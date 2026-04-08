@@ -3145,6 +3145,8 @@ function onLoginSuccess() {
 
   loadFromSupabase();
   subscribeRealtime();
+  // 모바일: 로그인 후 앱 화면 표시되면 fix 적용
+  if (window.innerWidth <= 768) setTimeout(mobileFixAll, 300);
 }
 
 // ============ 데이터 저장/불러오기 ============
@@ -3265,20 +3267,98 @@ function initApp() {
   setInitialDates();
   restorePageFromHash();
   initConsumables();
-  applyMobileGridFix();
-  applyMobileFlexFix();
-  // 모바일 fix는 showPage에서 페이지 전환마다 실행됨
+  mobileFixAll();
+
+  // 모바일: 렌더 함수 실행 후 자동으로 mobileFixAll 실행
+  if (window.innerWidth <= 768) {
+    [
+      'renderRevenue','renderTax','renderSales','renderProduction',
+      'renderConsumables','renderAssets','renderAttendance',
+      'renderNotice','renderProject','renderTasks',
+      'renderInventory','renderCalendar','renderOpsCalendar',
+      'renderChannelBreakdown','renderTaxMonthDetail',
+    ].forEach(name => {
+      if (typeof window[name] === 'function') {
+        const _orig = window[name];
+        window[name] = function(...a) {
+          const r = _orig.apply(this, a);
+          setTimeout(mobileFixAll, 40);
+          return r;
+        };
+      }
+    });
+  }
 }
 
 // 모바일에서 인라인 grid style 직접 수정
 // setProperty('...', '...', 'important')로 인라인 style보다 강하게 적용
+// ============ MOBILE FIX ============
+// 방식: JS로 동적 <style> 태그 삽입 + 인라인 style 직접 수정
+// CSS [style*=] 선택자는 인라인 style보다 specificity가 낮아서 작동 안 함
+// → setProperty('...', '...', 'important') 로 인라인 style 자체를 덮어씀
+
+const _MOB_STYLE_ID = 'cherop-mobile-fix-style';
+
+function injectMobileCSS() {
+  if (!document.getElementById(_MOB_STYLE_ID)) {
+    const s = document.createElement('style');
+    s.id = _MOB_STYLE_ID;
+    s.textContent = `
+      @media (max-width: 768px) {
+        .grid-2, .grid-3 {
+          grid-template-columns: 1fr !important;
+          gap: 10px !important;
+        }
+        .header-actions {
+          flex-wrap: nowrap !important;
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+        .header-actions .btn, .header-actions button, .header-actions label {
+          flex-shrink: 0 !important;
+          white-space: nowrap !important;
+          font-size: 11px !important;
+          padding: 6px 10px !important;
+        }
+        .tab-bar {
+          flex-wrap: nowrap !important;
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+        .tab-bar::-webkit-scrollbar { display: none; }
+        .tab {
+          flex-shrink: 0 !important;
+          white-space: nowrap !important;
+        }
+        .card { padding: 12px !important; }
+        .modal {
+          width: 100% !important;
+          max-width: 100% !important;
+          border-radius: 20px 20px 0 0 !important;
+          padding: 20px 14px !important;
+          max-height: 90vh !important;
+        }
+        .modal-overlay { align-items: flex-end !important; }
+        .form-row { grid-template-columns: 1fr !important; }
+        .form-input, .form-select, .form-textarea { font-size: 16px !important; }
+        table { font-size: 11px !important; }
+        th { padding: 5px 4px !important; font-size: 10px !important; }
+        td { padding: 7px 4px !important; }
+        .stat-value { font-size: 20px !important; }
+        .mobile-bottom-nav { display: flex !important; }
+        .toast { bottom: 70px !important; left: 12px !important; right: 12px !important; }
+        .cal-day { min-height: 40px !important; padding: 3px !important; }
+        .section { margin-bottom: 14px !important; }
+      }
+    `;
+    document.head.appendChild(s);
+  }
+}
+
 function applyMobileGridFix() {
   const isMobile = window.innerWidth <= 768;
-  // 앱 화면이 표시 중일 때만 실행 (로그인 화면 간섭 방지)
-  const appScreen = document.getElementById('app-screen');
-  if (isMobile && (!appScreen || appScreen.style.display === 'none')) return;
   document.querySelectorAll('[style], [data-orig-cols]').forEach(el => {
-    // data-orig-cols 없으면 원본 style 문자열에서 파싱
+    // 원본 아직 없으면 현재 style 문자열에서 파싱해 저장
     if (!el.dataset.origCols) {
       const raw = el.getAttribute('style') || '';
       if (!raw.includes('grid-template-columns')) return;
@@ -3291,16 +3371,14 @@ function applyMobileGridFix() {
 
     if (isMobile) {
       const colVal = el.dataset.origCols;
-      // repeat(N,...) 에서 N 추출
       const repeatN = parseInt((colVal.match(/repeat\(\s*(\d+)/) || [,'0'])[1], 10);
-      // 공백으로 구분된 열 토큰 수
       const frTokens = colVal.trim().split(/\s+/).length;
-      const effectiveCols = repeatN > 0 ? repeatN : frTokens;
+      const n = repeatN > 0 ? repeatN : frTokens;
 
-      if (effectiveCols >= 3) {
+      if (n >= 3) {
         el.style.setProperty('grid-template-columns', '1fr', 'important');
         el.style.setProperty('gap', '10px', 'important');
-      } else if (effectiveCols === 2 || /auto-fill|auto-fit|minmax/.test(colVal)) {
+      } else if (n === 2 || /auto-fill|auto-fit|minmax/.test(colVal)) {
         el.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
         el.style.setProperty('gap', '8px', 'important');
       }
@@ -3315,22 +3393,8 @@ function applyMobileGridFix() {
   });
 }
 
-let _mobileFixTimer = null;
-function _debouncedMobileFix() {
-  clearTimeout(_mobileFixTimer);
-  _mobileFixTimer = setTimeout(() => {
-    applyMobileGridFix();
-    applyMobileFlexFix();
-  }, 150);
-}
-window.addEventListener('resize', _debouncedMobileFix);
-
-// 모바일 전용 flex 컨테이너 직접 수정
 function applyMobileFlexFix() {
   if (window.innerWidth > 768) return;
-  // 앱 화면이 표시 중일 때만 실행 (로그인 화면 간섭 방지)
-  const appScreen = document.getElementById('app-screen');
-  if (!appScreen || appScreen.style.display === 'none') return;
 
   // 1. 공지배너+검색 → 세로 스택
   const topRow = document.getElementById('dash-top-row');
@@ -3355,73 +3419,58 @@ function applyMobileFlexFix() {
   }
 
   // 2. 바로가기 버튼 행 → 가로 스크롤
-  const shortcuts = document.querySelector('#page-dashboard > div:nth-child(3)');
-  if (shortcuts && shortcuts.style && shortcuts.style.display === 'flex') {
-    shortcuts.style.setProperty('flex-wrap', 'nowrap', 'important');
-    shortcuts.style.setProperty('overflow-x', 'auto', 'important');
-    shortcuts.style.setProperty('gap', '6px', 'important');
-    shortcuts.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-    shortcuts.querySelectorAll('a').forEach(a => {
-      a.style.flexShrink = '0';
+  const dash = document.getElementById('page-dashboard');
+  if (dash) {
+    // 바로가기 행은 dash-top-row 다음 다음 div (공지→헤더→바로가기)
+    dash.querySelectorAll(':scope > div').forEach(div => {
+      if (div.querySelectorAll('a[href]').length >= 3) {
+        div.style.setProperty('flex-wrap', 'nowrap', 'important');
+        div.style.setProperty('overflow-x', 'auto', 'important');
+        div.style.setProperty('gap', '6px', 'important');
+        div.querySelectorAll('a').forEach(a => { a.style.flexShrink = '0'; });
+      }
     });
   }
 
-  // 3. 헤더 액션 버튼들 → 가로 스크롤
-  document.querySelectorAll('.header-actions').forEach(ha => {
-    ha.style.setProperty('flex-wrap', 'nowrap', 'important');
-    ha.style.setProperty('overflow-x', 'auto', 'important');
-    ha.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-    ha.querySelectorAll('.btn, button, label').forEach(btn => {
-      btn.style.flexShrink = '0';
-      btn.style.whiteSpace = 'nowrap';
-    });
-  });
-
-  // 4. 탭바 → 가로 스크롤, 줄바꿈 없음
-  document.querySelectorAll('.tab-bar').forEach(tb => {
-    tb.style.setProperty('flex-wrap', 'nowrap', 'important');
-    tb.style.setProperty('overflow-x', 'auto', 'important');
-    tb.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-    tb.style.scrollbarWidth = 'none';
-    tb.querySelectorAll('.tab').forEach(t => {
-      t.style.flexShrink = '0';
-      t.style.whiteSpace = 'nowrap';
-    });
-  });
-
-  // 5. 재고 테이블 컬럼 숨김 (불필요 컬럼 제거)
+  // 3. 재고 테이블 컬럼 숨김
   const invTable = document.getElementById('inv-main-table');
   if (invTable) {
-    // 6번째(가용재고), 7번째(예상소진) 컬럼 숨김
-    invTable.querySelectorAll('th:nth-child(6), td:nth-child(6), th:nth-child(7), td:nth-child(7)').forEach(el => {
-      el.style.setProperty('display', 'none', 'important');
-    });
-    // 마지막 버튼 컬럼 축소
+    invTable.querySelectorAll(
+      'th:nth-child(6), td:nth-child(6), th:nth-child(7), td:nth-child(7)'
+    ).forEach(el => el.style.setProperty('display', 'none', 'important'));
     invTable.querySelectorAll('td:last-child .btn, td:last-child button').forEach(btn => {
       btn.style.fontSize = '10px';
-      btn.style.padding = '3px 6px';
+      btn.style.padding = '3px 5px';
     });
   }
 
-  // 6. 매출 이력 테이블 컬럼 숨김
+  // 4. 매출 이력 테이블 컬럼 숨김 (팝업,이모티콘,라인프렌즈,NCP)
   const revTable = document.getElementById('rev-log-table');
   if (revTable) {
-    // 팝업(5), 이모티콘(6), 라인프렌즈(7), NCP(8) 숨김
-    revTable.querySelectorAll('th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6), th:nth-child(7), td:nth-child(7), th:nth-child(8), td:nth-child(8)').forEach(el => {
-      el.style.setProperty('display', 'none', 'important');
-    });
+    revTable.querySelectorAll(
+      'th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6), th:nth-child(7), td:nth-child(7), th:nth-child(8), td:nth-child(8)'
+    ).forEach(el => el.style.setProperty('display', 'none', 'important'));
   }
 
-  // 7. 입고이력 메모 컬럼 숨김
+  // 5. 입고이력 메모 컬럼 숨김
   const inbTable = document.querySelector('#inv-inbound-log table');
   if (inbTable) {
-    inbTable.querySelectorAll('th:nth-child(4), td:nth-child(4)').forEach(el => {
-      el.style.setProperty('display', 'none', 'important');
-    });
+    inbTable.querySelectorAll(
+      'th:nth-child(4), td:nth-child(4)'
+    ).forEach(el => el.style.setProperty('display', 'none', 'important'));
   }
 }
 
+function mobileFixAll() {
+  injectMobileCSS();
+  applyMobileGridFix();
+  applyMobileFlexFix();
+}
 
+window.addEventListener('resize', () => {
+  clearTimeout(window._mfTimer);
+  window._mfTimer = setTimeout(mobileFixAll, 100);
+});
 
 async function init() {
   // 로그인 상태 확인
@@ -3835,12 +3884,10 @@ function showPage(page, pushState=true) {
   if (page === 'notice') renderNotice();
   if (page === 'assets') renderAssets();
   if (page === 'attendance') renderAttendance();
-  // 모바일 그리드+flex fix: 렌더 직후 + 지연 후 여러 번 실행
   if (window.innerWidth <= 768) {
-    applyMobileGridFix();
-    applyMobileFlexFix();
-    setTimeout(() => { applyMobileGridFix(); applyMobileFlexFix(); }, 80);
-    setTimeout(() => { applyMobileGridFix(); applyMobileFlexFix(); }, 350);
+    mobileFixAll();
+    setTimeout(mobileFixAll, 120);
+    setTimeout(mobileFixAll, 400);
   }
 }
 
@@ -8426,7 +8473,7 @@ function renderTax() {
 
   renderTaxChart(year);
   renderTaxMonthDetail();
-  if (window.innerWidth <= 768) setTimeout(applyMobileGridFix, 50);
+  if (window.innerWidth <= 768) setTimeout(mobileFixAll, 50);
 }
   const canvas = document.getElementById('tax-monthly-chart');
   if (!canvas) return;
@@ -10159,9 +10206,7 @@ async function fetchPajuWeather() {
 function renderDashboard() {
   try {
     _renderDashboard();
-    if (window.innerWidth <= 768) {
-      setTimeout(() => { applyMobileGridFix(); applyMobileFlexFix(); }, 50);
-    }
+    if (window.innerWidth <= 768) setTimeout(mobileFixAll, 50);
   } catch(e) {
     console.error('[Dashboard Error]', e);
   }
