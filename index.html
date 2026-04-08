@@ -15,8 +15,8 @@
     --border: #E2DDD5;
     --text: #1A1714;
     --text-muted: #8C8680;
-    --mongmo: #D4956A;
-    --mongmo-light: #FAF0E8;
+    --mongmo: #E8849A;
+    --mongmo-light: #FDF0F3;
     --palett: #7BA7BC;
     --palett-light: #EBF3F7;
     --accent: #C4956A;
@@ -738,17 +738,25 @@
         <div class="card" style="padding:16px 20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <div style="font-weight:700;">채널별 매출</div>
-            <select id="rev-channel-month-select" class="form-select" style="width:120px;font-size:12px;" onchange="renderChannelBreakdown(this.value)">
-            </select>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="rev-channel-month-select" class="form-select" style="width:130px;font-size:12px;" onchange="onChannelMonthChange(this.value)">
+                <option value="this">이번달</option>
+                <option value="last1">지난달</option>
+                <option value="last2">지지난달</option>
+                <option value="custom">직접설정</option>
+              </select>
+              <input type="month" id="rev-channel-month-custom" class="form-input" style="width:140px;font-size:12px;display:none;" onchange="renderChannelBreakdown(this.value)">
+            </div>
           </div>
           <div id="rev-channel-breakdown"></div>
         </div>
         <div class="card" style="padding:16px 20px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
             <div style="font-weight:700;">채널 비중</div>
             <div id="rev-pie-month-label" style="font-size:12px;color:var(--text-muted);"></div>
           </div>
-          <canvas id="rev-pie" width="240" height="240" style="display:block;margin:0 auto;"></canvas>
+          <canvas id="rev-pie" width="260" height="260" style="display:block;margin:0 auto;"></canvas>
+          <div id="rev-pie-legend" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;justify-content:center;"></div>
         </div>
       </div>
 
@@ -3099,13 +3107,14 @@ function showToast(msg) {
 
 // ============ REVENUE ============
 const REV_CHANNELS = [
-  { key:'imweb',  label:'🏠 자사몰',       color:'#D4956A' },
-  { key:'kakao',  label:'🎁 카카오',        color:'#F5C518' },
-  { key:'naver',  label:'🛒 스마트스토어',  color:'#03C75A' },
-  { key:'popup',  label:'🏪 팝업',          color:'#A67BB8' },
-  { key:'emoji',  label:'😊 이모티콘',      color:'#7BA7BC' },
-  { key:'line',   label:'🤝 라인프렌즈',    color:'#6B9E7A' },
-  { key:'ncp',    label:'🏬 NCP',           color:'#C4736A' },
+  { key:'imweb',    label:'🏠 자사몰',       color:'#E8849A' },
+  { key:'kakao',    label:'🎁 카카오',        color:'#F5C518' },
+  { key:'naver',    label:'🛒 스마트스토어',  color:'#03C75A' },
+  { key:'hyundai',  label:'🏬 더현대하이',    color:'#7BA7BC' },
+  { key:'popup',    label:'🏪 팝업',          color:'#A67BB8' },
+  { key:'emoticon', label:'😊 이모티콘',      color:'#F4A261' },
+  { key:'linefriends', label:'🤝 라인프렌즈', color:'#6B9E7A' },
+  { key:'ncp',      label:'🏬 NCP',           color:'#C4736A' },
 ];
 
 function fmtWon(n) {
@@ -3209,23 +3218,6 @@ function renderRevenue() {
 
   renderChannelBreakdown(thisMonthKey);
   renderRevLog();
-
-  // 채널별 월 선택 드롭다운 초기화
-  const sel = document.getElementById('rev-channel-month-select');
-  if (sel && sel.options.length === 0) {
-    // revenueLog에 있는 연월 목록 수집
-    const months = [...new Set((state.revenueLog||[]).map(r=>r.date.substring(0,7)))].sort().reverse();
-    months.forEach(ym => {
-      const [y,m] = ym.split('-');
-      const opt = document.createElement('option');
-      opt.value = ym;
-      opt.text = `${y}년 ${parseInt(m)}월`;
-      if (ym === thisMonthKey) opt.selected = true;
-      sel.appendChild(opt);
-    });
-  } else if (sel) {
-    sel.value = thisMonthKey;
-  }
 }
 
 function renderRevChart() {
@@ -3332,52 +3324,110 @@ function renderRevChart() {
   }
 }
 
+function onChannelMonthChange(val) {
+  const customInput = document.getElementById('rev-channel-month-custom');
+  if (val === 'custom') {
+    customInput.style.display = 'block';
+    if (customInput.value) renderChannelBreakdown(customInput.value);
+    return;
+  }
+  customInput.style.display = 'none';
+  const today = new Date();
+  let targetDate;
+  if (val === 'this')  targetDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  if (val === 'last1') targetDate = new Date(today.getFullYear(), today.getMonth()-1, 1);
+  if (val === 'last2') targetDate = new Date(today.getFullYear(), today.getMonth()-2, 1);
+  const ym = `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,'0')}`;
+  renderChannelBreakdown(ym);
+}
+
 function renderChannelBreakdown(monthKey) {
-  const monthLogs = state.revenueLog.filter(r => r.date.startsWith(monthKey));
+  const monthLogs = (state.revenueLog||[]).filter(r => r.date.startsWith(monthKey));
   const totals = {};
   REV_CHANNELS.forEach(ch => { totals[ch.key] = monthLogs.reduce((s,r)=>(s+(r[ch.key]||0)),0); });
   const grandTotal = REV_CHANNELS.reduce((s,ch)=>s+totals[ch.key],0)||1;
 
-  // 드롭다운 동기화
-  const sel = document.getElementById('rev-channel-month-select');
-  if (sel && sel.value !== monthKey) sel.value = monthKey;
-
-  // 파이차트 레이블
   const [y,m] = monthKey.split('-');
   const monthLabel = `${y}년 ${parseInt(m)}월`;
   const labelEl = document.getElementById('rev-pie-month-label');
   if (labelEl) labelEl.textContent = monthLabel;
 
-  document.getElementById('rev-channel-breakdown').innerHTML = REV_CHANNELS.map(ch => {
-    const pct = Math.round(totals[ch.key]/grandTotal*100);
-    return `<div style="margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-        <span style="font-size:12.5px;">${ch.label}</span>
-        <span style="font-size:12px;font-family:'DM Mono',monospace;">${fmtWon(totals[ch.key])} <span style="color:var(--text-muted);">(${pct}%)</span></span>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${ch.color};"></div></div>
-    </div>`;
-  }).join('');
+  // 채널별 바 목록 (매출 있는 것만 표시, 없는 건 흐리게)
+  const bd = document.getElementById('rev-channel-breakdown');
+  if (bd) {
+    bd.innerHTML = REV_CHANNELS.map(ch => {
+      const pct = Math.round(totals[ch.key]/grandTotal*100);
+      const hasData = totals[ch.key] > 0;
+      return `<div style="margin-bottom:10px;opacity:${hasData?1:0.35};">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span style="font-size:12.5px;">${ch.label}</span>
+          <span style="font-size:12px;font-family:'DM Mono',monospace;font-weight:600;">${hasData?fmtWon(totals[ch.key]):'—'} <span style="color:var(--text-muted);font-weight:400;">${hasData?`(${pct}%)`:'(0%)'}</span></span>
+        </div>
+        <div class="progress-bar" style="height:7px;border-radius:4px;">
+          <div class="progress-fill" style="width:${pct}%;background:${ch.color};border-radius:4px;transition:width 0.4s;"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 
-  // Pie chart
+  // ── 파이차트 (개선) ──
   const canvas = document.getElementById('rev-pie');
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,240,240);
+  const W = 260, H = 260;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+
+  const cx=W/2, cy=H/2, outerR=110, innerR=66;
+  const activeChannels = REV_CHANNELS.filter(ch=>totals[ch.key]>0);
+
+  if (activeChannels.length === 0) {
+    ctx.fillStyle='#E0DAD4'; ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff';    ctx.beginPath(); ctx.arc(cx,cy,innerR,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#B0A89E'; ctx.font='13px Noto Sans KR'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('데이터 없음', cx, cy);
+    return;
+  }
+
+  // 슬라이스 그리기
   let startAngle = -Math.PI/2;
-  const cx=120, cy=120, r=90;
-  REV_CHANNELS.forEach(ch => {
-    const slice = totals[ch.key]/grandTotal * Math.PI*2;
-    ctx.beginPath(); ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,r,startAngle,startAngle+slice);
-    ctx.closePath(); ctx.fillStyle=ch.color; ctx.fill();
-    startAngle += slice;
+  const gap = activeChannels.length > 1 ? 0.025 : 0;
+  activeChannels.forEach(ch => {
+    const slice = (totals[ch.key]/grandTotal) * Math.PI*2 - gap;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,outerR,startAngle+gap/2,startAngle+gap/2+slice);
+    ctx.closePath();
+    ctx.fillStyle = ch.color;
+    ctx.fill();
+    startAngle += totals[ch.key]/grandTotal * Math.PI*2;
   });
-  // Center hole
-  ctx.beginPath(); ctx.arc(cx,cy,50,0,Math.PI*2);
+
+  // 도넛 구멍
+  ctx.beginPath(); ctx.arc(cx,cy,innerR,0,Math.PI*2);
   ctx.fillStyle='#fff'; ctx.fill();
-  ctx.fillStyle='#1A1714'; ctx.font='bold 13px Noto Sans KR'; ctx.textAlign='center';
-  ctx.fillText(monthLabel, cx, cy-4);
-  ctx.fillText(fmtWon(grandTotal), cx, cy+14);
+
+  // 중앙 텍스트
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#8C8680'; ctx.font='12px Noto Sans KR';
+  ctx.fillText(monthLabel, cx, cy-14);
+  ctx.fillStyle='#1A1714'; ctx.font='bold 16px DM Mono, monospace';
+  ctx.fillText(fmtWon(grandTotal), cx, cy+6);
+  ctx.fillStyle='#8C8680'; ctx.font='11px Noto Sans KR';
+  const topCh = activeChannels.reduce((a,b)=>totals[a.key]>totals[b.key]?a:b);
+  ctx.fillText(`${topCh.label.split(' ')[1]} ${Math.round(totals[topCh.key]/grandTotal*100)}%`, cx, cy+24);
+
+  // 범례
+  const legend = document.getElementById('rev-pie-legend');
+  if (legend) {
+    legend.innerHTML = activeChannels.map(ch => {
+      const pct = Math.round(totals[ch.key]/grandTotal*100);
+      return `<div style="display:flex;align-items:center;gap:5px;">
+        <div style="width:10px;height:10px;border-radius:2px;background:${ch.color};flex-shrink:0;"></div>
+        <span style="font-size:11px;color:var(--text-muted);">${ch.label.split(' ')[1]} <strong style="color:var(--text);">${pct}%</strong></span>
+      </div>`;
+    }).join('');
+  }
 }
 
 function renderRevLog() {
@@ -5482,7 +5532,7 @@ function renderRevenueChart() {
   const mode = salesState.revChartMode;
 
   const W = Math.max(400, canvas.parentElement?.getBoundingClientRect().width || canvas.offsetWidth || document.getElementById('page-revenue')?.offsetWidth - 80 || 700);
-  const H = 220;
+  const H = 300;
   canvas.width = Math.floor(W) * (window.devicePixelRatio||1);
   canvas.height = H * (window.devicePixelRatio||1);
   canvas.style.width = Math.floor(W) + 'px';
@@ -5490,7 +5540,7 @@ function renderRevenueChart() {
   const ctx = canvas.getContext('2d');
   ctx.scale(window.devicePixelRatio||1, window.devicePixelRatio||1);
 
-  const padL=58, padB=32, padT=16, padR=16;
+  const padL=68, padB=36, padT=20, padR=16;
   const chartW = Math.floor(W)-padL-padR, chartH = H-padB-padT;
 
   const today = new Date();
@@ -5498,13 +5548,13 @@ function renderRevenueChart() {
   const labels = [];
   for(let i=days-1;i>=0;i--){ const d=new Date(today); d.setDate(d.getDate()-i); labels.push(fmt(d)); }
 
-  const CH_COLORS = { imweb:'#D4956A', kakao:'#F5B800', naver:'#6BA87A', hyundai:'#7BA7BC' };
+  const CH_COLORS = { imweb:'#E8849A', kakao:'#F5B800', naver:'#6BA87A', hyundai:'#7BA7BC' };
   const CH_LABELS = { imweb:'자사몰', kakao:'카카오', naver:'스마트스토어', hyundai:'더현대하이' };
 
   let datasets = [];
   if (mode === 'total') {
     const data = labels.map(d => (state.revenueLog||[]).filter(r=>r.date===d).reduce((s,r)=>s+getRevTotal(r),0));
-    datasets = [{ label:'총 매출', data, color:'#C4956A' }];
+    datasets = [{ label:'총 매출', data, color:'#E8849A' }];
   } else {
     datasets = Object.entries(CH_COLORS).map(([k,color]) => ({
       label: CH_LABELS[k], color,
@@ -5530,9 +5580,9 @@ function renderRevenueChart() {
     ctx.setLineDash([]);
     // Y축 레이블
     const val = niceMax*i/gridCount;
-    ctx.fillStyle='#A09890'; ctx.font=`10px 'DM Mono',monospace`; ctx.textAlign='right';
+    ctx.fillStyle='#A09890'; ctx.font=`13px 'DM Mono',monospace`; ctx.textAlign='right';
     const label = val>=100000000?`${(val/100000000).toFixed(1)}억`:val>=10000?`${Math.round(val/10000)}만`:`${val.toLocaleString()}`;
-    ctx.fillText(label, padL-6, y+3.5);
+    ctx.fillText(label, padL-8, y+4);
   }
 
   const slotW = chartW / labels.length;
@@ -5571,8 +5621,8 @@ function renderRevenueChart() {
     // X축 레이블
     const interval = Math.max(1, Math.ceil(days/10));
     if(i%interval===0 || i===labels.length-1){
-      ctx.fillStyle='#A09890'; ctx.font=`9px 'Noto Sans KR',sans-serif`; ctx.textAlign='center';
-      ctx.fillText(lbl.slice(5), slotX+slotW/2, H-8);
+      ctx.fillStyle='#A09890'; ctx.font=`12px 'Noto Sans KR',sans-serif`; ctx.textAlign='center';
+      ctx.fillText(lbl.slice(5), slotX+slotW/2, H-10);
     }
   });
 
