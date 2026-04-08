@@ -200,15 +200,190 @@
   .member-tab:hover { border-color: var(--mongmo); color: var(--text); }
   .member-tab.active { background: var(--text); color: #fff; border-color: var(--text); font-weight: 500; }
 
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  /* ══════════════════════════════════════════
+     MOBILE RESPONSIVE  (≤768px)
+  ══════════════════════════════════════════ */
+
+  /* 모바일 상단 헤더 */
+  .mobile-header {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    background: var(--text); z-index: 600;
+    align-items: center; justify-content: space-between;
+    padding: 0 16px; gap: 12px;
+  }
+  .mobile-header-logo { display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .mobile-header-logo img { width: 28px; height: 28px; object-fit:contain; }
+  .mobile-header-logo span { font-size:15px; font-weight:700; color:#fff; letter-spacing:0.04em; }
+  .mobile-hamburger {
+    background: none; border: none; cursor: pointer;
+    width: 36px; height: 36px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:5px; padding:4px;
+  }
+  .mobile-hamburger span {
+    display:block; width:20px; height:2px;
+    background:#fff; border-radius:2px; transition:all 0.2s;
+  }
+  .mobile-hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px,5px); }
+  .mobile-hamburger.open span:nth-child(2) { opacity:0; }
+  .mobile-hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px,-5px); }
+
+  /* 드로어 오버레이 */
+  .drawer-overlay {
+    display: none; position:fixed; inset:0;
+    background: rgba(0,0,0,0.45); z-index:650;
+  }
+  .drawer-overlay.open { display:block; }
+
+  @media (max-width: 768px) {
+    /* 기본 레이아웃 */
+    .mobile-header { display: flex; }
+    .sidebar { display: none; }
+    .sidebar.drawer-open {
+      display: flex; position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 260px; z-index: 700;
+      overflow-y: auto; flex-direction: column;
+      animation: slideInDrawer 0.22s ease;
+    }
+    @keyframes slideInDrawer {
+      from { transform: translateX(-100%); }
+      to   { transform: translateX(0); }
+    }
+    .main {
+      margin-left: 0 !important;
+      padding: 68px 14px 80px !important;
+    }
+
+    /* 페이지 헤더 */
+    .page-header {
+      flex-direction: column; align-items: flex-start;
+      gap: 10px; margin-bottom: 16px !important;
+    }
+    .header-actions {
+      flex-wrap: wrap; gap: 6px; width: 100%;
+    }
+    .header-actions .btn { font-size:12px; padding:7px 12px; }
+    .page-title { font-size: 18px !important; }
+
+    /* 카드 */
+    .card { padding: 14px !important; }
+
+    /* 탭바 */
+    .tab-bar { overflow-x: auto; flex-wrap: nowrap !important; width:100% !important; -webkit-overflow-scrolling: touch; }
+    .tab-bar::-webkit-scrollbar { display:none; }
+
+    /* 폼 row → 1열 */
+    .form-row { grid-template-columns: 1fr !important; }
+
+    /* 모달 */
+    .modal {
+      width: 100% !important; max-width: 100% !important;
+      margin: 0 !important; border-radius: 20px 20px 0 0 !important;
+      padding: 24px 18px !important; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-overlay { align-items: flex-end !important; }
+
+    /* 테이블 가로 스크롤 */
+    table { font-size: 11px; }
+    .table-wrap, [style*="overflow-x:auto"], [style*="overflow-x: auto"] { overflow-x: auto; }
+
+    /* 그리드 2열 → 1열 */
+    [style*="grid-template-columns: repeat(3"] { grid-template-columns: 1fr !important; }
+    [style*="grid-template-columns: repeat(4"] { grid-template-columns: 1fr 1fr !important; }
+
+    /* 칸반 보드 */
+    #kanban-board { grid-template-columns: 1fr !important; }
+
+    /* 대시보드 상태 요약 */
+    #dash-status-grid { grid-template-columns: 1fr 1fr !important; }
+
+    /* 매출비교 그리드 */
+    #sales-compare-grid { grid-template-columns: 1fr !important; }
+
+    /* asset grid */
+    #asset-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+
+    /* 바로가기 버튼 줄바꿈 */
+    .shortcut-bar { gap: 6px; }
+
+    /* 검색 박스 */
+    #dash-search-input { font-size: 13px; }
+
+    /* 하단 네비게이션 바 */
+    .mobile-bottom-nav {
+      display: flex;
+    }
+
+    /* 알림 패널 */
+    #notif-panel { left: 0 !important; width: 100% !important; }
+
+    /* 공지 배너 + 검색 */
+    #dash-notice-banner { min-width: 0 !important; }
+    #dash-search-input { width: 100% !important; }
+  }
+
+  /* 모바일 하단 탭 네비 */
+  .mobile-bottom-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; height: 58px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    z-index: 600; align-items: center; justify-content: space-around;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mobile-nav-item {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; padding: 6px 10px; cursor: pointer;
+    font-size: 9px; color: var(--text-muted); font-weight:500;
+    flex: 1; border: none; background: none;
+    transition: color 0.15s;
+  }
+  .mobile-nav-item .nav-icon { font-size: 20px; line-height:1; }
+  .mobile-nav-item.active { color: var(--mongmo); }
+  .mobile-nav-item.active .nav-icon { transform: scale(1.1); }
+
 </style>
 </head>
 <body>
 
-<!-- ========== LOGIN SCREEN ========== -->
+<!-- ══ 모바일 상단 헤더 ══ -->
+<div class="mobile-header" id="mobile-header">
+  <div class="mobile-header-logo" onclick="showPage('dashboard');closeMobileDrawer()">
+    <span>CHEROP</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button onclick="toggleNotifPanel()" style="background:none;border:none;cursor:pointer;font-size:20px;position:relative;">
+      🔔<span id="mobile-notif-dot" style="display:none;position:absolute;top:0;right:0;width:8px;height:8px;background:var(--mongmo);border-radius:50%;"></span>
+    </button>
+    <button class="mobile-hamburger" id="mobile-hamburger" onclick="toggleMobileDrawer()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</div>
+
+<!-- ══ 드로어 오버레이 ══ -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeMobileDrawer()"></div>
+
+<!-- ══ 모바일 하단 탭바 ══ -->
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+  <button class="mobile-nav-item active" id="mob-nav-dashboard" onclick="showPage('dashboard');setMobileNav('dashboard')">
+    <span class="nav-icon">📊</span>대시보드
+  </button>
+  <button class="mobile-nav-item" id="mob-nav-inventory" onclick="showPage('inventory');setMobileNav('inventory')">
+    <span class="nav-icon">📦</span>재고
+  </button>
+  <button class="mobile-nav-item" id="mob-nav-tasks" onclick="showPage('tasks');setMobileNav('tasks')">
+    <span class="nav-icon">✅</span>체크리스트
+  </button>
+  <button class="mobile-nav-item" id="mob-nav-revenue" onclick="showPage('revenue');setMobileNav('revenue')">
+    <span class="nav-icon">💰</span>매출
+  </button>
+  <button class="mobile-nav-item" id="mob-nav-more" onclick="toggleMobileDrawer()">
+    <span class="nav-icon">☰</span>더보기
+  </button>
+</nav>
+
+ -->
 <div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border-radius:20px;padding:48px 40px;width:100%;max-width:400px;box-shadow:var(--shadow-lg);text-align:center;">
     <div style="margin-bottom:20px;">
@@ -3194,6 +3369,10 @@ function showPage(page, pushState=true) {
   pageEl.classList.remove('hidden');
   if (navEl) navEl.classList.add('active');
 
+  // 모바일: 드로어 닫기 + 하단 탭 업데이트
+  closeMobileDrawer();
+  setMobileNav(page);
+
   // Hash URL 업데이트
   if (pushState) {
     const newHash = '#/' + page;
@@ -3215,6 +3394,47 @@ function showPage(page, pushState=true) {
   if (page === 'assets') renderAssets();
   if (page === 'attendance') renderAttendance();
 }
+
+// ── 모바일 드로어 ──
+function toggleMobileDrawer() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('drawer-overlay');
+  const burger  = document.getElementById('mobile-hamburger');
+  if (!sidebar) return;
+  const isOpen = sidebar.classList.contains('drawer-open');
+  if (isOpen) { closeMobileDrawer(); }
+  else {
+    sidebar.classList.add('drawer-open');
+    overlay.classList.add('open');
+    burger.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+function closeMobileDrawer() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('drawer-overlay');
+  const burger  = document.getElementById('mobile-hamburger');
+  if (!sidebar) return;
+  sidebar.classList.remove('drawer-open');
+  if (overlay) overlay.classList.remove('open');
+  if (burger)  burger.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── 모바일 하단 탭 활성화 ──
+const MOB_NAV_PAGES = ['dashboard','inventory','tasks','revenue'];
+function setMobileNav(page) {
+  document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById('mob-nav-' + page);
+  if (target) target.classList.add('active');
+  else {
+    // 하단 탭에 없는 페이지면 '더보기' 활성화
+    const more = document.getElementById('mob-nav-more');
+    if (more) more.classList.add('active');
+  }
+}
+
+
 
 // 브라우저 뒤로가기/앞으로가기 처리
 window.addEventListener('popstate', () => {
@@ -10671,13 +10891,13 @@ function renderAssets() {
     // 이미지 onerror는 함수로 분리해서 이스케이프 문제 방지
     const thumbId = 'thumb_' + a.id;
     const thumb = isImgUrl(a.url)
-      ? `<div id="${thumbId}" style="width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#f0f0f0;flex-shrink:0;">
-           <img src="${a.url}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="assetThumbFallback('${thumbId}','${ts.bg}','${ts.icon}')">
-         </div>`
-      : `<div style="width:100%;aspect-ratio:16/9;border-radius:10px;background:${ts.bg};display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;gap:4px;">
-           <div style="font-size:34px;">${ts.icon}</div>
-           <div style="font-size:10px;font-weight:700;color:${ts.color};font-family:'DM Mono',monospace;letter-spacing:0.1em;">${a.type||'파일'}</div>
-         </div>`;
+      ? '<div id="' + thumbId + '" style="width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#f0f0f0;flex-shrink:0;"><img src="' + a.url + '" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="assetThumbFallback(\'' + thumbId + '\',\'' + ts.bg + '\',\'' + ts.icon + '\')"></div>'
+      : '<div style="width:100%;aspect-ratio:16/9;border-radius:10px;background:' + ts.bg + ';display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;gap:4px;"><div style="font-size:34px;">' + ts.icon + '</div><div style="font-size:10px;font-weight:700;color:' + ts.color + ';font-family:\'DM Mono\',monospace;letter-spacing:0.1em;">' + (a.type||'파일') + '</div></div>';
+
+    const descHTML = a.desc ? '<div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:4px;">' + a.desc + '</div>' : '';
+    const linkHTML = a.url
+      ? '<a href="' + a.url + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--mongmo);font-weight:600;text-decoration:none;padding:4px 10px;border-radius:7px;background:#fce8ed;">🔗 열기</a>'
+      : '<span style="font-size:11px;color:var(--text-muted);">링크 없음</span>';
 
     return `
     <div onclick="openEditAsset(${a.id})" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s;"
@@ -10690,13 +10910,10 @@ function renderAssets() {
           <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${bColor}20;color:${bColor};font-weight:600;">${bLabel}</span>
           <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--surface2);color:var(--text-muted);">${catLabel}${subLabel}</span>
         </div>
-        ${a.desc ? `<div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:4px;">${a.desc}</div>` : ''}
+        ${descHTML}
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;" onclick="event.stopPropagation()">
-        ${a.url
-          ? `<a href="${a.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--mongmo);font-weight:600;text-decoration:none;padding:4px 10px;border-radius:7px;background:#fce8ed;">🔗 열기</a>`
-          : `<span style="font-size:11px;color:var(--text-muted);">링크 없음</span>`
-        }
+        ${linkHTML}
         <div style="display:flex;gap:3px;">
           <button onclick="openEditAsset(${a.id})" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:11px;cursor:pointer;padding:3px 7px;">✏️</button>
           <button onclick="deleteAsset(${a.id})" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:11px;cursor:pointer;padding:3px 7px;">✕</button>
