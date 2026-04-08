@@ -3267,44 +3267,16 @@ function initApp() {
   initConsumables();
   applyMobileGridFix();
   applyMobileFlexFix();
-  // 모바일: 모든 렌더 함수 실행 후 자동으로 grid fix 적용
-  if (window.innerWidth <= 768) {
-    const renderFns = [
-      'renderRevenue','renderTax','renderSales','renderProduction',
-      'renderConsumables','renderAssets','renderAttendance',
-      'renderNotice','renderProject','renderTasks',
-      'renderInventory','renderCalendar','renderOpsCalendar',
-      'renderSalesCompare','renderSalesKPI','renderSalesTrend',
-      'renderTaxMonthDetail','renderTaxChart','renderChannelBreakdown',
-    ];
-    renderFns.forEach(name => {
-      if (typeof window[name] === 'function') {
-        const orig = window[name];
-        window[name] = function(...args) {
-          const r = orig.apply(this, args);
-          setTimeout(() => { applyMobileGridFix(); applyMobileFlexFix(); }, 30);
-          return r;
-        };
-      }
-    });
-
-    // renderInventory는 별도로 한 번 더 래핑 (테이블 컬럼 숨김 즉시 적용)
-    const _origRenderInv = window.renderInventory;
-    if (typeof _origRenderInv === 'function') {
-      window.renderInventory = function(...args) {
-        const r = _origRenderInv.apply(this, args);
-        // 테이블이 DOM에 반영된 직후 실행
-        requestAnimationFrame(() => applyMobileFlexFix());
-        return r;
-      };
-    }
-  }
+  // 모바일 fix는 showPage에서 페이지 전환마다 실행됨
 }
 
 // 모바일에서 인라인 grid style 직접 수정
 // setProperty('...', '...', 'important')로 인라인 style보다 강하게 적용
 function applyMobileGridFix() {
   const isMobile = window.innerWidth <= 768;
+  // 앱 화면이 표시 중일 때만 실행 (로그인 화면 간섭 방지)
+  const appScreen = document.getElementById('app-screen');
+  if (isMobile && (!appScreen || appScreen.style.display === 'none')) return;
   document.querySelectorAll('[style], [data-orig-cols]').forEach(el => {
     // data-orig-cols 없으면 원본 style 문자열에서 파싱
     if (!el.dataset.origCols) {
@@ -3343,11 +3315,22 @@ function applyMobileGridFix() {
   });
 }
 
-window.addEventListener('resize', applyMobileGridFix);
+let _mobileFixTimer = null;
+function _debouncedMobileFix() {
+  clearTimeout(_mobileFixTimer);
+  _mobileFixTimer = setTimeout(() => {
+    applyMobileGridFix();
+    applyMobileFlexFix();
+  }, 150);
+}
+window.addEventListener('resize', _debouncedMobileFix);
 
 // 모바일 전용 flex 컨테이너 직접 수정
 function applyMobileFlexFix() {
   if (window.innerWidth > 768) return;
+  // 앱 화면이 표시 중일 때만 실행 (로그인 화면 간섭 방지)
+  const appScreen = document.getElementById('app-screen');
+  if (!appScreen || appScreen.style.display === 'none') return;
 
   // 1. 공지배너+검색 → 세로 스택
   const topRow = document.getElementById('dash-top-row');
@@ -3437,7 +3420,6 @@ function applyMobileFlexFix() {
     });
   }
 }
-window.addEventListener('resize', applyMobileFlexFix);
 
 
 
