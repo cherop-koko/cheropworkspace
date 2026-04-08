@@ -1015,11 +1015,11 @@
           <div class="page-sub">팝업 · 재고 입고 · 촬영 · 미팅 · 납품 등 운영 일정</div>
         </div>
         <div class="header-actions">
-          <button class="btn btn-primary" onclick="openModal('add-ops')">+ 일정 추가</button>
+          <button class="btn btn-primary" onclick="openAddOps()">+ 일정 추가</button>
         </div>
       </div>
-      <div style="display:flex;gap:24px;">
-        <div style="flex:1;">
+      <div style="display:flex;gap:20px;">
+        <div style="flex:1;min-width:0;">
           <div class="cal-nav">
             <button class="cal-nav-btn" onclick="changeOpsMonth(-1)">←</button>
             <div class="cal-nav-title" id="ops-cal-title"></div>
@@ -1031,9 +1031,9 @@
           </div>
           <div class="calendar-grid" id="ops-calendar-body" style="margin-top:1px;"></div>
         </div>
-        <div style="width:280px;">
-          <div class="card">
-            <div class="card-title">일정 목록</div>
+        <div style="width:300px;flex-shrink:0;">
+          <div class="card" style="padding:14px 16px;">
+            <div class="card-title" style="margin-bottom:10px;">일정 목록</div>
             <div id="ops-list"></div>
           </div>
         </div>
@@ -2089,10 +2089,11 @@
   </div>
 </div>
 
-<!-- Add Ops Event Modal -->
+<!-- Add/Edit Ops Event Modal -->
 <div class="modal-overlay hidden" id="modal-add-ops">
-  <div class="modal">
-    <div class="modal-title">📅 운영 일정 추가</div>
+  <div class="modal" style="width:480px;">
+    <div class="modal-title" id="ops-modal-title">📅 운영 일정 추가</div>
+    <input type="hidden" id="ops-edit-id">
     <div class="form-group">
       <label class="form-label">일정명</label>
       <input class="form-input" id="ops-title" placeholder="예: 더현대 판교 팝업 오픈">
@@ -2114,6 +2115,19 @@
         </select>
       </div>
       <div class="form-group">
+        <label class="form-label">담당자</label>
+        <select class="form-select" id="ops-assignee">
+          <option value="">없음</option>
+          <option value="김효민">김효민</option>
+          <option value="고예흰">고예흰</option>
+          <option value="박영아">박영아</option>
+          <option value="정현진">정현진</option>
+          <option value="김성애">김성애</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
         <label class="form-label">브랜드</label>
         <select class="form-select" id="ops-brand">
           <option value="mongmo">몽모</option>
@@ -2121,15 +2135,19 @@
           <option value="all">공통</option>
         </select>
       </div>
-    </div>
-    <div class="form-row">
       <div class="form-group">
         <label class="form-label">시작일</label>
         <input class="form-input" type="date" id="ops-start">
       </div>
-      <div class="form-group">
-        <label class="form-label">종료일</label>
-        <input class="form-input" type="date" id="ops-end">
+    </div>
+    <!-- 종료일 토글 -->
+    <div style="margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-muted);">
+        <input type="checkbox" id="ops-end-toggle" onchange="toggleOpsEnd()" style="accent-color:var(--mongmo);width:14px;height:14px;">
+        종료일 별도 설정 (팝업·이벤트 등 기간이 있는 일정)
+      </label>
+      <div id="ops-end-wrap" style="display:none;margin-top:8px;">
+        <input class="form-input" type="date" id="ops-end" placeholder="종료일">
       </div>
     </div>
     <div class="form-group">
@@ -2138,7 +2156,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-ops')">취소</button>
-      <button class="btn btn-primary" onclick="submitOps()">추가</button>
+      <button class="btn btn-primary" id="ops-submit-btn" onclick="submitOps()">추가</button>
     </div>
   </div>
 </div>
@@ -9338,13 +9356,12 @@ function renderOpsCalendar() {
     wkDays.forEach(({ d, ci, dateStr }) => {
       if (d === null) { html += `<div class="cal-day" style="background:var(--surface2);min-height:${minH}px;"></div>`; return; }
       const isToday = dateStr === todayStr;
-      // 1일짜리 이벤트
       const singles = (eventRows[dateStr]||[]).filter(e=>e.span===1);
       const singlesHtml = singles.slice(0,2).map(e =>
-        `<div style="font-size:10px;padding:1px 4px;border-radius:3px;background:${e.color}22;color:${e.color};overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;margin-top:2px;" onclick="showOpsDetail(${e.event.id})">${e.icon} ${e.title}</div>`
+        `<div style="font-size:11px;padding:2px 5px;border-radius:4px;background:${e.color}22;color:${e.color};overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;margin-top:3px;font-weight:500;" onclick="event.stopPropagation();showOpsDetail(${e.event.id})">${e.icon} ${e.title}</div>`
       ).join('');
-      html += `<div class="cal-day" style="min-height:${minH}px;padding:4px 3px;position:relative;${isToday?'background:var(--mongmo-light);border:1.5px solid var(--mongmo);border-radius:8px;':''}">
-        <div class="cal-num" style="font-size:12px;${isToday?'color:var(--mongmo);font-weight:700;':''}">${d}</div>
+      html += `<div class="cal-day ops-cal-day" data-date="${dateStr}" onclick="openAddOps('${dateStr}')" style="min-height:${minH}px;padding:5px 4px;position:relative;cursor:pointer;transition:background 0.12s;${isToday?'background:var(--mongmo-light);border:1.5px solid var(--mongmo);border-radius:8px;':''}">
+        <div class="cal-num" style="font-size:13px;${isToday?'color:var(--mongmo);font-weight:700;':''}">${d}</div>
         ${singlesHtml}
       </div>`;
     });
@@ -9360,8 +9377,8 @@ function renderOpsCalendar() {
           const isEndRound   = ev.isEnd;
           const radius = `${isStartRound?'6px':'0'} ${isEndRound?'6px':'0'} ${isEndRound?'6px':'0'} ${isStartRound?'6px':'0'}`;
           const startLabel = ev.isStart ? `${ev.icon} ${ev.title}` : '';
-          return `<div style="grid-column:${ev.startCol+1}/span ${span};grid-row:1;margin-top:${24 + ri*20}px;height:18px;background:${ev.color};border-radius:${radius};display:flex;align-items:center;padding:0 6px;overflow:hidden;white-space:nowrap;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.12);" onclick="showOpsDetail(${ev.event.id})">
-            <span style="font-size:10px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;">${startLabel}</span>
+          return `<div style="grid-column:${ev.startCol+1}/span ${span};grid-row:1;margin-top:${28 + ri*22}px;height:20px;background:${ev.color};border-radius:${radius};display:flex;align-items:center;padding:0 7px;overflow:hidden;white-space:nowrap;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.12);" onclick="event.stopPropagation();openEditOps(${ev.event.id})">
+            <span style="font-size:11px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;">${startLabel}</span>
           </div>`;
         }).join('')
       ).join('');
@@ -9375,32 +9392,62 @@ function renderOpsCalendar() {
 
   body.innerHTML = html;
 
-  // 사이드 목록
+  // hover 효과 (CSS로 처리)
+  if (!document.getElementById('ops-hover-style')) {
+    const st = document.createElement('style');
+    st.id = 'ops-hover-style';
+    st.textContent = `.ops-cal-day:hover { background: var(--surface2) !important; }`;
+    document.head.appendChild(st);
+  }
+
+  // 사이드 목록 - 이번달 + 앞뒤 5일
   const listEl = document.getElementById('ops-list');
   if (!listEl) return;
+  const todayD = new Date(todayStr);
+  const minus5 = new Date(todayD); minus5.setDate(minus5.getDate()-5);
+  const plus5  = new Date(todayD); plus5.setDate(plus5.getDate()+5);
+  const fmt = d => d.toISOString().split('T')[0];
   const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
-  const monthOps = ops.filter(o => {
-    const end = o.end || o.start;
-    return o.start.startsWith(monthStr) || end.startsWith(monthStr) ||
-           (o.start < monthStr+'-01' && end >= monthStr+'-01');
+  const monthStart = monthStr+'-01';
+  const monthEnd   = ds(daysInMonth);
+
+  const visOps = ops.filter(o => {
+    const oEnd = o.end || o.start;
+    const inMonth = o.start <= monthEnd && oEnd >= monthStart;
+    const near5 = o.start >= fmt(minus5) || oEnd >= fmt(minus5);
+    return inMonth || near5;
   }).sort((a,b)=>a.start.localeCompare(b.start));
 
-  if (!monthOps.length) {
-    listEl.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:12px 0;text-align:center;">이번달 일정 없음</div>`;
+  if (!visOps.length) {
+    listEl.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:12px 0;text-align:center;">일정 없음</div>`;
     return;
   }
-  listEl.innerHTML = monthOps.map(o => {
+
+  const active = visOps.filter(o=>!o.done);
+  const done   = visOps.filter(o=>o.done);
+
+  const renderItem = (o, isDone) => {
     const t = OPS_TYPES[o.type] || OPS_TYPES.etc;
     const range = o.end && o.end !== o.start ? `${o.start} ~ ${o.end}` : o.start;
-    return `<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;">
-      <div style="width:28px;height:28px;border-radius:8px;background:${t.color}22;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">${t.icon}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;">${o.title||t.label}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${range}${o.memo?` · ${o.memo}`:''}</div>
+    const assignBadge = o.assignee ? `<span style="font-size:10px;padding:1px 6px;border-radius:10px;background:var(--surface2);color:var(--text-muted);margin-left:4px;">👤 ${o.assignee}</span>` : '';
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border);${isDone?'opacity:0.5;':''}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <div style="width:26px;height:26px;border-radius:7px;background:${t.color}22;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">${t.icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;${isDone?'text-decoration:line-through;':''}">${o.title||t.label}${assignBadge}</div>
+          <div style="font-size:11px;color:var(--text-muted);">${range}${o.memo?` · ${o.memo}`:''}</div>
+        </div>
       </div>
-      <button onclick="deleteOpsEvent(${o.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:2px;">✕</button>
+      <div style="display:flex;gap:5px;justify-content:flex-end;">
+        ${!isDone ? `<button onclick="completeOpsEvent(${o.id})" style="font-size:11px;padding:2px 8px;border-radius:5px;background:var(--green-light);color:var(--green);border:1px solid var(--green);cursor:pointer;">완료</button>` : `<button onclick="uncompleteOpsEvent(${o.id})" style="font-size:11px;padding:2px 8px;border-radius:5px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;">되돌리기</button>`}
+        <button onclick="openEditOps(${o.id})" style="font-size:11px;padding:2px 8px;border-radius:5px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;">수정</button>
+        <button onclick="deleteOpsEvent(${o.id})" style="font-size:11px;padding:2px 8px;border-radius:5px;background:var(--red-light);color:var(--red);border:1px solid var(--red);cursor:pointer;">삭제</button>
+      </div>
     </div>`;
-  }).join('');
+  };
+
+  listEl.innerHTML = active.map(o=>renderItem(o,false)).join('') +
+    (done.length ? `<div style="font-size:11px;color:var(--text-muted);margin:10px 0 4px;font-weight:600;">✅ 완료된 일정</div>` + done.map(o=>renderItem(o,true)).join('') : '');
 }
 
 function changeOpsMonth(dir) {
@@ -9412,20 +9459,258 @@ function changeOpsMonth(dir) {
   renderOpsCalendar();
 }
 
+function toggleOpsEnd() {
+  const checked = document.getElementById('ops-end-toggle')?.checked;
+  const wrap = document.getElementById('ops-end-wrap');
+  if (wrap) wrap.style.display = checked ? 'block' : 'none';
+  if (!checked && document.getElementById('ops-end')) document.getElementById('ops-end').value = '';
+}
+
+function openAddOps(dateStr) {
+  // 모달 초기화
+  document.getElementById('ops-edit-id').value = '';
+  document.getElementById('ops-modal-title').textContent = '📅 운영 일정 추가';
+  document.getElementById('ops-submit-btn').textContent = '추가';
+  document.getElementById('ops-title').value = '';
+  document.getElementById('ops-type').value = 'etc';
+  document.getElementById('ops-assignee').value = '';
+  document.getElementById('ops-brand').value = 'mongmo';
+  document.getElementById('ops-start').value = dateStr || '';
+  document.getElementById('ops-end').value = '';
+  document.getElementById('ops-memo').value = '';
+  document.getElementById('ops-end-toggle').checked = false;
+  toggleOpsEnd();
+  openModal('add-ops');
+}
+
+function openEditOps(id) {
+  const o = (state.ops||[]).find(x=>x.id===id);
+  if (!o) return;
+  document.getElementById('ops-edit-id').value = id;
+  document.getElementById('ops-modal-title').textContent = '📅 운영 일정 수정';
+  document.getElementById('ops-submit-btn').textContent = '저장';
+  document.getElementById('ops-title').value = o.title || '';
+  document.getElementById('ops-type').value = o.type || 'etc';
+  document.getElementById('ops-assignee').value = o.assignee || '';
+  document.getElementById('ops-brand').value = o.brand || 'mongmo';
+  document.getElementById('ops-start').value = o.start || '';
+  const hasEnd = o.end && o.end !== o.start;
+  document.getElementById('ops-end-toggle').checked = hasEnd;
+  document.getElementById('ops-end').value = hasEnd ? o.end : '';
+  toggleOpsEnd();
+  document.getElementById('ops-memo').value = o.memo || '';
+  openModal('add-ops');
+}
+
 function submitOps() {
-  const title = document.getElementById('ops-title')?.value.trim();
-  const type  = document.getElementById('ops-type')?.value;
-  const brand = document.getElementById('ops-brand')?.value;
-  const start = document.getElementById('ops-start')?.value;
-  const end   = document.getElementById('ops-end')?.value;
-  const memo  = document.getElementById('ops-memo')?.value.trim();
+  const editId = parseInt(document.getElementById('ops-edit-id')?.value) || null;
+  const title    = document.getElementById('ops-title')?.value.trim();
+  const type     = document.getElementById('ops-type')?.value;
+  const assignee = document.getElementById('ops-assignee')?.value;
+  const brand    = document.getElementById('ops-brand')?.value;
+  const start    = document.getElementById('ops-start')?.value;
+  const hasEnd   = document.getElementById('ops-end-toggle')?.checked;
+  const end      = hasEnd ? document.getElementById('ops-end')?.value : start;
+  const memo     = document.getElementById('ops-memo')?.value.trim();
+
   if (!title || !start) { showToast('일정명과 시작일을 입력해주세요'); return; }
+  if (hasEnd && end && end < start) {
+    showToast('⚠️ 종료일이 시작일보다 빠릅니다. 다시 선택해주세요');
+    document.getElementById('ops-end').focus();
+    return;
+  }
+
   if (!state.ops) state.ops = [];
-  state.ops.push({ id: Date.now(), title, type, brand, start, end: end||start, memo });
+
+  if (editId) {
+    const idx = state.ops.findIndex(x=>x.id===editId);
+    if (idx>=0) state.ops[idx] = { ...state.ops[idx], title, type, assignee, brand, start, end: end||start, memo };
+    showToast('✅ 일정 수정됐어요');
+  } else {
+    state.ops.push({ id: Date.now(), title, type, assignee, brand, start, end: end||start, memo, done: false });
+    showToast('✅ 일정 추가됐어요');
+  }
+
   save(); closeModal('add-ops'); renderOpsCalendar();
-  showToast('✅ 일정 추가됐어요');
   // 폼 초기화
   ['ops-title','ops-memo','ops-start','ops-end'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+function completeOpsEvent(id) {
+  const o = (state.ops||[]).find(x=>x.id===id);
+  if (o) { o.done = true; save(); renderOpsCalendar(); showToast('✅ 완료 처리됐어요'); }
+}
+
+function uncompleteOpsEvent(id) {
+  const o = (state.ops||[]).find(x=>x.id===id);
+  if (o) { o.done = false; save(); renderOpsCalendar(); showToast('↩ 되돌렸어요'); }
+}
+
+// ══════════════════════════════════════════════════
+// 근태 관리
+// ══════════════════════════════════════════════════
+function renderAttendance() {
+  updateAttStatus();
+  renderAttTodaySummary();
+  renderAttLog();
+  renderLeaves();
+  const el = document.getElementById('att-log-month');
+  if (el && !el.value) {
+    const d = new Date();
+    el.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+}
+
+function switchAttTab(tab, el) {
+  ['log','leave'].forEach(t => {
+    const el2 = document.getElementById('att-tab-'+t);
+    if (el2) el2.classList.toggle('hidden', t!==tab);
+  });
+  document.querySelectorAll('.tab-bar .tab').forEach(t=>t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (tab==='log') renderAttLog();
+  if (tab==='leave') renderLeaves();
+}
+
+function updateAttStatus() {
+  const member = document.getElementById('att-member-select')?.value;
+  const today = new Date().toISOString().split('T')[0];
+  const rec = (state.attendances||[]).find(a=>a.member===member&&a.date===today);
+  const badge = document.getElementById('att-status-badge');
+  const info  = document.getElementById('att-today-info');
+  if (!badge) return;
+  if (!rec) {
+    badge.innerHTML = `<span class="status-badge" style="background:var(--surface2);color:var(--text-muted);">미출근</span>`;
+    if (info) info.textContent = '';
+  } else if (rec.checkIn && !rec.checkOut) {
+    badge.innerHTML = `<span class="status-badge" style="background:var(--green-light);color:var(--green);">🟢 근무중 · ${rec.checkIn} 출근</span>`;
+    if (info) info.textContent = `출근: ${rec.checkIn}`;
+  } else if (rec.checkIn && rec.checkOut) {
+    const mins = calcMins(rec.checkIn, rec.checkOut);
+    badge.innerHTML = `<span class="status-badge" style="background:var(--surface2);color:var(--text-muted);">퇴근 · ${rec.checkOut}</span>`;
+    if (info) info.textContent = `출근: ${rec.checkIn} · 퇴근: ${rec.checkOut} · 근무: ${fmtMins(mins)}`;
+  }
+}
+
+function clockIn() {
+  const member = document.getElementById('att-member-select')?.value;
+  if (!member) return;
+  const today = new Date().toISOString().split('T')[0];
+  const now   = new Date().toTimeString().slice(0,5);
+  if (!state.attendances) state.attendances = [];
+  const existing = state.attendances.find(a=>a.member===member&&a.date===today);
+  if (existing?.checkIn) { showToast('이미 출근 처리됐어요'); return; }
+  if (existing) existing.checkIn = now;
+  else state.attendances.push({ id:Date.now(), member, date:today, checkIn:now, checkOut:'' });
+  save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
+  showToast(`✅ ${member} 출근 처리됐어요 (${now})`);
+}
+
+function clockOut() {
+  const member = document.getElementById('att-member-select')?.value;
+  if (!member) return;
+  const today = new Date().toISOString().split('T')[0];
+  const now   = new Date().toTimeString().slice(0,5);
+  const rec = (state.attendances||[]).find(a=>a.member===member&&a.date===today);
+  if (!rec?.checkIn) { showToast('출근 기록이 없어요'); return; }
+  if (rec.checkOut)  { showToast('이미 퇴근 처리됐어요'); return; }
+  rec.checkOut = now;
+  const mins = calcMins(rec.checkIn, now);
+  save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
+  showToast(`✅ ${member} 퇴근 처리됐어요 (${now}) · 근무 ${fmtMins(mins)}`);
+}
+
+function calcMins(start, end) {
+  const [sh,sm]=start.split(':').map(Number);
+  const [eh,em]=end.split(':').map(Number);
+  return (eh*60+em)-(sh*60+sm);
+}
+function fmtMins(m) {
+  if (m<=0) return '-';
+  return `${Math.floor(m/60)}시간 ${m%60}분`;
+}
+
+function renderAttTodaySummary() {
+  const el = document.getElementById('att-today-summary');
+  if (!el) return;
+  const today = new Date().toISOString().split('T')[0];
+  const members = ['김효민','고예흰','박영아','정현진','김성애'];
+  el.innerHTML = members.map(m => {
+    const rec = (state.attendances||[]).find(a=>a.member===m&&a.date===today);
+    const color = MEMBER_COLORS[m] || 'var(--text-muted)';
+    let status, time;
+    if (!rec) { status='미출근'; time=''; }
+    else if (rec.checkIn && !rec.checkOut) { status='근무중'; time=rec.checkIn+' ~'; }
+    else { status='퇴근'; time=`${rec.checkIn}~${rec.checkOut}`; }
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${color};"></div>
+        <span style="font-size:13px;font-weight:500;">${m}</span>
+      </div>
+      <div style="text-align:right;">
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${status==='근무중'?'var(--green-light)':status==='퇴근'?'var(--surface2)':'var(--red-light)'};color:${status==='근무중'?'var(--green)':status==='퇴근'?'var(--text-muted)':'var(--red)'};">${status}</span>
+        ${time?`<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${time}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAttLog() {
+  const tbody = document.getElementById('att-log-tbody');
+  if (!tbody) return;
+  const member = document.getElementById('att-log-member')?.value || 'all';
+  const month  = document.getElementById('att-log-month')?.value || '';
+  let recs = state.attendances||[];
+  if (member!=='all') recs = recs.filter(a=>a.member===member);
+  if (month) recs = recs.filter(a=>a.date.startsWith(month));
+  recs = [...recs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,50);
+  if (!recs.length) { tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">기록 없음</td></tr>`; return; }
+  tbody.innerHTML = recs.map(a=>{
+    const mins = a.checkIn&&a.checkOut ? calcMins(a.checkIn,a.checkOut) : null;
+    return `<tr>
+      <td style="color:var(--text-muted);font-size:12px;">${a.date}</td>
+      <td><span style="font-size:12px;font-weight:500;">${a.member}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;">${a.checkIn||'-'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;">${a.checkOut||'-'}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${mins!==null?fmtMins(mins):'-'}</td>
+      <td></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLeaves() {
+  const tbody = document.getElementById('leave-tbody');
+  if (!tbody) return;
+  const leaves = [...(state.leaves||[])].sort((a,b)=>b.start.localeCompare(a.start));
+  if (!leaves.length) { tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">신청 내역 없음</td></tr>`; return; }
+  tbody.innerHTML = leaves.map(l=>`<tr>
+    <td style="font-size:12px;">${l.member}</td>
+    <td style="font-size:12px;">${l.type||'연차'}</td>
+    <td style="font-size:12px;color:var(--text-muted);">${l.start}${l.end&&l.end!==l.start?' ~ '+l.end:''}</td>
+    <td style="font-size:12px;">${l.reason||'-'}</td>
+    <td><span class="status-badge">${l.status||'대기'}</span></td>
+    <td style="white-space:nowrap;">
+      <button class="btn btn-sm btn-secondary" style="font-size:11px;" onclick="approveLeave(${l.id},'승인')">승인</button>
+      <button class="btn btn-sm btn-secondary" style="font-size:11px;color:var(--red);border-color:var(--red);" onclick="approveLeave(${l.id},'반려')">반려</button>
+    </td>
+  </tr>`).join('');
+}
+
+function approveLeave(id, status) {
+  const l = (state.leaves||[]).find(x=>x.id===id);
+  if (l) { l.status=status; save(); renderLeaves(); showToast(`${status} 처리됐어요`); }
+}
+
+function submitLeave() {
+  const member = document.getElementById('leave-member')?.value;
+  const type   = document.getElementById('leave-type')?.value;
+  const start  = document.getElementById('leave-start')?.value;
+  const end    = document.getElementById('leave-end')?.value || start;
+  const reason = document.getElementById('leave-reason')?.value.trim();
+  if (!member||!start) { showToast('신청자와 기간을 입력해주세요'); return; }
+  if (!state.leaves) state.leaves=[];
+  state.leaves.push({ id:Date.now(), member, type, start, end, reason, status:'대기' });
+  save(); closeModal('add-leave'); renderLeaves(); showToast('✅ 휴가 신청됐어요');
 }
 
 function deleteOpsEvent(id) {
