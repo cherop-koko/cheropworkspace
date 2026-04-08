@@ -36,31 +36,34 @@
   /* LAYOUT */
   .app { display: flex; min-height: 100vh; }
   .sidebar {
-    width: 220px; min-height: 100vh; background: var(--text);
+    width: 200px; height: 100vh; background: var(--text);
     display: flex; flex-direction: column; padding: 0; position: fixed; top: 0; left: 0;
-    z-index: 100;
+    z-index: 100; overflow: hidden;
   }
   .sidebar-logo {
-    padding: 28px 24px 20px;
+    padding: 20px 20px 14px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
   }
-  .sidebar-logo .logo-main { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0.04em; }
-  .sidebar-logo .logo-sub { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 0.06em; margin-top: 3px; font-family: 'DM Mono', monospace; }
-  .sidebar-nav { padding: 16px 0; flex: 1; }
-  .nav-section-label { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; padding: 12px 24px 6px; text-transform: uppercase; }
+  .sidebar-logo .logo-main { font-size: 17px; font-weight: 700; color: #fff; letter-spacing: 0.04em; }
+  .sidebar-logo .logo-sub { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.06em; margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .sidebar-nav { padding: 8px 0; flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+  .sidebar-nav::-webkit-scrollbar { width: 4px; }
+  .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .nav-section-label { font-size: 9px; color: rgba(255,255,255,0.35); letter-spacing: 0.1em; padding: 8px 20px 4px; text-transform: uppercase; }
   .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 24px; cursor: pointer; transition: all 0.15s;
-    font-size: 15px; color: rgba(255,255,255,0.55); font-weight: 400;
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 20px; cursor: pointer; transition: all 0.15s;
+    font-size: 13px; color: rgba(255,255,255,0.75); font-weight: 400;
     border-left: 2px solid transparent;
   }
-  .nav-item:hover { color: #fff; background: rgba(255,255,255,0.05); }
-  .nav-item.active { color: #fff; border-left-color: var(--mongmo); background: rgba(255,255,255,0.07); }
-  .nav-item .icon { font-size: 18px; width: 20px; text-align: center; }
-  .sidebar-footer { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); }
-  .sidebar-footer .date { font-size: 11px; color: rgba(255,255,255,0.3); font-family: 'DM Mono', monospace; }
+  .nav-item:hover { color: #fff; background: rgba(255,255,255,0.06); }
+  .nav-item.active { color: var(--mongmo); border-left-color: var(--mongmo); background: rgba(232,132,154,0.13); font-weight: 600; }
+  .nav-item .icon { font-size: 16px; width: 18px; text-align: center; }
+  .sidebar-footer { padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
+  .sidebar-footer .date { font-size: 10px; color: rgba(255,255,255,0.3); font-family: 'DM Mono', monospace; }
 
-  .main { margin-left: 220px; flex: 1; padding: 40px 40px 60px; }
+  .main { margin-left: 200px; flex: 1; padding: 40px 40px 60px; }
 
   /* HEADER */
   .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
@@ -111,6 +114,7 @@
   .status-low { background: var(--yellow-light); color: var(--yellow); }
   .status-out { background: var(--red-light); color: var(--red); }
   .status-done { background: var(--green-light); color: var(--green); }
+  .status-clearance { background: #FFF3E0; color: #E65100; }
   .status-todo { background: var(--surface2); color: var(--text-muted); }
   .status-inprogress { background: var(--palett-light); color: var(--palett); }
 
@@ -251,7 +255,7 @@
       </div>
     </div>
     <!-- 알림 패널 -->
-    <div id="notif-panel" style="display:none;position:fixed;top:0;left:220px;width:320px;height:100vh;background:var(--surface);border-right:1px solid var(--border);z-index:500;overflow-y:auto;box-shadow:4px 0 20px rgba(0,0,0,0.1);">
+    <div id="notif-panel" style="display:none;position:fixed;top:0;left:200px;width:320px;height:100vh;background:var(--surface);border-right:1px solid var(--border);z-index:500;overflow-y:auto;box-shadow:4px 0 20px rgba(0,0,0,0.1);">
       <div style="padding:20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
         <span style="font-size:15px;font-weight:700;">🔔 알림</span>
         <button onclick="toggleNotifPanel()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);">✕</button>
@@ -445,7 +449,10 @@
         <div class="card" style="padding:16px 20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <span style="font-size:13px;font-weight:700;">📅 입고 일정</span>
-            <span onclick="showPage('ops')" style="font-size:11px;color:var(--text-muted);cursor:pointer;">전체 →</span>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-sm btn-primary" style="font-size:11px;padding:3px 10px;" onclick="openAddInboundSchedule()">+ 추가</button>
+              <span onclick="showPage('ops')" style="font-size:11px;color:var(--text-muted);cursor:pointer;">전체 →</span>
+            </div>
           </div>
           <div id="inv-incoming-schedule"></div>
         </div>
@@ -1503,21 +1510,18 @@
         <input class="form-input" type="number" id="edit-inv-stock">
       </div>
       <div class="form-group">
-        <label class="form-label">재고 현황</label>
-        <select class="form-select" id="edit-inv-stockstatus">
-          <option value="여유">여유</option><option value="유의">유의</option>
-          <option value="품절">품절</option><option value="판매 종료">판매 종료</option>
-        </select>
+        <label class="form-label">안전재고 (발주기준)</label>
+        <input class="form-input" type="number" id="edit-inv-safe" placeholder="30">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">상태</label>
+        <label class="form-label">판매 상태</label>
         <select class="form-select" id="edit-inv-status">
           <option value="판매 중">🟢 판매 중</option>
           <option value="일시품절">🟡 일시품절 (재입고 예정)</option>
           <option value="시즌한정">🔵 시즌 한정</option>
-          <option value="단종 예정">🟠 단종 예정</option>
+          <option value="단종 예정">🟠 단종 예정 (소진 후 종료)</option>
           <option value="판매 종료">⛔ 판매 종료</option>
         </select>
       </div>
@@ -1530,6 +1534,13 @@
           <option value="모바일">모바일</option><option value="기타">기타</option>
         </select>
       </div>
+    </div>
+    <!-- 단종 빠른 처리 -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;">
+      <span style="font-size:12px;color:var(--text-muted);align-self:center;">빠른 처리:</span>
+      <button type="button" class="btn btn-sm btn-secondary" style="font-size:11px;" onclick="quickSetStatus('단종 예정')">🟠 단종 예정으로</button>
+      <button type="button" class="btn btn-sm btn-secondary" style="font-size:11px;" onclick="quickSetStatus('판매 종료')">⛔ 판매 종료로</button>
+      <button type="button" class="btn btn-sm btn-secondary" style="font-size:11px;background:var(--green-light);color:var(--green);border-color:var(--green);" onclick="quickSetStatus('판매 중')">🟢 판매 중으로</button>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -1546,6 +1557,7 @@
       <input class="form-input" id="edit-inv-imageurl" placeholder="https://... (Hixfield 또는 직접 URL)">
     </div>
     <input type="hidden" id="edit-inv-id">
+    <input type="hidden" id="edit-inv-stockstatus">
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('edit-inventory')">취소</button>
       <button class="btn btn-primary" onclick="saveEditInventory()">저장</button>
@@ -2673,7 +2685,6 @@ async function save() {
     defectLog: state.defectLog, productions: state.productions,
     prodStockReady: state.prodStockReady,
     productSalesLog: state.productSalesLog||[],
-    channelSalesLog: state.channelSalesLog||[],
   };
   // 디바운스: 연속 저장 방지 (500ms)
   clearTimeout(_saveTimeout);
@@ -2690,7 +2701,39 @@ async function loadFromSupabase() {
   } else {
     applyState(data.data);
   }
+
+  // channelSalesLog: 별도 테이블에서 최근 6개월치만 로딩
+  await loadChannelSalesLog();
+
   initApp();
+}
+
+async function loadChannelSalesLog(months) {
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - (months || 6));
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  const { data, error } = await sb
+    .from('channel_sales_log')
+    .select('*')
+    .gte('date', cutoffStr)
+    .order('date', { ascending: false });
+
+  if (!error && data) {
+    state.channelSalesLog = data.map(r => ({
+      id: r.id,
+      date: r.date,
+      channel: r.channel,
+      inventoryId: r.inventory_id,
+      productName: r.product_name,
+      qty: r.qty,
+      amount: r.amount,
+    }));
+    console.log(`📊 channelSalesLog 로딩: ${state.channelSalesLog.length}건 (${cutoffStr} 이후)`);
+  } else {
+    state.channelSalesLog = [];
+    console.warn('channelSalesLog 로딩 실패:', error?.message);
+  }
 }
 
 function applyState(p) {
@@ -2718,7 +2761,7 @@ function applyState(p) {
   state.productions = p.productions || [];
   state.prodStockReady = p.prodStockReady || {};
   state.productSalesLog = p.productSalesLog || [];
-  state.channelSalesLog = p.channelSalesLog || [];
+  state.channelSalesLog = state.channelSalesLog || []; // 별도 테이블에서 로딩
 }
 
 // 실시간 동기화 — 다른 사람이 수정하면 자동 반영
@@ -3960,32 +4003,65 @@ function getDaysToStockout(item) {
 
 // 스마트 재고 상태 계산
 function getSmartStatus(item) {
+  // 무한재고 (주문제작)
+  if (item.stockStatus === '무한재고') return { label:'∞ 주문제작', cls:'status-ok', priority:0 };
+  // 판매 종료
   if (item.status === '판매 종료') return { label:'판매종료', cls:'status-todo', priority:0 };
+  // 단종 예정 → 발주 필요 안 띄움
+  if (item.status === '단종 예정') {
+    if (item.stock === 0) return { label:'단종', cls:'status-todo', priority:0 };
+    return { label:'소진중', cls:'status-clearance', priority:0 };
+  }
+  // 품절
   if (item.stock === 0) return { label:'품절', cls:'status-out', priority:4 };
 
+  // 판매속도 기반 품절 예상일 계산
   const days = getDaysToStockout(item);
   const cfg = state.invSettings;
 
   if (days !== null) {
-    if (days <= cfg.dangerDays) return { label:`${days}일 후 품절`, cls:'status-out', priority:4 };
-    if (days <= 30) return { label:`${days}일 후 품절`, cls:'status-low', priority:3 };
-    if (days <= cfg.reorderDays) return { label:'발주필요', cls:'status-low', priority:2 };
+    if (days <= (cfg.dangerDays || 7))  return { label:`D-${days} 긴급발주`, cls:'status-out',  priority:4 };
+    if (days <= 30)                      return { label:`D-${days} 발주필요`, cls:'status-low',  priority:3 };
+    if (days <= (cfg.reorderDays || 60)) return { label:`D-${days} 발주검토`, cls:'status-low',  priority:2 };
     return { label:'여유', cls:'status-ok', priority:1 };
   }
 
-  // 출고 데이터 없으면 기존 stockStatus 사용
-  if (item.stockStatus === '유의') return { label:'발주필요', cls:'status-low', priority:2 };
-  if (item.stockStatus === '품절') return { label:'품절', cls:'status-out', priority:4 };
+  // 판매속도 없으면 안전재고(safe) 기준
+  const safe = item.safe || 30;
+  if (item.stock <= 0)         return { label:'품절',      cls:'status-out',  priority:4 };
+  if (item.stock <= safe * 0.3) return { label:'긴급발주',  cls:'status-out',  priority:3 };
+  if (item.stock <= safe)       return { label:'발주필요',  cls:'status-low',  priority:2 };
   return { label:'여유', cls:'status-ok', priority:1 };
+}
+
+// 재고 수량 기준 stockStatus 자동 계산
+function calcAutoStockStatus(item) {
+  if (item.stockStatus === '무한재고') return '무한재고';
+  if (item.status === '판매 종료') return '판매 종료';
+  if (item.status === '단종 예정') return item.stock > 0 ? '소진중' : '단종';
+  if (item.stock === 0) return '품절';
+  const safe = item.safe || 30;
+  if (item.stock <= safe * 0.3) return '위험';
+  if (item.stock <= safe)       return '유의';
+  return '여유';
 }
 
 // 품절 예상 뱃지 텍스트
 function getStockoutBadge(item) {
+  if (item.stockStatus === '무한재고') return `<span style="font-size:11px;color:var(--green);">∞ 주문제작</span>`;
+  if (item.status === '단종 예정') return item.stock > 0
+    ? `<span style="font-size:11px;color:#E65100;">소진중 ${item.stock}개</span>`
+    : `<span style="font-size:11px;color:var(--text-muted);">단종</span>`;
   if (item.stock === 0) return `<span style="font-size:11px;color:var(--red);font-weight:600;">품절</span>`;
   const days = getDaysToStockout(item);
-  if (days === null) return '<span style="font-size:11px;color:var(--text-muted);">-</span>';
-  const color = days <= 7 ? 'var(--red)' : days <= 30 ? 'var(--yellow)' : days <= 90 ? 'var(--mongmo)' : 'var(--text-muted)';
-  const label = days === 0 ? '오늘 품절' : days <= 7 ? `${days}일 후 품절 ⚠` : days <= 30 ? `${days}일 후 품절` : days <= 90 ? `${days}일 후 품절 📦` : `${days}일 후`;
+  if (days === null) {
+    const safe = item.safe || 30;
+    if (item.stock <= safe * 0.3) return `<span style="font-size:11px;color:var(--red);font-weight:600;">긴급발주</span>`;
+    if (item.stock <= safe) return `<span style="font-size:11px;color:var(--yellow);font-weight:600;">발주필요</span>`;
+    return '<span style="font-size:11px;color:var(--text-muted);">-</span>';
+  }
+  const color = days <= 7 ? 'var(--red)' : days <= 30 ? 'var(--yellow)' : days <= 60 ? 'var(--mongmo)' : 'var(--text-muted)';
+  const label = days === 0 ? '오늘 품절' : days <= 7 ? `D-${days} ⚠` : days <= 30 ? `D-${days} 발주필요` : days <= 60 ? `D-${days} 발주검토` : `D-${days}`;
   return `<span style="font-size:11px;color:${color};font-weight:${days<=30?600:400};">${label}</span>`;
 }
 
@@ -4182,7 +4258,8 @@ function renderInventory() {
     const vel7Week = vel7 > 0 ? `${(vel7*7).toFixed(1)}개/주` : '<span style="color:var(--border);">-</span>';
     const dbSize = ['몽모시리즈','동물시리즈'].includes(item.category) ? getDustbagSize(item.size) : null;
     const dbCell = dbSize ? `<span style="font-size:10px;color:var(--text-muted);">🛍${dbSize}</span>` : '';
-    const rowBg = idx%2===0?'':'background:var(--bg);';
+    const isClearance = item.status === '단종 예정' && item.stock > 0;
+    const rowBg = isClearance ? 'background:#FFFBF0;' : (idx%2===0?'':'background:var(--bg);');
     const expandId = `inv-expand-${item.id}`;
 
     if (ch === 'total') {
@@ -4307,21 +4384,37 @@ function renderIncomingSchedule() {
   const fmtLocal = d=>d.toISOString().split('T')[0];
   const d60 = fmtLocal(addDaysLocal(new Date(), 60));
   const incoming = (state.ops||[])
-    .filter(o => o.type === 'stock' && o.start >= today && o.start <= d60)
+    .filter(o => (o.type === 'inbound' || o.type === 'stock') && o.start >= today && o.start <= d60)
     .sort((a,b) => a.start.localeCompare(b.start));
   if (incoming.length === 0) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;">예정된 입고 일정 없음<br><span style="font-size:11px;">운영 일정에서 \'입고\' 유형으로 추가하세요</span></div>';
+    el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">예정된 입고 일정 없음<br><span style="font-size:11px;">+ 추가 버튼으로 등록하세요</span></div>`;
     return;
   }
   const today0 = new Date(); today0.setHours(0,0,0,0);
   el.innerHTML = incoming.map(o => {
     const dd = Math.ceil((new Date(o.start) - today0) / 86400000);
     const dc = dd <= 3 ? 'var(--green)' : dd <= 14 ? 'var(--mongmo)' : 'var(--text-muted)';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);">
-      <div><div style="font-size:13px;font-weight:500;">${o.title}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${o.start}${o.memo?' · '+o.memo:''}</div></div>
-      <div style="font-size:14px;font-weight:800;font-family:'DM Mono',monospace;color:${dc};">${dd===0?'오늘':'D-'+dd}</div>
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="cursor:pointer;flex:1;" onclick="openEditOps(${o.id})">
+        <div style="font-size:13px;font-weight:500;">${o.title}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">${o.start}${o.memo?' · '+o.memo:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:14px;font-weight:800;font-family:'DM Mono',monospace;color:${dc};">${dd===0?'오늘':'D-'+dd}</div>
+        <button onclick="deleteOpsEvent(${o.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;">✕</button>
+      </div>
     </div>`;
   }).join('');
+}
+
+// 재고관리에서 입고일정 빠르게 추가
+function openAddInboundSchedule() {
+  openAddOps(null);
+  // 유형을 '재고입고'로 기본 설정
+  setTimeout(() => {
+    const typeEl = document.getElementById('ops-type');
+    if (typeEl) typeEl.value = 'inbound';
+  }, 50);
 }
 
 // CSV 재고 업로드
@@ -4537,6 +4630,11 @@ function addInventoryItem() {
   showToast('✅ 상품이 추가됐어요');
 }
 
+function quickSetStatus(status) {
+  const el = document.getElementById('edit-inv-status');
+  if (el) el.value = status;
+}
+
 function openEditInventory(id) {
   const item = state.inventory.find(i => i.id === id);
   if (!item) return;
@@ -4544,7 +4642,8 @@ function openEditInventory(id) {
   document.getElementById('edit-inv-name').value = item.name;
   document.getElementById('edit-inv-size').value = item.size || '';
   document.getElementById('edit-inv-stock').value = item.stock;
-  document.getElementById('edit-inv-stockstatus').value = item.stockStatus || '여유';
+  const safeEl = document.getElementById('edit-inv-safe');
+  if (safeEl) safeEl.value = item.safe || 30;
   document.getElementById('edit-inv-status').value = item.status || '판매 중';
   document.getElementById('edit-inv-category').value = item.category || '몽모시리즈';
   document.getElementById('edit-inv-date').value = item.recentDate || '';
@@ -4564,13 +4663,19 @@ function saveEditInventory() {
   const newStock = parseInt(document.getElementById('edit-inv-stock').value) || 0;
   const imgEl = document.getElementById('edit-inv-imageurl');
 
+  const newStatus = document.getElementById('edit-inv-status').value;
+  const newSafe   = parseInt(document.getElementById('edit-inv-safe')?.value) || (prev.safe || 30);
+  // stockStatus 자동 계산
+  const autoStatus = calcAutoStockStatus({ stock: newStock, status: newStatus, stockStatus: prev.stockStatus, safe: newSafe });
+
   state.inventory[idx] = {
     ...prev,
     name: document.getElementById('edit-inv-name').value,
     size: document.getElementById('edit-inv-size').value,
     stock: newStock,
-    stockStatus: document.getElementById('edit-inv-stockstatus').value,
-    status: document.getElementById('edit-inv-status').value,
+    safe: newSafe,
+    stockStatus: autoStatus,
+    status: newStatus,
     category: document.getElementById('edit-inv-category').value,
     recentDate: newDate,
     recentQty: newQty,
@@ -4608,11 +4713,34 @@ function deleteInventory(id) {
 }
 
 function exportInventoryCSV() {
-  const headers = ['상품명','사이즈','카테고리','원재고','재고현황','판매가','마진','상태','최근입고일','최근입고수량','이미지URL'];
-  const rows = state.inventory.map(i => [
-    i.name, i.size||'', i.category||'', i.stock, i.stockStatus||'',
-    i.price||'', i.margin||'', i.status||'', i.recentDate||'', i.recentQty||'', i.imageUrl||''
-  ]);
+  const headers = [
+    '상품명','사이즈','카테고리',
+    '원재고',
+    '자사몰재고','카카오재고','스마트스토어재고','더현대재고',
+    '상품화완료재고','가용재고','상품화대기재고',
+    '판매가','상태','재고상태','최근입고일','최근입고수량','이미지URL'
+  ];
+  const rows = state.inventory.map(i => {
+    const imweb   = getChannelStock(i.id,'imweb');
+    const kakao   = getChannelStock(i.id,'kakao');
+    const naver   = getChannelStock(i.id,'naver');
+    const hyundai = getChannelStock(i.id,'hyundai');
+    const totalCh = imweb + kakao + naver + hyundai;
+    // 상품화완료재고: prodStockReady에 저장된 값
+    const prodReady = state.prodStockReady?.[i.id] || 0;
+    // 가용재고: 원재고 - 채널재고 합계
+    const available = Math.max(0, (i.stock || 0) - totalCh);
+    // 상품화대기재고: 원재고 - 상품화완료재고
+    const prodWaiting = Math.max(0, (i.stock || 0) - prodReady);
+    return [
+      i.name, i.size||'', i.category||'',
+      i.stock||0,
+      imweb, kakao, naver, hyundai,
+      prodReady, available, prodWaiting,
+      i.price||'', i.status||'', i.stockStatus||'',
+      i.recentDate||'', i.recentQty||'', i.imageUrl||''
+    ];
+  });
   const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
@@ -4894,20 +5022,28 @@ const MEMBERS = ['김효민', '고예흰', '박영아', '정현진', '김성애'
 const MEMBER_COLORS = { '김효민':'#D4956A', '고예흰':'#7BA7BC', '박영아':'#6B9E7A', '정현진':'#A67BB8', '김성애':'#C4736A' };
 
 function renderTasks() {
-  let items = state.tasks || [];
-  // 유형 필터
-  if (state.taskFilter === 'daily')    items = items.filter(t => t.type === 'daily');
-  else if (state.taskFilter === 'project') {
-    const pItems = renderTasksWithPCards();
-    items = [...items.filter(t => t.type === 'project'), ...pItems];
+  const allTasks = state.tasks || [];
+  const pItems   = renderTasksWithPCards(); // pCards → task 형식 변환
+
+  let items;
+  if (state.taskFilter === 'daily') {
+    items = allTasks.filter(t => t.type === 'daily');
+  } else if (state.taskFilter === 'project') {
+    // 업무체크리스트의 project 유형 + 프로젝트보드의 pCards 전부
+    items = [...allTasks.filter(t => t.type === 'project'), ...pItems];
+  } else if (state.taskFilter === 'personal') {
+    items = allTasks.filter(t => t.type === 'personal');
+  } else {
+    // 전체: 모든 tasks + pCards
+    items = [...allTasks, ...pItems];
   }
-  else if (state.taskFilter === 'personal') items = items.filter(t => t.type === 'personal');
+
   // 완료/미완료 필터
   if (_taskDoneFilter === 'todo') items = items.filter(t => !t.done);
   else if (_taskDoneFilter === 'done') items = items.filter(t => t.done);
   // 멤버 필터
   if (state.memberFilter && state.memberFilter !== 'all') items = items.filter(t => t.assignee === state.memberFilter);
-  // 마감일 순 정렬 (마감일 있는 것 먼저, 없는 것 뒤)
+  // 마감일 순 정렬
   items = [...items].sort((a,b) => {
     if (!a.due && !b.due) return 0;
     if (!a.due) return 1;
@@ -5032,13 +5168,28 @@ function filterMember(name, el) {
 function renderTaskKanban(member) {
   const board = document.getElementById('task-kanban-board');
   if (!board) return;
-  let tasks = (state.tasks||[]).filter(t => t.assignee === member);
+
+  // tasks (본인 담당) + pCards (본인 담당) 합치기
+  let myTasks = (state.tasks||[]).filter(t => t.assignee === member);
+  let myPCards = renderTasksWithPCards().filter(t => t.assignee === member);
+
   // 유형 필터 적용
-  if (state.taskFilter === 'daily')    tasks = tasks.filter(t=>t.type==='daily');
-  else if (state.taskFilter === 'project')  tasks = tasks.filter(t=>t.type==='project');
-  else if (state.taskFilter === 'personal') tasks = tasks.filter(t=>t.type==='personal');
+  if (state.taskFilter === 'daily') {
+    myTasks  = myTasks.filter(t=>t.type==='daily');
+    myPCards = []; // pCards는 daily 없음
+  } else if (state.taskFilter === 'project') {
+    myTasks  = myTasks.filter(t=>t.type==='project');
+    // pCards는 project이므로 유지
+  } else if (state.taskFilter === 'personal') {
+    myTasks  = myTasks.filter(t=>t.type==='personal');
+    myPCards = [];
+  }
+  // 전체인 경우 둘 다 포함
+
+  const allItems = [...myTasks, ...myPCards];
+
   // 마감일 순 정렬
-  tasks = [...tasks].sort((a,b)=>{
+  const tasks = [...allItems].sort((a,b)=>{
     if (!a.due && !b.due) return 0;
     if (!a.due) return 1;
     if (!b.due) return -1;
@@ -5055,16 +5206,25 @@ function renderTaskKanban(member) {
     const colTasks = tasks.filter(col.filter);
     const cardHTML = colTasks.length
       ? colTasks.map(t => {
-          const typeLabel = t.type === 'daily' ? '🔄' : t.type === 'personal' ? '👤' : '📌';
-          return `<div style="background:var(--surface);border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);cursor:pointer;" onclick="openEditTask(${t.id})">
+          const typeLabel = t.isPCard ? '🗂' : t.type === 'daily' ? '🔄' : t.type === 'personal' ? '👤' : '📌';
+          const projBadge = t.isPCard && t.projName ? `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:var(--mongmo-light);color:var(--mongmo);">📋 ${t.projName}</span>` : '';
+          const clickFn  = t.isPCard ? `openEditPCard(${t.pCardId})` : `openEditTask(${t.id})`;
+          const moveFn   = (status) => t.isPCard
+            ? `event.stopPropagation();movePCardStatus(${t.pCardId},'${status}')`
+            : `event.stopPropagation();setTaskStatus(${t.id},'${status}')`;
+          const deleteFn = t.isPCard
+            ? `event.stopPropagation();deletePCard(${t.pCardId})`
+            : `event.stopPropagation();deleteTask(${t.id})`;
+          return `<div style="background:var(--surface);border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);cursor:pointer;" onclick="${clickFn}">
             <div style="font-size:13px;font-weight:500;${t.done?'text-decoration:line-through;color:var(--text-muted);':''}">${typeLabel} ${t.title}</div>
-            ${t.due ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">📅 ${t.due}</div>` : ''}
+            ${projBadge ? `<div style="margin-top:4px;">${projBadge}</div>` : ''}
+            ${t.due  ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">📅 ${t.due}</div>`  : ''}
             ${t.memo ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">💬 ${t.memo}</div>` : ''}
             <div style="display:flex;gap:5px;margin-top:8px;justify-content:flex-end;">
-              ${col.key === 'todo'  ? `<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px;" onclick="event.stopPropagation();setTaskStatus(${t.id},'doing')">진행 →</button>` : ''}
-              ${col.key === 'doing' ? `<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px;background:var(--green-light);color:var(--green);border-color:var(--green);" onclick="event.stopPropagation();setTaskStatus(${t.id},'done')">완료 ✓</button>` : ''}
-              ${col.key === 'done'  ? `<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px;" onclick="event.stopPropagation();setTaskStatus(${t.id},'todo')">↩ 되돌리기</button>` : ''}
-              <button class="btn btn-sm btn-danger" style="font-size:11px;padding:2px 8px;" onclick="event.stopPropagation();deleteTask(${t.id})">✕</button>
+              ${col.key === 'todo'  ? `<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px;" onclick="${moveFn('doing')}">진행 →</button>` : ''}
+              ${col.key === 'doing' ? `<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px;background:var(--green-light);color:var(--green);border-color:var(--green);" onclick="${moveFn('done')}">완료 ✓</button>` : ''}
+              ${col.key === 'done'  ? `<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px;" onclick="${moveFn('todo')}">↩ 되돌리기</button>` : ''}
+              <button class="btn btn-sm btn-danger" style="font-size:11px;padding:2px 8px;" onclick="${deleteFn}">✕</button>
             </div>
           </div>`;
         }).join('')
@@ -5080,6 +5240,18 @@ function renderTaskKanban(member) {
       <button class="btn btn-sm btn-secondary" style="width:100%;margin-top:4px;" onclick="openAddTaskModal('${member}')">+ 추가</button>
     </div>`;
   }).join('');
+}
+
+function movePCardStatus(id, status) {
+  const c = (state.pCards||[]).find(x=>x.id===id);
+  if (!c) return;
+  if (status === 'done') { c.status = 'done'; }
+  else if (status === 'doing') { c.status = 'doing'; }
+  else { c.status = 'todo'; }
+  save();
+  const member = state.memberFilter;
+  if (member && member !== 'all') renderTaskKanban(member);
+  else renderTasks();
 }
 
 function setTaskStatus(id, status) {
@@ -6641,15 +6813,39 @@ async function submitChannelSales() {
   const submitBtn = document.getElementById('ch-upload-submit-btn');
   submitBtn.disabled=true; submitBtn.textContent='저장 중...';
 
-  // 1. channelSalesLog 업데이트 (같은 채널+날짜 덮어쓰기)
+  // 1. channel_sales_log 별도 테이블에 저장 (같은 채널+날짜 먼저 삭제 후 insert)
   if (!state.channelSalesLog) state.channelSalesLog = [];
   const overwriteDates = new Set(dates);
+
+  // 메모리 업데이트 (같은 채널+날짜 덮어쓰기)
   state.channelSalesLog = state.channelSalesLog.filter(r => !(r.channel===ch && overwriteDates.has(r.date)));
-  // inventoryId 자동 매핑 후 저장
+
+  // Supabase에서 해당 채널+날짜 범위 삭제
+  const dateArr = [...overwriteDates];
+  await sb.from('channel_sales_log').delete().eq('channel', ch).in('date', dateArr);
+
+  // 새 데이터 upsert (배치 500건)
+  const newRows = [];
+  let rowId = Date.now();
   parsed.forEach(r => {
     const inventoryId = r.inventoryId || matchProductNameToInventory(r.productName) || null;
-    state.channelSalesLog.push({ ...r, id: Date.now()+Math.random(), inventoryId });
+    const row = { ...r, id: rowId++, inventoryId };
+    state.channelSalesLog.push(row);
+    newRows.push({
+      id: rowId - 1,
+      date: r.date,
+      channel: ch,
+      inventory_id: inventoryId,
+      product_name: r.productName || '',
+      qty: r.qty || 0,
+      amount: r.amount || 0,
+    });
   });
+
+  const BATCH = 500;
+  for (let i = 0; i < newRows.length; i += BATCH) {
+    await sb.from('channel_sales_log').upsert(newRows.slice(i, i + BATCH), {onConflict:'id'});
+  }
 
   // 2. revenueLog 업데이트 (채널별 독립 덮어쓰기)
   const { byDate } = _chUploadData;
@@ -6706,7 +6902,6 @@ async function submitChannelSales() {
     defectLog: state.defectLog, productions: state.productions,
     prodStockReady: state.prodStockReady,
     productSalesLog: state.productSalesLog||[],
-    channelSalesLog: state.channelSalesLog||[],
   };
   await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
 
@@ -8023,9 +8218,14 @@ function submitCompleteProd() {
   deductConsumablesOnProd(p.inventoryId, actual);
 
   // 차감된 소모품 토스트 메시지 구성
-  const cfg = state.invSettings;
   const deductMsgs = [];
-  if (item && ['몽모시리즈','동물시리즈'].includes(item.category)) {
+  if (item && item.category === '안전벨트커버') {
+    if (item.linkedDollId) {
+      const doll = state.inventory.find(i=>i.id===item.linkedDollId);
+      if (doll) deductMsgs.push(`${doll.name} ${doll.size||''} ${actual}개`);
+    }
+    deductMsgs.push(`안전벨트커버 ${actual}개`, `클립 ${actual*3}개`, `더스트백S ${actual}개`);
+  } else if (item && ['몽모시리즈','동물시리즈'].includes(item.category)) {
     const dbs = getDustbagSize(item.size);
     deductMsgs.push(`더스트백 ${dbs} ${actual}개`);
     const postcard = (state.consumables||[]).find(c => c.name === '엽서');
@@ -8969,14 +9169,41 @@ function renderConsumableAlert() {
 function deductConsumablesOnProd(inventoryId, qty) {
   const item = state.inventory.find(i => i.id === inventoryId);
   if (!item) return;
+
+  // ── 안전벨트커버 카테고리: 인형 + 안전벨트커버 + 클립3개 + 더스트백S 차감 ──
+  if (item.category === '안전벨트커버') {
+    // 1. 연결된 인형 차감 (linkedDollId)
+    if (item.linkedDollId) {
+      const doll = state.inventory.find(i => i.id === item.linkedDollId);
+      if (doll) doll.stock = Math.max(0, doll.stock - qty);
+    }
+    // 2. 안전벨트커버 소모품 차감
+    const beltCons = (state.consumables||[]).find(c => c.name.includes('안전벨트커버'));
+    if (beltCons) beltCons.stock = Math.max(0, beltCons.stock - qty);
+    // 3. 클립 3개 차감 (제품당 3개)
+    const clipCons = (state.consumables||[]).find(c => c.name.includes('클립'));
+    if (clipCons) clipCons.stock = Math.max(0, clipCons.stock - qty * 3);
+    // 4. 더스트백 S 차감
+    const dustS = (state.consumables||[]).find(c => c.name === '더스트백 S');
+    if (dustS) dustS.stock = Math.max(0, dustS.stock - qty);
+    save();
+    return;
+  }
+
+  // ── 일반 인형/키링 ──
   const dbs = getDustbagSize(item.size);
-  // 더스트백 차감
-  const dbName = dbs === 'S' ? '더스트백 S' : '더스트백 L';
-  const dbCons = state.consumables.find(c => c.name === dbName);
-  if (dbCons) dbCons.stock = Math.max(0, dbCons.stock - qty);
+  if (dbs) {
+    let dbName;
+    if (dbs === 'XS') dbName = '더스트백 XS';
+    else if (dbs === 'L') dbName = '더스트백 L';
+    else if (dbs === 'XL') dbName = '더스트백 XL';
+    else dbName = '더스트백 S';
+    const dbCons = (state.consumables||[]).find(c => c.name === dbName);
+    if (dbCons) dbCons.stock = Math.max(0, dbCons.stock - qty);
+  }
   // 엽서 차감 (인형류)
   if (['몽모시리즈','동물시리즈'].includes(item.category)) {
-    const postcard = state.consumables.find(c => c.name === '엽서');
+    const postcard = (state.consumables||[]).find(c => c.name === '엽서');
     if (postcard) postcard.stock = Math.max(0, postcard.stock - qty);
   }
   save();
@@ -9636,15 +9863,14 @@ function toggleOpsEnd() {
   if (checked) {
     const startVal = document.getElementById('ops-start')?.value;
     const endEl    = document.getElementById('ops-end');
-    if (endEl && startVal && !endEl.value) endEl.value = startVal;
-  } else {
-    const endEl = document.getElementById('ops-end');
-    if (endEl) endEl.value = '';
+    if (endEl) {
+      endEl.min = startVal || ''; // 시작일 이전 선택 불가
+      if (!endEl.value || endEl.value < (startVal||'')) endEl.value = startVal || '';
+    }
   }
 }
 
 function openAddOps(dateStr) {
-  // 모달 초기화
   document.getElementById('ops-edit-id').value = '';
   document.getElementById('ops-modal-title').textContent = '📅 운영 일정 추가';
   document.getElementById('ops-submit-btn').textContent = '추가';
@@ -9653,7 +9879,9 @@ function openAddOps(dateStr) {
   document.getElementById('ops-assignee').value = '';
   document.getElementById('ops-brand').value = 'mongmo';
   document.getElementById('ops-start').value = dateStr || '';
-  document.getElementById('ops-end').value = '';
+  // 종료일: 해당 날짜로 기본 세팅, 토글 닫힌 상태
+  const endEl = document.getElementById('ops-end');
+  if (endEl) { endEl.value = dateStr || ''; endEl.min = dateStr || ''; }
   document.getElementById('ops-memo').value = '';
   document.getElementById('ops-end-toggle').checked = false;
   toggleOpsEnd();
@@ -9692,7 +9920,9 @@ function submitOps() {
 
   if (!title || !start) { showToast('일정명과 시작일을 입력해주세요'); return; }
   if (hasEnd && end && end < start) {
-    showToast('⚠️ 종료일이 시작일보다 빠릅니다. 다시 선택해주세요');
+    showToast('⚠️ 종료일은 시작일 이후여야 해요. 시작일 이후 날짜를 선택해주세요');
+    document.getElementById('ops-end').value = start;
+    document.getElementById('ops-end').min = start;
     document.getElementById('ops-end').focus();
     return;
   }
@@ -9709,6 +9939,8 @@ function submitOps() {
   }
 
   save(); closeModal('add-ops'); renderOpsCalendar();
+  // 입고 유형이면 재고관리 탭 입고일정도 갱신
+  if (type === 'inbound' || type === 'stock') renderIncomingSchedule();
   // 폼 초기화
   ['ops-title','ops-memo','ops-start','ops-end'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
 }
@@ -9730,12 +9962,14 @@ function openOpsDateMenu(dateStr) {
 
 // 종료일 toggle 시 시작일과 동일하게 기본값 세팅 (min 제한 없음)
 function onOpsStartChange() {
-  // 종료일이 열려있고 비어있으면 시작일로 초기화
   const startVal = document.getElementById('ops-start')?.value;
-  const endEl = document.getElementById('ops-end');
-  const toggled = document.getElementById('ops-end-toggle')?.checked;
-  if (endEl && startVal && toggled && !endEl.value) {
-    endEl.value = startVal;
+  const endEl    = document.getElementById('ops-end');
+  const toggled  = document.getElementById('ops-end-toggle')?.checked;
+  if (endEl && startVal) {
+    endEl.min = startVal;
+    if (toggled) {
+      if (!endEl.value || endEl.value < startVal) endEl.value = startVal;
+    }
   }
 }
 
