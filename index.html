@@ -8475,6 +8475,8 @@ function renderTax() {
   renderTaxMonthDetail();
   if (window.innerWidth <= 768) setTimeout(mobileFixAll, 50);
 }
+
+function renderTaxChart(year) {
   const canvas = document.getElementById('tax-monthly-chart');
   if (!canvas) return;
   const wrap = canvas.parentElement;
