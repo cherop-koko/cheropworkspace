@@ -236,7 +236,7 @@
   .drawer-overlay.open { display:block; }
 
   @media (max-width: 768px) {
-    /* 기본 레이아웃 */
+    /* ── 기본 레이아웃 ── */
     .mobile-header { display: flex; }
     .sidebar { display: none; }
     .sidebar.drawer-open {
@@ -252,14 +252,13 @@
     }
     .main {
       margin-left: 0 !important;
-      padding: 64px 12px 76px !important;
+      padding: 60px 12px 80px !important;
     }
 
     /* ── 그리드 전체 ── */
-    /* 클래스 기반 */
-    .grid-2, .grid-3 { grid-template-columns: 1fr !important; gap: 12px !important; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr !important; gap: 10px !important; }
 
-    /* 인라인 style 기반 - 모든 다중 컬럼 그리드 강제 1열 */
+    /* 인라인 style 기반 - 3열 이상 강제 1열 */
     [style*="grid-template-columns:1fr 1fr 1fr"],
     [style*="grid-template-columns: 1fr 1fr 1fr"],
     [style*="grid-template-columns:1fr 1fr 1fr 1fr"],
@@ -269,111 +268,270 @@
     [style*="grid-template-columns:repeat(4"],
     [style*="grid-template-columns: repeat(4"] {
       grid-template-columns: 1fr !important;
-      gap: 12px !important;
-    }
-
-    /* 2열은 유지하되 좁게 */
-    [style*="grid-template-columns:1fr 1fr"],
-    [style*="grid-template-columns: 1fr 1fr"] {
-      grid-template-columns: 1fr 1fr !important;
       gap: 10px !important;
     }
 
-    /* 칸반 보드 - 스크롤 방식으로 */
+    /* 2열 - 유지 */
+    [style*="grid-template-columns:1fr 1fr"],
+    [style*="grid-template-columns: 1fr 1fr"] {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 8px !important;
+    }
+
+    /* 칸반 보드 */
     #kanban-board, #task-kanban-board {
       grid-template-columns: 1fr !important;
     }
 
-    /* 페이지 헤더 */
+    /* ── 페이지 헤더 ── */
     .page-header {
       flex-direction: column; align-items: flex-start;
-      gap: 8px; margin-bottom: 16px !important;
+      gap: 8px; margin-bottom: 14px !important;
     }
+    .page-title { font-size: 17px !important; }
+    .page-sub { font-size: 11px !important; }
+
+    /* 헤더 액션 버튼 행 - 가로 스크롤 */
     .header-actions {
-      flex-wrap: wrap; gap: 6px; width: 100%;
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      gap: 6px;
+      width: 100%;
+      padding-bottom: 2px;
+      scrollbar-width: none;
     }
-    .header-actions .btn { font-size:12px; padding:7px 12px; }
-    .page-title { font-size: 18px !important; }
-    .page-sub { font-size: 12px !important; }
+    .header-actions::-webkit-scrollbar { display: none; }
+    .header-actions .btn {
+      font-size: 11px !important;
+      padding: 6px 10px !important;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .header-actions label.btn {
+      font-size: 11px !important;
+      padding: 6px 10px !important;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
 
-    /* 카드 */
-    .card { padding: 14px !important; }
+    /* ── 카드 ── */
+    .card { padding: 12px !important; }
+    .card-title { font-size: 13px !important; margin-bottom: 12px !important; }
 
-    /* 탭바 가로 스크롤 */
+    /* ── 탭바 가로 스크롤 ── */
     .tab-bar {
       overflow-x: auto; flex-wrap: nowrap !important;
       width: 100% !important; max-width: 100%;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+      padding: 3px !important;
     }
     .tab-bar::-webkit-scrollbar { display:none; }
-    .tab { white-space: nowrap; }
+    .tab {
+      white-space: nowrap;
+      padding: 7px 14px !important;
+      font-size: 12px !important;
+      flex-shrink: 0;
+    }
 
-    /* 폼 row → 1열 */
+    /* ── 폼 ── */
     .form-row { grid-template-columns: 1fr !important; }
+    .form-input, .form-select, .form-textarea {
+      font-size: 16px !important; /* iOS 줌 방지 */
+    }
 
-    /* 모달 - 하단 시트 */
+    /* ── 모달 - 하단 시트 ── */
     .modal {
       width: 100% !important; max-width: 100% !important;
       margin: 0 !important; border-radius: 20px 20px 0 0 !important;
-      padding: 24px 16px !important;
-      max-height: 88vh; overflow-y: auto;
+      padding: 20px 14px !important;
+      max-height: 92vh; overflow-y: auto;
     }
     .modal-overlay { align-items: flex-end !important; }
+    .modal-title { font-size: 15px !important; margin-bottom: 16px !important; }
+    .modal-actions { gap: 8px !important; }
+    .modal-actions .btn { flex: 1; text-align: center; }
 
     /* ── 테이블 공통 ── */
     table { font-size: 11px; }
-    th, td { padding: 6px 4px !important; }
+    th { padding: 6px 6px 6px 6px !important; font-size: 10px !important; }
+    td { padding: 8px 6px !important; }
 
-    /* ── 재고 테이블 - 핵심 컬럼만 ── */
-    #inv-main-table th:nth-child(6),  /* 가용재고 */
+    /* ── 재고 테이블 - 모바일 최적화 ── */
+    /* 가용재고, 예상소진 컬럼 숨김 */
+    #inv-main-table th:nth-child(6),
     #inv-main-table td:nth-child(6),
-    #inv-main-table th:nth-child(7),  /* 예상소진 */
+    #inv-main-table th:nth-child(7),
     #inv-main-table td:nth-child(7) {
       display: none;
     }
+    /* 사이즈 컬럼 좁게 */
+    #inv-main-table th:nth-child(2),
+    #inv-main-table td:nth-child(2) {
+      width: 36px;
+    }
+    /* 브랜드 배지 작게 */
+    #inv-main-table .brand-badge {
+      font-size: 9px !important;
+      padding: 2px 6px !important;
+    }
+    /* 재고 상태 배지 작게 */
+    #inv-main-table .status-badge {
+      font-size: 9px !important;
+      padding: 1px 5px !important;
+    }
+    /* 마지막 컬럼(버튼) 최소화 */
+    #inv-main-table th:last-child,
+    #inv-main-table td:last-child {
+      min-width: 56px;
+      white-space: nowrap;
+    }
+    #inv-main-table td:last-child .btn {
+      font-size: 10px !important;
+      padding: 3px 6px !important;
+    }
+    /* 상품명 셀 이미지 */
+    #inv-main-table td:nth-child(2) img,
+    #inv-main-table td:nth-child(2) > div > div:first-child {
+      width: 26px !important;
+      height: 26px !important;
+    }
 
-    /* ── 판매분석 메가SKU 테이블 ── */
+    /* ── 판매분석 테이블 ── */
     #mega-table th:nth-child(5),
     #mega-table td:nth-child(5),
     #mega-table th:nth-child(6),
     #mega-table td:nth-child(6) { display: none; }
 
-    /* ── 근태 테이블 - 핵심만 ── */
+    /* ── 근태 테이블 ── */
     #attendance-table th:nth-child(5),
     #attendance-table td:nth-child(5) { display: none; }
 
-    /* 대시보드 특화 */
+    /* ── 대시보드 특화 ── */
+    /* 상태 요약 배지 */
+    #dash-today-summary .status-badge,
+    #dash-today-summary span[style] {
+      font-size: 11px !important;
+      padding: 5px 10px !important;
+    }
     #dash-status-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
     #sales-compare-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
     #asset-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
 
-    /* 대시보드 바로가기 버튼 */
-    [style*="border-radius:20px"][style*="padding:7px 14px"] { padding: 6px 10px !important; font-size: 11px !important; }
+    /* 대시보드 상단 - 공지+검색 */
+    #page-dashboard > div:first-child {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    #page-dashboard > div:first-child > div:first-child,
+    #page-dashboard > div:first-child > div:last-child {
+      width: 100% !important;
+      min-width: 0 !important;
+      flex: none !important;
+    }
+    #dash-notice-banner {
+      min-width: 0 !important;
+      width: 100% !important;
+      padding: 8px 12px !important;
+      font-size: 12px !important;
+    }
+    #dash-search-input { width: 100% !important; font-size: 16px !important; }
 
-    /* 재고 상태 버튼 행 */
-    [style*="overflow-x:auto"], [style*="overflow-x: auto"] {
-      -webkit-overflow-scrolling: touch;
+    /* 대시보드 페이지 헤더 - 인사말 + 날씨/버튼 정리 */
+    #page-dashboard .page-header {
+      margin-bottom: 12px !important;
+    }
+    #page-dashboard .page-header > div:first-child {
+      flex-wrap: wrap !important;
+      gap: 8px !important;
+    }
+    #page-dashboard .header-actions {
+      flex-wrap: wrap !important;
+      overflow-x: visible !important;
+      gap: 6px !important;
+    }
+    #dash-weather-badge {
+      font-size: 12px !important;
+      padding: 6px 10px !important;
+      min-width: 0 !important;
+      flex-shrink: 0;
+    }
+    #dash-dday-inline {
+      width: 100%;
+      font-size: 12px !important;
+    }
+    #dash-date-sub {
+      flex-wrap: wrap;
+      word-break: keep-all;
     }
 
+    /* 바로가기 버튼 행 - 가로 스크롤 */
+    #page-dashboard > div:nth-child(3) {
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+      gap: 6px !important;
+    }
+    #page-dashboard > div:nth-child(3)::-webkit-scrollbar { display: none; }
+    #page-dashboard > div:nth-child(3) a { flex-shrink: 0; }
+    #page-dashboard > div:nth-child(3) div[style] {
+      padding: 6px 10px !important;
+      font-size: 11px !important;
+      white-space: nowrap;
+    }
+
+    /* 재고 스마트 필터 행 */
+    #inv-filter-row {
+      flex-wrap: wrap !important;
+      gap: 6px !important;
+    }
+    #inv-filter-row .tab-bar {
+      order: 0;
+    }
+    #inv-cat-filter { width: 100% !important; order: 1; }
+    #inv-search { width: 100% !important; order: 2; }
+
+    /* stat-value 숫자 크기 조정 */
+    .stat-value { font-size: 22px !important; }
+    .stat-label { font-size: 10px !important; }
+
     /* 검색 */
-    #dash-search-input { width: 100% !important; font-size: 13px; }
+    #dash-search-input { width: 100% !important; }
 
     /* 알림 패널 */
     #notif-panel { left: 0 !important; width: 100% !important; z-index: 800 !important; }
 
-    /* 공지 배너 */
-    #dash-notice-banner { min-width: 0 !important; }
-
     /* 달력 */
-    .calendar-header-row div,
-    .calendar-day { font-size: 10px !important; padding: 4px 2px !important; min-height: 36px !important; }
+    .cal-day { min-height: 40px !important; padding: 4px 3px !important; }
+    .cal-num { font-size: 11px !important; }
+    .cal-event { font-size: 9px !important; padding: 1px 3px !important; }
+    .cal-header { font-size: 10px !important; padding: 6px 0 !important; }
 
-    /* 채널 재고 이동 버튼들 */
-    .header-actions button, .header-actions a { min-width: 0; }
+    /* 섹션 여백 */
+    .section { margin-bottom: 16px !important; }
 
     /* 모바일 하단 탭 */
     .mobile-bottom-nav { display: flex; }
+
+    /* 토스트 위치 조정 */
+    .toast { bottom: 70px !important; right: 12px !important; left: 12px !important; right: 12px !important; text-align: center; }
+
+    /* 프로그레스 바 */
+    .progress-bar { height: 5px !important; }
+
+    /* 체크리스트 */
+    .checklist-item { padding: 10px 0 !important; gap: 10px !important; }
+    .check-title { font-size: 13px !important; }
+
+    /* 컨텐츠 리스트 */
+    .content-list-item { padding: 10px 0 !important; }
+
+    /* 멤버 탭 */
+    .member-tab { padding: 6px 12px !important; font-size: 12px !important; }
   }
 
   /* 모바일 하단 탭 네비 */
@@ -395,10 +553,100 @@
   .mobile-nav-item.active { color: var(--mongmo); }
   .mobile-nav-item.active .nav-icon { transform: scale(1.1); }
 
-  /* 모바일 그리드 보조 클래스 */
+  /* 모바일 그리드 보조 클래스 + 추가 세부 개선 */
   @media (max-width: 768px) {
-    .mob-grid-1 { grid-template-columns: 1fr !important; gap: 12px !important; }
-    .mob-grid-2 { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+    .mob-grid-1 { grid-template-columns: 1fr !important; gap: 10px !important; }
+    .mob-grid-2 { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+
+    /* ── 매출 이력 테이블 : 소수 채널 숨김 ── */
+    #rev-log-table th:nth-child(5),  /* 팝업 */
+    #rev-log-table td:nth-child(5),
+    #rev-log-table th:nth-child(6),  /* 이모티콘 */
+    #rev-log-table td:nth-child(6),
+    #rev-log-table th:nth-child(7),  /* 라인프렌즈 */
+    #rev-log-table td:nth-child(7),
+    #rev-log-table th:nth-child(8),  /* NCP */
+    #rev-log-table td:nth-child(8) {
+      display: none;
+    }
+
+    /* ── 판매분석 업로드 결과 테이블 ── */
+    #channel-upload-table th:nth-child(4),
+    #channel-upload-table td:nth-child(4),
+    #channel-upload-table th:nth-child(5),
+    #channel-upload-table td:nth-child(5) { display: none; }
+
+    /* ── 세무 테이블 ── */
+    #tax-table th:nth-child(4),
+    #tax-table td:nth-child(4) { display: none; }
+
+    /* ── 생산일정 카드 ── */
+    #page-production .card { padding: 10px !important; }
+
+    /* ── 콘텐츠 캘린더 달력 셀 ── */
+    .cal-day { min-height: 40px !important; }
+
+    /* ── 공지사항 리스트 ── */
+    #notice-list .content-list-item {
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    /* ── 프로젝트 칸반 카드 ── */
+    .kanban-card { padding: 10px !important; font-size: 12px !important; }
+
+    /* ── 근태 관리 헤더 액션 ── */
+    #page-attendance .header-actions {
+      overflow-x: auto !important;
+    }
+
+    /* ── 출퇴근 버튼 크기 ── */
+    #att-checkin-btn, #att-checkout-btn {
+      padding: 10px 16px !important;
+      font-size: 13px !important;
+    }
+
+    /* ── 브랜드 자산 그리드 ── */
+    #asset-grid {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 8px !important;
+    }
+
+    /* ── stat-card 여백 ── */
+    .stat-card { padding: 14px !important; }
+    .stat-value { font-size: 20px !important; }
+
+    /* ── page-header 에서 flex-wrap 강제 허용 ── */
+    .page-header > div:first-child { min-width: 0; }
+
+    /* ── 입고 이력 테이블 메모 컬럼 ── */
+    #inv-inbound-log table th:nth-child(4),
+    #inv-inbound-log table td:nth-child(4) { display: none; }
+
+    /* ── 달력 네비 ── */
+    .cal-nav { gap: 8px !important; }
+    .cal-nav-title { font-size: 14px !important; }
+    .cal-nav-btn { padding: 4px 10px !important; font-size: 13px !important; }
+
+    /* ── 모달 폼 그룹 ── */
+    .form-group { margin-bottom: 12px !important; }
+    .form-label { font-size: 12px !important; }
+
+    /* ── 탭바 안 첫번째 탭 여백 ── */
+    .tab-bar .tab:first-child { margin-left: 0; }
+
+    /* ── 드로어 닫기 오버레이 ── */
+    .drawer-overlay.open { display: block; }
+
+    /* ── 모바일 헤더 검색버튼 ── */
+    .mobile-header button { flex-shrink: 0; }
+
+    /* ── 소모품 테이블 ── */
+    #consumables-table th:nth-child(5),
+    #consumables-table td:nth-child(5) { display: none; }
+
+    /* ── 바로가기 버튼 overflow hidden 방지 ── */
+    #page-dashboard > div { overflow: visible; }
   }
 
 </style>
@@ -563,26 +811,24 @@
     <div id="page-dashboard">
 
       <!-- 공지 배너 + 통합검색 -->
-      <div style="display:flex;gap:12px;align-items:stretch;margin-bottom:20px;flex-wrap:wrap;">
-        <div id="dash-notice-banner" style="flex:1;min-width:260px;background:var(--mongmo-light);border:1px solid var(--mongmo);border-radius:10px;padding:10px 16px;cursor:pointer;" onclick="showPage('notice')"></div>
-        <div style="position:relative;width:260px;">
-          <input id="dash-search-input" class="form-input" placeholder="🔍 통합검색 (제품·프로젝트·공지...)" oninput="renderDashSearch()" style="padding-right:32px;">
+      <div style="display:flex;gap:10px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap;">
+        <div id="dash-notice-banner" style="flex:1;min-width:200px;background:var(--mongmo-light);border:1px solid var(--mongmo);border-radius:10px;padding:9px 14px;cursor:pointer;font-size:13px;" onclick="showPage('notice')"></div>
+        <div style="position:relative;flex:0 0 auto;width:220px;min-width:160px;">
+          <input id="dash-search-input" class="form-input" placeholder="🔍 통합검색..." oninput="renderDashSearch()" style="padding-right:32px;font-size:13px;">
           <div id="dash-search-results" style="display:none;position:absolute;top:44px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);z-index:200;max-height:320px;overflow-y:auto;"></div>
         </div>
       </div>
 
-      <div class="page-header" style="margin-bottom:20px;">
-        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-          <div>
-            <div class="page-title" id="dash-greeting">안녕하세요 👋</div>
-            <div class="page-sub" id="dash-date-sub"></div>
-          </div>
+      <div class="page-header" style="margin-bottom:16px;">
+        <div style="flex:1;min-width:0;">
+          <div class="page-title" id="dash-greeting">안녕하세요 👋</div>
+          <div class="page-sub" id="dash-date-sub"></div>
           <!-- D-day 인라인 박스 -->
-          <div id="dash-dday-inline" style="display:none;"></div>
+          <div id="dash-dday-inline" style="display:none;margin-top:6px;"></div>
         </div>
-        <div class="header-actions">
-          <div id="dash-weather-badge" style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;min-width:80px;"></div>
-          <button class="btn btn-secondary" onclick="showPage('tasks')" style="font-size:13px;">✅ 오늘 할 일</button>
+        <div class="header-actions" style="align-items:center;">
+          <div id="dash-weather-badge" style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:12px;white-space:nowrap;"></div>
+          <button class="btn btn-secondary" onclick="showPage('tasks')" style="font-size:12px;white-space:nowrap;">✅ 오늘 할 일</button>
         </div>
       </div>
 
@@ -678,7 +924,7 @@
       </div>
 
       <!-- 발주 필요 + 입고 일정 (2열) -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
         <div id="inv-smart-banner"></div>
         <div class="card" style="padding:16px 20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -721,7 +967,7 @@
         </div>
 
         <!-- 스마트 필터 + 검색 -->
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+        <div id="inv-filter-row" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
           <div class="tab-bar" style="margin-bottom:0;" id="inv-smart-filter-tabs">
             <div class="tab active" onclick="setInvSmartFilter('all',this)">전체</div>
             <div class="tab" onclick="setInvSmartFilter('danger',this)" style="color:var(--red);">🔴 위험</div>
@@ -1009,7 +1255,7 @@
           </div>
         </div>
         <div style="overflow-x:auto;">
-          <table class="data-table">
+          <table class="data-table" id="rev-log-table">
             <thead><tr><th>날짜</th><th>자사몰</th><th>카카오</th><th>스마트스토어</th><th>팝업</th><th>이모티콘</th><th>라인프렌즈</th><th>NCP</th><th>합계</th><th></th></tr></thead>
             <tbody id="rev-log-tbody"></tbody>
           </table>
@@ -9774,7 +10020,7 @@ async function fetchPajuWeather() {
     );
 
     if (greetEl) greetEl.textContent = `${timeGreet} — ${todayMsg}`;
-    if (subEl) subEl.innerHTML = `<span>${dateStr} · 파주</span> <span style="margin-left:12px;color:var(--text-muted);">${tmrMsg} · ${tempMsg}</span>`;
+    if (subEl) subEl.innerHTML = `<span>${dateStr} · 파주</span><span style="display:block;margin-top:1px;color:var(--text-muted);font-size:11px;">${tmrMsg} · ${tempMsg}</span>`;
 
     // 날씨 뱃지 (헤더 우측)
     const weatherBadge = document.getElementById('dash-weather-badge');
@@ -9842,7 +10088,14 @@ function _renderDashboard() {
       const dd = Math.ceil((new Date(bigEv.start)-today0)/86400000);
       const ddc = dd<=3?'var(--red)':dd<=7?'var(--yellow)':'var(--mongmo)';
       ddEl.style.display = 'flex';
-      ddEl.innerHTML = '<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:'+ddc+'12;border:1px solid '+ddc+'40;border-radius:10px;"><div><div style="font-size:10px;font-weight:600;color:'+ddc+';margin-bottom:1px;">🎯 카운트다운</div><div style="font-size:14px;font-weight:700;">'+bigEv.title+'</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px;">'+bigEv.start+(bigEv.start!==bigEv.end?' ~ '+bigEv.end:'')+'</div></div><div style="font-size:28px;font-weight:900;font-family:\'DM Mono\',monospace;color:'+ddc+';">'+(dd===0?'D-DAY':'D-'+dd)+'</div></div>';
+      ddEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:${ddc}12;border:1px solid ${ddc}40;border-radius:10px;width:100%;box-sizing:border-box;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:10px;font-weight:600;color:${ddc};margin-bottom:1px;">🎯 카운트다운</div>
+          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bigEv.title}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">${bigEv.start}${bigEv.start!==bigEv.end?' ~ '+bigEv.end:''}</div>
+        </div>
+        <div style="font-size:24px;font-weight:900;font-family:'DM Mono',monospace;color:${ddc};flex-shrink:0;">${dd===0?'D-DAY':'D-'+dd}</div>
+      </div>`;
     } else { ddEl.style.display = 'none'; }
   }
 
