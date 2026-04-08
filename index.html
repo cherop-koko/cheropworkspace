@@ -1049,7 +1049,7 @@
           <div class="page-sub">더스트백 · 엽서 · 클립 · 안전벨트커버 · 기타 소모품</div>
         </div>
         <div class="header-actions">
-          <button class="btn btn-primary" onclick="openModal('add-consumable')">+ 소모품 추가</button>
+          <button class="btn btn-primary" onclick="openAddConsumable()">+ 소모품 추가</button>
         </div>
       </div>
 
@@ -2101,11 +2101,15 @@
       <div class="form-group">
         <label class="form-label">유형</label>
         <select class="form-select" id="ops-type">
-          <option value="popup">🏪 팝업</option>
+          <option value="popup">🏪 팝업 일정</option>
           <option value="inbound">📦 재고 입고</option>
-          <option value="shoot">📸 촬영</option>
-          <option value="meeting">🤝 미팅</option>
+          <option value="meeting">🤝 외부 미팅</option>
           <option value="delivery">🚚 납품</option>
+          <option value="leave">🌴 근태 (직원 휴무)</option>
+          <option value="sample">📬 샘플 수령</option>
+          <option value="prod_deadline">⏰ 생산 마감</option>
+          <option value="launch">🚀 제품 출시일</option>
+          <option value="event">🎉 이벤트/기획전</option>
           <option value="etc">📌 기타</option>
         </select>
       </div>
@@ -2139,7 +2143,20 @@
   </div>
 </div>
 
-<!-- Channel Stock Modal -->
+<!-- ── 커스텀 Confirm 모달 ── -->
+<div class="modal-overlay hidden" id="modal-confirm">
+  <div class="modal" style="width:360px;text-align:center;">
+    <div style="font-size:32px;margin-bottom:12px;" id="confirm-icon">🗑</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px;" id="confirm-title">삭제할까요?</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;" id="confirm-desc"></div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn btn-secondary" style="min-width:100px;" onclick="closeModal('confirm');_confirmReject&&_confirmReject()">취소</button>
+      <button class="btn btn-primary" style="min-width:100px;background:var(--red);border-color:var(--red);" id="confirm-ok-btn" onclick="closeModal('confirm');_confirmResolve&&_confirmResolve()">삭제</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-overlay hidden" id="modal-channel-stock">
   <div class="modal" style="width:520px;">
     <div class="modal-title">🏪 채널 재고 이동</div>
@@ -2272,7 +2289,7 @@
 
 <!-- Add Consumable Modal -->
 <div class="modal-overlay hidden" id="modal-add-consumable">
-  <div class="modal">
+  <div class="modal" style="width:540px;">
     <div class="modal-title">🛍 소모품 추가 / 수정</div>
     <input type="hidden" id="cons-edit-id">
     <div class="form-group">
@@ -2282,7 +2299,7 @@
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">유형</label>
-        <select class="form-select" id="cons-type">
+        <select class="form-select" id="cons-type" onchange="toggleConsLinked()">
           <option value="auto">🔗 재고 연동 (출고시 자동 차감)</option>
           <option value="manual">✋ 수동 관리</option>
         </select>
@@ -2291,6 +2308,16 @@
         <label class="form-label">현재 재고 수량</label>
         <input class="form-input" type="number" id="cons-stock" placeholder="0">
       </div>
+    </div>
+    <!-- 재고 연동 선택 (자동차감일 때만 표시) -->
+    <div id="cons-linked-wrap" class="form-group">
+      <label class="form-label">연동 재고 선택 <span style="font-size:11px;color:var(--text-muted);">(다중선택 가능 — 해당 재고 출고 시 소모품 자동 차감)</span></label>
+      <div style="position:relative;margin-bottom:6px;">
+        <input class="form-input" id="cons-linked-search" placeholder="재고명 검색..." oninput="filterConsLinked(this.value)" style="padding-right:32px;">
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;">🔍</span>
+      </div>
+      <div id="cons-linked-list" style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:3px;"></div>
+      <div id="cons-linked-selected" style="margin-top:6px;font-size:11px;color:var(--mongmo);"></div>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -3466,9 +3493,10 @@ function renderProject() {
     const isActive = today >= p.start && today <= p.end;
     const daysLeft = Math.ceil((new Date(p.end)-new Date())/86400000);
     const b = p.brand==='mongmo'?'var(--mongmo)':p.brand==='palett'?'var(--palett)':'var(--text-muted)';
-    return `<div onclick="selectProject(${p.id})" style="padding:10px 20px;border-radius:10px;cursor:pointer;border:2px solid ${active?b:'var(--border)'};background:${active?b+'18':'var(--surface)'};transition:all 0.15s;">
-      <div style="font-size:13px;font-weight:600;">${p.name}</div>
+    return `<div style="padding:10px 16px;border-radius:10px;cursor:pointer;border:2px solid ${active?b:'var(--border)'};background:${active?b+'18':'var(--surface)'};transition:all 0.15s;position:relative;" onclick="selectProject(${p.id})">
+      <div style="font-size:13px;font-weight:600;padding-right:20px;">${p.name}</div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${p.start} ~ ${p.end} ${isActive?'<span style="color:var(--green);">● 진행중</span>':daysLeft>0?`D-${daysLeft}`:'종료'}</div>
+      <button onclick="event.stopPropagation();deleteProject(${p.id})" style="position:absolute;top:6px;right:8px;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;line-height:1;padding:2px 4px;border-radius:4px;" title="삭제">✕</button>
     </div>`;
   }).join('') + `<div onclick="openModal('add-project')" style="padding:10px 20px;border-radius:10px;cursor:pointer;border:2px dashed var(--border);color:var(--text-muted);font-size:13px;display:flex;align-items:center;">+ 새 프로젝트</div>`;
 
@@ -3503,7 +3531,7 @@ function renderKanban() {
             ${c.due ? `<span style="font-size:11px;color:var(--text-muted);">📅 ${c.due}</span>` : ''}
           </div>
           <div style="display:flex;gap:4px;">
-            ${col.key !== 'doing' ? `<button class="btn btn-sm btn-secondary" style="padding:3px 8px;font-size:11px;" onclick="moveCard(${c.id},'${col.key==='todo'?'doing':'done'}')">→</button>` : ''}
+            ${col.key === 'todo' ? `<button class="btn btn-sm btn-secondary" style="padding:3px 8px;font-size:11px;" onclick="moveCard(${c.id},'doing')">→</button>` : ''}
             ${col.key === 'doing' ? `<button class="btn btn-sm btn-secondary" style="padding:3px 8px;font-size:11px;" onclick="moveCard(${c.id},'done')">완료</button>` : ''}
             <button class="btn btn-sm btn-danger" style="padding:3px 8px;font-size:11px;" onclick="deletePCard(${c.id})">✕</button>
           </div>
@@ -3539,6 +3567,21 @@ function deletePCard(id) {
   state.pCards = state.pCards.filter(c=>c.id!==id);
   save(); renderKanban(); showToast('삭제됐어요');
 }
+
+function deleteProject(id) {
+  const p = state.projects.find(x=>x.id===id);
+  showConfirm({
+    title: `"${p?.name||'프로젝트'}" 삭제할까요?`,
+    desc: '이 프로젝트의 칸반 카드도 모두 삭제돼요.',
+    icon: '📋', okLabel: '삭제'
+  }).then(() => {
+    state.projects = state.projects.filter(x=>x.id!==id);
+    state.pCards  = state.pCards.filter(x=>x.projectId!==id);
+    if (state.activeProjectId === id) state.activeProjectId = state.projects[0]?.id || null;
+    save(); renderProject(); showToast('프로젝트가 삭제됐어요');
+  }).catch(()=>{});
+}
+
 
 function addProject() {
   const name = document.getElementById('proj-name-input').value.trim();
@@ -4880,13 +4923,6 @@ function toggleTask(id) {
   if (t) { t.done = !t.done; save(); renderTasks(); renderDashboard(); }
 }
 
-function deleteTask(id) {
-  if (!confirm('삭제할까요?')) return;
-  state.tasks = state.tasks.filter(t => t.id !== id);
-  save(); renderTasks();
-  showToast('삭제됐어요');
-}
-
 function addTask() {
   const title = document.getElementById('task-title-input').value.trim();
   if (!title) { showToast('업무 내용을 입력해주세요'); return; }
@@ -5438,12 +5474,6 @@ function getRevByPeriod(days) {
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = cutoff.toISOString().split('T')[0];
   return (state.revenueLog||[]).filter(r => r.date >= cutoffStr);
-}
-
-function fmtWon(n) {
-  if (n >= 100000000) return (n/100000000).toFixed(1)+'억';
-  if (n >= 10000) return Math.round(n/10000)+'만';
-  return n.toLocaleString();
 }
 
 // ── 전체 렌더 ──
@@ -8649,6 +8679,12 @@ function renderConsumables() {
     const linkedNote = c.type === 'auto'
       ? `<span style="font-size:11px;color:var(--green);">🔗 자동차감</span>`
       : `<span style="font-size:11px;color:var(--text-muted);">수동</span>`;
+    const linkedCount = (c.linkedInventory||[]).length;
+    const linkedDisplay = c.type === 'auto'
+      ? (linkedCount > 0
+          ? `<span style="font-size:11px;color:var(--green);">🔗 ${linkedCount}개 재고 연동</span>`
+          : `<span style="font-size:11px;color:var(--yellow);">⚠️ 미설정</span>`)
+      : `<span style="font-size:11px;color:var(--text-muted);">-</span>`;
     return `<tr>
       <td style="font-weight:500;">${c.name}${c.memo?`<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${c.memo}</span>`:''}
       </td>
@@ -8657,7 +8693,7 @@ function renderConsumables() {
       <td class="num" style="color:var(--text-muted);">${c.monthly}/월</td>
       <td style="font-size:12px;">${monthsLeft !== '-' ? `약 ${monthsLeft}개월` : '-'}</td>
       <td><span class="status-badge ${st.cls}">${st.label}</span></td>
-      <td>${linkedNote}</td>
+      <td>${linkedDisplay}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-sm btn-secondary" onclick="openEditConsumable(${c.id})">수정</button>
         <button class="btn btn-sm btn-secondary" style="margin-left:4px;" onclick="adjustConsumableStock(${c.id})">재고조정</button>
@@ -8689,60 +8725,6 @@ function renderConsumableAlert() {
       }).join('')}
     </div>
   </div>`;
-}
-
-function submitConsumable() {
-  const editId = parseInt(document.getElementById('cons-edit-id').value);
-  const entry = {
-    id: editId || Date.now(),
-    name: document.getElementById('cons-name').value.trim(),
-    type: document.getElementById('cons-type').value,
-    stock: parseInt(document.getElementById('cons-stock').value) || 0,
-    monthly: parseInt(document.getElementById('cons-monthly').value) || 0,
-    threshold: parseInt(document.getElementById('cons-threshold').value) || 0,
-    memo: document.getElementById('cons-memo').value,
-  };
-  if (!entry.name) { showToast('소모품명을 입력해주세요'); return; }
-
-  if (editId) {
-    const idx = state.consumables.findIndex(c => c.id === editId);
-    if (idx >= 0) state.consumables[idx] = entry;
-  } else {
-    state.consumables.push(entry);
-  }
-  save(); closeModal('add-consumable'); renderConsumables();
-  showToast('✅ 소모품 저장됐어요');
-}
-
-function openEditConsumable(id) {
-  const c = state.consumables.find(x => x.id === id);
-  if (!c) return;
-  document.getElementById('cons-edit-id').value = c.id;
-  document.getElementById('cons-name').value = c.name;
-  document.getElementById('cons-type').value = c.type;
-  document.getElementById('cons-stock').value = c.stock;
-  document.getElementById('cons-monthly').value = c.monthly;
-  document.getElementById('cons-threshold').value = c.threshold;
-  document.getElementById('cons-memo').value = c.memo || '';
-  openModal('add-consumable');
-}
-
-function adjustConsumableStock(id) {
-  const c = state.consumables.find(x => x.id === id);
-  if (!c) return;
-  const qty = prompt(`${c.name} 재고 조정\n현재: ${c.stock}개\n추가(+) 또는 차감(-) 수량 입력:`, '0');
-  if (qty === null) return;
-  const n = parseInt(qty);
-  if (isNaN(n)) { showToast('숫자를 입력해주세요'); return; }
-  c.stock = Math.max(0, c.stock + n);
-  save(); renderConsumables();
-  showToast(`✅ ${c.name} 재고 ${n >= 0 ? '+' : ''}${n}개 조정 → ${c.stock}개`);
-}
-
-function deleteConsumable(id) {
-  if (!confirm('삭제할까요?')) return;
-  state.consumables = state.consumables.filter(c => c.id !== id);
-  save(); renderConsumables();
 }
 
 // 생산 완료 시 소모품 자동 차감
@@ -9161,6 +9143,445 @@ async function resetAndReload() {
   showToast('✅ 초기화 완료');
   initApp();
 }
+
+
+// ══════════════════════════════════════════════════
+// 커스텀 Confirm 모달
+// ══════════════════════════════════════════════════
+let _confirmResolve = null, _confirmReject = null;
+
+function showConfirm({ title='삭제할까요?', desc='', icon='🗑', okLabel='삭제', okColor='var(--red)' } = {}) {
+  return new Promise((resolve, reject) => {
+    _confirmResolve = resolve;
+    _confirmReject = reject;
+    document.getElementById('confirm-icon').textContent = icon;
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-desc').textContent = desc;
+    const okBtn = document.getElementById('confirm-ok-btn');
+    okBtn.textContent = okLabel;
+    okBtn.style.background = okColor;
+    okBtn.style.borderColor = okColor;
+    openModal('confirm');
+  });
+}
+
+// ══════════════════════════════════════════════════
+// 운영일정 캘린더
+// ══════════════════════════════════════════════════
+const OPS_TYPES = {
+  popup:         { label:'팝업',        icon:'🏪', color:'#E8849A' },
+  inbound:       { label:'재고입고',    icon:'📦', color:'#6BA87A' },
+  meeting:       { label:'외부미팅',    icon:'🤝', color:'#7BA7BC' },
+  delivery:      { label:'납품',        icon:'🚚', color:'#A67BB8' },
+  leave:         { label:'근태',        icon:'🌴', color:'#F4A261' },
+  sample:        { label:'샘플수령',    icon:'📬', color:'#6B9E7A' },
+  prod_deadline: { label:'생산마감',    icon:'⏰', color:'#C4736A' },
+  launch:        { label:'제품출시',    icon:'🚀', color:'#E8849A' },
+  event:         { label:'이벤트',      icon:'🎉', color:'#F5C518' },
+  etc:           { label:'기타',        icon:'📌', color:'#B0A89E' },
+};
+
+function renderOpsCalendar() {
+  const year = state.opsYear || new Date().getFullYear();
+  const month = state.opsMonth !== undefined ? state.opsMonth : new Date().getMonth();
+  const titleEl = document.getElementById('ops-cal-title');
+  if (titleEl) titleEl.textContent = `${year}년 ${month+1}월`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const todayStr = new Date().toISOString().split('T')[0];
+  const ops = state.ops || [];
+
+  const body = document.getElementById('ops-calendar-body');
+  if (!body) return;
+
+  // 날짜 문자열 생성 헬퍼
+  const ds = d => `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+  // 주(週) 별로 날짜 그룹핑
+  const weeks = [];
+  let week = [];
+  for (let i=0; i<firstDay; i++) week.push(null); // 앞 빈칸
+  for (let d=1; d<=daysInMonth; d++) {
+    week.push(d);
+    if (week.length === 7 || d === daysInMonth) {
+      while (week.length < 7) week.push(null); // 뒤 빈칸
+      weeks.push([...week]);
+      week = [];
+    }
+  }
+
+  // 각 일정에 대해 주별 span 계산
+  // 표시할 일정 슬롯: 날짜 -> 슬롯 배열
+  const eventRows = {}; // { 'YYYY-MM-DD': [{event, span, isStart, isEnd}] }
+
+  ops.forEach(o => {
+    const start = o.start;
+    const end   = o.end || o.start;
+    const t = OPS_TYPES[o.type] || OPS_TYPES.etc;
+
+    // 이번달에 걸치는지 확인
+    const monthStart = ds(1);
+    const monthEnd   = ds(daysInMonth);
+    if (end < monthStart || start > monthEnd) return;
+
+    // 주별로 이 일정이 차지하는 날짜 범위 표시
+    weeks.forEach((wk, wi) => {
+      const wkDays = wk.filter(d=>d!==null);
+      if (!wkDays.length) return;
+      const wkStart = ds(wkDays[0]);
+      const wkEnd   = ds(wkDays[wkDays.length-1]);
+
+      // 이 주에 이 일정이 걸치는가
+      if (end < wkStart || start > wkEnd) return;
+
+      // 이 주에서 시작/끝 위치
+      const segStart = start > wkStart ? start : wkStart;
+      const segEnd   = end   < wkEnd   ? end   : wkEnd;
+
+      // 시작 일(d)
+      const segStartD = parseInt(segStart.split('-')[2]);
+      const segEndD   = parseInt(segEnd.split('-')[2]);
+
+      // segStart 날짜가 이번달인지
+      if (!eventRows[segStart]) eventRows[segStart] = [];
+      eventRows[segStart].push({
+        event: o,
+        span: segEndD - segStartD + 1, // 이 주에서 차지하는 칸 수
+        isStart: start === segStart,
+        isEnd: end === segEnd,
+        color: t.color,
+        icon: t.icon,
+        title: o.title || t.label,
+      });
+    });
+  });
+
+  // 날짜별로 렌더링 (주 단위)
+  let html = '';
+  weeks.forEach(wk => {
+    // 이 주의 이벤트 바들 계산
+    // 날짜칸들 먼저 렌더
+    const dayHtmls = wk.map((d, wi) => {
+      if (d === null) return `<div class="cal-day" style="background:var(--surface2);min-height:76px;"></div>`;
+      const dateStr = ds(d);
+      const isToday = dateStr === todayStr;
+      // 단일 이벤트 (이 날 시작하는 1일짜리)
+      const singles = (eventRows[dateStr]||[]).filter(e=>e.span===1);
+      const singleHtml = singles.slice(0,1).map(e =>
+        `<div style="font-size:10px;padding:1px 4px;border-radius:3px;background:${e.color}22;color:${e.color};overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;margin-top:2px;" onclick="showOpsDetail(${e.event.id})">${e.icon} ${e.title}</div>`
+      ).join('');
+      return `<div class="cal-day" style="min-height:76px;padding:4px 3px;position:relative;${isToday?'background:var(--mongmo-light);border:1.5px solid var(--mongmo);border-radius:8px;':''}">
+        <div class="cal-num" style="font-size:12px;${isToday?'color:var(--mongmo);font-weight:700;':''}">${d}</div>
+        ${singleHtml}
+      </div>`;
+    });
+
+    // 이 주에 걸치는 멀티데이 이벤트 바 오버레이
+    // 각 이벤트가 이 주 어느 열(0~6)에서 시작해서 몇 칸 차지하는지
+    const multiBars = [];
+    wk.forEach((d, wi) => {
+      if (d === null) return;
+      const dateStr = ds(d);
+      (eventRows[dateStr]||[]).filter(e=>e.span>1).forEach(e => {
+        const colStart = wi;
+        const colEnd   = Math.min(wi + e.span - 1, 6);
+        multiBars.push({ ...e, colStart, colEnd });
+      });
+    });
+
+    // 주 전체를 감싸는 relative 컨테이너로 렌더
+    html += `<div style="display:contents;">`;
+    html += dayHtmls.join('');
+    html += `</div>`;
+
+    // 멀티데이 바는 CSS grid를 활용해서 오버레이
+    // → 실제 구현: 각 이벤트 바를 절대 위치로 놓기 어려우므로
+    //   해당 주의 시작 날짜 칸 안에 넓은 바로 표시 (span 속성 활용)
+    // 위 dayHtmls에 직접 삽입하는 방식으로 재렌더
+  });
+
+  // 더 깔끔한 방법: 주 전체를 한 번에 렌더
+  html = '';
+  weeks.forEach((wk, wi) => {
+    const wkDays = wk.map((d, ci) => {
+      if (d === null) return { d: null, ci };
+      return { d, ci, dateStr: ds(d) };
+    });
+
+    // 이 주의 멀티데이 이벤트들
+    const multiEvents = [];
+    wkDays.forEach(({ d, ci, dateStr }) => {
+      if (!d) return;
+      (eventRows[dateStr]||[]).filter(e=>e.span>1).forEach(e => {
+        const endCol = Math.min(ci + e.span - 1, 6);
+        multiEvents.push({ ...e, startCol: ci, endCol });
+      });
+    });
+
+    // row별로 겹치지 않게 배치
+    const barRows = []; // barRows[row] = [{startCol, endCol, event}]
+    multiEvents.forEach(ev => {
+      let row = 0;
+      while (true) {
+        if (!barRows[row]) { barRows[row] = []; }
+        const overlap = barRows[row].some(b => !(ev.endCol < b.startCol || ev.startCol > b.endCol));
+        if (!overlap) { barRows[row].push(ev); break; }
+        row++;
+      }
+    });
+
+    // 각 날짜 칸의 높이를 barRows.length에 맞게 조정
+    const minH = Math.max(72, 52 + barRows.length * 20);
+
+    // 날짜 칸들
+    wkDays.forEach(({ d, ci, dateStr }) => {
+      if (d === null) { html += `<div class="cal-day" style="background:var(--surface2);min-height:${minH}px;"></div>`; return; }
+      const isToday = dateStr === todayStr;
+      // 1일짜리 이벤트
+      const singles = (eventRows[dateStr]||[]).filter(e=>e.span===1);
+      const singlesHtml = singles.slice(0,2).map(e =>
+        `<div style="font-size:10px;padding:1px 4px;border-radius:3px;background:${e.color}22;color:${e.color};overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;margin-top:2px;" onclick="showOpsDetail(${e.event.id})">${e.icon} ${e.title}</div>`
+      ).join('');
+      html += `<div class="cal-day" style="min-height:${minH}px;padding:4px 3px;position:relative;${isToday?'background:var(--mongmo-light);border:1.5px solid var(--mongmo);border-radius:8px;':''}">
+        <div class="cal-num" style="font-size:12px;${isToday?'color:var(--mongmo);font-weight:700;':''}">${d}</div>
+        ${singlesHtml}
+      </div>`;
+    });
+
+    // 멀티데이 바 오버레이 — 이 주 전체를 grid로 감싸고 span 활용
+    // CSS grid column span 방식으로 오버레이
+    if (barRows.length > 0) {
+      // 바 오버레이 컨테이너 (7칸 grid, 이 주 위에 absolute)
+      const barsHtml = barRows.map((row, ri) =>
+        row.map(ev => {
+          const span = ev.endCol - ev.startCol + 1;
+          const isStartRound = ev.isStart;
+          const isEndRound   = ev.isEnd;
+          const radius = `${isStartRound?'6px':'0'} ${isEndRound?'6px':'0'} ${isEndRound?'6px':'0'} ${isStartRound?'6px':'0'}`;
+          const startLabel = ev.isStart ? `${ev.icon} ${ev.title}` : '';
+          return `<div style="grid-column:${ev.startCol+1}/span ${span};grid-row:1;margin-top:${24 + ri*20}px;height:18px;background:${ev.color};border-radius:${radius};display:flex;align-items:center;padding:0 6px;overflow:hidden;white-space:nowrap;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.12);" onclick="showOpsDetail(${ev.event.id})">
+            <span style="font-size:10px;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;">${startLabel}</span>
+          </div>`;
+        }).join('')
+      ).join('');
+
+      // 이 주 전체를 가로로 덮는 그리드 오버레이
+      html += `<div style="grid-column:1/span 7;display:grid;grid-template-columns:repeat(7,1fr);gap:1px;pointer-events:none;margin-top:-${minH}px;height:${minH}px;position:relative;z-index:2;pointer-events:auto;">
+        ${barsHtml}
+      </div>`;
+    }
+  });
+
+  body.innerHTML = html;
+
+  // 사이드 목록
+  const listEl = document.getElementById('ops-list');
+  if (!listEl) return;
+  const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
+  const monthOps = ops.filter(o => {
+    const end = o.end || o.start;
+    return o.start.startsWith(monthStr) || end.startsWith(monthStr) ||
+           (o.start < monthStr+'-01' && end >= monthStr+'-01');
+  }).sort((a,b)=>a.start.localeCompare(b.start));
+
+  if (!monthOps.length) {
+    listEl.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:12px 0;text-align:center;">이번달 일정 없음</div>`;
+    return;
+  }
+  listEl.innerHTML = monthOps.map(o => {
+    const t = OPS_TYPES[o.type] || OPS_TYPES.etc;
+    const range = o.end && o.end !== o.start ? `${o.start} ~ ${o.end}` : o.start;
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:${t.color}22;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">${t.icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;">${o.title||t.label}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${range}${o.memo?` · ${o.memo}`:''}</div>
+      </div>
+      <button onclick="deleteOpsEvent(${o.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:2px;">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function changeOpsMonth(dir) {
+  if (!state.opsYear) state.opsYear = new Date().getFullYear();
+  if (state.opsMonth === undefined) state.opsMonth = new Date().getMonth();
+  state.opsMonth += dir;
+  if (state.opsMonth > 11) { state.opsMonth = 0; state.opsYear++; }
+  if (state.opsMonth < 0)  { state.opsMonth = 11; state.opsYear--; }
+  renderOpsCalendar();
+}
+
+function submitOps() {
+  const title = document.getElementById('ops-title')?.value.trim();
+  const type  = document.getElementById('ops-type')?.value;
+  const brand = document.getElementById('ops-brand')?.value;
+  const start = document.getElementById('ops-start')?.value;
+  const end   = document.getElementById('ops-end')?.value;
+  const memo  = document.getElementById('ops-memo')?.value.trim();
+  if (!title || !start) { showToast('일정명과 시작일을 입력해주세요'); return; }
+  if (!state.ops) state.ops = [];
+  state.ops.push({ id: Date.now(), title, type, brand, start, end: end||start, memo });
+  save(); closeModal('add-ops'); renderOpsCalendar();
+  showToast('✅ 일정 추가됐어요');
+  // 폼 초기화
+  ['ops-title','ops-memo','ops-start','ops-end'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+function deleteOpsEvent(id) {
+  showConfirm({ title:'일정을 삭제할까요?', icon:'📅', okLabel:'삭제' }).then(() => {
+    state.ops = (state.ops||[]).filter(o => o.id !== id);
+    save(); renderOpsCalendar(); showToast('삭제됐어요');
+  }).catch(()=>{});
+}
+
+function showOpsDetail(id) {
+  const o = (state.ops||[]).find(x=>x.id===id);
+  if (!o) return;
+  const t = OPS_TYPES[o.type]||OPS_TYPES.etc;
+  showToast(`${t.icon} ${o.title} · ${o.start}${o.end&&o.end!==o.start?' ~ '+o.end:''}${o.memo?' · '+o.memo:''}`);
+}
+
+// ══════════════════════════════════════════════════
+// 소모품 재고 연동 UI
+// ══════════════════════════════════════════════════
+let _consLinkedSelected = new Set(); // 선택된 inventoryId들
+
+function toggleConsLinked() {
+  const type = document.getElementById('cons-type')?.value;
+  const wrap = document.getElementById('cons-linked-wrap');
+  if (wrap) wrap.style.display = type === 'auto' ? 'block' : 'none';
+}
+
+function openConsLinkedList(searchVal = '') {
+  const listEl = document.getElementById('cons-linked-list');
+  if (!listEl) return;
+  const inv = state.inventory || [];
+  const filtered = inv.filter(i => !searchVal || (i.name+' '+i.size).toLowerCase().includes(searchVal.toLowerCase()));
+  listEl.innerHTML = filtered.map(i => {
+    const checked = _consLinkedSelected.has(i.id);
+    return `<label style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;${checked?'background:var(--mongmo-light);':''}hover:background:var(--surface2);">
+      <input type="checkbox" value="${i.id}" ${checked?'checked':''} onchange="toggleConsLinkedItem(${i.id},this.checked)" style="width:14px;height:14px;accent-color:var(--mongmo);">
+      <span style="font-size:12px;">${i.name}${i.size?' <span style="color:var(--text-muted);">'+i.size+'</span>':''}</span>
+    </label>`;
+  }).join('');
+  updateConsLinkedLabel();
+}
+
+function filterConsLinked(val) {
+  openConsLinkedList(val);
+}
+
+function toggleConsLinkedItem(id, checked) {
+  if (checked) _consLinkedSelected.add(id);
+  else _consLinkedSelected.delete(id);
+  updateConsLinkedLabel();
+  // 체크된 항목 배경 갱신
+  openConsLinkedList(document.getElementById('cons-linked-search')?.value || '');
+}
+
+function updateConsLinkedLabel() {
+  const el = document.getElementById('cons-linked-selected');
+  if (!el) return;
+  const inv = state.inventory || [];
+  const names = [..._consLinkedSelected].map(id => {
+    const i = inv.find(x=>x.id===id);
+    return i ? `${i.name}${i.size?' '+i.size:''}` : '';
+  }).filter(Boolean);
+  el.textContent = names.length ? `✅ 선택됨: ${names.join(', ')}` : '';
+}
+
+// ══════════════════════════════════════════════════
+// 소모품 모달 open/submit/edit 수정
+// ══════════════════════════════════════════════════
+function openEditConsumable(id) {
+  const c = state.consumables.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('cons-edit-id').value = c.id;
+  document.getElementById('cons-name').value = c.name;
+  document.getElementById('cons-type').value = c.type;
+  document.getElementById('cons-stock').value = c.stock;
+  document.getElementById('cons-monthly').value = c.monthly;
+  document.getElementById('cons-threshold').value = c.threshold;
+  document.getElementById('cons-memo').value = c.memo || '';
+  // 연동 재고 복원
+  _consLinkedSelected = new Set(c.linkedInventory || []);
+  openModal('add-consumable');
+  toggleConsLinked();
+  openConsLinkedList();
+}
+
+function submitConsumable() {
+  const editId = parseInt(document.getElementById('cons-edit-id').value);
+  const entry = {
+    id: editId || Date.now(),
+    name: document.getElementById('cons-name').value.trim(),
+    type: document.getElementById('cons-type').value,
+    stock: parseInt(document.getElementById('cons-stock').value) || 0,
+    monthly: parseInt(document.getElementById('cons-monthly').value) || 0,
+    threshold: parseInt(document.getElementById('cons-threshold').value) || 0,
+    memo: document.getElementById('cons-memo').value,
+    linkedInventory: [..._consLinkedSelected],
+  };
+  if (!entry.name) { showToast('소모품명을 입력해주세요'); return; }
+  if (editId) {
+    const idx = state.consumables.findIndex(c => c.id === editId);
+    if (idx >= 0) state.consumables[idx] = entry;
+  } else {
+    state.consumables.push(entry);
+  }
+  save(); closeModal('add-consumable'); renderConsumables();
+  showToast('✅ 소모품 저장됐어요');
+}
+
+function deleteConsumable(id) {
+  const c = state.consumables.find(x=>x.id===id);
+  showConfirm({ title:`${c?.name||'소모품'}을 삭제할까요?`, icon:'🛍', okLabel:'삭제' }).then(() => {
+    state.consumables = state.consumables.filter(c => c.id !== id);
+    save(); renderConsumables(); showToast('삭제됐어요');
+  }).catch(()=>{});
+}
+
+function adjustConsumableStock(id) {
+  const c = state.consumables.find(x => x.id === id);
+  if (!c) return;
+  // 재고조정 미니 모달 대신 커스텀 입력
+  const qty = prompt(`${c.name} 재고 조정\n현재: ${c.stock}개\n추가(+) 또는 차감(-) 수량 입력:`, '0');
+  if (qty === null) return;
+  const n = parseInt(qty);
+  if (isNaN(n)) { showToast('숫자를 입력해주세요'); return; }
+  c.stock = Math.max(0, c.stock + n);
+  save(); renderConsumables();
+  showToast(`✅ ${c.name} 재고 ${n>=0?'+':''}${n}개 조정 → ${c.stock}개`);
+}
+
+// 소모품 추가 버튼 클릭 시 초기화
+function openAddConsumable() {
+  document.getElementById('cons-edit-id').value = '';
+  document.getElementById('cons-name').value = '';
+  document.getElementById('cons-type').value = 'auto';
+  document.getElementById('cons-stock').value = '';
+  document.getElementById('cons-monthly').value = '';
+  document.getElementById('cons-threshold').value = '';
+  document.getElementById('cons-memo').value = '';
+  document.getElementById('cons-linked-search').value = '';
+  _consLinkedSelected = new Set();
+  openModal('add-consumable');
+  toggleConsLinked();
+  openConsLinkedList();
+}
+
+// ══════════════════════════════════════════════════
+// 업무 체크리스트 삭제 → 커스텀 confirm
+// ══════════════════════════════════════════════════
+function deleteTask(id) {
+  const t = (state.tasks||[]).find(x=>x.id===id);
+  showConfirm({ title:`"${t?.title||'업무'}" 삭제할까요?`, icon:'✅', okLabel:'삭제' }).then(() => {
+    state.tasks = state.tasks.filter(t => t.id !== id);
+    save(); renderTasks(); showToast('삭제됐어요');
+  }).catch(()=>{});
+}
+
 
 function setInitialDates() {
   const d = new Date();
