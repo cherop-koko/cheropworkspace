@@ -1348,20 +1348,21 @@
     <!-- ========== BRAND ASSETS ========== -->
     <div id="page-assets" class="hidden">
       <div class="page-header">
-        <div><div class="page-title">🗃 브랜드 자산</div><div class="page-sub">캐릭터 일러스트 · 패키지 · 팝업 디자인 파일 관리</div></div>
+        <div><div class="page-title">🗃 브랜드 자산</div><div class="page-sub">몽모 · 팔렛 브랜드 파일 통합 관리</div></div>
         <div class="header-actions">
+          <button class="btn btn-secondary" id="asset-add-tag-btn" onclick="openAddAssetTag()" style="display:none;font-size:12px;">+ 태그 추가</button>
           <button class="btn btn-primary" onclick="openModal('add-asset')">+ 파일 등록</button>
         </div>
       </div>
-      <div class="tab-bar" id="asset-cat-tabs">
-        <div class="tab active" onclick="filterAssets('all',this)">전체</div>
-        <div class="tab" onclick="filterAssets('character',this)">캐릭터</div>
-        <div class="tab" onclick="filterAssets('package',this)">패키지</div>
-        <div class="tab" onclick="filterAssets('popup',this)">팝업</div>
-        <div class="tab" onclick="filterAssets('marketing',this)">마케팅</div>
-        <div class="tab" onclick="filterAssets('etc',this)">기타</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;" id="asset-brand-tabs">
+        <button onclick="setAssetBrand('all',this)" style="border-radius:20px;font-size:12px;padding:5px 16px;background:var(--text);color:#fff;border:none;cursor:pointer;font-weight:600;">전체</button>
+        <button onclick="setAssetBrand('mongmo',this)" style="border-radius:20px;font-size:12px;padding:5px 16px;background:#fff;color:var(--mongmo);border:1.5px solid var(--mongmo);cursor:pointer;">몽모</button>
+        <button onclick="setAssetBrand('palett',this)" style="border-radius:20px;font-size:12px;padding:5px 16px;background:#fff;color:var(--palett);border:1.5px solid var(--palett);cursor:pointer;">팔렛</button>
+        <button onclick="setAssetBrand('common',this)" id="asset-brand-common-btn" style="border-radius:20px;font-size:12px;padding:5px 16px;background:#fff;color:var(--text-muted);border:1.5px solid var(--border);cursor:pointer;">공통</button>
       </div>
-      <div id="asset-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;"></div>
+      <div class="tab-bar" id="asset-cat-tabs" style="margin-bottom:10px;"></div>
+      <div id="asset-subtag-bar" style="margin-bottom:14px;display:none;flex-wrap:wrap;gap:6px;align-items:center;"></div>
+      <div id="asset-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;"></div>
     </div>
 
     <!-- ========== ATTENDANCE ========== -->
@@ -1979,7 +1980,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-project')">취소</button>
-      <button class="btn btn-primary" onclick="addProject()">추가</button>
+      <button class="btn btn-primary" id="proj-submit-btn" onclick="submitProject()">추가</button>
     </div>
   </div>
 </div>
@@ -2534,33 +2535,50 @@
 
 <!-- Add Asset Modal -->
 <div class="modal-overlay hidden" id="modal-add-asset">
-  <div class="modal">
-    <div class="modal-title">🗃 파일 등록</div>
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title" id="asset-modal-title">🗃 파일 등록</div>
+    <input type="hidden" id="asset-edit-id">
     <div class="form-group"><label class="form-label">파일명</label><input class="form-input" id="asset-name" placeholder="예: 몽모 캐릭터 일러스트 v2.0"></div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">카테고리</label>
-        <select class="form-select" id="asset-category">
-          <option value="character">캐릭터</option><option value="package">패키지</option>
-          <option value="popup">팝업</option><option value="marketing">마케팅</option><option value="etc">기타</option>
-        </select>
-      </div>
       <div class="form-group"><label class="form-label">브랜드</label>
         <select class="form-select" id="asset-brand">
           <option value="mongmo">몽모</option><option value="palett">팔렛</option><option value="all">공통</option>
         </select>
       </div>
+      <div class="form-group"><label class="form-label">카테고리</label>
+        <select class="form-select" id="asset-category" onchange="updateAssetSubtagSelect()">
+          <option value="package_postcard">패키지 · 엽서</option>
+          <option value="package_box">패키지 · 박스</option>
+          <option value="package_character">패키지 · 캐릭터</option>
+          <option value="marketing_visualboard">마케팅 · 비주얼보드</option>
+          <option value="marketing_meme">마케팅 · 몽모짤</option>
+          <option value="production">제작물 (짤 기반 굿즈·인쇄)</option>
+          <option value="popup">팝업</option>
+          <option value="ad">광고소재</option>
+          <option value="etc">기타</option>
+        </select>
+      </div>
     </div>
-    <div class="form-group"><label class="form-label">파일 링크 (구글 드라이브, Notion 등)</label><input class="form-input" id="asset-url" placeholder="https://drive.google.com/..."></div>
-    <div class="form-group"><label class="form-label">파일 형식</label>
-      <select class="form-select" id="asset-type">
-        <option value="AI">AI</option><option value="PSD">PSD</option><option value="PNG">PNG</option>
-        <option value="PDF">PDF</option><option value="ZIP">ZIP</option><option value="기타">기타</option>
-      </select>
+    <div class="form-group" id="asset-subtag-group" style="display:none;">
+      <label class="form-label">세부 주제</label>
+      <div style="display:flex;gap:8px;">
+        <select class="form-select" id="asset-subtag" style="flex:1;"></select>
+        <button type="button" class="btn btn-secondary" style="white-space:nowrap;font-size:12px;" onclick="addAssetTagInline()">+ 새 주제</button>
+      </div>
     </div>
-    <div class="form-group"><label class="form-label">설명 (선택)</label><input class="form-input" id="asset-desc" placeholder="간단한 설명"></div>
+    <div class="form-group"><label class="form-label">파일 링크 (구글 드라이브, 이미지 URL 등)</label><input class="form-input" id="asset-url" placeholder="https://drive.google.com/..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">파일 형식</label>
+        <select class="form-select" id="asset-type">
+          <option value="AI">AI</option><option value="PSD">PSD</option><option value="PNG">PNG</option>
+          <option value="JPG">JPG</option><option value="PDF">PDF</option><option value="ZIP">ZIP</option><option value="MP4">MP4</option><option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">설명 (선택)</label><input class="form-input" id="asset-desc" placeholder="간단한 설명"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-asset')">취소</button>
-      <button class="btn btn-primary" onclick="submitAsset()">등록</button>
+      <button class="btn btn-primary" id="asset-submit-btn" onclick="submitAsset()">등록</button>
     </div>
   </div>
 </div>
@@ -2674,7 +2692,7 @@ async function save() {
     inventory: state.inventory, content: state.content, tasks: state.tasks,
     salesLog: state.salesLog, revenueLog: state.revenueLog,
     projects: state.projects, pCards: state.pCards, goals: state.goals,
-    notices: state.notices, assets: state.assets,
+    notices: state.notices, assets: state.assets, assetTags: state.assetTags,
     attendances: state.attendances, leaves: state.leaves,
     expenses: state.expenses, activityLog: state.activityLog,
     ops: state.ops, invSettings: state.invSettings,
@@ -2745,6 +2763,7 @@ function applyState(p) {
   state.goals = p.goals || { annual: 2000000000, monthlyGoals: {} };
   state.notices = p.notices || [];
   state.assets = p.assets || [];
+  state.assetTags = p.assetTags || { popup:[], ad:[] };
   state.attendances = p.attendances || [];
   state.leaves = p.leaves || [];
   state.expenses = p.expenses || [];
@@ -2814,7 +2833,8 @@ let state = {
   revenueLog: [], projects: [], pCards: [],
   goals: { annual: 2000000000, monthlyGoals: {} },
   notices: [],      // { id, title, content, author, category, pinned, date }
-  assets: [],       // { id, name, category, brand, url, type, desc, date }
+  assets: [],       // { id, name, category, brand, subtag, url, type, desc, date }
+  assetTags: { popup:[], ad:[] }, // 동적 서브태그
   attendances: [],  // { id, member, date, clockIn, clockOut }
   leaves: [],       // { id, member, type, start, end, reason, status }
   expenses: [],     // { id, year, month, salary, insurance, cogs, shipping, rent, ads, other }
@@ -3219,6 +3239,14 @@ function restorePageFromHash() {
 // ============ MODALS ============
 function closeModal(name) {
   document.getElementById('modal-' + name).classList.add('hidden');
+  // 프로젝트 모달 닫을 때 수정 모드 초기화
+  if (name === 'add-project') {
+    const m = document.getElementById('modal-add-project');
+    delete m.dataset.editId;
+    m.querySelector('.modal-title').textContent = '🗂 프로젝트 추가';
+    const btn = document.getElementById('proj-submit-btn');
+    if (btn) btn.textContent = '추가';
+  }
 }
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if(e.target === m) m.classList.add('hidden'); });
@@ -3632,23 +3660,48 @@ function deleteAllRevenue() {
 
 // ============ PROJECT BOARD ============
 function renderProject() {
-  // Project tabs
   const tabsEl = document.getElementById('project-tabs');
   tabsEl.innerHTML = state.projects.map(p => {
     const active = state.activeProjectId === p.id;
-    const today = new Date().toISOString().split('T')[0];
-    const isActive = today >= p.start && today <= p.end;
-    const daysLeft = Math.ceil((new Date(p.end)-new Date())/86400000);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayStr = today.toISOString().split('T')[0];
+    const endDate = new Date(p.end); endDate.setHours(0,0,0,0);
+    const startDate = new Date(p.start); startDate.setHours(0,0,0,0);
+    const isActive = todayStr >= p.start && todayStr <= p.end;
+    const daysLeft = Math.ceil((endDate - today) / 86400000);
     const b = p.brand==='mongmo'?'var(--mongmo)':p.brand==='palett'?'var(--palett)':'var(--text-muted)';
-    return `<div style="padding:10px 16px;border-radius:10px;cursor:pointer;border:2px solid ${active?b:'var(--border)'};background:${active?b+'18':'var(--surface)'};transition:all 0.15s;position:relative;" onclick="selectProject(${p.id})">
-      <div style="font-size:13px;font-weight:600;padding-right:20px;">${p.name}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${p.start} ~ ${p.end} ${isActive?'<span style="color:var(--green);">● 진행중</span>':daysLeft>0?`D-${daysLeft}`:'종료'}</div>
-      <button onclick="event.stopPropagation();deleteProject(${p.id})" style="position:absolute;top:6px;right:8px;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;line-height:1;padding:2px 4px;border-radius:4px;" title="삭제">✕</button>
+    const statusBadge = isActive
+      ? `<span style="color:var(--green);font-size:10px;">● 진행중</span>`
+      : daysLeft > 0
+        ? `<span style="color:var(--mongmo);font-size:10px;">D-${daysLeft}</span>`
+        : `<span style="color:var(--text-muted);font-size:10px;">종료</span>`;
+    return `<div style="padding:10px 16px;border-radius:10px;cursor:pointer;border:2px solid ${active?b:'var(--border)'};background:#ffffff;transition:all 0.15s;position:relative;min-width:140px;" onclick="selectProject(${p.id})">
+      <div style="font-size:13px;font-weight:600;padding-right:40px;">${p.name}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${p.start} ~ ${p.end}&nbsp; ${statusBadge}</div>
+      <div style="position:absolute;top:6px;right:6px;display:flex;gap:2px;">
+        <button onclick="event.stopPropagation();openEditProject(${p.id})" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:2px 5px;border-radius:4px;" title="수정">✏️</button>
+        <button onclick="event.stopPropagation();deleteProject(${p.id})" style="background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;padding:2px 4px;border-radius:4px;" title="삭제">✕</button>
+      </div>
     </div>`;
-  }).join('') + `<div onclick="openModal('add-project')" style="padding:10px 20px;border-radius:10px;cursor:pointer;border:2px dashed var(--border);color:var(--text-muted);font-size:13px;display:flex;align-items:center;">+ 새 프로젝트</div>`;
+  }).join('') + `<div onclick="openModal('add-project')" style="padding:10px 20px;border-radius:10px;cursor:pointer;border:2px dashed var(--border);background:#ffffff;color:var(--text-muted);font-size:13px;display:flex;align-items:center;">+ 새 프로젝트</div>`;
 
   if (!state.activeProjectId && state.projects.length) state.activeProjectId = state.projects[0].id;
   renderKanban();
+}
+
+function openEditProject(id) {
+  const p = state.projects.find(x=>x.id===id);
+  if (!p) return;
+  // 모달 타이틀/버튼 수정 모드로
+  document.getElementById('modal-add-project').querySelector('.modal-title').textContent = '✏️ 프로젝트 수정';
+  document.getElementById('proj-submit-btn').textContent = '저장';
+  document.getElementById('proj-name-input').value = p.name || '';
+  document.getElementById('proj-start').value = p.start || '';
+  document.getElementById('proj-end').value = p.end || '';
+  document.getElementById('proj-brand').value = p.brand || 'mongmo';
+  // 수정 모드 ID 저장
+  document.getElementById('modal-add-project').dataset.editId = id;
+  openModal('add-project');
 }
 
 function selectProject(id) {
@@ -3738,15 +3791,35 @@ function deleteProject(id) {
 }
 
 
-function addProject() {
-  const name = document.getElementById('proj-name-input').value.trim();
+function addProject() { submitProject(); } // 구버전 호환
+
+function submitProject() {
+  const name  = document.getElementById('proj-name-input').value.trim();
   if (!name) { showToast('프로젝트명을 입력해주세요'); return; }
-  const p = { id:Date.now(), name, brand:document.getElementById('proj-brand').value, start:document.getElementById('proj-start').value, end:document.getElementById('proj-end').value };
-  state.projects.push(p);
-  state.activeProjectId = p.id;
-  save(); closeModal('add-project'); renderProject();
+  const modal = document.getElementById('modal-add-project');
+  const editId = modal.dataset.editId ? parseInt(modal.dataset.editId) : null;
+  const brand = document.getElementById('proj-brand').value;
+  const start = document.getElementById('proj-start').value;
+  const end   = document.getElementById('proj-end').value;
+
+  if (editId) {
+    // 수정 모드
+    const p = state.projects.find(x=>x.id===editId);
+    if (p) { p.name=name; p.brand=brand; p.start=start; p.end=end; }
+    delete modal.dataset.editId;
+    modal.querySelector('.modal-title').textContent = '🗂 프로젝트 추가';
+    document.getElementById('proj-submit-btn').textContent = '추가';
+    save(); closeModal('add-project'); renderProject();
+    showToast('✅ 프로젝트가 수정됐어요');
+  } else {
+    // 추가 모드
+    const p = { id:Date.now(), name, brand, start, end };
+    state.projects.push(p);
+    state.activeProjectId = p.id;
+    save(); closeModal('add-project'); renderProject();
+    showToast('✅ 프로젝트가 추가됐어요');
+  }
   document.getElementById('proj-name-input').value='';
-  showToast('✅ 프로젝트가 추가됐어요');
 }
 
 function submitPCard() {
@@ -6998,7 +7071,7 @@ async function submitChannelSales() {
     inventory: state.inventory, content: state.content, tasks: state.tasks,
     salesLog: state.salesLog, revenueLog: state.revenueLog,
     projects: state.projects, pCards: state.pCards, goals: state.goals,
-    notices: state.notices, assets: state.assets,
+    notices: state.notices, assets: state.assets, assetTags: state.assetTags,
     attendances: state.attendances, leaves: state.leaves,
     expenses: state.expenses, activityLog: state.activityLog,
     ops: state.ops, invSettings: state.invSettings,
@@ -9707,7 +9780,7 @@ async function resetAndReload() {
     inventory: state.inventory, content: state.content, tasks: state.tasks,
     salesLog: state.salesLog, revenueLog: state.revenueLog,
     projects: state.projects, pCards: state.pCards, goals: state.goals,
-    notices: state.notices, assets: state.assets,
+    notices: state.notices, assets: state.assets, assetTags: state.assetTags,
     attendances: state.attendances, leaves: state.leaves,
     expenses: state.expenses, activityLog: state.activityLog,
     ops: state.ops, invSettings: state.invSettings,
@@ -10427,6 +10500,342 @@ function submitNotice() {
   document.getElementById('notice-content').value = '';
   document.getElementById('notice-pinned').checked = false;
 }
+
+// ══════════════════════════════════════════
+// 브랜드 자산
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// 브랜드 자산
+// ══════════════════════════════════════════════════════════
+let _assetBrand = 'all';   // all | mongmo | palett | common
+let _assetCat   = 'all';   // all | 카테고리 키
+let _assetSubtag = 'all';  // all | 서브태그명
+
+// 카테고리 정의 (고정)
+const ASSET_CATS = [
+  { key:'all',                   label:'전체' },
+  { key:'package',               label:'📦 패키지',   sub:['엽서','박스','캐릭터'] },
+  { key:'marketing',             label:'📣 마케팅',   sub:['비주얼보드','몽모짤'] },
+  { key:'production',            label:'🛠 제작물' },
+  { key:'popup',                 label:'🏪 팝업',     dynamicSub:true },
+  { key:'ad',                    label:'📺 광고소재', dynamicSub:true },
+  { key:'etc',                   label:'📁 기타' },
+];
+
+// 카테고리 키 → 표시명
+const ASSET_CAT_MAP = {
+  package_postcard:'패키지·엽서', package_box:'패키지·박스', package_character:'패키지·캐릭터',
+  marketing_visualboard:'마케팅·비주얼보드', marketing_meme:'마케팅·몽모짤',
+  production:'제작물', popup:'팝업', ad:'광고소재', etc:'기타',
+};
+
+const ASSET_BRAND_COLORS = { mongmo:'var(--mongmo)', palett:'var(--palett)', all:'var(--text-muted)' };
+
+const TYPE_STYLE = {
+  AI:  { icon:'🎨', bg:'#E8F4FF', color:'#2563EB' },
+  PSD: { icon:'🖌', bg:'#EDE9FE', color:'#7C3AED' },
+  PNG: { icon:'🖼', bg:'#F0FDF4', color:'#16A34A' },
+  JPG: { icon:'📷', bg:'#FFF7ED', color:'#EA580C' },
+  PDF: { icon:'📄', bg:'#FEF2F2', color:'#DC2626' },
+  ZIP: { icon:'📦', bg:'#F5F3FF', color:'#6D28D9' },
+  MP4: { icon:'🎬', bg:'#FFF3E0', color:'#F57C00' },
+  '기타':{ icon:'📁', bg:'#F9FAFB', color:'#6B7280' },
+};
+
+// 카테고리 키에서 부모 그룹 구하기 (package_postcard → package)
+function getAssetCatGroup(catKey) {
+  if (!catKey) return 'etc';
+  if (catKey.startsWith('package_')) return 'package';
+  if (catKey.startsWith('marketing_')) return 'marketing';
+  return catKey;
+}
+
+// 동적 태그 목록 (state.assetTags = { popup:[], ad:[] })
+function getAssetTags(group) {
+  if (!state.assetTags) state.assetTags = {};
+  return state.assetTags[group] || [];
+}
+
+// ── 브랜드 탭 ──
+function setAssetBrand(brand, el) {
+  _assetBrand = brand;
+  _assetSubtag = 'all';
+  document.querySelectorAll('#asset-brand-tabs button').forEach(b => {
+    b.style.background = '#fff'; b.style.fontWeight = '';
+    b.style.color = b.dataset.brand === 'mongmo' ? 'var(--mongmo)' : b.dataset.brand === 'palett' ? 'var(--palett)' : 'var(--text-muted)';
+  });
+  if (el) { el.style.background = 'var(--text)'; el.style.color = '#fff'; el.style.fontWeight = '700'; }
+  renderAssets();
+}
+
+// ── 카테고리 탭 렌더 ──
+function renderAssetCatTabs() {
+  const bar = document.getElementById('asset-cat-tabs');
+  if (!bar) return;
+  bar.innerHTML = ASSET_CATS.map(c => {
+    const active = _assetCat === c.key;
+    return `<div class="tab${active?' active':''}" onclick="setAssetCat('${c.key}',this)">${c.label}</div>`;
+  }).join('');
+}
+
+function setAssetCat(cat, el) {
+  _assetCat = cat;
+  _assetSubtag = 'all';
+  document.querySelectorAll('#asset-cat-tabs .tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  // 서브태그 바 표시
+  renderAssetSubtagBar();
+  // + 태그 추가 버튼 표시 여부
+  const catDef = ASSET_CATS.find(c=>c.key===cat);
+  const addBtn = document.getElementById('asset-add-tag-btn');
+  if (addBtn) addBtn.style.display = (catDef && catDef.dynamicSub) ? 'inline-flex' : 'none';
+  renderAssets();
+}
+
+function renderAssetSubtagBar() {
+  const bar = document.getElementById('asset-subtag-bar');
+  if (!bar) return;
+  const catDef = ASSET_CATS.find(c=>c.key===_assetCat);
+  if (!catDef || (!catDef.sub && !catDef.dynamicSub)) { bar.style.display='none'; return; }
+
+  const tags = catDef.sub ? catDef.sub : getAssetTags(_assetCat);
+  if (!tags.length && catDef.dynamicSub) { bar.style.display='none'; return; }
+
+  bar.style.display = 'flex';
+  bar.innerHTML = `<span style="font-size:11px;color:var(--text-muted);padding:4px 2px;">세부:</span>` +
+    [`<button onclick="setAssetSubtag('all',this)" style="border-radius:16px;font-size:11px;padding:3px 12px;border:1px solid var(--border);background:${_assetSubtag==='all'?'var(--text)':'#fff'};color:${_assetSubtag==='all'?'#fff':'var(--text-muted)'};cursor:pointer;">전체</button>`]
+    .concat(tags.map(t => `<button onclick="setAssetSubtag('${t}',this)" style="border-radius:16px;font-size:11px;padding:3px 12px;border:1px solid var(--border);background:${_assetSubtag===t?'var(--text)':'#fff'};color:${_assetSubtag===t?'#fff':'var(--text-muted)'};cursor:pointer;">${t}</button>`)).join('');
+}
+
+function setAssetSubtag(tag, el) {
+  _assetSubtag = tag;
+  renderAssetSubtagBar();
+  renderAssets();
+}
+
+// ── 메인 렌더 ──
+function renderAssets() {
+  renderAssetCatTabs();
+  renderAssetSubtagBar();
+  const grid = document.getElementById('asset-grid');
+  if (!grid) return;
+
+  const isImgUrl = url => url && /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url);
+
+  let list = (state.assets || []);
+
+  // 브랜드 필터
+  if (_assetBrand !== 'all') {
+    if (_assetBrand === 'common') list = list.filter(a => a.brand === 'all');
+    else list = list.filter(a => a.brand === _assetBrand);
+  }
+
+  // 카테고리 필터
+  if (_assetCat !== 'all') {
+    const catDef = ASSET_CATS.find(c=>c.key===_assetCat);
+    if (catDef && catDef.sub) {
+      // 고정 sub → package_postcard 등 해당 그룹
+      list = list.filter(a => getAssetCatGroup(a.category) === _assetCat);
+    } else if (catDef && catDef.dynamicSub) {
+      list = list.filter(a => a.category === _assetCat);
+    } else {
+      list = list.filter(a => a.category === _assetCat);
+    }
+  }
+
+  // 서브태그 필터
+  if (_assetSubtag !== 'all') {
+    list = list.filter(a => a.subtag === _assetSubtag);
+  }
+
+  if (!list.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 0;gap:16px;">
+      <div style="font-size:48px;opacity:0.3;">🗃</div>
+      <div style="font-size:14px;color:var(--text-muted);">등록된 파일이 없어요</div>
+      <button onclick="openModal('add-asset')" style="margin-top:4px;padding:10px 24px;border-radius:24px;border:1.5px dashed var(--border);background:rgba(255,255,255,0.8);color:var(--text-muted);font-size:13px;cursor:pointer;transition:all 0.15s;"
+        onmouseover="this.style.borderColor='var(--mongmo)';this.style.color='var(--mongmo)';this.style.background='#fce8ed'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)';this.style.background='rgba(255,255,255,0.8)'">
+        + 파일 등록하기
+      </button>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(a => {
+    const ts = TYPE_STYLE[a.type] || TYPE_STYLE['기타'];
+    const bColor = ASSET_BRAND_COLORS[a.brand] || 'var(--text-muted)';
+    const bLabel = a.brand === 'mongmo' ? '몽모' : a.brand === 'palett' ? '팔렛' : '공통';
+    const catLabel = ASSET_CAT_MAP[a.category] || a.category || '';
+    const subLabel = a.subtag ? ` · ${a.subtag}` : '';
+
+    // 이미지 onerror는 함수로 분리해서 이스케이프 문제 방지
+    const thumbId = 'thumb_' + a.id;
+    const thumb = isImgUrl(a.url)
+      ? `<div id="${thumbId}" style="width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#f0f0f0;flex-shrink:0;">
+           <img src="${a.url}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="assetThumbFallback('${thumbId}','${ts.bg}','${ts.icon}')">
+         </div>`
+      : `<div style="width:100%;aspect-ratio:16/9;border-radius:10px;background:${ts.bg};display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;gap:4px;">
+           <div style="font-size:34px;">${ts.icon}</div>
+           <div style="font-size:10px;font-weight:700;color:${ts.color};font-family:'DM Mono',monospace;letter-spacing:0.1em;">${a.type||'파일'}</div>
+         </div>`;
+
+    return `
+    <div onclick="openEditAsset(${a.id})" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s;"
+      onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)';this.style.borderColor='var(--mongmo)'"
+      onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+      ${thumb}
+      <div>
+        <div style="font-size:13px;font-weight:600;line-height:1.45;word-break:keep-all;white-space:normal;margin-bottom:5px;">${a.name}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${bColor}20;color:${bColor};font-weight:600;">${bLabel}</span>
+          <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--surface2);color:var(--text-muted);">${catLabel}${subLabel}</span>
+        </div>
+        ${a.desc ? `<div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:4px;">${a.desc}</div>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;" onclick="event.stopPropagation()">
+        ${a.url
+          ? `<a href="${a.url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--mongmo);font-weight:600;text-decoration:none;padding:4px 10px;border-radius:7px;background:#fce8ed;">🔗 열기</a>`
+          : `<span style="font-size:11px;color:var(--text-muted);">링크 없음</span>`
+        }
+        <div style="display:flex;gap:3px;">
+          <button onclick="openEditAsset(${a.id})" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:11px;cursor:pointer;padding:3px 7px;">✏️</button>
+          <button onclick="deleteAsset(${a.id})" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:11px;cursor:pointer;padding:3px 7px;">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// onerror 폴백 함수 (이스케이프 문제 우회)
+function assetThumbFallback(id, bg, icon) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.background = bg;
+  el.style.display = 'flex';
+  el.style.flexDirection = 'column';
+  el.style.alignItems = 'center';
+  el.style.justifyContent = 'center';
+  el.style.gap = '4px';
+  el.innerHTML = `<div style="font-size:34px;">${icon}</div>`;
+}
+
+// filterAssets 구버전 호환
+function filterAssets(cat, el) { setAssetCat(cat, el); }
+
+// ── 모달 서브태그 select 업데이트 ──
+function updateAssetSubtagSelect() {
+  const cat = document.getElementById('asset-category').value;
+  const group = document.getElementById('asset-subtag-group');
+  const sel = document.getElementById('asset-subtag');
+  const catDef = ASSET_CATS.find(c=>c.key===cat || (c.sub && cat.startsWith(c.key+'_')));
+
+  // 팝업/광고소재만 서브태그 select 표시
+  if (cat === 'popup' || cat === 'ad') {
+    group.style.display = 'block';
+    const tags = getAssetTags(cat);
+    sel.innerHTML = `<option value="">-- 선택 --</option>` + tags.map(t=>`<option value="${t}">${t}</option>`).join('');
+  } else {
+    group.style.display = 'none';
+  }
+}
+
+// 모달 내 태그 추가
+function addAssetTagInline() {
+  const cat = document.getElementById('asset-category').value;
+  if (cat !== 'popup' && cat !== 'ad') return;
+  const name = prompt(`새 ${cat==='popup'?'팝업':'광고소재'} 주제 이름:`);
+  if (!name || !name.trim()) return;
+  if (!state.assetTags) state.assetTags = {};
+  if (!state.assetTags[cat]) state.assetTags[cat] = [];
+  if (!state.assetTags[cat].includes(name.trim())) {
+    state.assetTags[cat].push(name.trim());
+    save();
+  }
+  updateAssetSubtagSelect();
+  document.getElementById('asset-subtag').value = name.trim();
+}
+
+// 서브태그 탭에서 추가
+function openAddAssetTag() {
+  if (_assetCat !== 'popup' && _assetCat !== 'ad') return;
+  const label = _assetCat === 'popup' ? '팝업' : '광고소재';
+  const name = prompt(`새 ${label} 주제 이름:`);
+  if (!name || !name.trim()) return;
+  if (!state.assetTags) state.assetTags = {};
+  if (!state.assetTags[_assetCat]) state.assetTags[_assetCat] = [];
+  if (!state.assetTags[_assetCat].includes(name.trim())) {
+    state.assetTags[_assetCat].push(name.trim());
+    save(); renderAssetSubtagBar();
+  }
+}
+
+// ── 수정 ──
+function openEditAsset(id) {
+  const a = (state.assets||[]).find(x=>x.id===id);
+  if (!a) return;
+  document.getElementById('asset-modal-title').textContent = '✏️ 파일 수정';
+  document.getElementById('asset-submit-btn').textContent = '저장';
+  document.getElementById('asset-edit-id').value = id;
+  document.getElementById('asset-name').value = a.name || '';
+  document.getElementById('asset-brand').value = a.brand || 'mongmo';
+  document.getElementById('asset-category').value = a.category || 'etc';
+  document.getElementById('asset-type').value = a.type || 'AI';
+  document.getElementById('asset-url').value = a.url || '';
+  document.getElementById('asset-desc').value = a.desc || '';
+  updateAssetSubtagSelect();
+  if (a.subtag) {
+    const sel = document.getElementById('asset-subtag');
+    if (sel) sel.value = a.subtag;
+  }
+  openModal('add-asset');
+}
+
+// ── 등록/수정 저장 ──
+function submitAsset() {
+  const name = document.getElementById('asset-name').value.trim();
+  if (!name) { showToast('파일명을 입력해주세요'); return; }
+  const editId = parseInt(document.getElementById('asset-edit-id').value) || null;
+  const cat = document.getElementById('asset-category').value;
+  const subtagEl = document.getElementById('asset-subtag');
+  const subtag = (cat==='popup'||cat==='ad') && subtagEl ? subtagEl.value : '';
+
+  const data = {
+    name,
+    brand:    document.getElementById('asset-brand').value,
+    category: cat,
+    subtag:   subtag || '',
+    url:      document.getElementById('asset-url').value.trim(),
+    type:     document.getElementById('asset-type').value,
+    desc:     document.getElementById('asset-desc').value.trim(),
+  };
+
+  if (editId) {
+    const a = (state.assets||[]).find(x=>x.id===editId);
+    if (a) Object.assign(a, data);
+    showToast('✅ 수정됐어요');
+  } else {
+    if (!state.assets) state.assets = [];
+    state.assets.unshift({ id:Date.now(), date:new Date().toISOString().split('T')[0], ...data });
+    showToast('✅ 파일이 등록됐어요');
+  }
+
+  save(); closeModal('add-asset'); renderAssets();
+  document.getElementById('asset-edit-id').value='';
+  document.getElementById('asset-modal-title').textContent='🗃 파일 등록';
+  document.getElementById('asset-submit-btn').textContent='등록';
+  ['asset-name','asset-url','asset-desc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+// ── 삭제 ──
+function deleteAsset(id) {
+  showConfirm({ title:'파일 삭제할까요?', desc:'삭제하면 복구할 수 없어요.',
+    onConfirm: () => {
+      state.assets = (state.assets||[]).filter(a=>a.id!==id);
+      save(); renderAssets(); showToast('삭제됐어요');
+    }
+  }).catch(()=>{});
+}
+
 
 function deleteNotice(id) {
   showConfirm({ title:'공지를 삭제할까요?', icon:'📢', okLabel:'삭제' }).then(() => {
