@@ -4897,7 +4897,10 @@ function renderTasks() {
   let items = state.tasks || [];
   // 유형 필터
   if (state.taskFilter === 'daily')    items = items.filter(t => t.type === 'daily');
-  else if (state.taskFilter === 'project')  items = items.filter(t => t.type === 'project');
+  else if (state.taskFilter === 'project') {
+    const pItems = renderTasksWithPCards();
+    items = [...items.filter(t => t.type === 'project'), ...pItems];
+  }
   else if (state.taskFilter === 'personal') items = items.filter(t => t.type === 'personal');
   // 완료/미완료 필터
   if (_taskDoneFilter === 'todo') items = items.filter(t => !t.done);
@@ -4922,9 +4925,20 @@ function renderTasks() {
   } else {
     listEl.innerHTML = items.map(t => {
       const brandBadge = t.brand === 'mongmo' ? '<span class="brand-badge brand-mongmo">몽모</span>' : t.brand === 'palett' ? '<span class="brand-badge brand-palett">팔렛</span>' : '<span class="brand-badge brand-all">공통</span>';
-      const typeLabel = t.type === 'daily' ? '🔄' : t.type === 'personal' ? '👤' : '📌';
+      const typeLabel = t.isPCard ? '🗂' : t.type === 'daily' ? '🔄' : t.type === 'personal' ? '👤' : '📌';
       const memberColor = MEMBER_COLORS[t.assignee] || 'var(--text-muted)';
       const assigneeBadge = t.assignee ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:${memberColor}20;color:${memberColor};">👤 ${t.assignee}</span>` : '';
+      const projBadge = t.isPCard && t.projName ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--mongmo-light);color:var(--mongmo);">📋 ${t.projName}</span>` : '';
+      if (t.isPCard) {
+        return `<div class="checklist-item" style="cursor:pointer;" onclick="openEditPCard(${t.pCardId})">
+          <div class="check-box${t.done?' checked':''}" onclick="event.stopPropagation();togglePCardFromTask(${t.pCardId})"></div>
+          <div class="check-text">
+            <div class="check-title${t.done?' done':''}">${typeLabel} ${t.title}</div>
+            <div class="check-meta" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">${projBadge}${assigneeBadge}${t.due?`<span style="font-size:11px;color:var(--text-muted);">마감: ${t.due}</span>`:''}${t.memo?`<span style="font-size:11px;color:var(--text-muted);">💬 ${t.memo}</span>`:''}</div>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletePCard(${t.pCardId})">삭제</button>
+        </div>`;
+      }
       return `<div class="checklist-item" style="cursor:pointer;" onclick="openEditTask(${t.id})">
         <div class="check-box${t.done?' checked':''}" onclick="event.stopPropagation();toggleTask(${t.id})"></div>
         <div class="check-text">
@@ -9527,7 +9541,7 @@ function renderOpsCalendar() {
       }).join('');
 
       const bgStyle = isToday
-        ? 'background:var(--mongmo-light);border:1.5px solid var(--mongmo);border-radius:8px;'
+        ? 'background:#ffffff;border:2px solid var(--mongmo);border-radius:8px;'
         : isThisMonth
           ? 'background:#ffffff;'
           : 'background:#F5F3F0;';
@@ -9565,7 +9579,7 @@ function renderOpsCalendar() {
   const fmtD     = d => d.toISOString().split('T')[0];
   const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
   const monthStart = monthStr+'-01';
-  const monthEnd   = ds(daysInMonth);
+  const monthEnd   = fmtDate(new Date(year, month+1, 0));
 
   const visOps = ops.filter(o => {
     const oEnd = o.end || o.start;
@@ -10010,6 +10024,122 @@ function submitLeave() {
   if (!state.leaves) state.leaves=[];
   state.leaves.push({ id:Date.now(), member, type, start, end, reason, status:'대기' });
   save(); closeModal('add-leave'); renderLeaves(); showToast('✅ 휴가 신청됐어요');
+}
+
+// ══════════════════════════════════════════════════
+// 공지사항
+// ══════════════════════════════════════════════════
+function renderNotice() {
+  const listEl = document.getElementById('notice-list');
+  if (!listEl) return;
+  const notices = [...(state.notices||[])].sort((a,b)=>{
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return b.date.localeCompare(a.date);
+  });
+
+  if (!notices.length) {
+    listEl.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:14px;">공지사항이 없어요</div>`;
+    return;
+  }
+
+  const catColors = { 회의:'#7BA7BC', 안내:'#6BA87A', 중요:'#E8849A', 기타:'#B0A89E' };
+  listEl.innerHTML = notices.map(n => {
+    const cc = catColors[n.category] || '#B0A89E';
+    return `<div class="card" style="padding:20px;margin-bottom:12px;${n.pinned?'border-left:4px solid var(--mongmo);':''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+            ${n.pinned?`<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--mongmo-light);color:var(--mongmo);font-weight:600;">📌 고정</span>`:''}
+            <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${cc}20;color:${cc};">${n.category||'기타'}</span>
+            <span style="font-size:11px;color:var(--text-muted);">${n.author||''} · ${n.date||''}</span>
+          </div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px;">${n.title}</div>
+          <div style="font-size:13px;color:var(--text-muted);white-space:pre-wrap;line-height:1.6;">${n.content||''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+          <button onclick="togglePinNotice(${n.id})" style="font-size:11px;padding:3px 8px;border-radius:5px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;">${n.pinned?'📌 해제':'📌 고정'}</button>
+          <button onclick="deleteNotice(${n.id})" style="font-size:11px;padding:3px 8px;border-radius:5px;background:var(--red-light);color:var(--red);border:1px solid var(--red);cursor:pointer;">삭제</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 대시보드 공지 배너 갱신
+  const pinned = notices.find(n=>n.pinned) || notices[0];
+  const banner = document.getElementById('dash-notice-banner');
+  if (banner && pinned) {
+    banner.innerHTML = `<div style="font-size:11px;color:var(--mongmo);font-weight:600;margin-bottom:3px;">${pinned.pinned?'📌 고정 공지':'📢 최근 공지'}</div><div style="font-size:13px;font-weight:600;">${pinned.title}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${pinned.author} · ${pinned.date}</div>`;
+  }
+}
+
+function submitNotice() {
+  const title   = document.getElementById('notice-title-input')?.value.trim();
+  const content = document.getElementById('notice-content')?.value.trim();
+  const author  = document.getElementById('notice-author')?.value || '대표';
+  const cat     = document.getElementById('notice-category')?.value || '기타';
+  const pinned  = document.getElementById('notice-pinned')?.checked || false;
+  if (!title) { showToast('제목을 입력해주세요'); return; }
+  if (!state.notices) state.notices = [];
+  const today = new Date().toISOString().split('T')[0];
+  state.notices.push({ id:Date.now(), title, content, author, category:cat, pinned, date:today });
+  save(); closeModal('add-notice'); renderNotice(); showToast('✅ 공지사항이 등록됐어요');
+  document.getElementById('notice-title-input').value = '';
+  document.getElementById('notice-content').value = '';
+  document.getElementById('notice-pinned').checked = false;
+}
+
+function deleteNotice(id) {
+  showConfirm({ title:'공지를 삭제할까요?', icon:'📢', okLabel:'삭제' }).then(() => {
+    state.notices = (state.notices||[]).filter(n=>n.id!==id);
+    save(); renderNotice(); showToast('삭제됐어요');
+  }).catch(()=>{});
+}
+
+function togglePinNotice(id) {
+  const n = (state.notices||[]).find(x=>x.id===id);
+  if (!n) return;
+  // 기존 고정 해제 후 이 공지 고정
+  if (!n.pinned) (state.notices||[]).forEach(x=>x.pinned=false);
+  n.pinned = !n.pinned;
+  save(); renderNotice(); showToast(n.pinned?'📌 고정됐어요':'고정 해제됐어요');
+}
+
+// ══════════════════════════════════════════════════
+// 프로젝트 ↔ 업무 체크리스트 연동
+// pCards(projectId 기준)와 tasks(type='project') 연동 뷰
+// ══════════════════════════════════════════════════
+function renderTasksWithPCards() {
+  // 업무 체크리스트의 '프로젝트' 탭에서 pCards도 함께 표시
+  // pCards를 task 형식으로 변환해서 보여줌
+  const pCardTasks = (state.pCards||[]).map(c => {
+    const proj = (state.projects||[]).find(p=>p.id===c.projectId);
+    return {
+      id: 'pc_' + c.id,
+      title: c.title,
+      type: 'project',
+      brand: proj?.brand || 'all',
+      assignee: c.assignee || '',
+      due: c.due || '',
+      memo: c.memo || '',
+      done: c.status === 'done',
+      status: c.status || 'todo',
+      projName: proj?.name || '',
+      isPCard: true,
+      pCardId: c.id,
+    };
+  });
+  return pCardTasks;
+}
+
+function togglePCardFromTask(pCardId) {
+  const c = (state.pCards||[]).find(x=>x.id===pCardId);
+  if (!c) return;
+  c.status = c.status === 'done' ? 'todo' : 'done';
+  save();
+  const member = state.memberFilter;
+  if (member && member !== 'all') renderTaskKanban(member);
+  else renderTasks();
 }
 
 function deleteOpsEvent(id) {
