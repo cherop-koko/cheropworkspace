@@ -736,11 +736,18 @@
       <!-- 채널별 현황 -->
       <div class="grid-2 section">
         <div class="card" style="padding:16px 20px;">
-          <div style="font-weight:700;margin-bottom:12px;">이번달 채널별 매출</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-weight:700;">채널별 매출</div>
+            <select id="rev-channel-month-select" class="form-select" style="width:120px;font-size:12px;" onchange="renderChannelBreakdown(this.value)">
+            </select>
+          </div>
           <div id="rev-channel-breakdown"></div>
         </div>
         <div class="card" style="padding:16px 20px;">
-          <div style="font-weight:700;margin-bottom:12px;">이번달 채널 비중</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-weight:700;">채널 비중</div>
+            <div id="rev-pie-month-label" style="font-size:12px;color:var(--text-muted);"></div>
+          </div>
           <canvas id="rev-pie" width="240" height="240" style="display:block;margin:0 auto;"></canvas>
         </div>
       </div>
@@ -3202,6 +3209,23 @@ function renderRevenue() {
 
   renderChannelBreakdown(thisMonthKey);
   renderRevLog();
+
+  // 채널별 월 선택 드롭다운 초기화
+  const sel = document.getElementById('rev-channel-month-select');
+  if (sel && sel.options.length === 0) {
+    // revenueLog에 있는 연월 목록 수집
+    const months = [...new Set((state.revenueLog||[]).map(r=>r.date.substring(0,7)))].sort().reverse();
+    months.forEach(ym => {
+      const [y,m] = ym.split('-');
+      const opt = document.createElement('option');
+      opt.value = ym;
+      opt.text = `${y}년 ${parseInt(m)}월`;
+      if (ym === thisMonthKey) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } else if (sel) {
+    sel.value = thisMonthKey;
+  }
 }
 
 function renderRevChart() {
@@ -3314,6 +3338,16 @@ function renderChannelBreakdown(monthKey) {
   REV_CHANNELS.forEach(ch => { totals[ch.key] = monthLogs.reduce((s,r)=>(s+(r[ch.key]||0)),0); });
   const grandTotal = REV_CHANNELS.reduce((s,ch)=>s+totals[ch.key],0)||1;
 
+  // 드롭다운 동기화
+  const sel = document.getElementById('rev-channel-month-select');
+  if (sel && sel.value !== monthKey) sel.value = monthKey;
+
+  // 파이차트 레이블
+  const [y,m] = monthKey.split('-');
+  const monthLabel = `${y}년 ${parseInt(m)}월`;
+  const labelEl = document.getElementById('rev-pie-month-label');
+  if (labelEl) labelEl.textContent = monthLabel;
+
   document.getElementById('rev-channel-breakdown').innerHTML = REV_CHANNELS.map(ch => {
     const pct = Math.round(totals[ch.key]/grandTotal*100);
     return `<div style="margin-bottom:12px;">
@@ -3342,7 +3376,7 @@ function renderChannelBreakdown(monthKey) {
   ctx.beginPath(); ctx.arc(cx,cy,50,0,Math.PI*2);
   ctx.fillStyle='#fff'; ctx.fill();
   ctx.fillStyle='#1A1714'; ctx.font='bold 13px Noto Sans KR'; ctx.textAlign='center';
-  ctx.fillText('이번달', cx, cy-4);
+  ctx.fillText(monthLabel, cx, cy-4);
   ctx.fillText(fmtWon(grandTotal), cx, cy+14);
 }
 
@@ -6672,55 +6706,86 @@ function renderChannelSales() {
 function renderSalesTrend() {
   const el = document.getElementById('sales-trend-wrap');
   if (!el) return;
-  const thisW = getSalesByPeriod(7).reduce((s,l)=>s+l.qty,0);
-  const lastW = (() => {
-    const t=new Date(); t.setDate(t.getDate()-7);
-    const t2=new Date(); t2.setDate(t2.getDate()-14);
-    const f=t2.toISOString().split('T')[0], to=t.toISOString().split('T')[0];
-    return state.salesLog.filter(s=>s.date>=f&&s.date<to).reduce((s,l)=>s+l.qty,0);
-  })();
-  const thisM = getSalesByPeriod(30).reduce((s,l)=>s+l.qty,0);
-  const lastM = (() => {
-    const t=new Date(); t.setDate(t.getDate()-30);
-    const t2=new Date(); t2.setDate(t2.getDate()-60);
-    const f=t2.toISOString().split('T')[0], to=t.toISOString().split('T')[0];
-    return state.salesLog.filter(s=>s.date>=f&&s.date<to).reduce((s,l)=>s+l.qty,0);
-  })();
-  const wPct = lastW>0 ? Math.round((thisW-lastW)/lastW*100) : null;
-  const mPct = lastM>0 ? Math.round((thisM-lastM)/lastM*100) : null;
-  const badge = (val, pct) => {
-    const up = pct >= 0;
-    const color = up ? 'var(--green)' : 'var(--red)';
+  const today = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+
+  // 이번 주 vs 지난 주 (판매량 기준 - channelSalesLog)
+  const dow = today.getDay(); // 0=일
+  const thisWeekStart = fmt(new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow));
+  const lastWeekStart = fmt(new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow - 7));
+  const lastWeekEnd   = fmt(new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow - 1));
+  const csl = state.channelSalesLog || [];
+  const thisWQty = csl.filter(r=>r.date>=thisWeekStart&&r.date<=fmt(today)).reduce((s,r)=>s+(r.qty||0),0);
+  const lastWQty = csl.filter(r=>r.date>=lastWeekStart&&r.date<=lastWeekEnd).reduce((s,r)=>s+(r.qty||0),0);
+
+  // 이번 달 vs 작년 동월 (매출 기준 - revenueLog)
+  const thisYM  = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const lastYYM = `${today.getFullYear()-1}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const thisMAmt = (state.revenueLog||[]).filter(r=>r.date.startsWith(thisYM)).reduce((s,r)=>s+getRevTotal(r),0);
+  const lastYAmt = (state.revenueLog||[]).filter(r=>r.date.startsWith(lastYYM)).reduce((s,r)=>s+getRevTotal(r),0);
+
+  const wPct = lastWQty>0 ? Math.round((thisWQty-lastWQty)/lastWQty*100) : null;
+  const yPct = lastYAmt>0 ? Math.round((thisMAmt-lastYAmt)/lastYAmt*100) : null;
+
+  const badge = (label, thisVal, lastVal, pct, unit) => {
+    const up = pct !== null && pct >= 0;
+    const color = pct!==null ? (up ? 'var(--green)' : 'var(--red)') : 'var(--text-muted)';
+    const valFmt = v => unit==='won' ? fmtWon(v) : `${v}개`;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
-      <span style="font-size:12px;color:var(--text-muted);">${val}</span>
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px;">${label}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${valFmt(thisVal)} <span style="opacity:.5;">/ 비교 ${valFmt(lastVal)}</span></div>
+      </div>
       <div style="text-align:right;">
-        <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${pct!==null?`<span style="color:${color};font-size:13px;">${up?'▲':'▼'}${Math.abs(pct)}%</span>`:'데이터 없음'}</div>
+        ${pct!==null
+          ? `<span style="color:${color};font-size:14px;font-weight:700;">${up?'▲':'▼'}${Math.abs(pct)}%</span>`
+          : `<span style="font-size:12px;color:var(--text-muted);">데이터 없음</span>`}
       </div>
     </div>`;
   };
-  el.innerHTML = badge('이번 주 vs 지난 주', wPct) + badge('이번 달 vs 지난 달', mPct);
+
+  const thisMonthLabel = `${today.getFullYear()}년 ${today.getMonth()+1}월`;
+  const lastYearLabel  = `${today.getFullYear()-1}년 ${today.getMonth()+1}월`;
+  el.innerHTML =
+    badge('이번 주 vs 지난 주 (판매량)', thisWQty, lastWQty, wPct, 'qty') +
+    badge(`${thisMonthLabel} vs ${lastYearLabel} (매출)`, thisMAmt, lastYAmt, yPct, 'won');
 }
 
 // ── 요일별 판매 패턴 ──
 function renderSalesWeekday() {
   const el = document.getElementById('sales-weekday-wrap');
   if (!el) return;
-  const logs = getSalesByPeriod(90);
+  // channelSalesLog에서 최근 90일, qty > 0 인 것만
+  const today = new Date();
+  const from = new Date(today); from.setDate(from.getDate()-89);
+  const fromStr = from.toISOString().split('T')[0];
+  const todayStr = today.toISOString().split('T')[0];
+  const csl = (state.channelSalesLog||[]).filter(r=>r.date>=fromStr&&r.date<=todayStr&&(r.qty||0)>0);
+
   const days = ['일','월','화','수','목','금','토'];
   const totals = [0,0,0,0,0,0,0];
   const counts = [0,0,0,0,0,0,0];
-  logs.forEach(s => {
-    const dow = new Date(s.date).getDay();
-    totals[dow] += s.qty;
+  // 날짜별로 먼저 합산 (같은 날 중복 방지)
+  const byDate = {};
+  csl.forEach(r => { byDate[r.date] = (byDate[r.date]||0) + (r.qty||0); });
+  Object.entries(byDate).forEach(([date, qty]) => {
+    const dow = new Date(date).getDay();
+    totals[dow] += qty;
     counts[dow]++;
   });
-  const avgs = totals.map((t,i) => counts[i]>0 ? (t/counts[i]).toFixed(1) : 0);
-  const maxVal = Math.max(...avgs, 1);
+  const avgs = totals.map((t,i) => counts[i]>0 ? +(t/counts[i]).toFixed(1) : 0);
+  const maxVal = Math.max(...avgs, 0.1);
+
+  if (Object.keys(byDate).length === 0) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px 0;">판매 데이터 없음</div>`;
+    return;
+  }
+
   el.innerHTML = days.map((d,i) => {
     const pct = Math.round(avgs[i]/maxVal*100);
-    const isTop = avgs[i] == Math.max(...avgs);
+    const isTop = avgs[i] === Math.max(...avgs) && avgs[i] > 0;
     return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <div style="width:20px;font-size:12px;color:var(--text-muted);text-align:center;${i===0||i===6?'color:var(--red);':''}">${d}</div>
+      <div style="width:20px;font-size:12px;color:${i===0||i===6?'var(--red)':'var(--text-muted)'};text-align:center;">${d}</div>
       <div class="progress-bar" style="flex:1;height:18px;">
         <div class="progress-fill" style="width:${pct}%;background:${isTop?'var(--mongmo)':'var(--border)'};height:18px;display:flex;align-items:center;padding-left:6px;">
           ${pct>20?`<span style="font-size:10px;color:#fff;font-weight:600;">${avgs[i]}</span>`:''}
