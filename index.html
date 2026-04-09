@@ -31,6 +31,7 @@
     --shadow-lg: 0 8px 32px rgba(26,23,20,0.10);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow-x: hidden; }
   body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
   /* LAYOUT */
@@ -41,26 +42,26 @@
     z-index: 100; overflow: hidden;
   }
   .sidebar-logo {
-    padding: 20px 20px 14px;
+    padding: 10px 14px 8px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     flex-shrink: 0;
   }
-  .sidebar-logo .logo-main { font-size: 17px; font-weight: 700; color: #fff; letter-spacing: 0.04em; }
+  .sidebar-logo .logo-main { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: 0.04em; }
   .sidebar-logo .logo-sub { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.06em; margin-top: 2px; font-family: 'DM Mono', monospace; }
-  .sidebar-nav { padding: 8px 0; flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+  .sidebar-nav { padding: 4px 0; flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
   .sidebar-nav::-webkit-scrollbar { width: 4px; }
   .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-  .nav-section-label { font-size: 9px; color: rgba(255,255,255,0.35); letter-spacing: 0.1em; padding: 8px 20px 4px; text-transform: uppercase; }
+  .nav-section-label { font-size: 8px; color: rgba(255,255,255,0.35); letter-spacing: 0.1em; padding: 5px 14px 3px; text-transform: uppercase; }
   .nav-item {
-    display: flex; align-items: center; gap: 9px;
-    padding: 8px 20px; cursor: pointer; transition: all 0.15s;
-    font-size: 13px; color: rgba(255,255,255,0.75); font-weight: 400;
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 14px; cursor: pointer; transition: all 0.15s;
+    font-size: 11px; color: rgba(255,255,255,0.75); font-weight: 400;
     border-left: 2px solid transparent;
   }
   .nav-item:hover { color: #fff; background: rgba(255,255,255,0.06); }
   .nav-item.active { color: var(--mongmo); border-left-color: var(--mongmo); background: rgba(232,132,154,0.13); font-weight: 600; }
   .nav-item .icon { font-size: 16px; width: 18px; text-align: center; }
-  .sidebar-footer { padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
+  .sidebar-footer { padding: 6px 14px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
   .sidebar-footer .date { font-size: 10px; color: rgba(255,255,255,0.3); font-family: 'DM Mono', monospace; }
 
   .main { margin-left: 200px; flex: 1; padding: 40px 40px 60px; }
@@ -193,9 +194,10 @@
 
   /* MEMBER TABS */
   .member-tab {
-    padding: 8px 18px; border-radius: 24px; font-size: 13px; cursor: pointer;
+    padding: 6px 10px; border-radius: 24px; font-size: 11px; cursor: pointer;
     transition: all 0.15s; color: var(--text-muted); font-weight: 400;
     background: var(--surface); border: 1.5px solid var(--border);
+    white-space: nowrap; flex-shrink: 0;
   }
   .member-tab:hover { border-color: var(--mongmo); color: var(--text); }
   .member-tab.active { background: var(--text); color: #fff; border-color: var(--text); font-weight: 500; }
@@ -234,285 +236,132 @@
     background: rgba(0,0,0,0.45); z-index:650;
   }
   .drawer-overlay.open { display:block; }
-
   @media (max-width: 768px) {
     /* ── 기본 레이아웃 ── */
-    .mobile-header { display: flex; }
-    .sidebar { display: none; }
+    html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+    .mobile-header { display: flex !important; }
+    .sidebar { display: none !important; }
     .sidebar.drawer-open {
-      display: flex; position: fixed;
-      top: 0; left: 0; bottom: 0;
-      width: 260px; z-index: 700;
-      overflow-y: auto; flex-direction: column;
-      animation: slideInDrawer 0.22s ease;
+      display: flex !important; position: fixed;
+      top:0; left:0; bottom:0; width:260px; z-index:700;
+      overflow-y:auto; flex-direction:column;
+      animation: slideInLeft 0.22s ease;
     }
-    @keyframes slideInDrawer {
-      from { transform: translateX(-100%); }
-      to   { transform: translateX(0); }
-    }
-    .main {
-      margin-left: 0 !important;
-      padding: 60px 12px 80px !important;
-    }
+    @keyframes slideInLeft { from { transform:translateX(-100%); } to { transform:translateX(0); } }
+    .main { margin-left:0 !important; padding:58px 10px 80px !important; overflow-x:hidden; }
 
-    /* ── 그리드 전체 (클래스 기반) ── */
-    .grid-2, .grid-3 { grid-template-columns: 1fr !important; gap: 10px !important; }
-    /* 인라인 style grid는 JS applyMobileGridFix()가 setProperty로 직접 처리 */
-
-    /* 칸반 보드 */
-    #kanban-board, #task-kanban-board {
+    /* ── 그리드 클래스 → 1열 ── */
+    .grid-2, .grid-3, .mob-grid, .mob-grid-2, .form-row {
       grid-template-columns: 1fr !important;
+      gap: 10px !important;
     }
+    /* 발주필요+입고일정 1열 */
+    .inv-top-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+    /* 브랜드자산은 2열 유지 */
+    .g-col-auto { grid-template-columns: 1fr 1fr !important; }
 
-    /* ── 페이지 헤더 ── */
-    .page-header {
-      flex-direction: column; align-items: flex-start;
-      gap: 8px; margin-bottom: 14px !important;
-    }
-    .page-title { font-size: 17px !important; }
-    .page-sub { font-size: 11px !important; }
+    /* ── 대시보드 ── */
+    #dash-top-row { margin-bottom: 8px !important; }
+    #dash-notice-banner { font-size: 12px !important; }
+    #page-dashboard .card { padding: 12px !important; }
+    #page-dashboard .stat-value { font-size: 20px !important; }
 
-    /* 헤더 액션 버튼 행 - 가로 스크롤 */
+    /* ── 헤더 액션 버튼들 ── */
     .header-actions {
-      display: flex;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      gap: 6px;
-      width: 100%;
-      padding-bottom: 2px;
-      scrollbar-width: none;
-    }
-    .header-actions::-webkit-scrollbar { display: none; }
-    .header-actions .btn {
-      font-size: 11px !important;
-      padding: 6px 10px !important;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .header-actions label.btn {
-      font-size: 11px !important;
-      padding: 6px 10px !important;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    /* ── 카드 ── */
-    .card { padding: 12px !important; }
-    .card-title { font-size: 13px !important; margin-bottom: 12px !important; }
-
-    /* ── 탭바 가로 스크롤 ── */
-    .tab-bar {
-      overflow-x: auto; flex-wrap: nowrap !important;
-      width: 100% !important; max-width: 100%;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      padding: 3px !important;
-    }
-    .tab-bar::-webkit-scrollbar { display:none; }
-    .tab {
-      white-space: nowrap;
-      padding: 7px 14px !important;
-      font-size: 12px !important;
-      flex-shrink: 0;
-    }
-
-    /* ── 폼 ── */
-    .form-row { grid-template-columns: 1fr !important; }
-    .form-input, .form-select, .form-textarea {
-      font-size: 16px !important; /* iOS 줌 방지 */
-    }
-
-    /* ── 모달 - 하단 시트 ── */
-    .modal {
-      width: 100% !important; max-width: 100% !important;
-      margin: 0 !important; border-radius: 20px 20px 0 0 !important;
-      padding: 20px 14px !important;
-      max-height: 92vh; overflow-y: auto;
-    }
-    .modal-overlay { align-items: flex-end !important; }
-    .modal-title { font-size: 15px !important; margin-bottom: 16px !important; }
-    .modal-actions { gap: 8px !important; }
-    .modal-actions .btn { flex: 1; text-align: center; }
-
-    /* ── 테이블 공통 ── */
-    table { font-size: 11px; }
-    th { padding: 6px 6px 6px 6px !important; font-size: 10px !important; }
-    td { padding: 8px 6px !important; }
-
-    /* ── 재고 테이블 - 모바일 최적화 ── */
-    /* 가용재고, 예상소진 컬럼 숨김 */
-    #inv-main-table th:nth-child(6),
-    #inv-main-table td:nth-child(6),
-    #inv-main-table th:nth-child(7),
-    #inv-main-table td:nth-child(7) {
-      display: none;
-    }
-    /* 사이즈 컬럼 좁게 */
-    #inv-main-table th:nth-child(2),
-    #inv-main-table td:nth-child(2) {
-      width: 36px;
-    }
-    /* 브랜드 배지 작게 */
-    #inv-main-table .brand-badge {
-      font-size: 9px !important;
-      padding: 2px 6px !important;
-    }
-    /* 재고 상태 배지 작게 */
-    #inv-main-table .status-badge {
-      font-size: 9px !important;
-      padding: 1px 5px !important;
-    }
-    /* 마지막 컬럼(버튼) 최소화 */
-    #inv-main-table th:last-child,
-    #inv-main-table td:last-child {
-      min-width: 56px;
-      white-space: nowrap;
-    }
-    #inv-main-table td:last-child .btn {
-      font-size: 10px !important;
-      padding: 3px 6px !important;
-    }
-    /* 상품명 셀 이미지 */
-    #inv-main-table td:nth-child(2) img,
-    #inv-main-table td:nth-child(2) > div > div:first-child {
-      width: 26px !important;
-      height: 26px !important;
-    }
-
-    /* ── 판매분석 테이블 ── */
-    #mega-table th:nth-child(5),
-    #mega-table td:nth-child(5),
-    #mega-table th:nth-child(6),
-    #mega-table td:nth-child(6) { display: none; }
-
-    /* ── 근태 테이블 ── */
-    #attendance-table th:nth-child(5),
-    #attendance-table td:nth-child(5) { display: none; }
-
-    /* ── 대시보드 특화 ── */
-    /* 상태 요약 배지 */
-    #dash-today-summary .status-badge,
-    #dash-today-summary span[style] {
-      font-size: 11px !important;
-      padding: 5px 10px !important;
-    }
-    #dash-status-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
-    #sales-compare-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
-    #asset-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
-
-    /* 대시보드 상단 - 공지+검색 */
-    #page-dashboard > div:first-child {
-      flex-direction: column !important;
-      gap: 8px !important;
-    }
-    #page-dashboard > div:first-child > div:first-child,
-    #page-dashboard > div:first-child > div:last-child {
-      width: 100% !important;
-      min-width: 0 !important;
-      flex: none !important;
-    }
-    #dash-notice-banner {
-      min-width: 0 !important;
-      width: 100% !important;
-      padding: 8px 12px !important;
-      font-size: 12px !important;
-    }
-    #dash-search-input { width: 100% !important; font-size: 16px !important; }
-
-    /* 대시보드 페이지 헤더 - 인사말 + 날씨/버튼 정리 */
-    #page-dashboard .page-header {
-      margin-bottom: 12px !important;
-    }
-    #page-dashboard .page-header > div:first-child {
-      flex-wrap: wrap !important;
-      gap: 8px !important;
-    }
-    #page-dashboard .header-actions {
-      flex-wrap: wrap !important;
-      overflow-x: visible !important;
-      gap: 6px !important;
-    }
-    #dash-weather-badge {
-      font-size: 12px !important;
-      padding: 6px 10px !important;
-      min-width: 0 !important;
-      flex-shrink: 0;
-    }
-    #dash-dday-inline {
-      width: 100%;
-      font-size: 12px !important;
-    }
-    #dash-date-sub {
-      flex-wrap: wrap;
-      word-break: keep-all;
-    }
-
-    /* 바로가기 버튼 행 - 가로 스크롤 */
-    #page-dashboard > div:nth-child(3) {
       flex-wrap: nowrap !important;
       overflow-x: auto !important;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 4px;
-      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch !important;
       gap: 6px !important;
     }
-    #page-dashboard > div:nth-child(3)::-webkit-scrollbar { display: none; }
-    #page-dashboard > div:nth-child(3) a { flex-shrink: 0; }
-    #page-dashboard > div:nth-child(3) div[style] {
-      padding: 6px 10px !important;
-      font-size: 11px !important;
-      white-space: nowrap;
+    .header-actions::-webkit-scrollbar { display: none; }
+    .header-actions .btn { flex-shrink: 0 !important; font-size: 11px !important; padding: 6px 10px !important; white-space: nowrap !important; }
+
+    /* ── 탭바 ── */
+    .tab-bar {
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      gap: 2px !important;
     }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab { flex-shrink: 0 !important; white-space: nowrap !important; font-size: 12px !important; padding: 7px 10px !important; }
 
-    /* 재고 스마트 필터 행 */
-    #inv-filter-row {
-      flex-wrap: wrap !important;
-      gap: 6px !important;
-    }
-    #inv-filter-row .tab-bar {
-      order: 0;
-    }
-    #inv-cat-filter { width: 100% !important; order: 1; }
-    #inv-search { width: 100% !important; order: 2; }
+    /* ── 카드 ── */
+    .card { padding: 12px 14px !important; }
+    .section { margin-bottom: 12px !important; }
+    .page-title { font-size: 17px !important; }
+    .stat-value { font-size: 20px !important; }
 
-    /* stat-value 숫자 크기 조정 */
-    .stat-value { font-size: 22px !important; }
-    .stat-label { font-size: 10px !important; }
+    /* ── 폼 ── */
+    .form-input, .form-select, .form-textarea { font-size: 16px !important; }
+    .modal { width: 100% !important; max-width: 100% !important; border-radius: 20px 20px 0 0 !important; padding: 20px 14px 30px !important; max-height: 90vh !important; }
+    .modal-overlay { align-items: flex-end !important; }
 
-    /* 검색 */
-    #dash-search-input { width: 100% !important; }
+    /* ── 재고 테이블 ── */
+    #inv-main-table { font-size: 11px !important; }
+    #inv-main-table th, #inv-main-table td { padding: 6px 4px !important; font-size: 10px !important; }
+    /* 사이즈 컬럼 축소 */
+    #inv-main-table th:nth-child(3), #inv-main-table td:nth-child(3) { width: 28px !important; font-size: 10px !important; }
+    /* 원재고 컬럼 축소 */
+    #inv-main-table th:nth-child(4), #inv-main-table td:nth-child(4) { width: 36px !important; }
+    /* 7일속도 컬럼 축소 */
+    #inv-main-table th:nth-child(5), #inv-main-table td:nth-child(5) { width: 36px !important; }
+    /* 등급/스마트 컬럼 */
+    #inv-main-table th:nth-child(7), #inv-main-table td:nth-child(7) { display: none !important; }
 
-    /* 알림 패널 */
+    /* ── 재고 검색/카테고리 ── */
+    #inv-cat-filter, #inv-search { font-size: 13px !important; padding: 6px 8px !important; }
+
+    /* ── 판매분석 테이블 ── */
+    #mega-table { font-size: 10px !important; }
+    #mega-table th, #mega-table td { padding: 5px 3px !important; font-size: 10px !important; }
+    #mega-table .brand-badge { font-size: 9px !important; padding: 1px 4px !important; }
+    /* 매출기여, 가용재고, 예상소진 숨김 */
+    #mega-table th:nth-child(6), #mega-table td:nth-child(6),
+    #mega-table th:nth-child(8), #mega-table td:nth-child(8),
+    #mega-table th:nth-child(9), #mega-table td:nth-child(9) { display: none !important; }
+
+    /* ── 소모품 테이블 ── */
+    #cons-tbody tr td:nth-child(2) { display: none !important; }
+    #cons-tbody tr td:nth-child(7) { display: none !important; }
+    .cons-table th:nth-child(2), .cons-table th:nth-child(7) { display: none !important; }
+
+    /* ── 소모품 버튼 세로 나열 ── */
+    #cons-tbody td:last-child { display: flex !important; flex-direction: column !important; gap: 3px !important; }
+    #cons-tbody td:last-child .btn { margin: 0 !important; width: 100% !important; font-size: 10px !important; }
+
+    /* ── 근태 로그 테이블 ── */
+    #att-log-tbody td { font-size: 10px !important; }
+    .att-table th, .att-table td { font-size: 10px !important; padding: 5px 3px !important; }
+
+    /* ── 운영일정 캘린더 ── */
+    .cal-day { min-height: 42px !important; padding: 2px 3px !important; font-size: 10px !important; }
+    .cal-event { font-size: 9px !important; padding: 1px 3px !important; white-space: normal !important; word-break: keep-all !important; }
+    .cal-header-day { font-size: 10px !important; }
+
+    /* ── 토스트 ── */
+    .toast { bottom: 75px !important; left: 10px !important; right: 10px !important; }
+
+    /* ── 알림패널 ── */
     #notif-panel { left: 0 !important; width: 100% !important; z-index: 800 !important; }
 
-    /* 달력 */
-    .cal-day { min-height: 40px !important; padding: 4px 3px !important; }
-    .cal-num { font-size: 11px !important; }
-    .cal-event { font-size: 9px !important; padding: 1px 3px !important; }
-    .cal-header { font-size: 10px !important; padding: 6px 0 !important; }
+    /* ── 모바일 네비 ── */
+    .mobile-bottom-nav { display: flex !important; }
+    .mobile-nav-item { font-size: 10px !important; }
+    .mobile-nav-item .nav-icon { font-size: 20px !important; }
 
-    /* 섹션 여백 */
-    .section { margin-bottom: 16px !important; }
+    /* ── 대시보드 3열 카드 → 1열 ── */
+    #dash-top-cards { grid-template-columns: 1fr !important; }
 
-    /* 모바일 하단 탭 */
-    .mobile-bottom-nav { display: flex; }
+    /* ── 매출현황 테이블 ── */
+    #rev-log-table { font-size: 11px !important; }
+    #rev-log-table th, #rev-log-table td { padding: 5px 4px !important; font-size: 10px !important; }
+    #rev-log-table th:nth-child(5), #rev-log-table td:nth-child(5),
+    #rev-log-table th:nth-child(6), #rev-log-table td:nth-child(6),
+    #rev-log-table th:nth-child(7), #rev-log-table td:nth-child(7),
+    #rev-log-table th:nth-child(8), #rev-log-table td:nth-child(8) { display: none !important; }
+  }
 
-    /* 토스트 위치 조정 */
-    .toast { bottom: 70px !important; right: 12px !important; left: 12px !important; right: 12px !important; text-align: center; }
-
-    /* 프로그레스 바 */
-    .progress-bar { height: 5px !important; }
-
-    /* 체크리스트 */
-    .checklist-item { padding: 10px 0 !important; gap: 10px !important; }
-    .check-title { font-size: 13px !important; }
-
-    /* 컨텐츠 리스트 */
-    .content-list-item { padding: 10px 0 !important; }
-
-    /* 멤버 탭 */
-    .member-tab { padding: 6px 12px !important; font-size: 12px !important; }
   }
 
   /* 모바일 하단 탭 네비 */
@@ -534,100 +383,6 @@
   .mobile-nav-item.active { color: var(--mongmo); }
   .mobile-nav-item.active .nav-icon { transform: scale(1.1); }
 
-  /* 모바일 그리드 보조 클래스 + 추가 세부 개선 */
-  @media (max-width: 768px) {
-    .mob-grid-1 { grid-template-columns: 1fr !important; gap: 10px !important; }
-    .mob-grid-2 { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
-
-    /* ── 매출 이력 테이블 : 소수 채널 숨김 ── */
-    #rev-log-table th:nth-child(5),  /* 팝업 */
-    #rev-log-table td:nth-child(5),
-    #rev-log-table th:nth-child(6),  /* 이모티콘 */
-    #rev-log-table td:nth-child(6),
-    #rev-log-table th:nth-child(7),  /* 라인프렌즈 */
-    #rev-log-table td:nth-child(7),
-    #rev-log-table th:nth-child(8),  /* NCP */
-    #rev-log-table td:nth-child(8) {
-      display: none;
-    }
-
-    /* ── 판매분석 업로드 결과 테이블 ── */
-    #channel-upload-table th:nth-child(4),
-    #channel-upload-table td:nth-child(4),
-    #channel-upload-table th:nth-child(5),
-    #channel-upload-table td:nth-child(5) { display: none; }
-
-    /* ── 세무 테이블 ── */
-    #tax-table th:nth-child(4),
-    #tax-table td:nth-child(4) { display: none; }
-
-    /* ── 생산일정 카드 ── */
-    #page-production .card { padding: 10px !important; }
-
-    /* ── 콘텐츠 캘린더 달력 셀 ── */
-    .cal-day { min-height: 40px !important; }
-
-    /* ── 공지사항 리스트 ── */
-    #notice-list .content-list-item {
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-
-    /* ── 프로젝트 칸반 카드 ── */
-    .kanban-card { padding: 10px !important; font-size: 12px !important; }
-
-    /* ── 근태 관리 헤더 액션 ── */
-    #page-attendance .header-actions {
-      overflow-x: auto !important;
-    }
-
-    /* ── 출퇴근 버튼 크기 ── */
-    #att-checkin-btn, #att-checkout-btn {
-      padding: 10px 16px !important;
-      font-size: 13px !important;
-    }
-
-    /* ── 브랜드 자산 그리드 ── */
-    #asset-grid {
-      grid-template-columns: 1fr 1fr !important;
-      gap: 8px !important;
-    }
-
-    /* ── stat-card 여백 ── */
-    .stat-card { padding: 14px !important; }
-    .stat-value { font-size: 20px !important; }
-
-    /* ── page-header 에서 flex-wrap 강제 허용 ── */
-    .page-header > div:first-child { min-width: 0; }
-
-    /* ── 입고 이력 테이블 메모 컬럼 ── */
-    #inv-inbound-log table th:nth-child(4),
-    #inv-inbound-log table td:nth-child(4) { display: none; }
-
-    /* ── 달력 네비 ── */
-    .cal-nav { gap: 8px !important; }
-    .cal-nav-title { font-size: 14px !important; }
-    .cal-nav-btn { padding: 4px 10px !important; font-size: 13px !important; }
-
-    /* ── 모달 폼 그룹 ── */
-    .form-group { margin-bottom: 12px !important; }
-    .form-label { font-size: 12px !important; }
-
-    /* ── 탭바 안 첫번째 탭 여백 ── */
-    .tab-bar .tab:first-child { margin-left: 0; }
-
-    /* ── 드로어 닫기 오버레이 ── */
-    .drawer-overlay.open { display: block; }
-
-    /* ── 모바일 헤더 검색버튼 ── */
-    .mobile-header button { flex-shrink: 0; }
-
-    /* ── 소모품 테이블 ── */
-    #consumables-table th:nth-child(5),
-    #consumables-table td:nth-child(5) { display: none; }
-
-    /* ── 바로가기 버튼 overflow hidden 방지 ── */
-    #page-dashboard > div { overflow: visible; }
   }
 
 </style>
@@ -637,9 +392,10 @@
 <!-- ══ 모바일 상단 헤더 ══ -->
 <div class="mobile-header" id="mobile-header">
   <div class="mobile-header-logo" onclick="showPage('dashboard');closeMobileDrawer()">
-    <span>CHEROP</span>
+    <span style="font-size:12px;letter-spacing:0.1em;">CHEROP WORKSPACE</span>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button id="mob-search-btn" onclick="toggleMobileSearch()" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;">🔍</button>
     <button onclick="toggleNotifPanel()" style="background:none;border:none;cursor:pointer;font-size:20px;position:relative;">
       🔔<span id="mobile-notif-dot" style="display:none;position:absolute;top:0;right:0;width:8px;height:8px;background:var(--mongmo);border-radius:50%;"></span>
     </button>
@@ -791,30 +547,33 @@
     <!-- ========== DASHBOARD ========== -->
     <div id="page-dashboard">
 
-      <!-- 공지 배너 + 통합검색 -->
-      <div id="dash-top-row" style="display:flex;gap:10px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap;">
-        <div id="dash-notice-banner" style="flex:1;min-width:200px;background:var(--mongmo-light);border:1px solid var(--mongmo);border-radius:10px;padding:9px 14px;cursor:pointer;font-size:13px;" onclick="showPage('notice')"></div>
-        <div id="dash-search-wrap" style="position:relative;flex:0 0 auto;width:220px;min-width:160px;">
-          <input id="dash-search-input" class="form-input" placeholder="🔍 통합검색..." oninput="renderDashSearch()" style="padding-right:32px;font-size:13px;">
-          <div id="dash-search-results" style="display:none;position:absolute;top:44px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);z-index:200;max-height:320px;overflow-y:auto;"></div>
+      <!-- 공지 배너 -->
+      <div id="dash-top-row" style="margin-bottom:10px;">
+        <div id="dash-notice-banner" style="background:var(--mongmo-light);border:1px solid var(--mongmo);border-radius:10px;padding:9px 14px;cursor:pointer;font-size:13px;" onclick="showPage('notice')"></div>
+        <!-- 통합검색: 모바일은 상단 🔍 버튼으로 -->  
+        <div id="dash-search-wrap" style="display:none;">
+          <input id="dash-search-input" class="form-input" placeholder="🔍 통합검색..." oninput="renderDashSearch()" style="font-size:13px;">
+          <div id="dash-search-results" style="display:none;position:fixed;top:55px;left:12px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);z-index:800;max-height:320px;overflow-y:auto;"></div>
         </div>
       </div>
 
-      <div class="page-header" style="margin-bottom:16px;">
+      <!-- 행1: 인사말(좌) + 날씨뱃지(우) -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;">
         <div style="flex:1;min-width:0;">
-          <div class="page-title" id="dash-greeting">안녕하세요 👋</div>
-          <div class="page-sub" id="dash-date-sub"></div>
-          <!-- D-day 인라인 박스 -->
-          <div id="dash-dday-inline" style="display:none;margin-top:6px;"></div>
+          <div class="page-title" id="dash-greeting" style="font-size:17px;line-height:1.4;word-break:keep-all;">안녕하세요 👋</div>
+          <div class="page-sub" id="dash-date-sub" style="font-size:11px;margin-top:2px;"></div>
         </div>
-        <div class="header-actions" style="align-items:center;">
-          <div id="dash-weather-badge" style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:12px;white-space:nowrap;"></div>
-          <button class="btn btn-secondary" onclick="showPage('tasks')" style="font-size:12px;white-space:nowrap;">✅ 오늘 할 일</button>
-        </div>
+        <div id="dash-weather-badge" style="display:flex;align-items:center;gap:5px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:12px;white-space:nowrap;flex-shrink:0;"></div>
+      </div>
+      <!-- 행2: D-day(좌) + 오늘할일버튼(우) -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <div id="dash-dday-inline" style="display:none;flex:1;min-width:0;"></div>
+        <div id="dash-dday-empty" style="flex:1;"></div>
+        <button class="btn btn-secondary" onclick="showPage('tasks')" style="font-size:12px;white-space:nowrap;flex-shrink:0;">✅ 오늘 할 일</button>
       </div>
 
       <!-- 바로가기 버튼 -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
         <a href="https://shopping-sell.kakao.com/hub" target="_blank" style="text-decoration:none;">
           <div style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:background 0.15s;color:var(--text);" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'">
             🎁 카카오 어드민
@@ -860,7 +619,7 @@
       <div class="grid-3 section" id="dash-top-cards"></div>
 
       <!-- Row 2: 재고주의 / 소모품 / 상품화 긴급 -->
-      <div class="grid-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:32px;">
+      <div class="grid-3" class="mob-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:32px;">
         <div class="card">
           <div class="card-title">
             <span>⚠️ 재고 주의</span>
@@ -904,8 +663,8 @@
         </div>
       </div>
 
-      <!-- 발주 필요 + 입고 일정 (2열) -->
-      <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <!-- 발주 필요 + 입고 일정 (데스크탑2열/모바일1열) -->
+      <div class="inv-top-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
         <div id="inv-smart-banner"></div>
         <div class="card" style="padding:16px 20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -1143,7 +902,7 @@
             <div style="overflow-x:auto;">
               <table class="data-table">
                 <thead>
-                  <tr><th>상품명</th><th>사이즈</th><th>브랜드</th><th>판매량</th><th>일평균</th><th>매출 기여</th><th>현재 재고</th><th>가용 재고</th><th>예상 소진</th><th>등급</th></tr>
+                  <tr><th>상품명</th><th>사이즈</th><th>브랜드</th><th>판매</th><th>일평균</th><th>매출%</th><th>재고</th><th>가용</th><th>소진</th><th>등급</th></tr>
                 </thead>
                 <tbody id="sales-tbody"></tbody>
               </table>
@@ -1198,7 +957,7 @@
       <!-- 매출 비교 -->
       <div class="card section" style="padding:16px 20px;">
         <div style="font-weight:700;margin-bottom:14px;">📊 매출 비교</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;" id="sales-compare-grid"></div>
+        <div class="mob-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;" id="sales-compare-grid"></div>
       </div>
 
       <!-- 채널별 현황 -->
@@ -1346,7 +1105,7 @@
       <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;" id="project-tabs"></div>
 
       <!-- Kanban -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" id="kanban-board"></div>
+      <div class="mob-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" id="kanban-board"></div>
     </div>
 
     <!-- ========== CONTENT CALENDAR ========== -->
@@ -1527,8 +1286,8 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>소모품명</th><th>유형</th><th>현재 재고</th><th>월 소모량</th>
-              <th>품절 예상</th><th>재고 상태</th><th>연결 재고</th><th></th>
+              <th>소모품명</th><th style="display:none">유형</th><th>현재재고</th><th>월소모</th>
+              <th>품절예상</th><th>상태</th><th style="display:none">연결재고</th><th></th>
             </tr>
           </thead>
           <tbody id="cons-tbody"></tbody>
@@ -1605,7 +1364,7 @@
 
       <!-- 팀원별 칸반 뷰 -->
       <div id="task-kanban-wrap" style="display:none;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" id="task-kanban-board"></div>
+        <div class="mob-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" id="task-kanban-board"></div>
       </div>
     </div>
 
@@ -1619,7 +1378,7 @@
       </div>
 
       <!-- 상단: 추천 리스트(좌측 넓게) + 입고예정/오늘생산(우측 2단) -->
-      <div class="grid-2" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:20px;">
+      <div class="grid-2" class="mob-grid-2" style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:20px;">
 
         <!-- 좌측: 오늘 생산 추천 리스트 -->
         <div class="card" style="padding:16px;">
@@ -2886,7 +2645,7 @@
         <option value="기타">기타</option>
       </select>
     </div>
-    <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+    <div class="grid-2" class="mob-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
       <div class="form-group" style="margin-bottom:0;">
         <label class="form-label">❤️ 좋아요</label>
         <input class="form-input" type="number" id="feed-likes" placeholder="0">
@@ -3465,6 +3224,22 @@ function mobileFixAll() {
   injectMobileCSS();
   applyMobileGridFix();
   applyMobileFlexFix();
+}
+
+
+// 모바일 검색 토글
+function toggleMobileSearch() {
+  const wrap = document.getElementById('dash-search-wrap');
+  const input = document.getElementById('dash-search-input');
+  if (!wrap) return;
+  const isVisible = wrap.style.display !== 'none';
+  wrap.style.display = isVisible ? 'none' : 'block';
+  if (!isVisible) {
+    wrap.style.cssText = 'display:block;position:fixed;top:48px;left:0;right:0;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);z-index:600;box-shadow:0 4px 12px rgba(0,0,0,0.1);';
+    if (input) { input.style.width='100%'; input.focus(); }
+    const results = document.getElementById('dash-search-results');
+    if (results) results.style.cssText = 'display:none;position:absolute;top:44px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:0 0 10px 10px;box-shadow:var(--shadow-lg);z-index:601;max-height:60vh;overflow-y:auto;';
+  }
 }
 
 window.addEventListener('resize', () => {
@@ -4622,32 +4397,35 @@ function renderChannelAlert() {
 
   if (!alerts.length) { alertEl.innerHTML = ''; return; }
 
-  const shown = alerts.slice(0, 8);
-  const more = alerts.length - 8;
+  const isMob = window.innerWidth <= 768;
+  const showN = isMob ? 4 : 8;
+  const shown = alerts.slice(0, showN);
+  const more = alerts.length - showN;
 
   alertEl.innerHTML = `
-    <div class="card" style="padding:14px 20px;border-left:4px solid var(--red);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <span style="font-size:13px;font-weight:700;color:var(--red);">🚨 채널 재고 보충 필요 (3일 이내 소진) <span style="background:var(--red);color:#fff;font-size:11px;padding:1px 7px;border-radius:20px;margin-left:4px;">${alerts.length}</span></span>
-        <span onclick="openChannelAlertAll()" style="font-size:12px;color:var(--mongmo);cursor:pointer;font-weight:600;">전체 보기 →</span>
+    <div class="card" style="padding:12px 14px;border-left:4px solid var(--red);position:relative;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:700;color:var(--red);">🚨 채널 재고 보충 필요 <span style="background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:20px;margin-left:3px;">${alerts.length}</span></span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span onclick="openChannelAlertAll()" style="font-size:11px;color:var(--mongmo);cursor:pointer;font-weight:600;">전체 →</span>
+          <button onclick="document.getElementById('inv-channel-alert').innerHTML=''" style="border:none;background:var(--surface2);border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+        </div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
         ${shown.map(a => {
           const noAvail = a.available <= 0;
-          return `<div style="padding:8px 12px;background:var(--red-light);border-radius:8px;min-width:200px;">
-            <div style="font-size:12px;font-weight:600;">${a.ch.label} · ${a.item.name}${a.item.size?' '+a.item.size:''}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
-              현재 ${a.chStock}개 · ${a.daysLeft===0?'<strong style="color:var(--red)">오늘 소진</strong>':`<strong style="color:var(--red)">${a.daysLeft}일 후 소진</strong>`}
-            </div>
-            <div style="font-size:11px;margin-top:3px;">→ <strong>${a.refill}개</strong> 보충 추천 · 가용 ${a.available}개</div>
-            <button class="btn btn-sm" style="margin-top:6px;width:100%;background:${noAvail?'var(--surface2)':'var(--green)'};color:${noAvail?'var(--text-muted)':'#fff'};font-size:10px;"
+          return `<div style="padding:7px 8px;background:var(--red-light);border-radius:8px;">
+            <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.ch.label} · ${a.item.name}${a.item.size?' '+a.item.size:''}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">${a.daysLeft===0?'<strong style="color:var(--red)">오늘 소진</strong>':`<strong style="color:var(--red)">${a.daysLeft}일 후</strong>`}</div>
+            <div style="font-size:10px;margin-top:1px;">추천 <strong>${a.refill}개</strong></div>
+            <button class="btn btn-sm" style="margin-top:4px;width:100%;background:${noAvail?'var(--surface2)':'var(--green)'};color:${noAvail?'var(--text-muted)':'#fff'};font-size:9px;padding:2px 4px;"
               ${noAvail?'disabled':''} onclick="openChannelRefill(${a.item.id},'${a.ch.key}',${a.refill})">
-              ${noAvail?'가용재고 없음':'📦 보충하기'}
+              ${noAvail?'재고없음':'📦 보충'}
             </button>
           </div>`;
         }).join('')}
-        ${more > 0 ? `<div style="align-self:center;font-size:12px;color:var(--mongmo);cursor:pointer;font-weight:600;padding:8px;" onclick="openChannelAlertAll()">+${more}건 더 보기 →</div>` : ''}
       </div>
+      ${more > 0 ? `<div style="margin-top:6px;text-align:center;font-size:11px;color:var(--mongmo);cursor:pointer;font-weight:600;" onclick="openChannelAlertAll()">+${more}건 더 보기 →</div>` : ''}
     </div>`;
 }
 
@@ -5159,7 +4937,7 @@ function renderInventory() {
       </tr>`;
       return `<tr style="${rowBg}cursor:pointer;" onclick="toggleInvRow('${expandId}',this)">
         <td style="color:var(--text-muted);font-size:12px;text-align:center;">▶</td>
-        <td><div style="display:flex;align-items:center;gap:8px;">${thumbHTML}<div><div style="font-size:13px;font-weight:500;">${item.name}</div><div style="display:flex;gap:4px;margin-top:2px;">${dbCell}<span style="font-size:10px;padding:1px 6px;border-radius:10px;background:${sc.bg};color:${sc.color};">${item.status||'판매 중'}</span></div></div></div></td>
+        <td><div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;">${thumbHTML}<div style="font-size:11px;font-weight:500;line-height:1.3;word-break:keep-all;">${item.name}</div><div style="display:flex;gap:3px;">${dbCell}<span style="font-size:9px;padding:1px 4px;border-radius:8px;background:${sc.bg};color:${sc.color};">${item.status||'판매 중'}</span></div></div></td>
         <td style="color:var(--text-muted);font-size:12px;">${item.size||'-'}</td>
         <td class="num" style="font-weight:700;${item.stock===0?'color:var(--text-muted);':item.stock<20?'color:var(--red);':''}">${item.stock}</td>
         <td class="num" style="font-size:12px;">${vel7Week}</td>
@@ -5183,7 +4961,7 @@ function renderInventory() {
       const available = getAvailableStock(item.id);
       return `<tr style="${rowBg}">
         <td></td>
-        <td><div style="display:flex;align-items:center;gap:8px;">${thumbHTMLCh}<div><div style="font-size:13px;font-weight:500;">${item.name}</div><div style="font-size:11px;color:var(--text-muted);">${item.size||''} ${dbCell}</div></div></div></td>
+        <td><div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;">${thumbHTMLCh}<div style="font-size:11px;font-weight:500;line-height:1.3;word-break:keep-all;">${item.name}</div><div style="font-size:9px;color:var(--text-muted);">${item.size||''} ${dbCell}</div></div></td>
         <td class="num" style="font-weight:700;font-size:15px;${chColor}">${chStock}</td>
         <td class="num" style="font-size:12px;color:var(--text-muted);">${item.stock}</td>
         <td class="num" style="font-size:12px;">${vel7Week}</td>
@@ -10027,10 +9805,12 @@ function renderConsumables() {
       <td style="font-size:12px;">${monthsLeft !== '-' ? `약 ${monthsLeft}개월` : '-'}</td>
       <td><span class="status-badge ${st.cls}">${st.label}</span></td>
       <td>${linkedDisplay}</td>
-      <td style="white-space:nowrap;">
-        <button class="btn btn-sm btn-secondary" onclick="openEditConsumable(${c.id})">수정</button>
-        <button class="btn btn-sm btn-secondary" style="margin-left:4px;" onclick="adjustConsumableStock(${c.id})">재고조정</button>
-        <button class="btn btn-sm btn-danger" style="margin-left:4px;" onclick="deleteConsumable(${c.id})">삭제</button>
+      <td>
+        <div class="cons-btns" style="display:flex;flex-direction:column;gap:3px;">
+          <button class="btn btn-sm btn-secondary" onclick="openEditConsumable(${c.id})" style="font-size:10px;padding:3px 6px;">수정</button>
+          <button class="btn btn-sm btn-secondary" onclick="adjustConsumableStock(${c.id})" style="font-size:10px;padding:3px 6px;">재고조정</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteConsumable(${c.id})" style="font-size:10px;padding:3px 6px;">삭제</button>
+        </div>
       </td>
     </tr>`;
   }).join('');
@@ -10188,7 +9968,7 @@ async function fetchPajuWeather() {
       codes[0], codes[1], mins[0], maxes[0], mins[1], maxes[1]
     );
 
-    if (greetEl) greetEl.textContent = `${timeGreet} — ${todayMsg}`;
+    if (greetEl) greetEl.innerHTML = `${timeGreet} —<br><span style="font-size:14px;font-weight:400;">${todayMsg}</span>`;
     if (subEl) subEl.innerHTML = `<span>${dateStr} · 파주</span><span style="display:block;margin-top:1px;color:var(--text-muted);font-size:11px;">${tmrMsg} · ${tempMsg}</span>`;
 
     // 날씨 뱃지 (헤더 우측)
@@ -10258,6 +10038,7 @@ function _renderDashboard() {
       const dd = Math.ceil((new Date(bigEv.start)-today0)/86400000);
       const ddc = dd<=3?'var(--red)':dd<=7?'var(--yellow)':'var(--mongmo)';
       ddEl.style.display = 'flex';
+      if(ddEmpty) ddEmpty.style.display='none';
       ddEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:${ddc}12;border:1px solid ${ddc}40;border-radius:10px;width:100%;box-sizing:border-box;">
         <div style="flex:1;min-width:0;">
           <div style="font-size:10px;font-weight:600;color:${ddc};margin-bottom:1px;">🎯 카운트다운</div>
@@ -10266,7 +10047,7 @@ function _renderDashboard() {
         </div>
         <div style="font-size:24px;font-weight:900;font-family:'DM Mono',monospace;color:${ddc};flex-shrink:0;">${dd===0?'D-DAY':'D-'+dd}</div>
       </div>`;
-    } else { ddEl.style.display = 'none'; }
+    } else { ddEl.style.display = 'none'; if(ddEmpty) ddEmpty.style.display='flex'; }
   }
 
   // ── 오늘 상태 요약 ──
@@ -11087,12 +10868,12 @@ function renderAttLog() {
     const mins = a.checkIn&&a.checkOut ? calcWorkMins(a) : null;
     const seq = a.seq > 1 ? `<span style="font-size:10px;color:var(--text-muted);"> (${a.seq}번째)</span>` : '';
     return `<tr>
-      <td style="color:var(--text-muted);font-size:12px;">${a.date}</td>
-      <td><span style="font-size:12px;font-weight:500;">${a.member}</span>${seq}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px;">${a.checkIn||'-'}</td>
-      <td style="font-size:12px;color:var(--text-muted);">${a.lunchStart?(a.lunchStart+'~'+(a.lunchEnd||'?')):'-'}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px;">${a.checkOut||'-'}</td>
-      <td style="font-size:12px;color:var(--text-muted);">${mins!==null?fmtMins(mins):'-'}</td>
+      <td style="color:var(--text-muted);font-size:10px;">${a.date}</td>
+      <td><span style="font-size:10px;font-weight:500;">${a.member}</span>${seq}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:10px;">${a.checkIn||'-'}</td>
+      <td style="font-size:10px;color:var(--text-muted);">${a.lunchStart?(a.lunchStart+'~'+(a.lunchEnd||'?')):'-'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:10px;">${a.checkOut||'-'}</td>
+      <td style="font-size:10px;color:var(--text-muted);">${mins!==null?fmtMins(mins):'-'}</td>
       <td></td>
     </tr>`;
   }).join('');
