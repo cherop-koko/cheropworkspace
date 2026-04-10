@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
 <style>
   :root {
     --bg: #F5F3EE;
@@ -798,7 +799,10 @@
       </div>
     </nav>
     <div class="sidebar-footer">
-      <div class="date" id="sidebar-date"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="date" id="sidebar-date"></div>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.0.9</span>
+      </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
     </div>
@@ -929,7 +933,8 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <span style="font-size:13px;font-weight:700;">📅 입고 일정</span>
             <div style="display:flex;gap:8px;align-items:center;">
-              <button class="btn btn-sm btn-primary" style="font-size:11px;padding:3px 10px;" onclick="openAddInboundSchedule()">+ 추가</button>
+              <button class="btn btn-sm btn-primary" style="font-size:11px;padding:3px 10px;" onclick="openAddInboundSchedule()">+ 운영일정 추가</button>
+              <button class="btn btn-sm btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="openInboundItemModal()">📦 입고 등록</button>
               <span onclick="showPage('ops')" style="font-size:11px;color:var(--text-muted);cursor:pointer;">전체 →</span>
             </div>
           </div>
@@ -2025,10 +2030,6 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">판매가 (원)</label>
-        <input class="form-input" type="number" id="inv-price" placeholder="39000" min="0">
-      </div>
-      <div class="form-group">
         <label class="form-label">판매 상태</label>
         <select class="form-select" id="inv-status">
           <option value="판매 중">판매 중</option>
@@ -2036,13 +2037,20 @@
           <option value="판매 종료">판매 종료</option>
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label">재고 상태</label>
+        <select class="form-select" id="inv-stock-status">
+          <option value="">일반</option>
+          <option value="무한재고">무한재고 (주문제작)</option>
+        </select>
+      </div>
     </div>
     <div class="form-group">
-      <label class="form-label">재고 상태</label>
-      <select class="form-select" id="inv-stock-status">
-        <option value="">일반</option>
-        <option value="무한재고">무한재고 (주문제작)</option>
-      </select>
+      <label class="form-label">연동 소모품 <span style="font-size:11px;color:var(--text-muted);">(출고 시 자동 차감 — 다중 선택)</span></label>
+      <div id="inv-linked-cons-wrap" style="border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg);max-height:140px;overflow-y:auto;">
+        <div id="inv-linked-cons-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+      <input class="form-input" id="inv-linked-cons-search" placeholder="소모품 검색..." style="margin-top:6px;font-size:12px;" oninput="filterInvLinkedCons(this.value)">
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-inventory')">취소</button>
@@ -2840,7 +2848,47 @@
 </div>
 
 <!-- ── 채널 재고 직접수정 모달 ── -->
-<div class="modal-overlay hidden" id="modal-ch-stock-edit">
+<div class="modal-overlay hidden" 
+<!-- 입고 등록 모달 -->
+<div class="modal-overlay hidden" id="modal-inbound-item">
+  <div class="modal" style="width:560px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-title">📦 입고 등록</div>
+    <input type="hidden" id="inbound-edit-id">
+
+    <!-- 운영일정 연결 -->
+    <div class="form-group">
+      <label class="form-label">입고 일정 선택 <span style="font-size:11px;color:var(--text-muted);">(운영일정 재고입고 기준)</span></label>
+      <select class="form-select" id="inbound-ops-id" onchange="onInboundOpsChange()">
+        <option value="">일정 선택 (선택사항)</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">입고 예정일 *</label>
+        <input class="form-input" type="date" id="inbound-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">공급사 / 메모</label>
+        <input class="form-input" id="inbound-supplier" placeholder="예: OEM 공장, 발주번호">
+      </div>
+    </div>
+
+    <!-- 제품별 입고 수량 -->
+    <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:13px;font-weight:600;">입고 제품 목록</span>
+      <button class="btn btn-sm btn-secondary" onclick="addInboundItemRow()" style="font-size:11px;">+ 제품 추가</button>
+    </div>
+    <div id="inbound-item-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('inbound-item')">취소</button>
+      <button class="btn btn-primary" onclick="submitInboundItem()">저장</button>
+    </div>
+  </div>
+</div>
+
+id="modal-ch-stock-edit">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title">📦 채널 재고 직접 수정</div>
     <div id="ch-stock-edit-info" style="background:var(--surface2);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;"></div>
@@ -3449,6 +3497,7 @@ async function save() {
     defectLog: state.defectLog, productions: state.productions,
     prodStockReady: state.prodStockReady,
     productSalesLog: state.productSalesLog||[],
+    inboundItems: state.inboundItems||[],
   };
   clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(async () => {
@@ -3540,6 +3589,7 @@ function applyState(p) {
   state.productions = p.productions || [];
   state.prodStockReady = p.prodStockReady || {};
   state.productSalesLog = p.productSalesLog || [];
+  state.inboundItems = p.inboundItems || [];
   state.channelSalesLog = state.channelSalesLog || []; // 별도 테이블에서 로딩
 }
 
@@ -5270,6 +5320,13 @@ function renderSmartBanner() {
   const dustbagWarnings = [];
   const seenDustbag = new Set();
 
+  // 발주완료(입고대기) 제품 ID 세트
+  const today = new Date().toISOString().split('T')[0];
+  const inboundPendingIds = new Set(
+    (state.inboundItems||[]).filter(b=>!b.done && b.date>=today).map(b=>b.inventoryId)
+  );
+  const inboundList = [];
+
   state.inventory.forEach(item => {
     if (item.status === '판매 종료') return;
     const days = getDaysToStockout(item);
@@ -5277,6 +5334,15 @@ function renderSmartBanner() {
     const vel30 = getSalesVelocity(item.id, 30);
     const velBase = vel7 > 0 ? vel7 : vel30;
     const velWeek = (vel7 > 0 ? vel7 : vel30) * 7;
+
+    // 발주완료(입고대기) 제품 → 별도 리스트
+    if (inboundPendingIds.has(item.id)) {
+      const pending = (state.inboundItems||[]).filter(b=>!b.done&&b.inventoryId===item.id&&b.date>=today);
+      const totalQty = pending.reduce((s,b)=>s+b.qty,0);
+      const nearestDate = pending.sort((a,b)=>a.date.localeCompare(b.date))[0]?.date||'';
+      inboundList.push({ item, totalQty, nearestDate, days });
+      return;
+    }
 
     if (days !== null && days <= cfg.reorderDays && days > 0 && velBase > 0) {
       const recommended = Math.ceil(velBase * 60 / 10) * 10;
@@ -5302,7 +5368,8 @@ function renderSmartBanner() {
   const dangerCnt  = reorderList.filter(r=>r.urgency==='danger').length;
   const warnCnt    = reorderList.filter(r=>r.urgency==='warn').length;
   const noticeCnt  = reorderList.filter(r=>r.urgency==='notice').length + dustbagWarnings.length;
-  const total      = reorderList.length + dustbagWarnings.length;
+  const inboundCnt = inboundList.length;
+  const total      = reorderList.length + dustbagWarnings.length + inboundList.length;
 
   if (total === 0) {
     banner.innerHTML = `<div style="padding:12px 20px;background:var(--green-light);border-radius:10px;font-size:13px;color:var(--green);margin-bottom:4px;">✅ 발주가 필요한 상품이 없어요</div>`;
@@ -5314,6 +5381,7 @@ function renderSmartBanner() {
     dangerCnt  > 0 ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;background:var(--red);color:#fff;font-size:12px;font-weight:700;">🚨 긴급 ${dangerCnt}건</span>` : '',
     warnCnt    > 0 ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;background:var(--yellow-light);color:var(--yellow);font-size:12px;font-weight:600;">⚠️ 주의 ${warnCnt}건</span>` : '',
     noticeCnt  > 0 ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;background:var(--mongmo-light);color:var(--mongmo);font-size:12px;font-weight:600;">📦 발주필요 ${noticeCnt}건</span>` : '',
+    inboundCnt > 0 ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;background:var(--green-light);color:var(--green);font-size:12px;font-weight:600;">✅ 발주완료 ${inboundCnt}건</span>` : '',
   ].filter(Boolean).join('');
 
   const urgencyStyle = {
@@ -5323,6 +5391,20 @@ function renderSmartBanner() {
   };
 
   const listHTML = [
+    ...inboundList.map(b => {
+      const dd = b.nearestDate ? Math.ceil((new Date(b.nearestDate) - new Date().setHours(0,0,0,0)) / 86400000) : null;
+      const ddLabel = dd===0?'오늘':dd!==null?`D-${dd}`:'';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--green-light);border-radius:8px;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <span style="font-size:11px;background:var(--green);color:#fff;padding:1px 7px;border-radius:20px;font-weight:600;flex-shrink:0;">✅ 발주완료</span>
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:600;">${b.item.name}${b.item.size?' '+b.item.size:''}</div>
+            <div style="font-size:11px;color:var(--text-muted);">입고 ${b.totalQty.toLocaleString()}개 예정 · ${b.nearestDate||''} 입고대기${b.days!==null?' · 재고 '+b.days+'일 후 소진':''}</div>
+          </div>
+        </div>
+        <div style="font-size:14px;font-weight:800;font-family:'DM Mono',monospace;color:var(--green);flex-shrink:0;margin-left:10px;">${ddLabel}</div>
+      </div>`;
+    }),
     ...dustbagWarnings.map(d => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--mongmo-light);border-radius:8px;margin-bottom:6px;">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -5404,7 +5486,12 @@ function renderInventory() {
   } else if (invSmartFilter === 'out') {
     items = items.filter(i => ch==='total' ? i.stock===0 : getChannelStock(i.id,ch)===0);
   } else if (invSmartFilter === 'order') {
-    items = items.filter(i => { const d=getDaysToStockout(i); return d!==null && d<=state.invSettings.reorderDays && d>0; });
+    const _todayStr = new Date().toISOString().split('T')[0];
+    const _inboundIds = new Set((state.inboundItems||[]).filter(b=>!b.done&&b.date>=_todayStr).map(b=>b.inventoryId));
+    items = items.filter(i => {
+      if (_inboundIds.has(i.id)) return false;
+      const d=getDaysToStockout(i); return d!==null && d<=state.invSettings.reorderDays && d>0;
+    });
   } else if (invSmartFilter === 'selling') {
     items = items.filter(i=>i.status==='판매 중');
   } else if (invSmartFilter === 'discontinued') {
@@ -5612,58 +5699,81 @@ function renderIncomingSchedule() {
   const el = document.getElementById('inv-incoming-schedule');
   if (!el) return;
   const today = new Date().toISOString().split('T')[0];
-  const addDaysLocal = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
-  const fmtLocal = d=>d.toISOString().split('T')[0];
-  const d60 = fmtLocal(addDaysLocal(new Date(), 60));
-  const incoming = (state.ops||[])
-    .filter(o => (o.type === 'inbound' || o.type === 'stock') && o.start >= today && o.start <= d60)
+  const today0 = new Date(); today0.setHours(0,0,0,0);
+  const addDL = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+  const fmtL = d=>d.toISOString().split('T')[0];
+  const d60 = fmtL(addDL(new Date(), 60));
+
+  // inboundItems: 미완료 + 60일 이내
+  const items = (state.inboundItems||[])
+    .filter(b => !b.done && b.date >= today && b.date <= d60)
+    .sort((a,b) => a.date.localeCompare(b.date));
+
+  // ops 기반 입고일정 (inboundItems로 등록 안 된 것만)
+  const registeredOpsIds = new Set((state.inboundItems||[]).map(b=>b.opsId).filter(Boolean));
+  const opsIncoming = (state.ops||[])
+    .filter(o => (o.type==='inbound'||o.type==='stock') && o.start>=today && o.start<=d60 && !registeredOpsIds.has(o.id))
     .sort((a,b) => a.start.localeCompare(b.start));
 
-  if (incoming.length === 0) {
-    el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">예정된 입고 일정 없음<br><span style="font-size:11px;">+ 추가 버튼으로 등록하세요</span></div>`;
+  if (!items.length && !opsIncoming.length) {
+    el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">예정된 입고 일정 없음<br><span style="font-size:11px;">📦 입고 등록 버튼으로 제품별 입고를 등록하세요</span></div>`;
     return;
   }
 
-  const today0 = new Date(); today0.setHours(0,0,0,0);
+  let html_str = '';
 
-  el.innerHTML = incoming.map(o => {
-    const dd = Math.ceil((new Date(o.start) - today0) / 86400000);
-    const isUrgent = dd <= 3;
-    const isSoon   = dd <= 14;
-    const bg    = isUrgent ? 'var(--red-light)'    : isSoon ? 'var(--yellow-light)' : 'var(--palett-light)';
-    const color = isUrgent ? 'var(--red)'          : isSoon ? 'var(--yellow)'       : 'var(--palett)';
-    const badge = isUrgent ? '🚨 긴급'              : isSoon ? '⏰ 임박'              : '📦 입고예정';
-    const ddLabel = dd === 0 ? '오늘' : `D-${dd}`;
+  // ── inboundItems 제품별 카드 ──
+  items.forEach(b => {
+    const dd = Math.ceil((new Date(b.date) - today0) / 86400000);
+    const isUrgent = dd<=3, isSoon = dd<=14;
+    const bg    = isUrgent?'var(--red-light)':isSoon?'var(--yellow-light)':'var(--palett-light)';
+    const color = isUrgent?'var(--red)':isSoon?'var(--yellow)':'var(--palett)';
+    const badge = isUrgent?'🚨 긴급':isSoon?'⏰ 임박':'📦 입고예정';
+    const ddLabel = dd===0?'오늘':`D-${dd}`;
+    const item = state.inventory.find(i=>i.id===b.inventoryId);
+    const itemName = item ? `${item.name}${item.size?' '+item.size:''}` : '(상품 미지정)';
+    const ops = b.opsId ? (state.ops||[]).find(o=>o.id===b.opsId) : null;
+    const opsLabel = ops ? `· ${ops.title}` : '';
 
-    // 연결 상품명
-    const linkedItem = o.inboundItemId
-      ? state.inventory.find(i => i.id == o.inboundItemId)
-      : null;
-    const itemLabel = linkedItem
-      ? `${linkedItem.name}${linkedItem.size?' '+linkedItem.size:''}` : '';
-
-    // 상세 라인
-    const details = [];
-    if (o.inboundQty > 0) details.push(`입고 ${o.inboundQty.toLocaleString()}개`);
-    if (itemLabel)        details.push(itemLabel);
-    if (o.inboundSupplier) details.push(o.inboundSupplier);
-    if (o.assignee)       details.push(`담당 ${o.assignee}`);
-    if (o.memo)           details.push(o.memo);
-
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${bg};border-radius:8px;margin-bottom:6px;cursor:pointer;" onclick="openEditOps(${o.id})">
+    html_str += `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${bg};border-radius:8px;margin-bottom:6px;">
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
         <span style="font-size:11px;background:${color};color:#fff;padding:1px 8px;border-radius:20px;font-weight:600;flex-shrink:0;">${badge}</span>
         <div style="min-width:0;">
-          <div style="font-size:13px;font-weight:600;">${o.title}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${o.start}${details.length?' · '+details.join(' · '):''}</div>
+          <div style="font-size:13px;font-weight:600;">${itemName} <span style="font-size:12px;font-weight:700;color:${color};">${b.qty.toLocaleString()}개</span></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">${b.date}${opsLabel}${b.supplier?' · '+b.supplier:''}</div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
-        <div style="font-size:16px;font-weight:800;font-family:'DM Mono',monospace;color:${color};">${ddLabel}</div>
-        <button onclick="event.stopPropagation();deleteOpsEvent(${o.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;">✕</button>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:10px;">
+        <div style="font-size:15px;font-weight:800;font-family:'DM Mono',monospace;color:${color};">${ddLabel}</div>
+        <button onclick="completeInboundItem(${b.id})" style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--green-light);color:var(--green);border:1px solid var(--green);cursor:pointer;white-space:nowrap;">✅ 입고완료</button>
+        <button onclick="deleteInboundItem(${b.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;">✕</button>
       </div>
     </div>`;
-  }).join('');
+  });
+
+  // ── ops 기반 (등록 안 된 것) ──
+  opsIncoming.forEach(o => {
+    const dd = Math.ceil((new Date(o.start) - today0) / 86400000);
+    const isUrgent = dd<=3, isSoon = dd<=14;
+    const bg    = isUrgent?'var(--red-light)':isSoon?'var(--yellow-light)':'var(--surface2)';
+    const color = isUrgent?'var(--red)':isSoon?'var(--yellow)':'var(--text-muted)';
+    const ddLabel = dd===0?'오늘':`D-${dd}`;
+    html_str += `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${bg};border-radius:8px;margin-bottom:6px;opacity:0.8;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <span style="font-size:11px;background:var(--border);color:var(--text-muted);padding:1px 8px;border-radius:20px;font-weight:600;flex-shrink:0;">📋 일정만</span>
+        <div style="min-width:0;">
+          <div style="font-size:13px;font-weight:600;">${o.title}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">${o.start}${o.memo?' · '+o.memo:''} <span style="color:var(--mongmo);">— 📦 입고 등록 버튼으로 제품별 수량 등록하세요</span></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:10px;">
+        <div style="font-size:15px;font-weight:800;font-family:'DM Mono',monospace;color:${color};">${ddLabel}</div>
+        <button onclick="deleteOpsEvent(${o.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;">✕</button>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = html_str;
 }
 
 
@@ -5998,11 +6108,19 @@ function deductLinkedStock(inventoryId, qty) {
   const item = state.inventory.find(i=>i.id===inventoryId);
   if (!item) return;
 
-  // 더스트백 차감
+  // 더스트백 차감 (카테고리 기반)
   if (['몽모시리즈','동물시리즈'].includes(item.category)) {
     const dbSize = getDustbagSize(item.size);
     if (dbSize === 'S') state.invSettings.dustbagS = Math.max(0, (state.invSettings.dustbagS||0) - qty);
     else state.invSettings.dustbagL = Math.max(0, (state.invSettings.dustbagL||0) - qty);
+  }
+
+  // linkedConsumables 차감 (상품에 직접 연동된 소모품)
+  if (item.linkedConsumables && item.linkedConsumables.length > 0) {
+    item.linkedConsumables.forEach(consId => {
+      const cons = (state.consumables||[]).find(c => c.id === consId);
+      if (cons) cons.stock = Math.max(0, cons.stock - qty);
+    });
   }
 
   // BOM 연결재고 차감
@@ -6037,13 +6155,47 @@ function getProductStatus(status) {
   return `<span style="font-size:11px;color:var(--text-muted);">${status}</span>`;
 }
 
+let _invLinkedConsSelected = new Set();
+
+function filterInvLinkedCons(val) {
+  renderInvLinkedConsList(val);
+}
+
+function renderInvLinkedConsList(search='') {
+  const listEl = document.getElementById('inv-linked-cons-list');
+  if (!listEl) return;
+  const cons = (state.consumables||[]).filter(c =>
+    !search || c.name.toLowerCase().includes(search.toLowerCase())
+  );
+  if (!cons.length) {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:4px;">등록된 소모품 없음</div>';
+    return;
+  }
+  listEl.innerHTML = cons.map(c => {
+    const checked = _invLinkedConsSelected.has(c.id);
+    return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:3px 4px;border-radius:6px;background:${checked?'var(--mongmo-light)':'transparent'};">
+      <input type="checkbox" value="${c.id}" ${checked?'checked':''} onchange="toggleInvLinkedCons(${c.id},this.checked)" style="width:14px;height:14px;accent-color:var(--mongmo);">
+      <span style="font-size:12px;">${c.name} <span style="color:var(--text-muted);">(재고 ${c.stock}개)</span></span>
+    </label>`;
+  }).join('');
+}
+
+function toggleInvLinkedCons(id, checked) {
+  if (checked) _invLinkedConsSelected.add(id);
+  else _invLinkedConsSelected.delete(id);
+  renderInvLinkedConsList(document.getElementById('inv-linked-cons-search')?.value||'');
+}
+
 function openAddInventoryModal() {
-  ['inv-name','inv-size','inv-price'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['inv-name','inv-size'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   ['inv-stock','inv-prod-ready'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='0';});
   const cat=document.getElementById('inv-category'); if(cat) cat.value='mongmo';
   const br=document.getElementById('inv-brand'); if(br) br.value='mongmo';
   const st=document.getElementById('inv-status'); if(st) st.value='판매 중';
   const ss=document.getElementById('inv-stock-status'); if(ss) ss.value='';
+  const cs=document.getElementById('inv-linked-cons-search'); if(cs) cs.value='';
+  _invLinkedConsSelected = new Set();
+  renderInvLinkedConsList();
   openModal('add-inventory');
 }
 
@@ -6061,12 +6213,12 @@ function addInventoryItem() {
     category: document.getElementById('inv-category').value || 'etc',
     brand: document.getElementById('inv-brand').value || 'mongmo',
     stock,
-    price: parseInt(document.getElementById('inv-price').value) || 0,
     status: document.getElementById('inv-status').value || '판매 중',
     stockStatus: document.getElementById('inv-stock-status').value || '',
     memo: '',
     imageUrl: '',
     linkedInventory: [],
+    linkedConsumables: [..._invLinkedConsSelected],
   });
   if (!state.prodStockReady) state.prodStockReady = {};
   state.prodStockReady[newId] = prodReady;
@@ -6289,13 +6441,10 @@ function downloadInventoryXlsx() {
     showToast('📊 엑셀 양식 다운로드 완료! (현재 재고 반영)');
   };
 
-  if (window.XLSX) { doExport(window.XLSX); return; }
-  showToast('⏳ SheetJS 로딩 중...');
-  const s = document.createElement('script');
-  s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
-  s.onload = () => doExport(window.XLSX);
-  s.onerror = () => showToast('❌ SheetJS 로드 실패, 네트워크를 확인해주세요');
-  document.head.appendChild(s);
+  // xlsx-js-style 우선 (스타일 지원), 없으면 일반 XLSX
+  const XLS = window.XLSXStyle || window.XLSX;
+  if (XLS) { doExport(XLS); return; }
+  showToast('❌ SheetJS 로드 실패, 새로고침 후 다시 시도해주세요');
 }
 
 
@@ -8876,6 +9025,7 @@ async function submitChannelSales() {
     defectLog: state.defectLog, productions: state.productions,
     prodStockReady: state.prodStockReady,
     productSalesLog: state.productSalesLog||[],
+    inboundItems: state.inboundItems||[],
   };
   await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
 
@@ -13408,6 +13558,143 @@ function deleteTask(id) {
 }
 
 
+// ══════════════════════════════════════════════════
+// 입고 등록 (inboundItems)
+// ══════════════════════════════════════════════════
+let _inboundRowCount = 0;
+
+function openInboundItemModal() {
+  document.getElementById('inbound-edit-id').value = '';
+  document.getElementById('inbound-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('inbound-supplier').value = '';
+  _inboundRowCount = 0;
+  document.getElementById('inbound-item-rows').innerHTML = '';
+  addInboundItemRow();
+
+  // 운영일정 재고입고 목록 채우기
+  const sel = document.getElementById('inbound-ops-id');
+  const today = new Date().toISOString().split('T')[0];
+  const opsInbound = (state.ops||[])
+    .filter(o => (o.type==='inbound'||o.type==='stock') && o.start >= today)
+    .sort((a,b)=>a.start.localeCompare(b.start));
+  sel.innerHTML = '<option value="">일정 선택 (선택사항)</option>' +
+    opsInbound.map(o=>`<option value="${o.id}">${o.start} · ${o.title}</option>`).join('');
+  openModal('inbound-item');
+}
+
+function onInboundOpsChange() {
+  const opsId = parseInt(document.getElementById('inbound-ops-id').value);
+  if (!opsId) return;
+  const ops = (state.ops||[]).find(o=>o.id===opsId);
+  if (!ops) return;
+  document.getElementById('inbound-date').value = ops.start;
+  if (ops.inboundSupplier) document.getElementById('inbound-supplier').value = ops.inboundSupplier;
+  // 이미 연결된 제품 있으면 첫 행에 세팅
+  if (ops.inboundItemId) {
+    const row = document.querySelector('.inbound-item-row');
+    if (row) {
+      const itemSel = row.querySelector('.inbound-row-item');
+      if (itemSel) itemSel.value = ops.inboundItemId;
+      if (ops.inboundQty) {
+        const qtySel = row.querySelector('.inbound-row-qty');
+        if (qtySel) qtySel.value = ops.inboundQty;
+      }
+    }
+  }
+}
+
+function addInboundItemRow() {
+  _inboundRowCount++;
+  const rowId = _inboundRowCount;
+  const container = document.getElementById('inbound-item-rows');
+  const div = document.createElement('div');
+  div.className = 'inbound-item-row';
+  div.id = `inbound-row-${rowId}`;
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;padding:8px 10px;background:var(--surface2);border-radius:8px;';
+  const itemOptions = (state.inventory||[])
+    .filter(i=>i.status!=='판매 종료')
+    .map(i=>`<option value="${i.id}">${i.name}${i.size?' '+i.size:''}</option>`)
+    .join('');
+  div.innerHTML = `
+    <select class="form-select inbound-row-item" style="flex:2;font-size:13px;">
+      <option value="">상품 선택 *</option>
+      ${itemOptions}
+    </select>
+    <input class="form-input inbound-row-qty" type="number" min="1" placeholder="수량" style="width:90px;font-size:13px;">
+    <button onclick="removeInboundRow(${rowId})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:0 4px;flex-shrink:0;">✕</button>`;
+  container.appendChild(div);
+}
+
+function removeInboundRow(rowId) {
+  const row = document.getElementById(`inbound-row-${rowId}`);
+  if (row) row.remove();
+}
+
+function submitInboundItem() {
+  const date = document.getElementById('inbound-date').value;
+  if (!date) { showToast('입고 예정일을 선택해주세요'); return; }
+  const supplier = document.getElementById('inbound-supplier').value.trim();
+  const opsId = parseInt(document.getElementById('inbound-ops-id').value)||null;
+  const rows = document.querySelectorAll('.inbound-item-row');
+  const entries = [];
+  for (const row of rows) {
+    const invId = parseInt(row.querySelector('.inbound-row-item').value);
+    const qty   = parseInt(row.querySelector('.inbound-row-qty').value)||0;
+    if (!invId || qty<=0) continue;
+    entries.push({inventoryId: invId, qty});
+  }
+  if (!entries.length) { showToast('제품과 수량을 입력해주세요'); return; }
+  if (!state.inboundItems) state.inboundItems = [];
+  entries.forEach(e => {
+    state.inboundItems.push({
+      id: Date.now() + Math.random(),
+      opsId,
+      date,
+      supplier,
+      inventoryId: e.inventoryId,
+      qty: e.qty,
+      done: false,
+      createdAt: new Date().toISOString(),
+    });
+  });
+  save(); closeModal('inbound-item'); renderIncomingSchedule();
+  showToast(`✅ ${entries.length}개 제품 입고 등록 완료`);
+}
+
+function completeInboundItem(id) {
+  const b = (state.inboundItems||[]).find(x=>x.id===id);
+  if (!b) return;
+  const item = state.inventory.find(i=>i.id===b.inventoryId);
+  if (!item) { showToast('❌ 연결된 상품을 찾을 수 없어요'); return; }
+  // 원재고 추가
+  item.stock = (item.stock||0) + b.qty;
+  b.done = true;
+  b.completedAt = new Date().toISOString();
+  // 생산일정 자동 추가
+  if (!state.productions) state.productions = [];
+  state.productions.push({
+    id: Date.now(),
+    inventoryId: b.inventoryId,
+    plannedQty: b.qty,
+    actualQty: 0,
+    qty: b.qty,
+    date: new Date().toISOString().split('T')[0],
+    assignee: '김성애',
+    priority: '높음',
+    status: '대기',
+    memo: `입고완료 자동등록 (${b.date} 입고)`,
+  });
+  save(); renderIncomingSchedule(); renderInventory();
+  if (typeof renderProduction === 'function') renderProduction();
+  showToast(`✅ ${item.name}${item.size?' '+item.size:''} ${b.qty}개 입고 완료 — 생산일정에 추가됐어요`);
+}
+
+function deleteInboundItem(id) {
+  state.inboundItems = (state.inboundItems||[]).filter(x=>x.id!==id);
+  save(); renderIncomingSchedule();
+  showToast('삭제됐어요');
+}
+
 function setInitialDates() {
   const d = new Date();
   const el = document.getElementById('sidebar-date');
@@ -13420,9 +13707,6 @@ function setInitialDates() {
   state.prodMonth = d.getMonth();
 }
 </script>
-  <!-- 버전 표시 고정 -->
-  <div style="position:fixed;top:10px;right:14px;z-index:9999;pointer-events:none;">
-    <span style="font-size:10px;color:rgba(140,134,128,0.6);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.0.8</span>
-  </div>
+
 </body>
 </html>
