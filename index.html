@@ -12183,8 +12183,10 @@ function confirmChStockEdit() {
   const newQty = parseInt(document.getElementById('ch-stock-edit-qty').value);
   if (isNaN(newQty) || newQty < 0) { showToast('❌ 올바른 수량을 입력해주세요'); return; }
 
-  if (!item.channelStock) item.channelStock = {};
-  item.channelStock[chKey] = newQty;
+  // getChannelStock은 state.channelStock[itemId][ch] 에서 읽으므로 거기에 저장
+  if (!state.channelStock) state.channelStock = {};
+  if (!state.channelStock[itemId]) state.channelStock[itemId] = {};
+  state.channelStock[itemId][chKey] = newQty;
   save();
   renderInventory();
   closeModal('ch-stock-edit');
