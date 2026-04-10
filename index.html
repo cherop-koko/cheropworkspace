@@ -3471,7 +3471,7 @@ function applyState(p) {
   state.expenses = p.expenses || [];
   state.activityLog = p.activityLog || [];
   state.ops = p.ops || [];
-  state.invSettings = p.invSettings || { dustbagS:500, dustbagL:200, dustbagSThreshold:200, dustbagLThreshold:100, reorderDays:90, dangerDays:14, bom:[] };
+  state.invSettings = p.invSettings || { dustbagS:500, dustbagL:200, dustbagSThreshold:200, dustbagLThreshold:100, reorderDays:60, dangerDays:45, bom:[] };
   state.channelStock = p.channelStock || {};
   state.consumables = p.consumables || [];
   state.feedRecords = p.feedRecords || [];
@@ -5129,8 +5129,7 @@ function getSmartStatus(item) {
   const cfg = state.invSettings;
 
   if (days !== null) {
-    if (days <= (cfg.dangerDays || 7))  return { label:`D-${days} 긴급발주`, cls:'status-out',  priority:4 };
-    if (days <= 30)                      return { label:`D-${days} 발주필요`, cls:'status-low',  priority:3 };
+    if (days <= 45)                      return { label:`D-${days} 발주필요`, cls:'status-out',  priority:4 };
     if (days <= (cfg.reorderDays || 60)) return { label:`D-${days} 발주검토`, cls:'status-low',  priority:2 };
     return { label:'여유', cls:'status-ok', priority:1 };
   }
@@ -5169,9 +5168,9 @@ function getStockoutBadge(item) {
     if (item.stock <= safe) return `<span style="font-size:11px;color:var(--yellow);font-weight:600;">발주필요</span>`;
     return '<span style="font-size:11px;color:var(--text-muted);">-</span>';
   }
-  const color = days <= 7 ? 'var(--red)' : days <= 30 ? 'var(--yellow)' : days <= 60 ? 'var(--mongmo)' : 'var(--text-muted)';
-  const label = days === 0 ? '오늘 품절' : days <= 7 ? `D-${days} ⚠` : days <= 30 ? `D-${days} 발주필요` : days <= 60 ? `D-${days} 발주검토` : `D-${days}`;
-  return `<span style="font-size:11px;color:${color};font-weight:${days<=30?600:400};">${label}</span>`;
+  const color = days <= 45 ? 'var(--red)' : days <= 60 ? 'var(--yellow)' : 'var(--text-muted)';
+  const label = days === 0 ? '오늘 품절' : days <= 45 ? `D-${days} 발주필요` : days <= 60 ? `D-${days} 발주검토` : `D-${days}`;
+  return `<span style="font-size:11px;color:${color};font-weight:${days<=60?600:400};">${label}</span>`;
 }
 
 // 스마트 추천 배너 생성
@@ -10220,6 +10219,8 @@ function renderProdAlert() {
   const urgent = [];
   state.inventory.forEach(item => {
     if (item.status === '판매 종료') return;
+    if (item.status === '단종 예정') return;
+    if (item.stockStatus === '무한재고') return;
     const totalStock = item.stock;
     const readyStock = getProdStockReady(item.id);
     const pendingStock = Math.max(0, totalStock - readyStock);
