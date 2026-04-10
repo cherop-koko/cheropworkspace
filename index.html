@@ -801,7 +801,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.0.9</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.1.0</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -5709,13 +5709,7 @@ function renderIncomingSchedule() {
     .filter(b => !b.done && b.date >= today && b.date <= d60)
     .sort((a,b) => a.date.localeCompare(b.date));
 
-  // ops 기반 입고일정 (inboundItems로 등록 안 된 것만)
-  const registeredOpsIds = new Set((state.inboundItems||[]).map(b=>b.opsId).filter(Boolean));
-  const opsIncoming = (state.ops||[])
-    .filter(o => (o.type==='inbound'||o.type==='stock') && o.start>=today && o.start<=d60 && !registeredOpsIds.has(o.id))
-    .sort((a,b) => a.start.localeCompare(b.start));
-
-  if (!items.length && !opsIncoming.length) {
+  if (!items.length) {
     el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">예정된 입고 일정 없음<br><span style="font-size:11px;">📦 입고 등록 버튼으로 제품별 입고를 등록하세요</span></div>`;
     return;
   }
@@ -5751,27 +5745,7 @@ function renderIncomingSchedule() {
     </div>`;
   });
 
-  // ── ops 기반 (등록 안 된 것) ──
-  opsIncoming.forEach(o => {
-    const dd = Math.ceil((new Date(o.start) - today0) / 86400000);
-    const isUrgent = dd<=3, isSoon = dd<=14;
-    const bg    = isUrgent?'var(--red-light)':isSoon?'var(--yellow-light)':'var(--surface2)';
-    const color = isUrgent?'var(--red)':isSoon?'var(--yellow)':'var(--text-muted)';
-    const ddLabel = dd===0?'오늘':`D-${dd}`;
-    html_str += `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${bg};border-radius:8px;margin-bottom:6px;opacity:0.8;">
-      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-        <span style="font-size:11px;background:var(--border);color:var(--text-muted);padding:1px 8px;border-radius:20px;font-weight:600;flex-shrink:0;">📋 일정만</span>
-        <div style="min-width:0;">
-          <div style="font-size:13px;font-weight:600;">${o.title}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">${o.start}${o.memo?' · '+o.memo:''} <span style="color:var(--mongmo);">— 📦 입고 등록 버튼으로 제품별 수량 등록하세요</span></div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:10px;">
-        <div style="font-size:15px;font-weight:800;font-family:'DM Mono',monospace;color:${color};">${ddLabel}</div>
-        <button onclick="deleteOpsEvent(${o.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;">✕</button>
-      </div>
-    </div>`;
-  });
+  // ops 기반 "일정만" 카드는 표시하지 않음 (입고 등록 버튼으로만 등록)
 
   el.innerHTML = html_str;
 }
@@ -6357,94 +6331,110 @@ function downloadInventoryXlsx() {
     '모바일':'FFE8EDF4','인형':'FFFAFAF8','기타':'FFFAFAF8',
   };
 
-  const doExport = (XLSX) => {
-    const wb = XLSX.utils.book_new();
-    // 헤더
-    const wsData = [
-      ['상품명','사이즈','카테고리','원재고',
-       '자사몰재고','카카오재고','스마트스토어재고','더현대재고',
-       '상품화완료재고','가용재고','상품화대기재고','판매가','연동인형(참고)']
-    ];
+  const XLS = window.XLSXStyle || window.XLSX;
+  if (!XLS) { showToast('❌ 라이브러리 로드 중, 잠시 후 다시 시도해주세요'); return; }
 
-    // 데이터 행
-    state.inventory.forEach(i => {
-      const imweb   = getChannelStock(i.id,'imweb');
-      const kakao   = getChannelStock(i.id,'kakao');
-      const naver   = getChannelStock(i.id,'naver');
-      const hyundai = getChannelStock(i.id,'hyundai');
-      const prodReady = state.prodStockReady?.[i.id] ?? 0;
-      const raw = i.stock || 0;
-      const linkedNames = (i.linkedInventory||[]).map(lid => {
-        const li = state.inventory.find(x => x.id === lid);
-        return li ? `${li.name}${li.size?' '+li.size:''}` : '';
-      }).filter(Boolean).join(' / ');
-      const catKo = CAT_KO[i.category] || i.category || '';
-      wsData.push([i.name, i.size||'', catKo, raw,
-        imweb, kakao, naver, hyundai,
-        prodReady, 0, 0, i.price||0, linkedNames]);
-    });
+  const wb = XLS.utils.book_new();
+  const COLS = ['A','B','C','D','E','F','G','H','I','J','K','L','M'];
+  const HEADERS = ['상품명','사이즈','카테고리','원재고',
+    '자사몰재고','카카오재고','스마트스토어재고','더현대재고',
+    '상품화완료재고','가용재고','상품화대기재고','판매가','연동인형(참고)'];
 
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
+  // 데이터 수집
+  const dataRows = [];
+  state.inventory.forEach(i => {
+    const imweb   = getChannelStock(i.id,'imweb');
+    const kakao   = getChannelStock(i.id,'kakao');
+    const naver   = getChannelStock(i.id,'naver');
+    const hyundai = getChannelStock(i.id,'hyundai');
+    const prodReady = state.prodStockReady?.[i.id] ?? 0;
+    const raw = i.stock || 0;
+    const linkedNames = (i.linkedInventory||[]).map(lid => {
+      const li = state.inventory.find(x=>x.id===lid);
+      return li ? `${li.name}${li.size?' '+li.size:''}` : '';
+    }).filter(Boolean).join(' / ');
+    const catKo = CAT_KO[i.category] || i.category || '';
+    dataRows.push([i.name, i.size||'', catKo, raw,
+      imweb, kakao, naver, hyundai, prodReady,
+      null, null,  // J, K는 수식으로
+      i.price||0, linkedNames]);
+  });
 
-    // 가용재고·상품화대기재고 수식 삽입 (J, K 컬럼, 2행부터)
-    for (let r = 2; r <= wsData.length; r++) {
-      ws[`J${r}`] = { f: `MAX(0,I${r}-(E${r}+F${r}+G${r}+H${r}))`, t:'n' };
-      ws[`K${r}`] = { f: `IF(D${r}=9999,9999,MAX(0,D${r}-I${r}))`, t:'n' };
-    }
+  // 워크시트 빈 구조 생성
+  const ws = { '!ref': `A1:M${dataRows.length+1}` };
 
-    // 컬럼 폭
-    ws['!cols'] = [
-      {wch:22},{wch:8},{wch:11},{wch:8},
-      {wch:9},{wch:9},{wch:11},{wch:8},
-      {wch:10},{wch:9},{wch:10},{wch:9},{wch:28}
-    ];
-    ws['!rows'] = [{hpt:22}];
+  // 헤더 행 스타일
+  const hBaseFont = {bold:true, color:{rgb:'FFFFFFFF'}, sz:9, name:'Arial'};
+  COLS.forEach((c,ci) => {
+    let bg = 'FF1A1714';
+    if (ci===9||ci===10) bg='FF2E7D32';
+    else if (ci===12) bg='FF7B6800';
+    ws[c+'1'] = {
+      v: HEADERS[ci], t:'s',
+      s:{ font:hBaseFont, fill:{patternType:'solid',fgColor:{rgb:bg}},
+          alignment:{horizontal:'center',vertical:'center'} }
+    };
+  });
 
-    // 헤더 스타일
-    const COLS = 'ABCDEFGHIJKLM'.split('');
-    const hBase = {font:{bold:true,color:{rgb:'FFFFFFFF'},sz:9,name:'Arial'},alignment:{horizontal:'center',vertical:'center'}};
-    COLS.forEach((c,ci) => {
-      const cell = ws[c+'1'];
-      if (!cell) return;
-      let bg = 'FF1A1714';
-      if (ci===9||ci===10) bg = 'FF2E7D32';
-      else if (ci===12) bg = 'FF7B6800';
-      cell.s = {...hBase, fill:{patternType:'solid',fgColor:{rgb:bg}}};
-    });
+  // 데이터 행
+  dataRows.forEach((row, ri) => {
+    const r = ri + 2;
+    const catKo = row[2] || '';
+    const rowBg = CAT_COLOR[catKo] || 'FFFFFFFF';
 
-    // 데이터 행 스타일
-    for (let r = 2; r <= wsData.length; r++) {
-      const catKo = wsData[r-1][2] || '';
-      const rowBg = CAT_COLOR[catKo] || 'FFFFFFFF';
-      COLS.forEach((c,ci) => {
-        const addr = c + r;
-        if (!ws[addr]) ws[addr] = {v:'', t:'s'};
-        const base = {
-          font:{sz:9,name:'Arial'},
+    COLS.forEach((c, ci) => {
+      // J(9), K(10) 컬럼 → 수식
+      if (ci === 9) {
+        ws[c+r] = {
+          f: `MAX(0,I${r}-(E${r}+F${r}+G${r}+H${r}))`, t:'n',
+          s:{ font:{sz:9,name:'Arial',color:{rgb:'FF2E7D32'}},
+              fill:{patternType:'solid',fgColor:{rgb:'FFE8F4EE'}},
+              alignment:{horizontal:'center',vertical:'center'} }
+        };
+        return;
+      }
+      if (ci === 10) {
+        ws[c+r] = {
+          f: `IF(D${r}=9999,9999,MAX(0,D${r}-I${r}))`, t:'n',
+          s:{ font:{sz:9,name:'Arial',color:{rgb:'FF2E7D32'}},
+              fill:{patternType:'solid',fgColor:{rgb:'FFE8F4EE'}},
+              alignment:{horizontal:'center',vertical:'center'} }
+        };
+        return;
+      }
+
+      const val = row[ci];
+      const t = typeof val === 'number' ? 'n' : 's';
+      let s;
+      if (ci===12) {
+        s = {font:{sz:8,name:'Arial',color:{rgb:'FF996600'}},
+             fill:{patternType:'solid',fgColor:{rgb:'FFFFF9E6'}}};
+      } else {
+        s = {
+          font:{sz:9, name:'Arial', bold:ci===3,
+                color:{rgb: ci===3&&row[3]===9999?'FF6B9E7A':'FF1A1714'}},
           fill:{patternType:'solid',fgColor:{rgb:rowBg}},
           alignment:{horizontal:ci<=2?'left':'center',vertical:'center'}
         };
-        if (ci===9||ci===10) {
-          ws[addr].s = {...base, font:{...base.font,color:{rgb:'FF2E7D32'}}, fill:{patternType:'solid',fgColor:{rgb:'FFE8F4EE'}}};
-        } else if (ci===12) {
-          ws[addr].s = {font:{sz:8,name:'Arial',color:{rgb:'FF996600'}}, fill:{patternType:'solid',fgColor:{rgb:'FFFFF9E6'}}};
-        } else if (ci===3) {
-          ws[addr].s = {...base, font:{...base.font,bold:true}};
-        } else {
-          ws[addr].s = base;
-        }
-      });
-    }
+      }
+      ws[c+r] = { v: val??'', t, s };
+    });
+  });
 
-    XLSX.utils.book_append_sheet(wb, ws, '체로프_재고');
-    XLSX.writeFile(wb, `cherop_재고업로드_양식_${new Date().toISOString().split('T')[0]}.xlsx`);
-    showToast('📊 엑셀 양식 다운로드 완료! (현재 재고 반영)');
-  };
+  // 컬럼 폭·행 높이
+  ws['!cols'] = [
+    {wch:22},{wch:8},{wch:11},{wch:8},
+    {wch:9},{wch:9},{wch:11},{wch:8},
+    {wch:10},{wch:9},{wch:10},{wch:9},{wch:28}
+  ];
+  ws['!rows'] = [{hpt:22}];
 
-  // xlsx-js-style 우선 (스타일 지원), 없으면 일반 XLSX
-  const XLS = window.XLSXStyle || window.XLSX;
-  if (XLS) { doExport(XLS); return; }
-  showToast('❌ SheetJS 로드 실패, 새로고침 후 다시 시도해주세요');
+  // 틀 고정 (D2)
+  ws['!freeze'] = {xSplit:3, ySplit:1};
+
+  XLS.utils.book_append_sheet(wb, ws, '체로프_재고');
+  XLS.writeFile(wb, `cherop_재고업로드_양식_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('📊 엑셀 양식 다운로드 완료! (현재 재고 반영)');
 }
 
 
@@ -13564,22 +13554,33 @@ function deleteTask(id) {
 let _inboundRowCount = 0;
 
 function openInboundItemModal() {
-  document.getElementById('inbound-edit-id').value = '';
-  document.getElementById('inbound-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('inbound-supplier').value = '';
-  _inboundRowCount = 0;
-  document.getElementById('inbound-item-rows').innerHTML = '';
-  addInboundItemRow();
+  try {
+    const editEl = document.getElementById('inbound-edit-id');
+    if (editEl) editEl.value = '';
+    const dateEl = document.getElementById('inbound-date');
+    if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+    const supEl = document.getElementById('inbound-supplier');
+    if (supEl) supEl.value = '';
+    _inboundRowCount = 0;
+    const rowsEl = document.getElementById('inbound-item-rows');
+    if (rowsEl) rowsEl.innerHTML = '';
+    addInboundItemRow();
 
-  // 운영일정 재고입고 목록 채우기
-  const sel = document.getElementById('inbound-ops-id');
-  const today = new Date().toISOString().split('T')[0];
-  const opsInbound = (state.ops||[])
-    .filter(o => (o.type==='inbound'||o.type==='stock') && o.start >= today)
-    .sort((a,b)=>a.start.localeCompare(b.start));
-  sel.innerHTML = '<option value="">일정 선택 (선택사항)</option>' +
-    opsInbound.map(o=>`<option value="${o.id}">${o.start} · ${o.title}</option>`).join('');
-  openModal('inbound-item');
+    // 운영일정 재고입고 목록 채우기
+    const sel = document.getElementById('inbound-ops-id');
+    if (sel) {
+      const today = new Date().toISOString().split('T')[0];
+      const opsInbound = (state.ops||[])
+        .filter(o => (o.type==='inbound'||o.type==='stock') && o.start >= today)
+        .sort((a,b)=>a.start.localeCompare(b.start));
+      sel.innerHTML = '<option value="">일정 선택 (선택사항)</option>' +
+        opsInbound.map(o=>`<option value="${o.id}">${o.start} · ${o.title}</option>`).join('');
+    }
+    openModal('inbound-item');
+  } catch(e) {
+    showToast('❌ 오류: ' + e.message);
+    console.error('openInboundItemModal error:', e);
+  }
 }
 
 function onInboundOpsChange() {
