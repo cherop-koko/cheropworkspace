@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
 <style>
   :root {
     --bg: #F5F3EE;
@@ -801,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.1.0</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.1.1</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -2848,7 +2847,8 @@
 </div>
 
 <!-- ── 채널 재고 직접수정 모달 ── -->
-<div class="modal-overlay hidden" 
+<div class="modal-overlay hidden" id="modal-ch-stock-edit-placeholder" style="display:none;"></div>
+
 <!-- 입고 등록 모달 -->
 <div class="modal-overlay hidden" id="modal-inbound-item">
   <div class="modal" style="width:560px;max-height:85vh;overflow-y:auto;">
@@ -6320,120 +6320,57 @@ function exportInventoryCSV() {
 }
 
 function downloadInventoryXlsx() {
+  if (!window.XLSX) { showToast('❌ SheetJS 로드 실패, 새로고침 후 다시 시도해주세요'); return; }
+
   const CAT_KO = {
     mongmo:'몽모시리즈', animal:'동물시리즈', keyring:'키링',
     beltcover:'안전벨트커버', goods:'굿즈', clothes:'커스텀옷',
     mobile:'모바일', doll:'인형', etc:'기타',
   };
-  const CAT_COLOR = {
-    '몽모시리즈':'FFFDE8EF','동물시리즈':'FFEBF3F7','키링':'FFEBF4EE',
-    '안전벨트커버':'FFFFF3E0','굿즈':'FFF0EDE6','커스텀옷':'FFEDE8F4',
-    '모바일':'FFE8EDF4','인형':'FFFAFAF8','기타':'FFFAFAF8',
-  };
 
-  const XLS = window.XLSXStyle || window.XLSX;
-  if (!XLS) { showToast('❌ 라이브러리 로드 중, 잠시 후 다시 시도해주세요'); return; }
+  // 헤더 + 데이터 행 구성
+  const wsData = [
+    ['상품명','사이즈','카테고리','원재고',
+     '자사몰재고','카카오재고','스마트스토어재고','더현대재고',
+     '상품화완료재고','가용재고(자동)','상품화대기(자동)','판매가','연동인형(참고)']
+  ];
 
-  const wb = XLS.utils.book_new();
-  const COLS = ['A','B','C','D','E','F','G','H','I','J','K','L','M'];
-  const HEADERS = ['상품명','사이즈','카테고리','원재고',
-    '자사몰재고','카카오재고','스마트스토어재고','더현대재고',
-    '상품화완료재고','가용재고','상품화대기재고','판매가','연동인형(참고)'];
-
-  // 데이터 수집
-  const dataRows = [];
   state.inventory.forEach(i => {
     const imweb   = getChannelStock(i.id,'imweb');
     const kakao   = getChannelStock(i.id,'kakao');
     const naver   = getChannelStock(i.id,'naver');
     const hyundai = getChannelStock(i.id,'hyundai');
+    const totalCh = imweb + kakao + naver + hyundai;
     const prodReady = state.prodStockReady?.[i.id] ?? 0;
     const raw = i.stock || 0;
+    const avail   = Math.max(0, prodReady - totalCh);
+    const waiting = raw === 9999 ? 9999 : Math.max(0, raw - prodReady);
     const linkedNames = (i.linkedInventory||[]).map(lid => {
       const li = state.inventory.find(x=>x.id===lid);
       return li ? `${li.name}${li.size?' '+li.size:''}` : '';
     }).filter(Boolean).join(' / ');
-    const catKo = CAT_KO[i.category] || i.category || '';
-    dataRows.push([i.name, i.size||'', catKo, raw,
-      imweb, kakao, naver, hyundai, prodReady,
-      null, null,  // J, K는 수식으로
-      i.price||0, linkedNames]);
+    wsData.push([
+      i.name, i.size||'', CAT_KO[i.category]||i.category||'', raw,
+      imweb, kakao, naver, hyundai,
+      prodReady, avail, waiting, i.price||0, linkedNames
+    ]);
   });
 
-  // 워크시트 빈 구조 생성
-  const ws = { '!ref': `A1:M${dataRows.length+1}` };
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-  // 헤더 행 스타일
-  const hBaseFont = {bold:true, color:{rgb:'FFFFFFFF'}, sz:9, name:'Arial'};
-  COLS.forEach((c,ci) => {
-    let bg = 'FF1A1714';
-    if (ci===9||ci===10) bg='FF2E7D32';
-    else if (ci===12) bg='FF7B6800';
-    ws[c+'1'] = {
-      v: HEADERS[ci], t:'s',
-      s:{ font:hBaseFont, fill:{patternType:'solid',fgColor:{rgb:bg}},
-          alignment:{horizontal:'center',vertical:'center'} }
-    };
-  });
-
-  // 데이터 행
-  dataRows.forEach((row, ri) => {
-    const r = ri + 2;
-    const catKo = row[2] || '';
-    const rowBg = CAT_COLOR[catKo] || 'FFFFFFFF';
-
-    COLS.forEach((c, ci) => {
-      // J(9), K(10) 컬럼 → 수식
-      if (ci === 9) {
-        ws[c+r] = {
-          f: `MAX(0,I${r}-(E${r}+F${r}+G${r}+H${r}))`, t:'n',
-          s:{ font:{sz:9,name:'Arial',color:{rgb:'FF2E7D32'}},
-              fill:{patternType:'solid',fgColor:{rgb:'FFE8F4EE'}},
-              alignment:{horizontal:'center',vertical:'center'} }
-        };
-        return;
-      }
-      if (ci === 10) {
-        ws[c+r] = {
-          f: `IF(D${r}=9999,9999,MAX(0,D${r}-I${r}))`, t:'n',
-          s:{ font:{sz:9,name:'Arial',color:{rgb:'FF2E7D32'}},
-              fill:{patternType:'solid',fgColor:{rgb:'FFE8F4EE'}},
-              alignment:{horizontal:'center',vertical:'center'} }
-        };
-        return;
-      }
-
-      const val = row[ci];
-      const t = typeof val === 'number' ? 'n' : 's';
-      let s;
-      if (ci===12) {
-        s = {font:{sz:8,name:'Arial',color:{rgb:'FF996600'}},
-             fill:{patternType:'solid',fgColor:{rgb:'FFFFF9E6'}}};
-      } else {
-        s = {
-          font:{sz:9, name:'Arial', bold:ci===3,
-                color:{rgb: ci===3&&row[3]===9999?'FF6B9E7A':'FF1A1714'}},
-          fill:{patternType:'solid',fgColor:{rgb:rowBg}},
-          alignment:{horizontal:ci<=2?'left':'center',vertical:'center'}
-        };
-      }
-      ws[c+r] = { v: val??'', t, s };
-    });
-  });
-
-  // 컬럼 폭·행 높이
+  // 컬럼 폭
   ws['!cols'] = [
     {wch:22},{wch:8},{wch:11},{wch:8},
     {wch:9},{wch:9},{wch:11},{wch:8},
     {wch:10},{wch:9},{wch:10},{wch:9},{wch:28}
   ];
-  ws['!rows'] = [{hpt:22}];
 
-  // 틀 고정 (D2)
+  // 틀 고정 D2
   ws['!freeze'] = {xSplit:3, ySplit:1};
 
-  XLS.utils.book_append_sheet(wb, ws, '체로프_재고');
-  XLS.writeFile(wb, `cherop_재고업로드_양식_${new Date().toISOString().split('T')[0]}.xlsx`);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '체로프_재고');
+  XLSX.writeFile(wb, `cherop_재고업로드_양식_${new Date().toISOString().split('T')[0]}.xlsx`);
   showToast('📊 엑셀 양식 다운로드 완료! (현재 재고 반영)');
 }
 
