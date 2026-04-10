@@ -188,8 +188,8 @@
   .empty-state .empty-text { font-size: 14px; }
 
   /* TOAST */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 13px; z-index: 9999; opacity: 0; transform: translateY(8px); transition: all 0.2s; pointer-events: none; }
-  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-8px); background: var(--text); color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 13px; font-weight: 500; z-index: 9999; opacity: 0; transition: all 0.2s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   /* MEMBER TABS */
   .member-tab {
@@ -519,7 +519,7 @@
     .mobile-bottom-nav { display: flex; }
 
     /* 토스트 위치 조정 */
-    .toast { bottom: 70px !important; right: 12px !important; left: 12px !important; right: 12px !important; text-align: center; }
+    .toast { top: 70px !important; left: 50% !important; right: auto !important; bottom: auto !important; transform: translateX(-50%) translateY(0) !important; }
 
     /* 프로그레스 바 */
     .progress-bar { height: 5px !important; }
@@ -2122,7 +2122,7 @@
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">유형</label>
-        <select class="form-select" id="task-type-input">
+        <select class="form-select" id="task-type-input" onchange="toggleTaskDueField()">
           <option value="daily">데일리 루틴</option>
           <option value="project">프로젝트</option>
           <option value="personal">개인 일정</option>
@@ -2149,7 +2149,7 @@
           <option value="palett">팔렛</option>
         </select>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="task-due-group">
         <label class="form-label">마감일 (선택)</label>
         <input class="form-input" type="date" id="task-due-input">
       </div>
@@ -3302,8 +3302,8 @@ function subscribeRealtime() {
     .on('postgres_changes', {
       event: 'UPDATE', schema: 'public', table: 'app_state', filter: 'id=eq.cherop_main'
     }, (payload) => {
-      // 내가 방금 저장한 이벤트면 무시 (2초 이내 내 저장 = skip)
-      if (Date.now() - _lastSaveTime < 2000) return;
+      // 내가 방금 저장한 이벤트면 무시 (3초 이내 내 저장 = skip)
+      if (Date.now() - _lastSaveTime < 3000) return;
       applyState(payload.new.data);
       // 현재 보고 있는 페이지 즉시 리렌더
       const activePage = document.querySelector('.page:not(.hidden)');
@@ -3402,7 +3402,7 @@ function injectMobileCSS() {
         td { padding: 7px 4px !important; }
         .stat-value { font-size: 20px !important; }
         .mobile-bottom-nav { display: flex !important; }
-        .toast { bottom: 70px !important; left: 12px !important; right: 12px !important; }
+        .toast { top: 70px !important; left: 50% !important; right: auto !important; bottom: auto !important; }
         .cal-day { min-height: 40px !important; padding: 3px !important; }
         .section { margin-bottom: 14px !important; }
       }
@@ -6051,9 +6051,11 @@ function renderTasks() {
     items = [...allTasks, ...pItems];
   }
 
-  // 오늘 할일만 표시 (오늘 마감 OR 진행중 OR 데일리루틴)
+  // 전체 필터일 때만 오늘 할일로 제한 (특정 유형 선택 시엔 전체 표시)
   const _todayStr = new Date().toISOString().split('T')[0];
-  items = items.filter(t => t.due === _todayStr || t.status === 'doing' || t.type === 'daily');
+  if (!state.taskFilter || state.taskFilter === 'all') {
+    items = items.filter(t => t.due === _todayStr || t.status === 'doing' || t.type === 'daily');
+  }
 
   // 완료/미완료 필터
   if (_taskDoneFilter === 'todo') items = items.filter(t => !t.done);
@@ -6364,16 +6366,27 @@ function toggleTask(id) {
   if (t) { t.done = !t.done; save(); renderTasks(); renderDashboard(); }
 }
 
+
+function toggleTaskDueField() {
+  const type = document.getElementById('task-type-input')?.value;
+  const dueGroup = document.getElementById('task-due-group');
+  if (!dueGroup) return;
+  dueGroup.style.display = type === 'daily' ? 'none' : '';
+}
+
 function openAddTaskModal(assignee) {
   document.getElementById('task-edit-id').value = '';
   document.getElementById('task-modal-title').textContent = '업무 추가';
   document.getElementById('task-submit-btn').textContent = '추가';
   document.getElementById('task-title-input').value = '';
-  document.getElementById('task-type-input').value = 'daily';
-  document.getElementById('task-assignee-input').value = assignee || state.memberFilter || '';
+  // 현재 필터 유형으로 자동 설정 (all이면 daily 기본)
+  const autoType = (!state.taskFilter || state.taskFilter === 'all') ? 'daily' : state.taskFilter;
+  document.getElementById('task-type-input').value = autoType;
+  document.getElementById('task-assignee-input').value = assignee || (state.memberFilter !== 'all' ? state.memberFilter : '') || '';
   document.getElementById('task-brand-input').value = 'all';
   document.getElementById('task-due-input').value = '';
   document.getElementById('task-memo-input').value = '';
+  toggleTaskDueField();
   openModal('add-task');
 }
 
@@ -6389,6 +6402,7 @@ function openEditTask(id) {
   document.getElementById('task-brand-input').value = t.brand||'all';
   document.getElementById('task-due-input').value = t.due||'';
   document.getElementById('task-memo-input').value = t.memo||'';
+  toggleTaskDueField();
   openModal('add-task');
 }
 
