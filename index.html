@@ -5213,7 +5213,7 @@ function renderInventory() {
       return `<tr style="${rowBg}">
         <td></td>
         <td><div style="display:flex;align-items:center;gap:8px;">${thumbHTMLCh}<div><div style="font-size:13px;font-weight:500;">${item.name}</div><div style="font-size:11px;color:var(--text-muted);">${item.size||''} ${dbCell}</div></div></div></td>
-        <td class="num" style="font-weight:700;font-size:15px;${chColor}">${chStock}</td>
+        <td class="num" style="font-weight:700;font-size:15px;${chColor};cursor:pointer;text-decoration:underline dotted var(--border);border-radius:6px;padding:4px 8px;transition:background 0.12s;" onclick="event.stopPropagation();openChannelStockEdit(${item.id},'${ch}')" title="클릭해서 재고 수정">${chStock}</td>
         <td class="num" style="font-size:12px;color:var(--text-muted);">${item.stock}</td>
         <td class="num" style="font-size:12px;">${vel7Week}</td>
         <td style="font-size:12px;">${cDaysBadge}</td>
@@ -5327,9 +5327,10 @@ function _importInventoryXlsx(file, input) {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        // header:1 → 2D 배열 (첫 행=헤더명)
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
         if (rows.length < 2) { showToast('❌ 데이터가 없어요'); return; }
         _processInventoryRows(rows);
       } catch(err) { showToast('❌ 파일 오류: ' + err.message); }
@@ -12078,6 +12079,99 @@ function openAddConsumable() {
   openModal('add-consumable');
   toggleConsLinked();
   openConsLinkedList();
+}
+
+
+// ── 채널 재고 직접수정 ──
+let _chStockEditItemId = null, _chStockEditChKey = null;
+
+function openChannelStockEdit(itemId, chKey) {
+  _chStockEditItemId = itemId;
+  _chStockEditChKey = chKey;
+  const item = state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+  const ch = (CHANNELS||[]).find(c => c.key === chKey);
+  const chLabel = ch ? ch.label : chKey;
+  const curStock = getChannelStock(itemId, chKey);
+  const available = getAvailableStock(itemId);
+  const totalCh = (CHANNELS||[]).reduce((s,c) => s + getChannelStock(itemId, c.key), 0);
+
+  const infoEl = document.getElementById('ch-stock-edit-info');
+  infoEl.innerHTML = `
+    <div style="font-weight:700;font-size:14px;margin-bottom:10px;">${item.name}${item.size?' · '+item.size:''}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="padding:8px 10px;background:var(--surface);border-radius:8px;">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">${chLabel} 현재 재고</div>
+        <div style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;">${curStock}<span style="font-size:12px;font-weight:400;color:var(--text-muted);"> 개</span></div>
+      </div>
+      <div style="padding:8px 10px;background:var(--green-light);border-radius:8px;">
+        <div style="font-size:10px;color:var(--green);font-weight:600;margin-bottom:2px;">🟢 가용 재고</div>
+        <div style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;color:var(--green);">${available}<span style="font-size:12px;font-weight:400;color:var(--green);"> 개</span></div>
+      </div>
+      <div style="padding:8px 10px;background:var(--surface);border-radius:8px;">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">창고 총재고</div>
+        <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${item.stock} 개</div>
+      </div>
+      <div style="padding:8px 10px;background:var(--surface);border-radius:8px;">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">전채널 배분 합계</div>
+        <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${totalCh} 개</div>
+      </div>
+    </div>`;
+
+  const qtyEl = document.getElementById('ch-stock-edit-qty');
+  qtyEl.value = curStock;
+  document.getElementById('ch-stock-edit-preview').style.display = 'none';
+  openModal('ch-stock-edit');
+  setTimeout(() => { qtyEl.select(); }, 100);
+}
+
+function updateChStockPreview() {
+  const itemId = _chStockEditItemId;
+  const chKey  = _chStockEditChKey;
+  if (!itemId || !chKey) return;
+  const item = state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+  const ch = (CHANNELS||[]).find(c => c.key === chKey);
+  const chLabel = ch ? ch.label : chKey;
+  const curStock = getChannelStock(itemId, chKey);
+  const newQty = parseInt(document.getElementById('ch-stock-edit-qty').value);
+  const previewEl = document.getElementById('ch-stock-edit-preview');
+  if (isNaN(newQty) || newQty < 0) { previewEl.style.display = 'none'; return; }
+
+  const diff = newQty - curStock;
+  const available = getAvailableStock(itemId);
+  const newAvail = available - diff;
+  const diffStr = diff === 0 ? '변경 없음' : (diff > 0 ? `<span style="color:var(--green)">+${diff}개 증가</span>` : `<span style="color:var(--red)">${diff}개 감소</span>`);
+  const availColor = newAvail < 0 ? 'var(--red)' : newAvail < 10 ? 'var(--yellow)' : 'var(--green)';
+  const warn = newAvail < 0 ? `<div style="color:var(--red);font-weight:600;margin-top:8px;">⚠️ 가용재고 초과! ${Math.abs(newAvail)}개 부족해요</div>` : '';
+
+  previewEl.style.display = 'block';
+  previewEl.innerHTML = `
+    <div style="font-weight:600;color:var(--mongmo);margin-bottom:8px;">변경 미리보기</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;">
+      <div><span style="color:var(--text-muted);">${chLabel} 재고</span> <strong>${curStock} → ${newQty}개</strong> (${diffStr})</div>
+      <div><span style="color:var(--text-muted);">가용재고</span> <strong style="color:${availColor};">${available} → ${newAvail}개</strong></div>
+    </div>${warn}`;
+}
+
+function confirmChStockEdit() {
+  const itemId = _chStockEditItemId;
+  const chKey  = _chStockEditChKey;
+  if (!itemId || !chKey) return;
+  const item = state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+  const ch = (CHANNELS||[]).find(c => c.key === chKey);
+  const chLabel = ch ? ch.label : chKey;
+  const curStock = getChannelStock(itemId, chKey);
+  const newQty = parseInt(document.getElementById('ch-stock-edit-qty').value);
+  if (isNaN(newQty) || newQty < 0) { showToast('❌ 올바른 수량을 입력해주세요'); return; }
+
+  if (!item.channelStock) item.channelStock = {};
+  item.channelStock[chKey] = newQty;
+  save();
+  renderInventory();
+  closeModal('ch-stock-edit');
+  showToast(`✅ ${item.name}${item.size?' '+item.size:''} ${chLabel} 재고: ${curStock}개 → ${newQty}개`);
 }
 
 // ══════════════════════════════════════════════════
