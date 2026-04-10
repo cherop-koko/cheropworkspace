@@ -5085,7 +5085,35 @@ function matchProductNameToInventory(productName) {
   return null;
 }
 
+// getSalesVelocity 캐시 (대시보드에서 재고별 × 2번씩 호출되므로 캐싱 필수)
+const _velocityCache = {};
+let _velocityCacheKey = '';
+// 상품명 → inventoryId 매핑 캐시
+const _matchCache = {};
+
+function _getVelocityCacheKey() {
+  const src = state.channelSalesLog;
+  return src ? src.length + '_' + (src[0]?.date||'') : 'none';
+}
+
+function matchProductNameCached(name) {
+  if (!name) return null;
+  if (_matchCache[name] !== undefined) return _matchCache[name];
+  _matchCache[name] = matchProductNameToInventory(name);
+  return _matchCache[name];
+}
+
 function getSalesVelocity(itemId, days) {
+  // 데이터 변경 시 캐시 무효화
+  const ck = _getVelocityCacheKey();
+  if (ck !== _velocityCacheKey) {
+    Object.keys(_velocityCache).forEach(k => delete _velocityCache[k]);
+    Object.keys(_matchCache).forEach(k => delete _matchCache[k]);
+    _velocityCacheKey = ck;
+  }
+  const cacheKey = itemId + '_' + days;
+  if (_velocityCache[cacheKey] !== undefined) return _velocityCache[cacheKey];
+
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = cutoff.toISOString().split('T')[0];
   const src = (state.channelSalesLog && state.channelSalesLog.length > 0)
@@ -5094,20 +5122,19 @@ function getSalesVelocity(itemId, days) {
 
   let total = 0;
   if (src === state.channelSalesLog) {
-    // channelSalesLog: inventoryId 있으면 우선, 없으면 productName 매칭
     total = src.filter(s => {
       if (s.date < cutoffStr) return false;
       if (s.inventoryId) return s.inventoryId === itemId;
-      // productName으로 매칭
       if (!s.productName) return false;
-      const matched = matchProductNameToInventory(s.productName);
-      return matched === itemId;
+      return matchProductNameCached(s.productName) === itemId;
     }).reduce((s,r) => s + (r.qty||0), 0);
   } else {
     total = src.filter(s => s.inventoryId === itemId && s.date >= cutoffStr)
       .reduce((s,r) => s + r.qty, 0);
   }
-  return total / days;
+  const result = total / days;
+  _velocityCache[cacheKey] = result;
+  return result;
 }
 
 // 품절 예상일 계산 (일 단위)
@@ -7325,11 +7352,11 @@ function getSalesByPeriod(days, fromDate, toDate) {
     const cutoffStr = cutoff.toISOString().split('T')[0];
     result = src.filter(s => s.date >= cutoffStr);
   }
-  // channelSalesLog 사용 시 inventoryId 없는 항목에 실시간 매핑
+  // channelSalesLog 사용 시 inventoryId 없는 항목에 캐시된 매핑 적용
   if (src === state.channelSalesLog) {
     return result.map(r => {
       if (r.inventoryId) return r;
-      const invId = matchProductNameToInventory(r.productName);
+      const invId = matchProductNameCached(r.productName);
       return invId ? { ...r, inventoryId: invId } : r;
     });
   }
