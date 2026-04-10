@@ -2704,6 +2704,46 @@
   </div>
 </div>
 
+<!-- ── 근태 기록 수정 모달 (대표 전용) ── -->
+<div class="modal-overlay hidden" id="modal-edit-att">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">📝 근태 기록 수정</div>
+    <input type="hidden" id="edit-att-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">날짜</label>
+        <input class="form-input" type="date" id="edit-att-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">직원</label>
+        <select class="form-select" id="edit-att-member">
+          <option>김효민</option><option>고예흰</option><option>박영아</option><option>정현진</option><option>김성애</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">출근</label>
+        <input class="form-input" type="time" id="edit-att-checkin">
+      </div>
+      <div class="form-group">
+        <label class="form-label">퇴근</label>
+        <input class="form-input" type="time" id="edit-att-checkout">
+      </div>
+      <div class="form-group">
+        <label class="form-label">점심 시작</label>
+        <input class="form-input" type="time" id="edit-att-lunch-start">
+      </div>
+      <div class="form-group">
+        <label class="form-label">점심 종료</label>
+        <input class="form-input" type="time" id="edit-att-lunch-end">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('edit-att')">취소</button>
+      <button class="btn btn-primary" style="flex:1;background:var(--mongmo);" onclick="submitEditAttRecord()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── 커스텀 Confirm 모달 ── -->
 <div class="modal-overlay hidden" id="modal-confirm">
   <div class="modal" style="width:360px;text-align:center;">
@@ -11482,7 +11522,7 @@ function lunchStart() {
   const rec = recs[recs.length-1];
   if (rec.lunchStart) { showToast('점심 시작이 이미 기록됐어요'); return; }
   rec.lunchStart = now;
-  save(); updateAttStatus();
+  save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`🍱 ${member} 점심 시작 (${now})`);
 }
 
@@ -11498,7 +11538,7 @@ function lunchEnd() {
   if (rec.lunchEnd) { showToast('점심 종료가 이미 기록됐어요'); return; }
   rec.lunchEnd = now;
   const lunchMins = calcMins(rec.lunchStart, now);
-  save(); updateAttStatus();
+  save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`☕ ${member} 점심 종료 (${now}) · 점심 ${fmtMins(lunchMins)}`);
 }
 
@@ -11561,6 +11601,10 @@ function renderAttLog() {
   tbody.innerHTML = recs.map(a=>{
     const mins = a.checkIn&&a.checkOut ? calcWorkMins(a) : null;
     const seq = a.seq > 1 ? `<span style="font-size:10px;color:var(--text-muted);"> (${a.seq}번째)</span>` : '';
+    const adminBtns = isAdmin() ? `
+      <button class="btn btn-sm btn-secondary" style="font-size:11px;" onclick="openEditAttRecord('${a.id}')">수정</button>
+      <button class="btn btn-sm btn-secondary" style="font-size:11px;color:var(--red);border-color:var(--red);margin-left:4px;" onclick="deleteAttRecord('${a.id}')">삭제</button>
+    ` : '';
     return `<tr>
       <td style="color:var(--text-muted);font-size:12px;">${a.date}</td>
       <td><span style="font-size:12px;font-weight:500;">${a.member}</span>${seq}</td>
@@ -11568,7 +11612,7 @@ function renderAttLog() {
       <td style="font-size:12px;color:var(--text-muted);">${a.lunchStart?(a.lunchStart+'~'+(a.lunchEnd||'?')):'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px;">${a.checkOut||'-'}</td>
       <td style="font-size:12px;color:var(--text-muted);">${mins!==null?fmtMins(mins):'-'}</td>
-      <td></td>
+      <td style="white-space:nowrap;">${adminBtns}</td>
     </tr>`;
   }).join('');
 }
@@ -12283,6 +12327,45 @@ function startTaskClock() {
 function stopTaskClock() {
   clearInterval(_taskClockTimer);
   _taskClockTimer = null;
+}
+
+
+// ── 근태 기록 수정/삭제 (대표 전용) ──
+function openEditAttRecord(id) {
+  if (!isAdmin()) return;
+  const a = (state.attendances||[]).find(x => x.id == id);
+  if (!a) return;
+  document.getElementById('edit-att-id').value = a.id;
+  document.getElementById('edit-att-date').value = a.date || '';
+  document.getElementById('edit-att-member').value = a.member || '';
+  document.getElementById('edit-att-checkin').value = a.checkIn || '';
+  document.getElementById('edit-att-checkout').value = a.checkOut || '';
+  document.getElementById('edit-att-lunch-start').value = a.lunchStart || '';
+  document.getElementById('edit-att-lunch-end').value = a.lunchEnd || '';
+  openModal('edit-att');
+}
+
+function submitEditAttRecord() {
+  if (!isAdmin()) return;
+  const id = document.getElementById('edit-att-id').value;
+  const a = (state.attendances||[]).find(x => x.id == id);
+  if (!a) return;
+  a.date       = document.getElementById('edit-att-date').value;
+  a.member     = document.getElementById('edit-att-member').value;
+  a.checkIn    = document.getElementById('edit-att-checkin').value || null;
+  a.checkOut   = document.getElementById('edit-att-checkout').value || null;
+  a.lunchStart = document.getElementById('edit-att-lunch-start').value || null;
+  a.lunchEnd   = document.getElementById('edit-att-lunch-end').value || null;
+  save(); renderAttLog(); renderAttTodaySummary();
+  closeModal('edit-att');
+  showToast('✅ 근태 기록이 수정됐어요');
+}
+
+function deleteAttRecord(id) {
+  if (!isAdmin()) return;
+  state.attendances = (state.attendances||[]).filter(x => x.id != id);
+  save(); renderAttLog(); renderAttTodaySummary();
+  showToast('삭제됐어요');
 }
 
 // ── 채널 재고 직접수정 ──
