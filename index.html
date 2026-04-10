@@ -2668,6 +2668,23 @@
   </div>
 </div>
 
+<!-- ── 채널 재고 직접수정 모달 ── -->
+<div class="modal-overlay hidden" id="modal-ch-stock-edit">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">📦 채널 재고 직접 수정</div>
+    <div id="ch-stock-edit-info" style="background:var(--surface2);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;"></div>
+    <div class="form-group">
+      <label class="form-label">새 재고 수량</label>
+      <input class="form-input" type="number" id="ch-stock-edit-qty" min="0" placeholder="수량 입력" style="font-size:18px;font-weight:700;text-align:center;" oninput="updateChStockPreview()">
+    </div>
+    <div id="ch-stock-edit-preview" style="background:var(--mongmo-light);border-radius:10px;padding:12px 16px;margin-top:8px;font-size:13px;display:none;"></div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('ch-stock-edit')">취소</button>
+      <button class="btn btn-primary" style="flex:1;background:var(--mongmo);" onclick="confirmChStockEdit()">✅ 확인</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── 커스텀 Confirm 모달 ── -->
 <div class="modal-overlay hidden" id="modal-confirm">
   <div class="modal" style="width:360px;text-align:center;">
