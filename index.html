@@ -8281,10 +8281,12 @@ async function previewChannelSales() {
         if (!dateKey) throw new Error(`아임웹 날짜 컬럼 없음. 발견: ${keys.slice(0,10).join(', ')}`);
         if (!totalAmtKey && !itemAmtKey && !finalAmtKey) throw new Error(`아임웹 금액 컬럼 없음. 발견: ${keys.slice(0,10).join(', ')}`);
 
-        // 날짜별로 결제금액 집계 (결제번호별 결제금액 > 0인 행만 합산 → 중복 방지)
-        // 동시에 상품명별 건수도 집계
+        // 날짜별로 결제금액 집계
+        // 주문번호별 중복 제거 필수: 아임웹은 1주문에 상품 여러개면 결제금액이 각 행마다 동일하게 반복됨
         const dateOrderAmt = {}; // { date: totalAmt }
         const dateItemRows = {}; // { date: [{name, option, itemAmt}] }
+        const seenOrders = new Set(); // 주문번호 중복 방지
+        const orderKey = keys.find(k=>k==='주문번호') || keys.find(k=>k.includes('주문번호'));
 
         for (const row of raw) {
           // 취소/반품 건 제외
@@ -8298,11 +8300,16 @@ async function previewChannelSales() {
           const dateStr = parseDateStr(row[dateKey]);
           if (!dateStr) continue;
 
-          // 매출 집계: 결제번호별 결제금액 기준 (0이면 같은 주문의 추가 상품행 → 매출은 건너뜀)
+          // 매출 집계: 주문번호 기준 중복 제거 (같은 주문의 추가 상품행은 매출 건너뜀)
           if (totalAmtKey) {
             const totalAmt = parseInt(String(row[totalAmtKey]).replace(/[^0-9.-]/g,''))||0;
             if (totalAmt > 0) {
-              dateOrderAmt[dateStr] = (dateOrderAmt[dateStr]||0) + totalAmt;
+              const orderNo = orderKey ? String(row[orderKey]||'') : '';
+              // 주문번호가 있으면 중복 체크, 없으면 그냥 합산
+              if (!orderNo || !seenOrders.has(orderNo)) {
+                if (orderNo) seenOrders.add(orderNo);
+                dateOrderAmt[dateStr] = (dateOrderAmt[dateStr]||0) + totalAmt;
+              }
             }
           } else {
             // 결제번호별 컬럼 없으면 최종결제금액 or 품목실결제가 합산
