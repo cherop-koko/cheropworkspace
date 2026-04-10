@@ -5301,35 +5301,128 @@ function openAddInboundSchedule() {
   }, 50);
 }
 
-// CSV 재고 업로드
+// 재고 엑셀/CSV 업로드 (xlsx + csv 모두 지원)
 function importInventoryCSV(input) {
   const file = input.files[0];
   if (!file) return;
+  const isXlsx = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
+  if (isXlsx) {
+    _importInventoryXlsx(file, input);
+  } else {
+    _importInventoryCsvText(file, input);
+  }
+}
+
+function _importInventoryXlsx(file, input) {
+  // SheetJS 동적 로드
+  const loadSheetJS = () => new Promise((resolve, reject) => {
+    if (window.XLSX) { resolve(window.XLSX); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => resolve(window.XLSX);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  loadSheetJS().then(XLSX => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (rows.length < 2) { showToast('❌ 데이터가 없어요'); return; }
+        _processInventoryRows(rows);
+      } catch(err) { showToast('❌ 파일 오류: ' + err.message); }
+      input.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  }).catch(() => { showToast('❌ SheetJS 로드 실패, 네트워크를 확인해주세요'); input.value=''; });
+}
+
+function _importInventoryCsvText(file, input) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
       const text = e.target.result.replace(/^\uFEFF/,'');
       const lines = text.split('\n').filter(l=>l.trim());
       if (lines.length < 2) { showToast('❌ 데이터가 없어요'); return; }
-      const headers = lines[0].split(',').map(h=>h.trim().replace(/"/g,''));
-      const nameIdx  = headers.findIndex(h=>h==='상품명');
-      const sizeIdx  = headers.findIndex(h=>h==='사이즈');
-      const stockIdx = headers.findIndex(h=>h.includes('원재고')||h==='재고수량');
-      if (nameIdx<0||stockIdx<0) { showToast('❌ 상품명, 원재고 컬럼이 필요해요'); return; }
-      let updated=0, notFound=0;
-      for (let i=1; i<lines.length; i++) {
-        const cols = lines[i].split(',').map(c=>c.trim().replace(/"/g,''));
-        const name=cols[nameIdx], size=sizeIdx>=0?cols[sizeIdx]:'', stock=parseInt(cols[stockIdx]);
-        if (!name||isNaN(stock)) continue;
-        const item = state.inventory.find(inv=>inv.name===name&&(!size||inv.size===size));
-        if (item) { item.stock=stock; updated++; } else notFound++;
-      }
-      save(); renderInventory();
-      showToast(`✅ ${updated}개 업데이트${notFound>0?' · '+notFound+'개 미매칭':''}`);
-    } catch(err) { showToast('❌ 파일 오류: '+err.message); }
-    input.value='';
+      const rows = lines.map(l => l.split(',').map(c=>c.trim().replace(/"/g,'')));
+      _processInventoryRows(rows);
+    } catch(err) { showToast('❌ 파일 오류: ' + err.message); }
+    input.value = '';
   };
   reader.readAsText(file, 'UTF-8');
+}
+
+function _processInventoryRows(rows) {
+  const headers = rows[0].map(h => String(h).trim());
+  const nameIdx  = headers.findIndex(h => h === '상품명');
+  const sizeIdx  = headers.findIndex(h => h === '사이즈');
+  const stockIdx = headers.findIndex(h => h.includes('원재고') || h === '재고수량');
+  const catIdx   = headers.findIndex(h => h === '카테고리');
+  const priceIdx = headers.findIndex(h => h === '판매가' || h === '판매가격');
+  const statusIdx= headers.findIndex(h => h === '상태');
+  const prodIdx  = headers.findIndex(h => h.includes('상품화완료') || h.includes('prodStockReady'));
+
+  if (nameIdx < 0 || stockIdx < 0) {
+    showToast('❌ 상품명, 원재고 컬럼이 필요해요');
+    return;
+  }
+
+  // 카테고리 매핑
+  const catMap = {
+    '몽모시리즈':'mongmo','동물시리즈':'animal','키링':'keyring',
+    '안전벨트커버':'beltcover','굿즈':'goods','커스텀옷':'clothes',
+    '커스텀 옷':'clothes','모바일':'mobile','인형':'doll','기타':'etc',
+  };
+
+  let updated = 0, added = 0, skipped = 0;
+  const maxId = state.inventory.length > 0 ? Math.max(...state.inventory.map(i=>i.id||0)) : 0;
+  let nextId = maxId + 1;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const name  = String(row[nameIdx]||'').trim();
+    const size  = sizeIdx >= 0 ? String(row[sizeIdx]||'').trim() : '';
+    const stock = parseInt(row[stockIdx]);
+    if (!name || isNaN(stock)) { skipped++; continue; }
+
+    // 기존 항목 찾기
+    const existing = state.inventory.find(inv =>
+      inv.name === name && (size ? inv.size === size : !inv.size || inv.size === '')
+    );
+
+    if (existing) {
+      // 재고만 업데이트
+      existing.stock = stock;
+      if (prodIdx >= 0 && row[prodIdx] !== '') existing.prodStockReady = parseInt(row[prodIdx]) || 0;
+      if (priceIdx >= 0 && row[priceIdx]) existing.price = parseInt(row[priceIdx]) || existing.price;
+      if (statusIdx >= 0 && row[statusIdx]) existing.status = String(row[statusIdx]).trim() || existing.status;
+      updated++;
+    } else {
+      // 신규 추가
+      const catRaw = catIdx >= 0 ? String(row[catIdx]||'').trim() : '';
+      const newItem = {
+        id: nextId++,
+        name, size,
+        category: catMap[catRaw] || 'etc',
+        brand: 'mongmo',
+        stock,
+        prodStockReady: prodIdx >= 0 ? (parseInt(row[prodIdx])||0) : 0,
+        price: priceIdx >= 0 ? (parseInt(row[priceIdx])||0) : 0,
+        status: statusIdx >= 0 ? (String(row[statusIdx]).trim()||'판매 중') : '판매 중',
+        memo: '',
+      };
+      state.inventory.push(newItem);
+      added++;
+    }
+  }
+
+  save(); renderInventory();
+  let msg = `✅ ${updated}개 업데이트`;
+  if (added > 0) msg += ` · ${added}개 신규 추가`;
+  if (skipped > 0) msg += ` · ${skipped}개 건너뜀`;
+  showToast(msg);
 }
 
 // 설정 모달 열기
