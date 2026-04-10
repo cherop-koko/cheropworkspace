@@ -3242,8 +3242,8 @@ function onLoginSuccess() {
 
 // ============ 데이터 저장/불러오기 ============
 async function save() {
-  const mainData = {
-    inventory: state.inventory, content: state.content,
+  const data = {
+    inventory: state.inventory, content: state.content, tasks: state.tasks,
     salesLog: state.salesLog, revenueLog: state.revenueLog,
     projects: state.projects, pCards: state.pCards, goals: state.goals,
     notices: state.notices, assets: state.assets, assetTags: state.assetTags,
@@ -3258,22 +3258,13 @@ async function save() {
   };
   clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(async () => {
-    await sb.from('app_state').upsert({ id: 'cherop_main', data: mainData, updated_at: new Date().toISOString() });
+    await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
   }, 100);
 }
 
-async function saveTasks() {
-  clearTimeout(_saveTasksTimeout);
-  _saveTasksTimeout = setTimeout(async () => {
-    await sb.from('app_state').upsert({ id: 'cherop_tasks', data: { tasks: state.tasks }, updated_at: new Date().toISOString() });
-  }, 100);
-}
+function saveTasks() { save(); }
 
 async function loadFromSupabase() {
-  // tasks 별도 로드
-  const { data: tData } = await sb.from('app_state').select('data').eq('id', 'cherop_tasks').single();
-  if (tData?.data?.tasks) state.tasks = tData.data.tasks;
-
   const { data, error } = await sb.from('app_state').select('data').eq('id', 'cherop_main').single();
   if (error || !data?.data || Object.keys(data.data).length === 0) {
     seedData();
@@ -3319,7 +3310,7 @@ async function loadChannelSalesLog(months) {
 function applyState(p) {
   state.inventory = p.inventory || [];
   state.content = p.content || [];
-  // tasks는 cherop_tasks row에서 별도 관리 - cherop_main 구독이 덮어쓰지 않음
+  state.tasks = p.tasks || [];
   state.salesLog = p.salesLog || [];
   state.revenueLog = p.revenueLog || [];
   state.projects = p.projects || [];
@@ -3363,17 +3354,6 @@ function subscribeRealtime() {
     })
     .subscribe();
 
-  // tasks 별도 구독
-  sb.channel('tasks_changes')
-    .on('postgres_changes', {
-      event: 'UPDATE', schema: 'public', table: 'app_state', filter: 'id=eq.cherop_tasks'
-    }, (payload) => {
-      state.tasks = payload.new.data?.tasks || state.tasks;
-      const activePage = document.querySelector('.page:not(.hidden)')?.id?.replace('page-', '');
-      if (activePage === 'tasks') renderTasks();
-      if (activePage === 'dashboard') renderDashboard();
-    })
-    .subscribe();
 }
 
 // ============ INIT ============
@@ -11028,7 +11008,6 @@ async function resetAndReload() {
 // 커스텀 Confirm 모달
 // ══════════════════════════════════════════════════
 let _confirmResolve = null, _confirmReject = null;
-let _saveTasksTimeout = null;
 
 function showConfirm({ title='삭제할까요?', desc='', icon='🗑', okLabel='삭제', okColor='var(--red)' } = {}) {
   return new Promise((resolve, reject) => {
