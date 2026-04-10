@@ -1619,7 +1619,18 @@
 
       <!-- 팀원별 칸반 뷰 -->
       <div id="task-kanban-wrap" style="display:none;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" id="task-kanban-board"></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:start;">
+          <!-- 왼쪽: 오늘 할일 체크리스트 -->
+          <div class="card" style="padding:16px 18px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+              <span>☀️ 오늘 할 일</span>
+              <span id="today-task-progress" style="font-size:11px;color:var(--text-muted);"></span>
+            </div>
+            <div id="today-task-checklist"></div>
+          </div>
+          <!-- 오른쪽: 칸반 보드 (3열, span 3) -->
+          <div style="grid-column:span 3;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" id="task-kanban-board"></div>
+        </div>
       </div>
     </div>
 
@@ -6030,13 +6041,19 @@ function renderTasks() {
     items = [...allTasks, ...pItems];
   }
 
+  // 오늘 할일만 표시
+  const _todayStr = new Date().toISOString().split('T')[0];
+  items = items.filter(t => t.due === _todayStr || t.status === 'doing');
+
   // 완료/미완료 필터
   if (_taskDoneFilter === 'todo') items = items.filter(t => !t.done);
   else if (_taskDoneFilter === 'done') items = items.filter(t => t.done);
   // 멤버 필터
   if (state.memberFilter && state.memberFilter !== 'all') items = items.filter(t => t.assignee === state.memberFilter);
-  // 마감일 순 정렬
+  // 진행중 먼저, 그 다음 마감일 순
   items = [...items].sort((a,b) => {
+    if (a.status === 'doing' && b.status !== 'doing') return -1;
+    if (a.status !== 'doing' && b.status === 'doing') return 1;
     if (!a.due && !b.due) return 0;
     if (!a.due) return 1;
     if (!b.due) return -1;
@@ -6044,7 +6061,7 @@ function renderTasks() {
   });
 
   const titleEl = document.getElementById('task-list-title');
-  if (titleEl) titleEl.textContent = state.memberFilter === 'all' ? '📋 할 일 목록' : `📋 ${state.memberFilter} 업무`;
+  if (titleEl) titleEl.textContent = state.memberFilter === 'all' ? `☀️ 오늘 할 일` : `☀️ ${state.memberFilter} 오늘 할 일`;
 
   const listEl = document.getElementById('task-list');
   if (!listEl) return;
@@ -6160,6 +6177,54 @@ function filterMember(name, el) {
 function renderTaskKanban(member) {
   const board = document.getElementById('task-kanban-board');
   if (!board) return;
+
+  // ── 오늘 할일 체크리스트 렌더 ──
+  const todayStr = new Date().toISOString().split('T')[0];
+  const checkEl = document.getElementById('today-task-checklist');
+  const progEl  = document.getElementById('today-task-progress');
+  if (checkEl) {
+    // 오늘 마감 + 미완료 / 진행중 업무
+    const todayTasks = [...(state.tasks||[])].filter(t =>
+      t.assignee === member && !t.done &&
+      (t.due === todayStr || t.status === 'doing')
+    ).sort((a,b) => (a.status === 'doing' ? -1 : 1));
+
+    const doneTasks = [...(state.tasks||[])].filter(t =>
+      t.assignee === member && t.done && t.due === todayStr
+    );
+
+    const allToday = [...todayTasks, ...doneTasks];
+    const doneCount = doneTasks.length;
+    const totalCount = allToday.length;
+
+    if (progEl) progEl.textContent = totalCount > 0 ? `${doneCount}/${totalCount}` : '';
+
+    if (!allToday.length) {
+      checkEl.innerHTML = `<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:20px 0;">오늘 마감 업무 없음 🎉</div>`;
+    } else {
+      // 진행률 바
+      const pct = totalCount > 0 ? Math.round(doneCount/totalCount*100) : 0;
+      const progressBar = `<div style="height:4px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:14px;">
+        <div style="height:100%;width:${pct}%;background:var(--mongmo);border-radius:4px;transition:width 0.4s;"></div>
+      </div>`;
+
+      checkEl.innerHTML = progressBar + allToday.map(t => {
+        const isDoing = t.status === 'doing' && !t.done;
+        const labelColor = isDoing ? 'color:var(--mongmo);' : t.done ? 'color:var(--text-muted);' : '';
+        const lineThrough = t.done ? 'text-decoration:line-through;opacity:0.5;' : '';
+        const badge = isDoing ? `<span style="font-size:9px;padding:1px 5px;border-radius:8px;background:var(--mongmo-light);color:var(--mongmo);margin-left:4px;font-weight:600;">진행중</span>` : '';
+        return `<label style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="toggleTaskDoneFromKanban(${t.id}, this)">
+          <div style="width:18px;height:18px;border-radius:5px;border:2px solid ${t.done?'var(--green)':'var(--border)'};background:${t.done?'var(--green)':'transparent'};flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;">
+            ${t.done ? '<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:500;${labelColor}${lineThrough}">${t.title}${badge}</div>
+            ${t.due ? `<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">📅 ${t.due}</div>` : ''}
+          </div>
+        </label>`;
+      }).join('');
+    }
+  }
 
   // tasks (본인 담당) + pCards (본인 담당) 합치기
   let myTasks = (state.tasks||[]).filter(t => t.assignee === member);
@@ -12094,6 +12159,21 @@ function openAddConsumable() {
   openConsLinkedList();
 }
 
+
+
+// 칸반뷰 오늘 할일 체크박스 토글
+function toggleTaskDoneFromKanban(id, labelEl) {
+  const t = (state.tasks||[]).find(x => x.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  if (t.done) t.status = 'done';
+  else if (t.status === 'done') t.status = 'todo';
+  save();
+  // 체크박스만 즉시 갱신 (전체 리렌더 대신)
+  const member = state.memberFilter;
+  renderTaskKanban(member);
+  renderDashboard();
+}
 
 // ── 채널 재고 직접수정 ──
 let _chStockEditItemId = null, _chStockEditChKey = null;
