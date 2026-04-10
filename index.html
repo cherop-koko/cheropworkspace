@@ -963,7 +963,6 @@
             <div class="tab" onclick="setInvChannel('imweb',this)">🏠 자사몰</div>
             <div class="tab" onclick="setInvChannel('kakao',this)">🎁 카카오</div>
             <div class="tab" onclick="setInvChannel('naver',this)">🛒 스마트스토어</div>
-            <div class="tab" onclick="setInvChannel('hyundai',this)">🏬 더현대하이</div>
           </div>
         </div>
 
@@ -4035,7 +4034,6 @@ const REV_CHANNELS = [
   { key:'imweb',    label:'🏠 자사몰',       color:'#E8849A' },
   { key:'kakao',    label:'🎁 카카오',        color:'#F5C518' },
   { key:'naver',    label:'🛒 스마트스토어',  color:'#03C75A' },
-  { key:'hyundai',  label:'🏬 더현대하이',    color:'#7BA7BC' },
   { key:'popup',    label:'🏪 팝업',          color:'#A67BB8' },
   { key:'emoticon', label:'😊 이모티콘',      color:'#F4A261' },
   { key:'linefriends', label:'🤝 라인프렌즈', color:'#6B9E7A' },
@@ -4632,8 +4630,7 @@ function openEditPCard(id) {
 const CHANNELS = [
   { key:'imweb',   label:'🏠 자사몰' },
   { key:'kakao',   label:'🎁 카카오' },
-  { key:'naver',   label:'🛒 스마트스토어' },
-  { key:'hyundai', label:'🏬 더현대하이' },
+  { key:'naver',   label:'🛒 스마트스토어' }
 ];
 
 function getChannelStock(itemId, ch) {
@@ -5192,7 +5189,7 @@ function renderInventory() {
             <div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">자사몰</div><div class="num">${getChannelStock(item.id,'imweb')}</div></div>
             <div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">카카오</div><div class="num">${getChannelStock(item.id,'kakao')}</div></div>
             <div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">스마트스토어</div><div class="num">${getChannelStock(item.id,'naver')}</div></div>
-            <div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">더현대하이</div><div class="num">${getChannelStock(item.id,'hyundai')}</div></div>
+
             <div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">안전재고 기준</div><div class="num" style="color:var(--text-muted);">${item.safeStock||'-'}개</div></div>
             <div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">SKU</div><div style="color:var(--text-muted);">${item.sku||'-'}</div></div>
             <div><div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">최근 입고</div><div>${item.recentDate||'-'}${item.recentQty?' ('+item.recentQty+'개)':''}</div></div>
@@ -7086,8 +7083,7 @@ function renderSalesChPie(year, month, thisMonthStr, thisM1, endStr) {
   const CH_KEYS = [
     {key:'imweb',   label:'자사몰',       color:'#E8849A'},
     {key:'kakao',   label:'카카오',       color:'#F5B800'},
-    {key:'naver',   label:'스마트스토어', color:'#6BA87A'},
-    {key:'hyundai', label:'더현대하이',   color:'#7BA7BC'},
+    {key:'naver',   label:'스마트스토어', color:'#6BA87A'}
   ];
   const chTotals = {};
   CH_KEYS.forEach(ch => { chTotals[ch.key] = 0; });
