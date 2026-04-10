@@ -235,6 +235,20 @@
   }
   .drawer-overlay.open { display:block; }
 
+  /* PC: 대시보드 헤더 가로 배치 (모바일 column override 상쇄) */
+  @media (min-width: 769px) {
+    #page-dashboard .page-header {
+      flex-direction: row !important;
+      align-items: center !important;
+    }
+    #page-dashboard .page-header > div:first-child {
+      flex: 1;
+    }
+    #page-dashboard .header-actions {
+      flex-shrink: 0;
+    }
+  }
+
   @media (max-width: 768px) {
     /* ── 기본 레이아웃 ── */
     .mobile-header { display: flex; }
@@ -419,19 +433,25 @@
       font-size: 12px !important;
     }
     #dash-search-input { width: 100% !important; font-size: 16px !important; }
+    #dash-search-wrap { display: none !important; }
 
-    /* 대시보드 페이지 헤더 - 인사말 + 날씨/버튼 정리 */
+    /* 대시보드 페이지 헤더 - 모바일: 세로 배치 */
     #page-dashboard .page-header {
+      flex-direction: column !important;
+      align-items: flex-start !important;
       margin-bottom: 12px !important;
     }
     #page-dashboard .page-header > div:first-child {
-      flex-wrap: wrap !important;
-      gap: 8px !important;
+      width: 100% !important;
+      flex: none !important;
     }
     #page-dashboard .header-actions {
-      flex-wrap: wrap !important;
-      overflow-x: visible !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
       gap: 6px !important;
+      flex-shrink: 0 !important;
+      width: 100% !important;
     }
     #dash-weather-badge {
       font-size: 12px !important;
@@ -640,6 +660,7 @@
     <span>CHEROP</span>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
+    <button onclick="toggleMobileSearch()" style="background:none;border:none;cursor:pointer;font-size:20px;">🔍</button>
     <button onclick="toggleNotifPanel()" style="background:none;border:none;cursor:pointer;font-size:20px;position:relative;">
       🔔<span id="mobile-notif-dot" style="display:none;position:absolute;top:0;right:0;width:8px;height:8px;background:var(--mongmo);border-radius:50%;"></span>
     </button>
@@ -803,10 +824,10 @@
         <div style="flex:1;min-width:0;">
           <div class="page-title" id="dash-greeting">안녕하세요 👋</div>
           <div class="page-sub" id="dash-date-sub"></div>
-          <!-- D-day 인라인 박스 -->
-          <div id="dash-dday-inline" style="display:none;margin-top:6px;"></div>
         </div>
         <div class="header-actions" style="align-items:center;">
+          <!-- D-day 인라인 박스 -->
+          <div id="dash-dday-inline" style="display:none;"></div>
           <div id="dash-weather-badge" style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:12px;white-space:nowrap;"></div>
           <button class="btn btn-secondary" onclick="showPage('tasks')" style="font-size:12px;white-space:nowrap;">✅ 오늘 할 일</button>
         </div>
@@ -1014,17 +1035,12 @@
         </div>
       </div>
 
-      <!-- AI 자동 분석 -->
-      <div class="card section" style="padding:16px 20px;border-left:4px solid var(--mongmo);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <span style="font-weight:700;">✨ AI 자동 분석</span>
-          <button class="btn btn-sm btn-secondary" onclick="runSalesInsight()">🔄 새로고침</button>
-        </div>
-        <div id="sales-insight-content" style="color:var(--text-muted);line-height:1.7;">탭을 열면 자동으로 분석해요...</div>
+      <!-- KPI + 비교 + 채널비중 (3박스) -->
+      <div class="section" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:stretch;" id="sales-kpi-wrap">
+        <div class="card" id="sales-kpi" style="padding:16px 20px;"></div>
+        <div class="card" id="sales-vol-compare" style="padding:16px 20px;"></div>
+        <div class="card" id="sales-ch-pie" style="padding:16px 20px;"></div>
       </div>
-
-      <!-- KPI -->
-      <div class="grid-3 section" id="sales-kpi"></div>
 
       <!-- 판매 현황 콘텐츠 -->
       <div id="sales-tab-sales">
@@ -3167,6 +3183,7 @@ async function save() {
   // 디바운스: 연속 저장 방지 (500ms)
   clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(async () => {
+    _lastSaveTime = Date.now();
     await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
   }, 500);
 }
@@ -3249,12 +3266,16 @@ function subscribeRealtime() {
     .on('postgres_changes', {
       event: 'UPDATE', schema: 'public', table: 'app_state', filter: 'id=eq.cherop_main'
     }, (payload) => {
+      // 내가 방금 저장한 이벤트면 무시 (2초 이내 내 저장 = skip)
+      if (Date.now() - _lastSaveTime < 2000) return;
       applyState(payload.new.data);
-      // 현재 보고 있는 페이지 리렌더
+      // 현재 보고 있는 페이지 즉시 리렌더
       const activePage = document.querySelector('.page:not(.hidden)');
-      if (activePage) {
-        const pageId = activePage.id?.replace('page-', '');
-        if (pageId) showPage(pageId);
+      const pageId = activePage?.id?.replace('page-', '');
+      if (pageId === 'attendance') {
+        renderAttendance();
+      } else if (pageId) {
+        showPage(pageId);
       }
       showToast('🔄 데이터가 업데이트됐어요');
     })
@@ -3891,6 +3912,15 @@ function showPage(page, pushState=true) {
 }
 
 // ── 모바일 드로어 ──
+function toggleMobileSearch() {
+  const wrap = document.getElementById('dash-search-wrap');
+  const input = document.getElementById('dash-search-input');
+  if (!wrap) return;
+  const isHidden = wrap.style.display === 'none' || wrap.style.display === '';
+  wrap.style.setProperty('display', isHidden ? 'block' : 'none', 'important');
+  if (isHidden && input) { input.focus(); }
+}
+
 function toggleMobileDrawer() {
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.getElementById('drawer-overlay');
@@ -6778,36 +6808,229 @@ function renderSales() {
 }
 function setSalesPeriod(days, el) { renderSales(); } // 전역 기간은 제거, 호환성 유지
 
-// ── KPI (최근 30일 고정) ──
+// ── KPI + 비교 + 채널비중 ──
+// 판매분석 KPI 표시 월 상태
+let _salesKpiYear = null, _salesKpiMonth = null;
+
+function moveSalesKpiMonth(delta) {
+  const today = new Date();
+  if (_salesKpiYear === null) { _salesKpiYear = today.getFullYear(); _salesKpiMonth = today.getMonth(); }
+  _salesKpiMonth += delta;
+  if (_salesKpiMonth > 11) { _salesKpiMonth = 0; _salesKpiYear++; }
+  if (_salesKpiMonth < 0)  { _salesKpiMonth = 11; _salesKpiYear--; }
+  renderSalesKPI();
+}
+
 function renderSalesKPI() {
-  const logs30 = getSalesByPeriod(30);
-  const logs7  = getSalesByPeriod(7);
-  const rev30  = getRevByPeriod(30).reduce((s,r) => s+getRevTotal(r), 0);
-  const totalSold30 = logs30.reduce((s,l) => s+l.qty, 0);
-  const totalSold7  = logs7.reduce((s,l) => s+l.qty, 0);
-  const activeSkus  = new Set(logs30.map(l=>l.inventoryId)).size;
+  const today = new Date();
+  if (_salesKpiYear === null) { _salesKpiYear = today.getFullYear(); _salesKpiMonth = today.getMonth(); }
+
+  const year = _salesKpiYear, month = _salesKpiMonth;
+  const thisMonthStr = `${year}-${String(month+1).padStart(2,'0')}`;
+  const thisM1 = `${year}-${String(month+1).padStart(2,'0')}-01`;
+  const lastDay = new Date(year, month+1, 0).getDate();
+  const isCurrentMonth = (year === today.getFullYear() && month === today.getMonth());
+  const endDay = isCurrentMonth ? today.getDate() : lastDay;
+  const endStr = `${year}-${String(month+1).padStart(2,'0')}-${String(endDay).padStart(2,'0')}`;
+  const monthLabel = `${month+1}월`;
+
+  const logsThisMonth = getSalesByPeriod(0, thisM1, endStr);
+  const totalSoldMonth = logsThisMonth.reduce((s,l) => s+l.qty, 0);
+  const revMonth = (state.revenueLog||[]).filter(r=>r.date.startsWith(thisMonthStr)).reduce((s,r)=>s+getRevTotal(r),0);
+  const activeSkus = new Set(logsThisMonth.filter(l=>l.inventoryId).map(l=>l.inventoryId)).size;
+
+  const isThisMonth = (year === today.getFullYear() && month === today.getMonth());
+  const navBtns = `<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px;">
+    <button onclick="moveSalesKpiMonth(-1)" style="width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">◀</button>
+    <span style="font-size:13px;font-weight:700;">📅 ${year}년 ${monthLabel} 현황</span>
+    <button onclick="moveSalesKpiMonth(1)" ${isThisMonth?'disabled style="opacity:0.3;cursor:default;width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"':' style="width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"'}>▶</button>
+  </div>`;
+
   const el = document.getElementById('sales-kpi');
   if (!el) return;
-  const growthPct = totalSold7 > 0 && totalSold30 > 0
-    ? Math.round((totalSold7/(totalSold30/30*7)-1)*100) : null;
-  const growthStr = growthPct !== null
-    ? `<span style="color:${growthPct>=0?'var(--green)':'var(--red)'};font-size:11px;">${growthPct>=0?'▲':'▼'}${Math.abs(growthPct)}% vs 7일 평균</span>` : '';
-  el.innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">30일 총 판매량</div>
-      <div class="stat-value">${totalSold30.toLocaleString()}</div>
-      <div class="stat-change">일평균 ${(totalSold30/30).toFixed(1)}개 ${growthStr}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">30일 매출</div>
-      <div class="stat-value">${fmtWon(rev30)}</div>
-      <div class="stat-change">일평균 ${fmtWon(Math.round(rev30/30))}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">판매 발생 SKU</div>
-      <div class="stat-value">${activeSkus}</div>
-      <div class="stat-change">전체 ${state.inventory.filter(i=>i.status!=='판매 종료').length}개 중</div>
+  el.innerHTML = navBtns + `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--surface2);border-radius:10px;">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">총 판매량</div>
+          <div style="font-size:24px;font-weight:800;font-family:'DM Mono',monospace;">${totalSoldMonth.toLocaleString()}<span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:3px;">개</span></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">일평균 ${endDay>0?(totalSoldMonth/endDay).toFixed(1):0}개</div>
+        </div>
+        <div style="font-size:26px;">📦</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--surface2);border-radius:10px;">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">매출</div>
+          <div style="font-size:22px;font-weight:800;font-family:'DM Mono',monospace;">${fmtWon(revMonth)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">일평균 ${fmtWon(endDay>0?Math.round(revMonth/endDay):0)}</div>
+        </div>
+        <div style="font-size:26px;">💰</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--surface2);border-radius:10px;">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">판매 발생 SKU</div>
+          <div style="font-size:24px;font-weight:800;font-family:'DM Mono',monospace;">${activeSkus}<span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:3px;">종</span></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">전체 ${state.inventory.filter(i=>i.status!=='판매 종료').length}개 중</div>
+        </div>
+        <div style="font-size:26px;">🏷️</div>
+      </div>
     </div>`;
+
+  renderSalesVolCompare(year, month, isCurrentMonth, thisM1, endStr, endDay, today);
+  renderSalesChPie(year, month, thisMonthStr, thisM1, endStr);
+}
+
+function _makeVolCard(title, curr, prev, prevTotal, currLabel, prevLabel, note) {
+  const diff = curr - prev;
+  const pct  = prev > 0 ? Math.round(diff/prev*100) : null;
+  const up   = diff >= 0;
+  const color   = up ? 'var(--green)' : 'var(--red)';
+  const bgColor = up ? 'var(--green-light)' : 'var(--red-light)';
+  const maxBar  = Math.max(curr, prevTotal, prev) || 1;
+  return `<div style="padding:12px 14px;background:var(--surface2);border-radius:10px;">
+    <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
+      <span style="font-size:12px;color:var(--text-muted);font-weight:600;">${title}</span>
+      ${pct !== null ? `<span style="margin-left:auto;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;background:${bgColor};color:${color};">${up?'▲':'▼'}${Math.abs(pct)}%</span>` : ''}
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-bottom:7px;">${note}</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">
+      <span style="font-size:11px;color:var(--text-muted);">${currLabel}</span>
+      <span style="font-size:15px;font-weight:800;font-family:'DM Mono',monospace;">${curr.toLocaleString()} 개</span>
+    </div>
+    <div style="height:5px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:5px;">
+      <div style="height:100%;width:${Math.round(curr/maxBar*100)}%;background:var(--mongmo);border-radius:4px;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;">
+      <span style="font-size:10px;color:var(--text-muted);">${prevLabel} (동기간)</span>
+      <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text-muted);">${prev.toLocaleString()} 개</span>
+    </div>
+    <div style="height:4px;background:var(--border);border-radius:4px;overflow:hidden;">
+      <div style="height:100%;width:${Math.round(prev/maxBar*100)}%;background:#C0B8B2;border-radius:4px;"></div>
+    </div>
+  </div>`;
+}
+
+function renderSalesVolCompare(year, month, isCurrentMonth, thisM1, endStr, endDay, today) {
+  const el = document.getElementById('sales-vol-compare');
+  if (!el) return;
+  const fmt = d => d.toISOString().split('T')[0];
+  const getSalesQtyRange = (from, to) =>
+    getSalesByPeriod(0, from, to).reduce((s,l)=>s+l.qty, 0);
+
+  let weekHtml = '', monthHtml = '';
+
+  if (isCurrentMonth) {
+    const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
+    const yestStr = fmt(yesterday);
+    const dow = yesterday.getDay();
+    const daysSinceMon = dow === 0 ? 6 : dow - 1;
+    const thisMonStart = new Date(yesterday); thisMonStart.setDate(yesterday.getDate()-daysSinceMon);
+    const lastMonStart = new Date(thisMonStart); lastMonStart.setDate(thisMonStart.getDate()-7);
+    const lastSunEnd   = new Date(thisMonStart); lastSunEnd.setDate(thisMonStart.getDate()-1);
+    const lastWeekSameDay = new Date(lastMonStart); lastWeekSameDay.setDate(lastMonStart.getDate()+daysSinceMon);
+    const wd = ['일','월','화','수','목','금','토'];
+    const thisWeekQty   = getSalesQtyRange(fmt(thisMonStart), yestStr);
+    const lastWeekQty   = getSalesQtyRange(fmt(lastMonStart), fmt(lastWeekSameDay));
+    const lastWeekTotal = getSalesQtyRange(fmt(lastMonStart), fmt(lastSunEnd));
+
+    const dayOfMonth = yesterday.getDate();
+    const lastM1Obj = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    const lastMLObj = new Date(today.getFullYear(), today.getMonth(), 0);
+    const lastMSameDayObj = new Date(lastM1Obj.getFullYear(), lastM1Obj.getMonth(), Math.min(dayOfMonth, lastMLObj.getDate()));
+    const thisMQty   = getSalesQtyRange(thisM1, yestStr);
+    const lastMSame  = getSalesQtyRange(fmt(lastM1Obj), fmt(lastMSameDayObj));
+    const lastMTotal = getSalesQtyRange(fmt(lastM1Obj), fmt(lastMLObj));
+
+    weekHtml  = _makeVolCard('주간 비교', thisWeekQty, lastWeekQty, lastWeekTotal,
+      '이번 주 (월~어제)', '지난 주', `월~${wd[yesterday.getDay()]} vs 지난주 동기간`);
+    monthHtml = _makeVolCard('월간 비교', thisMQty, lastMSame, lastMTotal,
+      `이번 달 (1~${dayOfMonth}일)`, '지난 달', `이번달 1~${dayOfMonth}일 vs 지난달 동일 기간`);
+  } else {
+    const lastM1Obj = new Date(year, month-1, 1);
+    const lastMLObj = new Date(year, month, 0);
+    const thisTotal  = getSalesQtyRange(thisM1, endStr);
+    const lastTotal  = getSalesQtyRange(fmt(lastM1Obj), fmt(lastMLObj));
+    const prevYearM1 = new Date(year-1, month, 1);
+    const prevYearML = new Date(year-1, month+1, 0);
+    const prevYearTotal = getSalesQtyRange(fmt(prevYearM1), fmt(prevYearML));
+
+    weekHtml  = _makeVolCard(`${month+1}월 vs 전달`, thisTotal, lastTotal, lastTotal,
+      `${month+1}월 전체`, `${month}월 전체`, `${month+1}월 vs ${month}월`);
+    monthHtml = _makeVolCard(`${month+1}월 vs 작년 동월`, thisTotal, prevYearTotal, prevYearTotal,
+      `${year}년 ${month+1}월`, `${year-1}년 ${month+1}월`, '작년 동월 비교');
+  }
+
+  el.innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:14px;">📊 판매량 비교</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${weekHtml}
+      ${monthHtml}
+    </div>`;
+}
+
+function renderSalesChPie(year, month, thisMonthStr, thisM1, endStr) {
+  const el = document.getElementById('sales-ch-pie');
+  if (!el) return;
+  const chLogs = getSalesByPeriod(0, thisM1, endStr);
+  const CH_KEYS = [
+    {key:'imweb',   label:'자사몰',       color:'#E8849A'},
+    {key:'kakao',   label:'카카오',       color:'#F5B800'},
+    {key:'naver',   label:'스마트스토어', color:'#6BA87A'},
+    {key:'hyundai', label:'더현대하이',   color:'#7BA7BC'},
+  ];
+  const chTotals = {};
+  CH_KEYS.forEach(ch => { chTotals[ch.key] = 0; });
+  chLogs.forEach(l => {
+    const ch = (l.channel || l.source || '').toLowerCase();
+    if (ch.includes('imweb')||ch.includes('아임웹')||ch.includes('자사')) chTotals.imweb += (l.qty||0);
+    else if (ch.includes('kakao')||ch.includes('카카오')) chTotals.kakao += (l.qty||0);
+    else if (ch.includes('naver')||ch.includes('네이버')||ch.includes('스마트')) chTotals.naver += (l.qty||0);
+    else if (ch.includes('hyundai')||ch.includes('현대')) chTotals.hyundai += (l.qty||0);
+  });
+  const chTotal = Object.values(chTotals).reduce((s,v)=>s+v,0) || 1;
+  const active = CH_KEYS.filter(ch => chTotals[ch.key] > 0);
+
+  const cx=60, cy=60, outerR=54, innerR=34;
+  let slices = '';
+  let startAngle = -Math.PI/2;
+  if (active.length > 0) {
+    active.forEach(ch => {
+      const frac = chTotals[ch.key] / chTotal;
+      const sweep = frac * Math.PI * 2 - (active.length > 1 ? 0.03 : 0);
+      const a0 = startAngle + 0.015, a1 = a0 + sweep;
+      const x1=cx+outerR*Math.cos(a0), y1=cy+outerR*Math.sin(a0);
+      const x2=cx+outerR*Math.cos(a1), y2=cy+outerR*Math.sin(a1);
+      const xi1=cx+innerR*Math.cos(a0), yi1=cy+innerR*Math.sin(a0);
+      const xi2=cx+innerR*Math.cos(a1), yi2=cy+innerR*Math.sin(a1);
+      const lf = sweep > Math.PI ? 1 : 0;
+      slices += `<path d="M${xi1.toFixed(1)} ${yi1.toFixed(1)} L${x1.toFixed(1)} ${y1.toFixed(1)} A${outerR} ${outerR} 0 ${lf} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} L${xi2.toFixed(1)} ${yi2.toFixed(1)} A${innerR} ${innerR} 0 ${lf} 0 ${xi1.toFixed(1)} ${yi1.toFixed(1)}Z" fill="${ch.color}"/>`;
+      startAngle += frac * Math.PI * 2;
+    });
+  } else {
+    slices = `<circle cx="${cx}" cy="${cy}" r="${outerR}" fill="var(--border)"/>`;
+  }
+  const top = active.length > 0 ? active.reduce((a,b)=>chTotals[a.key]>chTotals[b.key]?a:b) : null;
+  const topPct = top ? Math.round(chTotals[top.key]/chTotal*100) : 0;
+  const centerText = top
+    ? `<text x="${cx}" y="${cy-7}" text-anchor="middle" font-size="9" fill="var(--text-muted)" font-family="Noto Sans KR">${year}년 ${month+1}월</text><text x="${cx}" y="${cy+6}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" font-family="DM Mono,monospace">${topPct}%</text><text x="${cx}" y="${cy+19}" text-anchor="middle" font-size="9" fill="var(--text-muted)" font-family="Noto Sans KR">${top.label}</text>`
+    : `<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-family="Noto Sans KR">데이터 없음</text>`;
+
+  const legend = CH_KEYS.map(ch=>{
+    const qty=chTotals[ch.key], pct=Math.round(qty/chTotal*100);
+    return `<div style="display:flex;align-items:center;gap:6px;opacity:${qty>0?1:0.3};">
+      <div style="width:8px;height:8px;border-radius:2px;background:${ch.color};flex-shrink:0;"></div>
+      <span style="font-size:11px;color:var(--text-muted);flex:1;">${ch.label}</span>
+      <span style="font-size:11px;font-weight:600;">${qty.toLocaleString()}</span>
+      <span style="font-size:10px;color:var(--text-muted);">(${pct}%)</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:14px;">🏪 채널별 판매 비중</div>
+    <div style="display:flex;justify-content:center;margin-bottom:12px;">
+      <svg width="120" height="120" viewBox="0 0 120 120">${slices}<circle cx="${cx}" cy="${cy}" r="${innerR}" fill="var(--surface)"/>${centerText}</svg>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;">${legend}</div>`;
 }
 
 // ── 매출 그래프 ──
@@ -10257,13 +10480,12 @@ function _renderDashboard() {
       const dd = Math.ceil((new Date(bigEv.start)-today0)/86400000);
       const ddc = dd<=3?'var(--red)':dd<=7?'var(--yellow)':'var(--mongmo)';
       ddEl.style.display = 'flex';
-      ddEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:${ddc}12;border:1px solid ${ddc}40;border-radius:10px;width:100%;box-sizing:border-box;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:10px;font-weight:600;color:${ddc};margin-bottom:1px;">🎯 카운트다운</div>
-          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bigEv.title}</div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">${bigEv.start}${bigEv.start!==bigEv.end?' ~ '+bigEv.end:''}</div>
+      ddEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:${ddc}12;border:1px solid ${ddc}40;border-radius:10px;white-space:nowrap;">
+        <div>
+          <div style="font-size:10px;font-weight:600;color:${ddc};">🎯 ${bigEv.title}</div>
+          <div style="font-size:10px;color:var(--text-muted);">${bigEv.start}${bigEv.start!==bigEv.end?' ~ '+bigEv.end:''}</div>
         </div>
-        <div style="font-size:24px;font-weight:900;font-family:'DM Mono',monospace;color:${ddc};flex-shrink:0;">${dd===0?'D-DAY':'D-'+dd}</div>
+        <div style="font-size:18px;font-weight:900;font-family:'DM Mono',monospace;color:${ddc};">${dd===0?'D-DAY':'D-'+dd}</div>
       </div>`;
     } else { ddEl.style.display = 'none'; }
   }
@@ -10395,10 +10617,11 @@ function _renderDashboard() {
           const ot=getOT(o.type);
           const dc=dd<=1?'var(--red)':dd<=3?'var(--yellow)':'var(--mongmo)';
           const range = o.end && o.end!==o.start ? `${o.start} ~ ${o.end}` : o.start;
+          const aTag = o.assignee ? '<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:rgba(0,0,0,0.06);color:var(--text-muted);margin-left:4px;">👤 '+o.assignee+'</span>' : '';
           return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
             +'<div style="display:flex;align-items:center;gap:8px;">'
             +'<div style="width:26px;height:26px;border-radius:7px;background:'+ot.color+'20;display:flex;align-items:center;justify-content:center;font-size:13px;">'+ot.icon+'</div>'
-            +'<div><div style="font-size:13px;font-weight:500;">'+o.title+'</div>'
+            +'<div><div style="font-size:13px;font-weight:500;">'+o.title+aTag+'</div>'
             +'<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">'+range+'</div></div></div>'
             +'<div style="font-size:14px;font-weight:800;font-family:\'DM Mono\',monospace;color:'+dc+';">'+(dd===0?'오늘':'D-'+dd)+'</div></div>';
         }).join('');
@@ -10522,6 +10745,7 @@ async function resetAndReload() {
 // 커스텀 Confirm 모달
 // ══════════════════════════════════════════════════
 let _confirmResolve = null, _confirmReject = null;
+let _lastSaveTime = 0; // 내 마지막 저장 시각(ms) - 실시간 구독 덮어씀 방지용
 
 function showConfirm({ title='삭제할까요?', desc='', icon='🗑', okLabel='삭제', okColor='var(--red)' } = {}) {
   return new Promise((resolve, reject) => {
@@ -10654,7 +10878,8 @@ function renderOpsCalendar() {
       // 단일 이벤트 HTML
       const singlesHtml = singles.slice(0,2).map(o => {
         const t2 = OPS_TYPES[o.type] || OPS_TYPES.etc;
-        return `<div style="font-size:11px;padding:2px 5px;border-radius:4px;background:${t2.color}22;color:${t2.color};overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;margin-top:2px;font-weight:500;" onclick="event.stopPropagation();openEditOps(${o.id})">${t2.icon} ${o.title||t2.label}</div>`;
+        const aName = o.assignee ? `<span style="opacity:0.75;margin-left:3px;font-size:10px;">${o.assignee}</span>` : '';
+        return `<div style="font-size:11px;padding:2px 5px;border-radius:4px;background:${t2.color}22;color:${t2.color};overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;margin-top:2px;font-weight:500;" onclick="event.stopPropagation();openEditOps(${o.id})">${t2.icon} ${o.title||t2.label}${aName}</div>`;
       }).join('');
 
       // 멀티데이 바 HTML
@@ -10662,10 +10887,11 @@ function renderOpsCalendar() {
         const isLeft  = b.startCol === ci;
         const isRight = b.endCol   === ci;
         const radius  = `${isLeft?'6px':'0'} ${isRight?'6px':'0'} ${isRight?'6px':'0'} ${isLeft?'6px':'0'}`;
+        const aLabel  = isLeft && b.ev.assignee ? `<span style="font-size:10px;opacity:0.75;margin-left:3px;">${b.ev.assignee}</span>` : '';
         const label   = isLeft ? `${b.icon} ${b.title}` : '';
         const topOff  = 36 + singlesArea + b.row * 24;
         return `<div style="position:absolute;top:${topOff}px;left:${isLeft?'2px':'0'};right:${isRight?'2px':'0'};height:20px;background:${b.color}44;border:1.5px solid ${b.color}99;border-radius:${radius};display:flex;align-items:center;padding-left:${isLeft?'6px':'2px'};overflow:hidden;white-space:nowrap;cursor:pointer;z-index:2;" onclick="event.stopPropagation();openEditOps(${b.ev.id})">
-          <span style="font-size:11px;color:${b.color};font-weight:700;overflow:hidden;text-overflow:ellipsis;">${label}</span>
+          <span style="font-size:11px;color:${b.color};font-weight:700;overflow:hidden;text-overflow:ellipsis;">${label}</span>${aLabel}
         </div>`;
       }).join('');
 
@@ -11080,7 +11306,14 @@ function renderAttLog() {
   let recs = state.attendances||[];
   if (member!=='all') recs = recs.filter(a=>a.member===member);
   if (month) recs = recs.filter(a=>a.date.startsWith(month));
-  recs = [...recs].sort((a,b)=>b.date.localeCompare(a.date)||((a.seq||1)-(b.seq||1))).slice(0,60);
+  recs = [...recs].sort((a,b) => {
+    const dateDiff = b.date.localeCompare(a.date);
+    if (dateDiff !== 0) return dateDiff;
+    // 같은 날짜: 이름 오름차순 → seq 오름차순
+    const nameDiff = (a.member||'').localeCompare(b.member||'');
+    if (nameDiff !== 0) return nameDiff;
+    return (a.seq||1) - (b.seq||1);
+  }).slice(0,60);
   if (!recs.length) { tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">기록 없음</td></tr>`; return; }
   tbody.innerHTML = recs.map(a=>{
     const mins = a.checkIn&&a.checkOut ? calcWorkMins(a) : null;
@@ -11760,8 +11993,12 @@ function openAddConsumable() {
 function deleteTask(id) {
   const t = (state.tasks||[]).find(x=>x.id===id);
   showConfirm({ title:`"${t?.title||'업무'}" 삭제할까요?`, icon:'✅', okLabel:'삭제' }).then(() => {
-    state.tasks = state.tasks.filter(t => t.id !== id);
-    save(); renderTasks(); showToast('삭제됐어요');
+    state.tasks = state.tasks.filter(x => x.id !== id);
+    // 로컬 state 즉시 렌더 (save() 보다 먼저)
+    renderTasks();
+    if (!document.getElementById('page-dashboard')?.classList.contains('hidden')) renderDashboard();
+    showToast('삭제됐어요');
+    save(); // _lastSaveTime이 설정되어 2초간 실시간 구독 덮어씀 방지
   }).catch(()=>{});
 }
 
