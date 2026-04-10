@@ -1557,21 +1557,14 @@
           <div class="page-title">업무 체크리스트</div>
           <div class="page-sub">루틴 체크 · 프로젝트 업무 관리</div>
         </div>
-        <div class="header-actions">
+        <div class="header-actions" style="align-items:center;">
+          <div id="task-datetime-clock" style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text-muted);text-align:right;line-height:1.5;padding:4px 10px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);white-space:nowrap;"></div>
           <button class="btn btn-secondary" onclick="resetDailyRoutine()">🔄 데일리 루틴 초기화</button>
           <button class="btn btn-primary" onclick="openAddTaskModal()">+ 업무 추가</button>
         </div>
       </div>
 
-      <!-- 유형 필터 (전체/팀원 모두 표시) -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-        <div class="tab-bar" style="margin-bottom:0;" id="task-type-tabs">
-          <div class="tab active" onclick="filterTasks('all', this)" data-filter-type="type">전체</div>
-          <div class="tab" onclick="filterTasks('daily', this)" data-filter-type="type">데일리 루틴</div>
-          <div class="tab" onclick="filterTasks('project', this)" data-filter-type="type">프로젝트</div>
-          <div class="tab" onclick="filterTasks('personal', this)" data-filter-type="type">개인 일정</div>
-        </div>
-      </div>
+
 
       <!-- 팀원별 탭 -->
       <div style="margin-bottom:20px;">
@@ -1590,8 +1583,17 @@
       <div id="task-list-wrap">
         <div class="grid-2">
           <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <div style="font-size:14px;font-weight:600;" id="task-list-title">📋 할 일 목록</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <div style="font-size:14px;font-weight:600;" id="task-list-title">☀️ 오늘 할 일</div>
+                <!-- 유형 알약 필터 -->
+                <div style="display:flex;gap:4px;" id="task-type-pills">
+                  <button class="task-type-pill active" onclick="filterTasks('all',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--text);color:#fff;cursor:pointer;transition:all 0.15s;">전체</button>
+                  <button class="task-type-pill" onclick="filterTasks('daily',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all 0.15s;">🔄 데일리루틴</button>
+                  <button class="task-type-pill" onclick="filterTasks('project',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all 0.15s;">🗂 프로젝트</button>
+                  <button class="task-type-pill" onclick="filterTasks('personal',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all 0.15s;">👤 개인일정</button>
+                </div>
+              </div>
               <div style="display:flex;gap:5px;" id="task-done-filter">
                 <button class="btn btn-sm btn-secondary task-done-btn active" onclick="setTaskDoneFilter('all',this)">전체</button>
                 <button class="btn btn-sm btn-secondary task-done-btn" onclick="setTaskDoneFilter('todo',this)">미완료</button>
@@ -1619,6 +1621,13 @@
 
       <!-- 팀원별 칸반 뷰 -->
       <div id="task-kanban-wrap" style="display:none;">
+        <!-- 팀원별 유형 알약 필터 -->
+        <div style="display:flex;gap:4px;margin-bottom:16px;" id="task-type-pills-kanban">
+          <button class="task-type-pill-k active" onclick="filterTasksKanban('all',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--text);color:#fff;cursor:pointer;transition:all 0.15s;">전체</button>
+          <button class="task-type-pill-k" onclick="filterTasksKanban('daily',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all 0.15s;">🔄 데일리루틴</button>
+          <button class="task-type-pill-k" onclick="filterTasksKanban('project',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all 0.15s;">🗂 프로젝트</button>
+          <button class="task-type-pill-k" onclick="filterTasksKanban('personal',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all 0.15s;">👤 개인일정</button>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:start;">
           <!-- 왼쪽: 오늘 할일 체크리스트 -->
           <div class="card" style="padding:16px 18px;">
@@ -3208,9 +3217,9 @@ async function save() {
     productSalesLog: state.productSalesLog||[],
   };
   // 디바운스: 연속 저장 방지 (500ms)
+  _lastSaveTime = Date.now(); // 즉시 기록 - 실시간 구독 덮어씀 방지
   clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(async () => {
-    _lastSaveTime = Date.now();
     await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
   }, 500);
 }
@@ -3921,7 +3930,8 @@ function showPage(page, pushState=true) {
   if (page === 'inventory') renderInventory();
   if (page === 'content') renderCalendar();
   if (page === 'ops') renderOpsCalendar();
-  if (page === 'tasks') renderTasks();
+  if (page === 'tasks') { renderTasks(); startTaskClock(); }
+  else { stopTaskClock(); }
   if (page === 'sales') renderSales();
   if (page === 'revenue') { renderRevenue(); setTimeout(renderRevenueChart, 300); }
   if (page === 'project') renderProject();
@@ -6041,9 +6051,9 @@ function renderTasks() {
     items = [...allTasks, ...pItems];
   }
 
-  // 오늘 할일만 표시
+  // 오늘 할일만 표시 (오늘 마감 OR 진행중 OR 데일리루틴)
   const _todayStr = new Date().toISOString().split('T')[0];
-  items = items.filter(t => t.due === _todayStr || t.status === 'doing');
+  items = items.filter(t => t.due === _todayStr || t.status === 'doing' || t.type === 'daily');
 
   // 완료/미완료 필터
   if (_taskDoneFilter === 'todo') items = items.filter(t => !t.done);
@@ -6148,6 +6158,12 @@ function renderTasks() {
 
 function filterTasks(f, el) {
   state.taskFilter = f;
+  // 전체탭 알약 active 처리
+  document.querySelectorAll('.task-type-pill').forEach(t => {
+    t.style.background = 'var(--surface2)';
+    t.style.color = 'var(--text-muted)';
+  });
+  if (el) { el.style.background = 'var(--text)'; el.style.color = '#fff'; }
   document.querySelectorAll('#task-type-tabs .tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   const member = state.memberFilter;
@@ -6170,6 +6186,15 @@ function filterMember(name, el) {
   } else {
     if (listWrap)   listWrap.style.display = 'none';
     if (kanbanWrap) kanbanWrap.style.display = 'block';
+    // 칸반 알약 초기화 (전체 active)
+    state.taskFilter = 'all';
+    document.querySelectorAll('.task-type-pill-k').forEach(b => {
+      b.style.background = 'var(--surface2)';
+      b.style.color = 'var(--text-muted)';
+      b.style.borderColor = 'var(--border)';
+    });
+    const firstPill = document.querySelector('.task-type-pill-k');
+    if (firstPill) { firstPill.style.background='var(--text)'; firstPill.style.color='#fff'; firstPill.style.borderColor='var(--text)'; }
     renderTaskKanban(name);
   }
 }
@@ -6186,11 +6211,11 @@ function renderTaskKanban(member) {
     // 오늘 마감 + 미완료 / 진행중 업무
     const todayTasks = [...(state.tasks||[])].filter(t =>
       t.assignee === member && !t.done &&
-      (t.due === todayStr || t.status === 'doing')
-    ).sort((a,b) => (a.status === 'doing' ? -1 : 1));
+      (t.due === todayStr || t.status === 'doing' || t.type === 'daily')
+    ).sort((a,b) => (a.status === 'doing' ? -1 : b.type === 'daily' ? 1 : 0));
 
     const doneTasks = [...(state.tasks||[])].filter(t =>
-      t.assignee === member && t.done && t.due === todayStr
+      t.assignee === member && t.done && (t.due === todayStr || t.type === 'daily')
     );
 
     const allToday = [...todayTasks, ...doneTasks];
@@ -6371,13 +6396,19 @@ function submitTask() {
   const editId = parseInt(document.getElementById('task-edit-id').value) || null;
   const title  = document.getElementById('task-title-input').value.trim();
   if (!title) { showToast('업무 내용을 입력해주세요'); return; }
+  const _taskType = document.getElementById('task-type-input').value;
+  const _todayDate = new Date().toISOString().split('T')[0];
+  // 데일리루틴은 due를 오늘 날짜로 자동 설정
+  const _taskDue = _taskType === 'daily'
+    ? _todayDate
+    : document.getElementById('task-due-input').value;
   const entry = {
     id: editId || Date.now(),
     title,
-    type:     document.getElementById('task-type-input').value,
+    type:     _taskType,
     brand:    document.getElementById('task-brand-input').value,
     assignee: document.getElementById('task-assignee-input').value,
-    due:      document.getElementById('task-due-input').value,
+    due:      _taskDue,
     memo:     document.getElementById('task-memo-input').value,
     done:     false,
     status:   'todo',
@@ -6410,10 +6441,18 @@ function setTaskDoneFilter(val, el) {
 
 
 function resetDailyRoutine() {
-  if (!confirm('데일리 루틴 체크를 모두 초기화할까요?')) return;
-  state.tasks.forEach(t => { if (t.type === 'daily') t.done = false; });
-  save(); renderTasks();
-  showToast('🔄 데일리 루틴 초기화 완료');
+  showConfirm({ title:'데일리 루틴을 초기화할까요?', desc:'오늘 날짜로 업데이트되어 오늘 할 일에 다시 표시돼요.', icon:'🔄', okLabel:'초기화', okColor:'var(--mongmo)' }).then(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    state.tasks.forEach(t => {
+      if (t.type === 'daily') {
+        t.done = false;
+        t.due = todayStr; // 당일 날짜로 업데이트
+        t.status = 'todo';
+      }
+    });
+    save(); renderTasks();
+    showToast('🔄 데일리 루틴 초기화 완료 · 오늘 할 일에 추가됐어요');
+  }).catch(()=>{});
 }
 
 // ============ ACTIVITY LOG ============
@@ -12161,6 +12200,24 @@ function openAddConsumable() {
 
 
 
+
+// 칸반뷰 유형 알약 필터
+function filterTasksKanban(type, el) {
+  state.taskFilter = type;
+  document.querySelectorAll('.task-type-pill-k').forEach(b => {
+    b.style.background = 'var(--surface2)';
+    b.style.color = 'var(--text-muted)';
+    b.style.borderColor = 'var(--border)';
+  });
+  if (el) {
+    el.style.background = 'var(--text)';
+    el.style.color = '#fff';
+    el.style.borderColor = 'var(--text)';
+  }
+  const member = state.memberFilter;
+  if (member && member !== 'all') renderTaskKanban(member);
+}
+
 // 칸반뷰 오늘 할일 체크박스 토글
 function toggleTaskDoneFromKanban(id, labelEl) {
   const t = (state.tasks||[]).find(x => x.id === id);
@@ -12173,6 +12230,27 @@ function toggleTaskDoneFromKanban(id, labelEl) {
   const member = state.memberFilter;
   renderTaskKanban(member);
   renderDashboard();
+}
+
+
+// ── 업무 체크리스트 실시간 시계 ──
+let _taskClockTimer = null;
+function startTaskClock() {
+  const el = document.getElementById('task-datetime-clock');
+  if (!el) return;
+  const update = () => {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (${['일','월','화','수','목','금','토'][now.getDay()]})`;
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    el.innerHTML = `<div style="font-size:11px;color:var(--text-muted);">${dateStr}</div><div style="font-size:15px;font-weight:600;color:var(--text);">${timeStr}</div>`;
+  };
+  update();
+  clearInterval(_taskClockTimer);
+  _taskClockTimer = setInterval(update, 1000);
+}
+function stopTaskClock() {
+  clearInterval(_taskClockTimer);
+  _taskClockTimer = null;
 }
 
 // ── 채널 재고 직접수정 ──
