@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.1.1</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.1.2</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -2888,7 +2888,7 @@
   </div>
 </div>
 
-id="modal-ch-stock-edit">
+<div class="modal-overlay hidden" id="modal-ch-stock-edit">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title">📦 채널 재고 직접 수정</div>
     <div id="ch-stock-edit-info" style="background:var(--surface2);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;"></div>
@@ -5391,20 +5391,6 @@ function renderSmartBanner() {
   };
 
   const listHTML = [
-    ...inboundList.map(b => {
-      const dd = b.nearestDate ? Math.ceil((new Date(b.nearestDate) - new Date().setHours(0,0,0,0)) / 86400000) : null;
-      const ddLabel = dd===0?'오늘':dd!==null?`D-${dd}`:'';
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--green-light);border-radius:8px;margin-bottom:6px;">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-          <span style="font-size:11px;background:var(--green);color:#fff;padding:1px 7px;border-radius:20px;font-weight:600;flex-shrink:0;">✅ 발주완료</span>
-          <div style="min-width:0;">
-            <div style="font-size:13px;font-weight:600;">${b.item.name}${b.item.size?' '+b.item.size:''}</div>
-            <div style="font-size:11px;color:var(--text-muted);">입고 ${b.totalQty.toLocaleString()}개 예정 · ${b.nearestDate||''} 입고대기${b.days!==null?' · 재고 '+b.days+'일 후 소진':''}</div>
-          </div>
-        </div>
-        <div style="font-size:14px;font-weight:800;font-family:'DM Mono',monospace;color:var(--green);flex-shrink:0;margin-left:10px;">${ddLabel}</div>
-      </div>`;
-    }),
     ...dustbagWarnings.map(d => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--mongmo-light);border-radius:8px;margin-bottom:6px;">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -5429,6 +5415,20 @@ function renderSmartBanner() {
           <div style="font-size:15px;font-weight:800;font-family:'DM Mono',monospace;color:${s.color};">${r.recommended}개</div>
           <div style="font-size:10px;color:var(--text-muted);">발주 추천</div>
         </div>
+      </div>`;
+    }),
+    ...inboundList.map(b => {
+      const dd = b.nearestDate ? Math.ceil((new Date(b.nearestDate) - new Date().setHours(0,0,0,0)) / 86400000) : null;
+      const ddLabel = dd===0?'오늘':dd!==null?`D-${dd}`:'';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--green-light);border-radius:8px;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <span style="font-size:11px;background:var(--green);color:#fff;padding:1px 7px;border-radius:20px;font-weight:600;flex-shrink:0;">✅ 발주완료</span>
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:600;">${b.item.name}${b.item.size?' '+b.item.size:''}</div>
+            <div style="font-size:11px;color:var(--text-muted);">입고 ${b.totalQty.toLocaleString()}개 예정 · ${b.nearestDate||''} 입고대기${b.days!==null?' · 재고 '+b.days+'일 후 소진':''}</div>
+          </div>
+        </div>
+        <div style="font-size:14px;font-weight:800;font-family:'DM Mono',monospace;color:var(--green);flex-shrink:0;margin-left:10px;">${ddLabel}</div>
       </div>`;
     }),
   ].join('');
