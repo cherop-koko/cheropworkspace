@@ -1377,7 +1377,7 @@
             <span style="font-size:16px;">📸</span> 인스타그램 바로가기
           </a>
           <button class="btn btn-secondary" onclick="openModal('add-feed-record')" style="background:var(--palett-light);color:var(--palett);border-color:var(--palett);">📊 피드 실적 입력</button>
-          <button class="btn btn-primary" onclick="openModal('add-content')">+ 콘텐츠 추가</button>
+
         </div>
       </div>
 
@@ -2062,7 +2062,9 @@
 <!-- Add Content Modal -->
 <div class="modal-overlay hidden" id="modal-add-content">
   <div class="modal">
-    <div class="modal-title">콘텐츠 추가</div>
+    <div class="modal-title" id="ct-modal-title">콘텐츠 추가</div>
+    <input type="hidden" id="ct-edit-id">
+    <input type="hidden" id="ct-image-data">
     <div class="form-group">
       <label class="form-label">콘텐츠 제목</label>
       <input class="form-input" id="ct-title" placeholder="예: 몽모 신상 리뷰 릴스">
@@ -2102,6 +2104,28 @@
     <div class="form-group">
       <label class="form-label">메모</label>
       <textarea class="form-textarea" id="ct-memo" placeholder="콘텐츠 방향, 키워드 등..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">이미지</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button type="button" class="btn btn-sm btn-secondary" id="ct-img-tab-url" onclick="setCtImgTab('url')" style="flex:1;background:var(--text);color:#fff;">🔗 인스타 URL</button>
+        <button type="button" class="btn btn-sm btn-secondary" id="ct-img-tab-file" onclick="setCtImgTab('file')" style="flex:1;">📁 직접 업로드</button>
+      </div>
+      <div id="ct-img-url-wrap">
+        <input class="form-input" id="ct-insta-url" placeholder="https://www.instagram.com/p/..." oninput="previewInstaThumb(this.value)">
+        <div id="ct-insta-preview" style="margin-top:6px;display:none;">
+          <img id="ct-insta-thumb" src="" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;" onerror="this.parentElement.style.display='none'">
+        </div>
+      </div>
+      <div id="ct-img-file-wrap" style="display:none;">
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--surface2);">
+          <span id="ct-file-label">📁 클릭해서 이미지 선택</span>
+          <input type="file" id="ct-image-file" accept="image/*" style="display:none;" onchange="previewUploadedImage(this)">
+        </label>
+        <div id="ct-upload-preview" style="margin-top:6px;display:none;">
+          <img id="ct-upload-thumb" src="" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;">
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-content')">취소</button>
@@ -5939,16 +5963,19 @@ function renderCalendar() {
         </div>`).join('');
     }
 
-    planned.forEach(c => {
-      const col = c.brand==='mongmo'?'var(--mongmo)':'var(--palett)';
-      cellContent += `<div class="cal-event" style="font-size:11px;background:${col}18;color:${col};padding:3px 5px;">${c.title}</div>`;
+    planned.forEach(ct => {
+      const col = ct.brand==='mongmo'?'var(--mongmo)':'var(--palett)';
+      const thumb = ct.imageUrl
+        ? `<img src="${ct.imageUrl}" style="width:100%;height:40px;object-fit:cover;border-radius:4px;margin-bottom:2px;display:block;" onerror="this.style.display='none'">`
+        : '';
+      cellContent += `<div class="cal-event" style="font-size:11px;background:${col}18;color:${col};padding:3px 5px;overflow:hidden;" onclick="event.stopPropagation();openEditContent(${ct.id})">${thumb}${ct.title}</div>`;
     });
 
     if (!isPast && plan && !planned.length && !feedsOnDay.length) {
       cellContent += `<div style="font-size:11px;padding:3px 5px;border-radius:4px;background:${plan.color}15;color:${plan.color};border:1px dashed ${plan.color}50;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${plan.icon} ${plan.label}</div>`;
     }
 
-    cells += `<div class="cal-day${isToday?' today':''}${isPast?' ':' '}" style="${isPast?'background:#fafaf8;':''}">
+    cells += `<div class="cal-day${isToday?' today':''}${isPast?' ':' '}" style="${isPast?'background:#fafaf8;':''}cursor:pointer;" onclick="openContentModal('${dateStr}')">
       <div class="cal-num" style="font-size:11px;">${isToday?`<span style="background:var(--text);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">${d}</span>`:d}</div>
       ${cellContent}
     </div>`;
@@ -6012,19 +6039,27 @@ function changeMonth(dir) {
 function addContent() {
   const title = document.getElementById('ct-title').value.trim();
   if (!title) { showToast('제목을 입력해주세요'); return; }
-  state.content.push({
-    id: Date.now(),
+  const editId = document.getElementById('ct-edit-id').value;
+  const imageUrl = document.getElementById('ct-image-data').value || '';
+  const entry = {
+    id: editId ? parseInt(editId) : Date.now(),
     title,
     brand: document.getElementById('ct-brand').value,
     channel: document.getElementById('ct-channel').value,
     date: document.getElementById('ct-date').value,
     status: document.getElementById('ct-status').value,
     memo: document.getElementById('ct-memo').value,
-  });
+    imageUrl,
+  };
+  if (editId) {
+    const idx = state.content.findIndex(x => x.id === parseInt(editId));
+    if (idx >= 0) state.content[idx] = entry;
+    showToast('✅ 수정됐어요');
+  } else {
+    state.content.push(entry);
+    showToast('✅ 콘텐츠가 추가됐어요');
+  }
   save(); closeModal('add-content'); renderCalendar();
-  document.getElementById('ct-title').value = '';
-  document.getElementById('ct-memo').value = '';
-  showToast('✅ 콘텐츠가 추가됐어요');
 }
 
 function deleteContent(id) {
@@ -12345,6 +12380,98 @@ function deleteAttRecord(id) {
   state.attendances = (state.attendances||[]).filter(x => x.id != id);
   save(); renderAttLog(); renderAttTodaySummary();
   showToast('삭제됐어요');
+}
+
+
+// ── 콘텐츠 캘린더 모달 ──
+function openContentModal(dateStr) {
+  document.getElementById('ct-edit-id').value = '';
+  document.getElementById('ct-modal-title').textContent = '콘텐츠 추가';
+  document.getElementById('ct-title').value = '';
+  document.getElementById('ct-date').value = dateStr || '';
+  document.getElementById('ct-brand').value = 'mongmo';
+  document.getElementById('ct-channel').value = 'instagram';
+  document.getElementById('ct-status').value = 'todo';
+  document.getElementById('ct-memo').value = '';
+  document.getElementById('ct-image-data').value = '';
+  document.getElementById('ct-insta-url').value = '';
+  document.getElementById('ct-insta-preview').style.display = 'none';
+  document.getElementById('ct-upload-preview').style.display = 'none';
+  document.getElementById('ct-file-label').textContent = '📁 클릭해서 이미지 선택';
+  setCtImgTab('url');
+  openModal('add-content');
+}
+
+function openEditContent(id) {
+  const ct = state.content.find(x => x.id === id);
+  if (!ct) return;
+  document.getElementById('ct-edit-id').value = ct.id;
+  document.getElementById('ct-modal-title').textContent = '콘텐츠 수정';
+  document.getElementById('ct-title').value = ct.title || '';
+  document.getElementById('ct-date').value = ct.date || '';
+  document.getElementById('ct-brand').value = ct.brand || 'mongmo';
+  document.getElementById('ct-channel').value = ct.channel || 'instagram';
+  document.getElementById('ct-status').value = ct.status || 'todo';
+  document.getElementById('ct-memo').value = ct.memo || '';
+  document.getElementById('ct-image-data').value = ct.imageUrl || '';
+  document.getElementById('ct-insta-url').value = '';
+  // 기존 이미지 미리보기
+  if (ct.imageUrl) {
+    const isInsta = ct.instaUrl;
+    setCtImgTab(ct.instaUrl ? 'url' : 'file');
+    if (ct.instaUrl) {
+      document.getElementById('ct-insta-url').value = ct.instaUrl || '';
+      document.getElementById('ct-insta-thumb').src = ct.imageUrl;
+      document.getElementById('ct-insta-preview').style.display = 'block';
+    } else {
+      document.getElementById('ct-upload-thumb').src = ct.imageUrl;
+      document.getElementById('ct-upload-preview').style.display = 'block';
+    }
+  } else {
+    setCtImgTab('url');
+  }
+  openModal('add-content');
+}
+
+function setCtImgTab(tab) {
+  document.getElementById('ct-img-url-wrap').style.display = tab === 'url' ? '' : 'none';
+  document.getElementById('ct-img-file-wrap').style.display = tab === 'file' ? '' : 'none';
+  document.getElementById('ct-img-tab-url').style.background = tab === 'url' ? 'var(--text)' : '';
+  document.getElementById('ct-img-tab-url').style.color = tab === 'url' ? '#fff' : '';
+  document.getElementById('ct-img-tab-file').style.background = tab === 'file' ? 'var(--text)' : '';
+  document.getElementById('ct-img-tab-file').style.color = tab === 'file' ? '#fff' : '';
+}
+
+function previewInstaThumb(url) {
+  if (!url || !url.includes('instagram.com')) {
+    document.getElementById('ct-insta-preview').style.display = 'none';
+    document.getElementById('ct-image-data').value = '';
+    return;
+  }
+  // instagram oEmbed으로 썸네일 추출
+  const oembedUrl = `https://graph.facebook.com/v18.0/instagram_oembed?url=${encodeURIComponent(url)}&maxwidth=400`;
+  // oEmbed은 앱 토큰 필요해서 직접 접근 불가
+  // 대신 URL에서 shortcode 추출 후 cdninstagram 패턴으로 시도
+  // 실제로는 저장만 해두고 나중에 수동 업로드로 교체 가능하도록
+  // URL 자체를 imageUrl로 저장 (인스타 링크 저장)
+  document.getElementById('ct-image-data').value = url; // URL 자체 저장
+  // 썸네일은 직접 업로드 탭으로 안내
+  showToast('인스타 URL이 저장됐어요. 썸네일은 직접 업로드 탭에서 이미지를 올려주세요 📸');
+  document.getElementById('ct-insta-preview').style.display = 'none';
+}
+
+function previewUploadedImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    document.getElementById('ct-upload-thumb').src = dataUrl;
+    document.getElementById('ct-upload-preview').style.display = 'block';
+    document.getElementById('ct-image-data').value = dataUrl;
+    document.getElementById('ct-file-label').textContent = '✅ ' + file.name;
+  };
+  reader.readAsDataURL(file);
 }
 
 // ── 채널 재고 직접수정 ──
