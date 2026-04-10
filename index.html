@@ -3428,7 +3428,7 @@ async function loadFromSupabase() {
 
 async function loadChannelSalesLog(months) {
   const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - (months || 36));
+  cutoff.setMonth(cutoff.getMonth() - (months || 6));
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
   const PAGE = 1000;
@@ -8152,6 +8152,7 @@ const CH_UPLOAD_GUIDES = {
 
 let _chUploadTab = 'kakao';
 let _chUploadData = null;
+let _imwebDateOrderAmt = null;
 
 function openChannelSalesUpload() {
   _chUploadData = null;
@@ -8334,6 +8335,9 @@ async function previewChannelSales() {
           }
         }
 
+        // dateOrderAmt를 전역 저장 (revenueLog 저장 시 중복 없는 금액 사용)
+        if (_chUploadTab === 'imweb') _imwebDateOrderAmt = dateOrderAmt;
+
         // parsed 배열에 추가
         // 매출현황용: 날짜별 총액 (revenueLog 반영)
         // 판매분석용: 날짜별 상품 행 (channelSalesLog 반영)
@@ -8506,7 +8510,7 @@ async function previewChannelSales() {
     statusEl.style.background='var(--green-light)'; statusEl.style.color='var(--green)';
     statusEl.textContent=`✅ ${dates.length}일치 데이터 확인 · 총 ${fmtWon(totalAmt)}${overwriteDates.length>0?' ('+overwriteDates.length+'일 덮어쓰기)':''}`;
     submitBtn.disabled=false;
-    _chUploadData = { parsed, dates, byDate };
+    _chUploadData = { parsed, dates, byDate, dateOrderAmt: _imwebDateOrderAmt };
 
     if (zone) zone.innerHTML=`<div style="font-size:14px;font-weight:600;">📄 ${files.length > 1 ? files.length+'개 파일' : files[0].name}</div><div style="font-size:12px;color:var(--green);">✅ ${dates.length}일치 · ${parsed.length}건 확인됨</div>`;
 
@@ -8573,30 +8577,13 @@ async function submitChannelSales() {
   }
 
   // 2. revenueLog 업데이트 (채널별 독립 덮어쓰기)
-  const { byDate } = _chUploadData;
+  const { byDate, dateOrderAmt: imwebOrderAmt } = _chUploadData;
   for (const date of dates) {
-    // 아임웹 건별 파일: orderTotal(결제번호별 결제금액) 기준으로 매출 집계
-    // → 같은 날짜의 orderTotal을 가진 row들 합산 (orderTotal 없으면 amount 합산)
+    // imweb: 주문번호 dedup된 dateOrderAmt 우선 사용 (중복 방지)
+    // 기타 채널: byDate.amount 사용
     let amt;
-    if (ch === 'imweb' && parsed.some(r=>r.date===date && r.orderTotal)) {
-      // orderTotal이 있는 row들: 이미 날짜별 주문 단위로 기록되어 있음
-      // 같은 주문(orderTotal)이 여러 상품행으로 중복될 수 있으므로 품목실결제가 합산 사용
-      // → byDate[date].amount는 품목실결제가 합산값 (할인 반영된 정확한 상품별 금액)
-      // revenueLog에는 결제번호별 결제금액(배송비 포함 최종) 합산이 더 정확
-      // parsed에서 orderTotal이 있는 첫 번째 row의 합이 곧 해당 날짜 총 결제금액
-      const dayOrders = parsed.filter(r=>r.date===date && r.orderTotal);
-      // 각 주문의 orderTotal을 중복 없이 합산 (같은 orderTotal은 한 번만 카운트)
-      const seenTotals = new Set();
-      let orderSum = 0;
-      dayOrders.forEach(r => {
-        const key = r.date + '_' + r.orderTotal;
-        // orderTotal은 그 날짜 내 각기 다른 주문들의 합이므로 모두 더함
-        orderSum += r.orderTotal;
-        seenTotals.add(key);
-      });
-      // orderTotal을 가진 row 수 = 실제 주문 수 (상품별로 1행씩)
-      // 실제로는 byDate의 amount(품목실결제가 합)가 더 정확
-      amt = byDate[date].amount;
+    if (ch === 'imweb' && imwebOrderAmt && imwebOrderAmt[date]) {
+      amt = imwebOrderAmt[date];
     } else {
       amt = byDate[date].amount;
     }
