@@ -911,13 +911,14 @@
         </div>
         <div class="header-actions">
           <button class="btn btn-secondary" onclick="openModal('inv-settings')" style="font-size:12px;">⚙️ 설정</button>
+          <button class="btn btn-primary" onclick="openAddInventoryModal()" style="font-size:12px;">+ 상품 추가</button>
           <button class="btn btn-secondary" onclick="exportInventoryCSV()" style="font-size:12px;">📥 재고 내보내기</button>
+          <button class="btn btn-secondary" onclick="downloadInventoryXlsx()" style="font-size:12px;background:var(--green-light);color:var(--green);border-color:var(--green);">📊 엑셀 양식 다운로드</button>
           <label class="btn btn-secondary" style="font-size:12px;cursor:pointer;margin:0;">
             📤 재고 업로드
             <input type="file" accept=".csv,.xlsx" style="display:none;" onchange="importInventoryCSV(this)">
           </label>
           <button class="btn btn-secondary" onclick="resetAndReload()" style="font-size:12px;color:var(--text-muted);">🔄 초기화</button>
-          <button class="btn btn-primary" onclick="openModal('add-inventory')">+ 상품 추가</button>
         </div>
       </div>
 
@@ -967,7 +968,6 @@
         <div id="inv-filter-row" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
           <div class="tab-bar" style="margin-bottom:0;" id="inv-smart-filter-tabs">
             <div class="tab active" onclick="setInvSmartFilter('all',this)">전체</div>
-            <div class="tab" onclick="setInvSmartFilter('danger',this)" style="color:var(--red);">🔴 위험</div>
             <div class="tab" onclick="setInvSmartFilter('out',this)" style="color:var(--red);">❌ 품절</div>
             <div class="tab" onclick="setInvSmartFilter('order',this)" style="color:var(--yellow);">📦 발주필요</div>
             <div class="tab" onclick="setInvSmartFilter('selling',this)">판매중</div>
@@ -1978,12 +1978,32 @@
 
 <!-- Add Inventory Modal -->
 <div class="modal-overlay hidden" id="modal-add-inventory">
-  <div class="modal">
-    <div class="modal-title">상품 추가</div>
+  <div class="modal" style="width:520px;">
+    <div class="modal-title">+ 상품 추가</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2;">
+        <label class="form-label">상품명 *</label>
+        <input class="form-input" id="inv-name" placeholder="예: 오리지널 몽모">
+      </div>
+      <div class="form-group">
+        <label class="form-label">사이즈</label>
+        <input class="form-input" id="inv-size" placeholder="예: S, M, XS">
+      </div>
+    </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">상품명</label>
-        <input class="form-input" id="inv-name" placeholder="예: 몽모 곰인형 L">
+        <label class="form-label">카테고리 *</label>
+        <select class="form-select" id="inv-category">
+          <option value="mongmo">몽모시리즈</option>
+          <option value="animal">동물시리즈</option>
+          <option value="keyring">키링</option>
+          <option value="beltcover">안전벨트커버</option>
+          <option value="goods">굿즈</option>
+          <option value="clothes">커스텀옷</option>
+          <option value="mobile">모바일</option>
+          <option value="doll">인형</option>
+          <option value="etc">기타</option>
+        </select>
       </div>
       <div class="form-group">
         <label class="form-label">브랜드</label>
@@ -1995,23 +2015,34 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">SKU</label>
-        <input class="form-input" id="inv-sku" placeholder="예: MM-001">
+        <label class="form-label">원재고</label>
+        <input class="form-input" type="number" id="inv-stock" placeholder="0" min="0">
       </div>
       <div class="form-group">
-        <label class="form-label">현재 재고</label>
-        <input class="form-input" type="number" id="inv-stock" placeholder="0">
+        <label class="form-label">상품화완료재고</label>
+        <input class="form-input" type="number" id="inv-prod-ready" placeholder="0" min="0">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">안전 재고 (최소 수량)</label>
-        <input class="form-input" type="number" id="inv-safe" placeholder="10">
+        <label class="form-label">판매가 (원)</label>
+        <input class="form-input" type="number" id="inv-price" placeholder="39000" min="0">
       </div>
       <div class="form-group">
-        <label class="form-label">최근 입고일</label>
-        <input class="form-input" type="date" id="inv-date">
+        <label class="form-label">판매 상태</label>
+        <select class="form-select" id="inv-status">
+          <option value="판매 중">판매 중</option>
+          <option value="단종 예정">단종 예정</option>
+          <option value="판매 종료">판매 종료</option>
+        </select>
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">재고 상태</label>
+      <select class="form-select" id="inv-stock-status">
+        <option value="">일반</option>
+        <option value="무한재고">무한재고 (주문제작)</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-inventory')">취소</button>
@@ -2724,7 +2755,7 @@
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">유형</label>
-        <select class="form-select" id="ops-type">
+        <select class="form-select" id="ops-type" onchange="toggleOpsInboundFields()">
           <option value="popup">🏪 팝업 일정</option>
           <option value="inbound">📦 재고 입고</option>
           <option value="meeting">🤝 외부 미팅</option>
@@ -2776,6 +2807,26 @@
     <div class="form-group">
       <label class="form-label">메모</label>
       <input class="form-input" id="ops-memo" placeholder="상세 내용">
+    </div>
+    <!-- 재고입고 전용 필드 -->
+    <div id="ops-inbound-fields" style="display:none;background:var(--palett-light);border-radius:10px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:600;color:var(--palett);margin-bottom:10px;">📦 입고 상세 정보</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">입고 수량</label>
+          <input class="form-input" type="number" id="ops-inbound-qty" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">연결 상품</label>
+          <select class="form-select" id="ops-inbound-item">
+            <option value="">상품 선택 (선택사항)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">공급사 / 메모</label>
+        <input class="form-input" id="ops-inbound-supplier" placeholder="예: OEM 공장, 발주번호 등">
+      </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--mongmo-light);border-radius:8px;margin-bottom:4px;">
       <input type="checkbox" id="ops-important" style="width:15px;height:15px;accent-color:var(--mongmo);cursor:pointer;">
@@ -5353,7 +5404,7 @@ function renderInventory() {
   } else if (invSmartFilter === 'out') {
     items = items.filter(i => ch==='total' ? i.stock===0 : getChannelStock(i.id,ch)===0);
   } else if (invSmartFilter === 'order') {
-    items = items.filter(i => { const d=getDaysToStockout(i); return d!==null && d<=state.invSettings.reorderDays && d>state.invSettings.dangerDays; });
+    items = items.filter(i => { const d=getDaysToStockout(i); return d!==null && d<=state.invSettings.reorderDays && d>0; });
   } else if (invSmartFilter === 'selling') {
     items = items.filter(i=>i.status==='판매 중');
   } else if (invSmartFilter === 'discontinued') {
@@ -5567,28 +5618,55 @@ function renderIncomingSchedule() {
   const incoming = (state.ops||[])
     .filter(o => (o.type === 'inbound' || o.type === 'stock') && o.start >= today && o.start <= d60)
     .sort((a,b) => a.start.localeCompare(b.start));
+
   if (incoming.length === 0) {
     el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">예정된 입고 일정 없음<br><span style="font-size:11px;">+ 추가 버튼으로 등록하세요</span></div>`;
     return;
   }
+
   const today0 = new Date(); today0.setHours(0,0,0,0);
+
   el.innerHTML = incoming.map(o => {
     const dd = Math.ceil((new Date(o.start) - today0) / 86400000);
-    const dc = dd <= 3 ? 'var(--green)' : dd <= 14 ? 'var(--mongmo)' : 'var(--text-muted)';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
-      <div style="cursor:pointer;flex:1;" onclick="openEditOps(${o.id})">
-        <div style="font-size:13px;font-weight:500;">${o.title}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">${o.start}${o.memo?' · '+o.memo:''}</div>
+    const isUrgent = dd <= 3;
+    const isSoon   = dd <= 14;
+    const bg    = isUrgent ? 'var(--red-light)'    : isSoon ? 'var(--yellow-light)' : 'var(--palett-light)';
+    const color = isUrgent ? 'var(--red)'          : isSoon ? 'var(--yellow)'       : 'var(--palett)';
+    const badge = isUrgent ? '🚨 긴급'              : isSoon ? '⏰ 임박'              : '📦 입고예정';
+    const ddLabel = dd === 0 ? '오늘' : `D-${dd}`;
+
+    // 연결 상품명
+    const linkedItem = o.inboundItemId
+      ? state.inventory.find(i => i.id == o.inboundItemId)
+      : null;
+    const itemLabel = linkedItem
+      ? `${linkedItem.name}${linkedItem.size?' '+linkedItem.size:''}` : '';
+
+    // 상세 라인
+    const details = [];
+    if (o.inboundQty > 0) details.push(`입고 ${o.inboundQty.toLocaleString()}개`);
+    if (itemLabel)        details.push(itemLabel);
+    if (o.inboundSupplier) details.push(o.inboundSupplier);
+    if (o.assignee)       details.push(`담당 ${o.assignee}`);
+    if (o.memo)           details.push(o.memo);
+
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${bg};border-radius:8px;margin-bottom:6px;cursor:pointer;" onclick="openEditOps(${o.id})">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <span style="font-size:11px;background:${color};color:#fff;padding:1px 8px;border-radius:20px;font-weight:600;flex-shrink:0;">${badge}</span>
+        <div style="min-width:0;">
+          <div style="font-size:13px;font-weight:600;">${o.title}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${o.start}${details.length?' · '+details.join(' · '):''}</div>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="font-size:14px;font-weight:800;font-family:'DM Mono',monospace;color:${dc};">${dd===0?'오늘':'D-'+dd}</div>
-        <button onclick="deleteOpsEvent(${o.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;">✕</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
+        <div style="font-size:16px;font-weight:800;font-family:'DM Mono',monospace;color:${color};">${ddLabel}</div>
+        <button onclick="event.stopPropagation();deleteOpsEvent(${o.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;">✕</button>
       </div>
     </div>`;
   }).join('');
 }
 
-// 재고관리에서 입고일정 빠르게 추가
+
 function openAddInboundSchedule() {
   openAddOps(null);
   // 유형을 '재고입고'로 기본 설정
@@ -5959,24 +6037,41 @@ function getProductStatus(status) {
   return `<span style="font-size:11px;color:var(--text-muted);">${status}</span>`;
 }
 
+function openAddInventoryModal() {
+  ['inv-name','inv-size','inv-price'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['inv-stock','inv-prod-ready'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='0';});
+  const cat=document.getElementById('inv-category'); if(cat) cat.value='mongmo';
+  const br=document.getElementById('inv-brand'); if(br) br.value='mongmo';
+  const st=document.getElementById('inv-status'); if(st) st.value='판매 중';
+  const ss=document.getElementById('inv-stock-status'); if(ss) ss.value='';
+  openModal('add-inventory');
+}
+
 function addInventoryItem() {
   const name = document.getElementById('inv-name').value.trim();
   if (!name) { showToast('상품명을 입력해주세요'); return; }
+  const newId = Date.now();
+  const stock = parseInt(document.getElementById('inv-stock').value) || 0;
+  const prodReady = parseInt(document.getElementById('inv-prod-ready').value) || 0;
+  const size = document.getElementById('inv-size').value.trim();
   state.inventory.push({
-    id: Date.now(),
+    id: newId,
     name,
-    brand: document.getElementById('inv-brand').value,
-    sku: document.getElementById('inv-sku').value || '-',
-    stock: parseInt(document.getElementById('inv-stock').value) || 0,
-    safe: parseInt(document.getElementById('inv-safe').value) || 10,
-    date: document.getElementById('inv-date').value || new Date().toISOString().split('T')[0],
+    size,
+    category: document.getElementById('inv-category').value || 'etc',
+    brand: document.getElementById('inv-brand').value || 'mongmo',
+    stock,
+    price: parseInt(document.getElementById('inv-price').value) || 0,
+    status: document.getElementById('inv-status').value || '판매 중',
+    stockStatus: document.getElementById('inv-stock-status').value || '',
+    memo: '',
+    imageUrl: '',
+    linkedInventory: [],
   });
+  if (!state.prodStockReady) state.prodStockReady = {};
+  state.prodStockReady[newId] = prodReady;
   save(); closeModal('add-inventory'); renderInventory();
-  document.getElementById('inv-name').value = '';
-  document.getElementById('inv-sku').value = '';
-  document.getElementById('inv-stock').value = '';
-  document.getElementById('inv-safe').value = '';
-  showToast('✅ 상품이 추가됐어요');
+  showToast('✅ ' + name + (size ? ' ' + size : '') + ' 추가됐어요');
 }
 
 function quickSetStatus(status) {
@@ -6062,17 +6157,14 @@ function deleteInventory(id) {
 }
 
 function exportInventoryCSV() {
-  // ── 새 포맷: 상품명·사이즈·카테고리·원재고·채널재고·상품화완료·가용·대기·판매가·연동인형
   const CAT_KO = {
     mongmo:'몽모시리즈', animal:'동물시리즈', keyring:'키링',
     beltcover:'안전벨트커버', goods:'굿즈', clothes:'커스텀옷',
     mobile:'모바일', doll:'인형', etc:'기타',
   };
-  const headers = [
-    '상품명','사이즈','카테고리','원재고',
+  const headers = ['상품명','사이즈','카테고리','원재고',
     '자사몰재고','카카오재고','스마트스토어재고','더현대재고',
-    '상품화완료재고','가용재고','상품화대기재고','판매가','연동인형(참고)'
-  ];
+    '상품화완료재고','가용재고','상품화대기재고','판매가','연동인형(참고)'];
   const rows = state.inventory.map(i => {
     const imweb   = getChannelStock(i.id,'imweb');
     const kakao   = getChannelStock(i.id,'kakao');
@@ -6083,27 +6175,129 @@ function exportInventoryCSV() {
     const available   = Math.max(0, prodReady - totalCh);
     const rawStock    = i.stock || 0;
     const prodWaiting = rawStock === 9999 ? 9999 : Math.max(0, rawStock - prodReady);
-    // 벨트커버 연동 인형명
     const linkedNames = (i.linkedInventory||[]).map(lid => {
       const li = state.inventory.find(x => x.id === lid);
       return li ? `${li.name}${li.size?' '+li.size:''}` : '';
     }).filter(Boolean).join(' / ');
     const catKo = CAT_KO[i.category] || i.category || '';
-    return [
-      i.name, i.size||'', catKo, rawStock,
+    return [i.name, i.size||'', catKo, rawStock,
       imweb, kakao, naver, hyundai,
-      prodReady, available, prodWaiting,
-      i.price||0, linkedNames
-    ];
+      prodReady, available, prodWaiting, i.price||0, linkedNames];
   });
   const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `cherop_재고업로드_양식_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `cherop_재고_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
-  showToast('📥 재고 내보내기 완료 (엑셀 양식과 동일 포맷)');
+  showToast('📥 CSV 내보내기 완료');
 }
+
+function downloadInventoryXlsx() {
+  const CAT_KO = {
+    mongmo:'몽모시리즈', animal:'동물시리즈', keyring:'키링',
+    beltcover:'안전벨트커버', goods:'굿즈', clothes:'커스텀옷',
+    mobile:'모바일', doll:'인형', etc:'기타',
+  };
+  const CAT_COLOR = {
+    '몽모시리즈':'FFFDE8EF','동물시리즈':'FFEBF3F7','키링':'FFEBF4EE',
+    '안전벨트커버':'FFFFF3E0','굿즈':'FFF0EDE6','커스텀옷':'FFEDE8F4',
+    '모바일':'FFE8EDF4','인형':'FFFAFAF8','기타':'FFFAFAF8',
+  };
+
+  const doExport = (XLSX) => {
+    const wb = XLSX.utils.book_new();
+    // 헤더
+    const wsData = [
+      ['상품명','사이즈','카테고리','원재고',
+       '자사몰재고','카카오재고','스마트스토어재고','더현대재고',
+       '상품화완료재고','가용재고','상품화대기재고','판매가','연동인형(참고)']
+    ];
+
+    // 데이터 행
+    state.inventory.forEach(i => {
+      const imweb   = getChannelStock(i.id,'imweb');
+      const kakao   = getChannelStock(i.id,'kakao');
+      const naver   = getChannelStock(i.id,'naver');
+      const hyundai = getChannelStock(i.id,'hyundai');
+      const prodReady = state.prodStockReady?.[i.id] ?? 0;
+      const raw = i.stock || 0;
+      const linkedNames = (i.linkedInventory||[]).map(lid => {
+        const li = state.inventory.find(x => x.id === lid);
+        return li ? `${li.name}${li.size?' '+li.size:''}` : '';
+      }).filter(Boolean).join(' / ');
+      const catKo = CAT_KO[i.category] || i.category || '';
+      wsData.push([i.name, i.size||'', catKo, raw,
+        imweb, kakao, naver, hyundai,
+        prodReady, 0, 0, i.price||0, linkedNames]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // 가용재고·상품화대기재고 수식 삽입 (J, K 컬럼, 2행부터)
+    for (let r = 2; r <= wsData.length; r++) {
+      ws[`J${r}`] = { f: `MAX(0,I${r}-(E${r}+F${r}+G${r}+H${r}))`, t:'n' };
+      ws[`K${r}`] = { f: `IF(D${r}=9999,9999,MAX(0,D${r}-I${r}))`, t:'n' };
+    }
+
+    // 컬럼 폭
+    ws['!cols'] = [
+      {wch:22},{wch:8},{wch:11},{wch:8},
+      {wch:9},{wch:9},{wch:11},{wch:8},
+      {wch:10},{wch:9},{wch:10},{wch:9},{wch:28}
+    ];
+    ws['!rows'] = [{hpt:22}];
+
+    // 헤더 스타일
+    const COLS = 'ABCDEFGHIJKLM'.split('');
+    const hBase = {font:{bold:true,color:{rgb:'FFFFFFFF'},sz:9,name:'Arial'},alignment:{horizontal:'center',vertical:'center'}};
+    COLS.forEach((c,ci) => {
+      const cell = ws[c+'1'];
+      if (!cell) return;
+      let bg = 'FF1A1714';
+      if (ci===9||ci===10) bg = 'FF2E7D32';
+      else if (ci===12) bg = 'FF7B6800';
+      cell.s = {...hBase, fill:{patternType:'solid',fgColor:{rgb:bg}}};
+    });
+
+    // 데이터 행 스타일
+    for (let r = 2; r <= wsData.length; r++) {
+      const catKo = wsData[r-1][2] || '';
+      const rowBg = CAT_COLOR[catKo] || 'FFFFFFFF';
+      COLS.forEach((c,ci) => {
+        const addr = c + r;
+        if (!ws[addr]) ws[addr] = {v:'', t:'s'};
+        const base = {
+          font:{sz:9,name:'Arial'},
+          fill:{patternType:'solid',fgColor:{rgb:rowBg}},
+          alignment:{horizontal:ci<=2?'left':'center',vertical:'center'}
+        };
+        if (ci===9||ci===10) {
+          ws[addr].s = {...base, font:{...base.font,color:{rgb:'FF2E7D32'}}, fill:{patternType:'solid',fgColor:{rgb:'FFE8F4EE'}}};
+        } else if (ci===12) {
+          ws[addr].s = {font:{sz:8,name:'Arial',color:{rgb:'FF996600'}}, fill:{patternType:'solid',fgColor:{rgb:'FFFFF9E6'}}};
+        } else if (ci===3) {
+          ws[addr].s = {...base, font:{...base.font,bold:true}};
+        } else {
+          ws[addr].s = base;
+        }
+      });
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, '체로프_재고');
+    XLSX.writeFile(wb, `cherop_재고업로드_양식_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('📊 엑셀 양식 다운로드 완료! (현재 재고 반영)');
+  };
+
+  if (window.XLSX) { doExport(window.XLSX); return; }
+  showToast('⏳ SheetJS 로딩 중...');
+  const s = document.createElement('script');
+  s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+  s.onload = () => doExport(window.XLSX);
+  s.onerror = () => showToast('❌ SheetJS 로드 실패, 네트워크를 확인해주세요');
+  document.head.appendChild(s);
+}
+
 
 function updateKpiBar() {
   const input = document.getElementById('kpi-views-input');
@@ -11767,6 +11961,11 @@ function openEditOps(id) {
   toggleOpsEnd();
   document.getElementById('ops-memo').value = o.memo || '';
   const impElE = document.getElementById('ops-important'); if(impElE) impElE.checked = !!o.important;
+  // inbound 필드 복원
+  toggleOpsInboundFields();
+  const qtyEl = document.getElementById('ops-inbound-qty'); if(qtyEl) qtyEl.value = o.inboundQty||0;
+  const supEl = document.getElementById('ops-inbound-supplier'); if(supEl) supEl.value = o.inboundSupplier||'';
+  const itmEl = document.getElementById('ops-inbound-item'); if(itmEl && o.inboundItemId) itmEl.value = o.inboundItemId;
   openModal('add-ops');
 }
 
@@ -11793,12 +11992,18 @@ function submitOps() {
 
   if (!state.ops) state.ops = [];
 
+  // 재고입고 추가 필드
+  const isInbound = type === 'inbound' || type === 'stock';
+  const inboundQty      = isInbound ? (parseInt(document.getElementById('ops-inbound-qty')?.value)||0) : 0;
+  const inboundItemId   = isInbound ? (parseInt(document.getElementById('ops-inbound-item')?.value)||null) : null;
+  const inboundSupplier = isInbound ? (document.getElementById('ops-inbound-supplier')?.value.trim()||'') : '';
+
   if (editId) {
     const idx = state.ops.findIndex(x=>x.id===editId);
-    if (idx>=0) state.ops[idx] = { ...state.ops[idx], title, type, assignee, brand, start, end: end||start, memo, important };
+    if (idx>=0) state.ops[idx] = { ...state.ops[idx], title, type, assignee, brand, start, end: end||start, memo, important, inboundQty, inboundItemId, inboundSupplier };
     showToast('✅ 일정 수정됐어요');
   } else {
-    state.ops.push({ id: Date.now(), title, type, assignee, brand, start, end: end||start, memo, important, done: false });
+    state.ops.push({ id: Date.now(), title, type, assignee, brand, start, end: end||start, memo, important, done: false, inboundQty, inboundItemId, inboundSupplier });
     showToast('✅ 일정 추가됐어요');
   }
 
@@ -11807,6 +12012,9 @@ function submitOps() {
   if (type === 'inbound' || type === 'stock') renderIncomingSchedule();
   // 폼 초기화
   ['ops-title','ops-memo','ops-start','ops-end'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['ops-inbound-qty','ops-inbound-supplier'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const itmReset=document.getElementById('ops-inbound-item'); if(itmReset) itmReset.value='';
+  toggleOpsInboundFields();
 }
 
 function openOpsDateMenu(dateStr) {
@@ -11825,6 +12033,26 @@ function openOpsDateMenu(dateStr) {
 }
 
 // 종료일 toggle 시 시작일과 동일하게 기본값 세팅 (min 제한 없음)
+function toggleOpsInboundFields() {
+  const type = document.getElementById('ops-type')?.value;
+  const fields = document.getElementById('ops-inbound-fields');
+  if (!fields) return;
+  const isInbound = type === 'inbound' || type === 'stock';
+  fields.style.display = isInbound ? 'block' : 'none';
+  if (isInbound) {
+    // 연결 상품 셀렉트 채우기
+    const sel = document.getElementById('ops-inbound-item');
+    if (sel) {
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">상품 선택 (선택사항)</option>' +
+        (state.inventory||[]).filter(i=>i.status!=='판매 종료').map(i=>
+          `<option value="${i.id}">${i.name}${i.size?' '+i.size:''}</option>`
+        ).join('');
+      if (cur) sel.value = cur;
+    }
+  }
+}
+
 function onOpsStartChange() {
   const startVal = document.getElementById('ops-start')?.value;
   const endEl    = document.getElementById('ops-end');
@@ -13194,7 +13422,7 @@ function setInitialDates() {
 </script>
   <!-- 버전 표시 고정 -->
   <div style="position:fixed;top:10px;right:14px;z-index:9999;pointer-events:none;">
-    <span style="font-size:10px;color:rgba(140,134,128,0.6);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.0.6</span>
+    <span style="font-size:10px;color:rgba(140,134,128,0.6);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.0.8</span>
   </div>
 </body>
 </html>
