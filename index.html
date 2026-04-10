@@ -3428,29 +3428,38 @@ async function loadFromSupabase() {
 
 async function loadChannelSalesLog(months) {
   const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - (months || 6));
+  cutoff.setMonth(cutoff.getMonth() - (months || 36));
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
-  const { data, error } = await sb
-    .from('channel_sales_log')
-    .select('*')
-    .gte('date', cutoffStr)
-    .order('date', { ascending: false });
+  const PAGE = 1000;
+  let allData = [];
+  let from = 0;
+  let hasMore = true;
 
-  if (!error && data) {
-    state.channelSalesLog = data.map(r => ({
-      id: r.id,
-      date: r.date,
-      channel: r.channel,
-      inventoryId: r.inventory_id,
-      productName: r.product_name,
-      qty: r.qty,
-      amount: r.amount,
+  try {
+    while (hasMore) {
+      const { data, error } = await sb
+        .from('channel_sales_log')
+        .select('*')
+        .gte('date', cutoffStr)
+        .order('date', { ascending: false })
+        .range(from, from + PAGE - 1);
+
+      if (error) { console.warn('channelSalesLog 로딩 실패:', error?.message); break; }
+      if (!data || data.length === 0) { hasMore = false; break; }
+      allData = allData.concat(data);
+      if (data.length < PAGE) hasMore = false;
+      else from += PAGE;
+    }
+    state.channelSalesLog = allData.map(r => ({
+      id: r.id, date: r.date, channel: r.channel,
+      inventoryId: r.inventory_id, productName: r.product_name,
+      qty: r.qty, amount: r.amount,
     }));
     console.log(`📊 channelSalesLog 로딩: ${state.channelSalesLog.length}건 (${cutoffStr} 이후)`);
-  } else {
+  } catch(e) {
     state.channelSalesLog = [];
-    console.warn('channelSalesLog 로딩 실패:', error?.message);
+    console.warn('channelSalesLog 로딩 오류:', e);
   }
 }
 
@@ -5360,15 +5369,46 @@ function renderInventory() {
   const bomMap = {};
   (state.invSettings.bom||[]).forEach(b=>{ bomMap[b.productId]=b.linkedIds; });
 
-  tbody.innerHTML = items.map((item, idx) => {
+  // 안전벨트커버 그룹핑: linkedDollId 있는 것은 연결 인형 바로 뒤에 서브행으로
+  const beltMap = {}; // dollId → [beltItems]
+  const standaloneItems = [];
+  items.forEach(item => {
+    if (item.category === '안전벨트커버' && item.linkedDollId) {
+      if (!beltMap[item.linkedDollId]) beltMap[item.linkedDollId] = [];
+      beltMap[item.linkedDollId].push(item);
+    } else {
+      standaloneItems.push(item);
+    }
+  });
+
+  // 인형 뒤에 연결 벨트커버 삽입
+  const groupedItems = [];
+  standaloneItems.forEach(item => {
+    groupedItems.push({ item, isBelt: false });
+    if (beltMap[item.id]) {
+      beltMap[item.id].forEach(belt => groupedItems.push({ item: belt, isBelt: true }));
+    }
+  });
+  // linkedDollId 있는데 연결 인형이 items에 없는 경우 (필터링으로 인형이 숨겨진 경우) — 독립 표시
+  items.forEach(item => {
+    if (item.category === '안전벨트커버' && item.linkedDollId) {
+      const dollInList = standaloneItems.find(i => i.id === item.linkedDollId);
+      if (!dollInList) groupedItems.push({ item, isBelt: false });
+    }
+  });
+
+  tbody.innerHTML = groupedItems.map(({ item, isBelt }, idx) => {
     const smartStatus = getSmartStatus(item);
     const vel7 = getSalesVelocity(item.id, 7);
     const vel7Week = vel7 > 0 ? `${(vel7*7).toFixed(1)}개/주` : '<span style="color:var(--border);">-</span>';
     const dbSize = ['몽모시리즈','동물시리즈'].includes(item.category) ? getDustbagSize(item.size) : null;
     const dbCell = dbSize ? `<span style="font-size:10px;color:var(--text-muted);">🛍${dbSize}</span>` : '';
     const isClearance = item.status === '단종 예정' && item.stock > 0;
-    const rowBg = isClearance ? 'background:#FFFBF0;' : (idx%2===0?'':'background:var(--bg);');
+    const rowBg = isBelt
+      ? 'background:var(--surface2);'
+      : (isClearance ? 'background:#FFFBF0;' : (idx%2===0?'':'background:var(--bg);'));
     const expandId = `inv-expand-${item.id}`;
+    const beltIndent = isBelt ? 'padding-left:36px;' : '';
 
     if (ch === 'total') {
       const statusColors = {
@@ -5410,9 +5450,15 @@ function renderInventory() {
           </div>
         </td>
       </tr>`;
-      return `<tr style="${rowBg}cursor:pointer;" onclick="toggleInvRow('${expandId}',this)">
-        <td style="color:var(--text-muted);font-size:12px;text-align:center;">▶</td>
-        <td><div style="display:flex;align-items:center;gap:8px;">${thumbHTML}<div><div style="font-size:13px;font-weight:500;">${item.name}</div><div style="display:flex;gap:4px;margin-top:2px;">${dbCell}<span style="font-size:10px;padding:1px 6px;border-radius:10px;background:${sc.bg};color:${sc.color};">${item.status||'판매 중'}</span></div></div></div></td>
+      const beltNameHTML = isBelt
+        ? `<div style="display:flex;align-items:center;gap:8px;${beltIndent}">
+            <div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">🔗</div>
+            <div><div style="font-size:12px;font-weight:500;color:var(--text-muted);">${item.name}</div>
+            <div style="display:flex;gap:4px;margin-top:1px;"><span style="font-size:10px;padding:1px 6px;border-radius:10px;background:${sc.bg};color:${sc.color};">${item.status||'판매 중'}</span></div></div></div>`
+        : `<div style="display:flex;align-items:center;gap:8px;">${thumbHTML}<div><div style="font-size:13px;font-weight:500;">${item.name}</div><div style="display:flex;gap:4px;margin-top:2px;">${dbCell}<span style="font-size:10px;padding:1px 6px;border-radius:10px;background:${sc.bg};color:${sc.color};">${item.status||'판매 중'}</span></div></div></div>`;
+      return `<tr style="${rowBg}cursor:pointer;${isBelt?'opacity:0.85;':''}" onclick="toggleInvRow('${expandId}',this)">
+        <td style="color:var(--text-muted);font-size:12px;text-align:center;">${isBelt?'':'▶'}</td>
+        <td>${beltNameHTML}</td>
         <td style="color:var(--text-muted);font-size:12px;">${item.size||'-'}</td>
         <td class="num" style="font-weight:700;${item.stock===0?'color:var(--text-muted);':item.stock<20?'color:var(--red);':''}">${item.stock}</td>
         <td class="num" style="font-size:12px;">${vel7Week}</td>
@@ -9170,10 +9216,26 @@ function getMonthRevenue(year, month) {
     .reduce((s, r) => s + (r.imweb||0) + (r.kakao||0) + (r.naver||0) + (r.popup||0) + (r.emoji||0) + (r.line||0) + (r.ncp||0), 0);
 }
 
+function getMonthPlatformFees(year, month) {
+  // revenueLog에서 해당 월 채널별 매출 합산 후 수수료 계산
+  const mk = `${year}-${String(month).padStart(2,'0')}`;
+  const logs = (state.revenueLog||[]).filter(r => r.date.startsWith(mk));
+  const kakaoRev  = logs.reduce((s,r) => s+(r.kakao||0), 0);
+  const imwebRev  = logs.reduce((s,r) => s+(r.imweb||0), 0);
+  const naverRev  = logs.reduce((s,r) => s+(r.naver||0), 0);
+  // 네이버는 정산예정금액이 이미 있으면 그 차이, 없으면 5.7%
+  const kakaoFee  = Math.round(kakaoRev * 0.15);
+  const imwebFee  = Math.round(imwebRev * 0.0255);
+  const naverFee  = Math.round(naverRev * 0.057);
+  return { kakaoFee, imwebFee, naverFee,
+           total: kakaoFee + imwebFee + naverFee,
+           kakaoRev, imwebRev, naverRev };
+}
+
 function getMonthExpense(year, month) {
   const e = state.expenses.find(x => x.year == year && x.month == month);
-  if (!e) return { total: 0, items: [] };
-  const items = [
+  const fees = getMonthPlatformFees(year, month);
+  const baseItems = e ? [
     { label: '직원 급여', value: e.salary || 0, icon: '👥' },
     { label: '4대보험 (회사부담)', value: e.insurance || 0, icon: '🏥' },
     { label: '매입 원가', value: e.cogs || 0, icon: '📦' },
@@ -9181,9 +9243,16 @@ function getMonthExpense(year, month) {
     { label: '사무실 월세', value: e.rent || 0, icon: '🏢' },
     { label: '광고비', value: e.ads || 0, icon: '📣' },
     { label: '기타 고정비', value: e.other || 0, icon: '💳' },
-  ].filter(i => i.value > 0);
+  ].filter(i => i.value > 0) : [];
+  // 플랫폼 수수료 자동 추가
+  const feeItems = [
+    fees.kakaoFee  > 0 ? { label: `카카오 수수료 (15%)`,    value: fees.kakaoFee,  icon: '💛' } : null,
+    fees.imwebFee  > 0 ? { label: `자사몰 수수료 (2.55%)`,  value: fees.imwebFee,  icon: '🏪' } : null,
+    fees.naverFee  > 0 ? { label: `스마트스토어 수수료 (5.7%)`, value: fees.naverFee, icon: '🟢' } : null,
+  ].filter(Boolean);
+  const items = [...baseItems, ...feeItems];
   const total = items.reduce((s, i) => s + i.value, 0);
-  return { total, items, raw: e };
+  return { total, items, raw: e, fees };
 }
 
 function renderTax() {
