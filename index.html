@@ -3202,8 +3202,8 @@ function onLoginSuccess() {
 
 // ============ 데이터 저장/불러오기 ============
 async function save() {
-  const data = {
-    inventory: state.inventory, content: state.content, tasks: state.tasks,
+  const mainData = {
+    inventory: state.inventory, content: state.content,
     salesLog: state.salesLog, revenueLog: state.revenueLog,
     projects: state.projects, pCards: state.pCards, goals: state.goals,
     notices: state.notices, assets: state.assets, assetTags: state.assetTags,
@@ -3216,15 +3216,24 @@ async function save() {
     prodStockReady: state.prodStockReady,
     productSalesLog: state.productSalesLog||[],
   };
-  // 즉시 저장 (디바운스 제거 - 삭제 즉시반영을 위해)
-  _lastSaveTime = Date.now();
   clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(async () => {
-    await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
+    await sb.from('app_state').upsert({ id: 'cherop_main', data: mainData, updated_at: new Date().toISOString() });
+  }, 100);
+}
+
+async function saveTasks() {
+  clearTimeout(_saveTasksTimeout);
+  _saveTasksTimeout = setTimeout(async () => {
+    await sb.from('app_state').upsert({ id: 'cherop_tasks', data: { tasks: state.tasks }, updated_at: new Date().toISOString() });
   }, 100);
 }
 
 async function loadFromSupabase() {
+  // tasks 별도 로드
+  const { data: tData } = await sb.from('app_state').select('data').eq('id', 'cherop_tasks').single();
+  if (tData?.data?.tasks) state.tasks = tData.data.tasks;
+
   const { data, error } = await sb.from('app_state').select('data').eq('id', 'cherop_main').single();
   if (error || !data?.data || Object.keys(data.data).length === 0) {
     seedData();
@@ -3270,7 +3279,7 @@ async function loadChannelSalesLog(months) {
 function applyState(p) {
   state.inventory = p.inventory || [];
   state.content = p.content || [];
-  state.tasks = p.tasks || [];
+  // tasks는 cherop_tasks row에서 별도 관리 - cherop_main 구독이 덮어쓰지 않음
   state.salesLog = p.salesLog || [];
   state.revenueLog = p.revenueLog || [];
   state.projects = p.projects || [];
@@ -3311,6 +3320,18 @@ function subscribeRealtime() {
         showPage(pageId);
       }
       showToast('🔄 데이터가 업데이트됐어요');
+    })
+    .subscribe();
+
+  // tasks 별도 구독
+  sb.channel('tasks_changes')
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'app_state', filter: 'id=eq.cherop_tasks'
+    }, (payload) => {
+      state.tasks = payload.new.data?.tasks || state.tasks;
+      const activePage = document.querySelector('.page:not(.hidden)')?.id?.replace('page-', '');
+      if (activePage === 'tasks') renderTasks();
+      if (activePage === 'dashboard') renderDashboard();
     })
     .subscribe();
 }
@@ -6432,7 +6453,7 @@ function submitTask() {
     state.tasks.push(entry);
     showToast('✅ 업무가 추가됐어요');
   }
-  save(); closeModal('add-task');
+  saveTasks(); closeModal('add-task');
   const member = state.memberFilter;
   if (member && member !== 'all') renderTaskKanban(member);
   else renderTasks();
@@ -6461,7 +6482,7 @@ function resetDailyRoutine() {
         t.status = 'todo';
       }
     });
-    save(); renderTasks();
+    saveTasks(); renderTasks();
     showToast('🔄 데일리 루틴 초기화 완료 · 오늘 할 일에 추가됐어요');
   }).catch(()=>{});
 }
@@ -10967,7 +10988,7 @@ async function resetAndReload() {
 // 커스텀 Confirm 모달
 // ══════════════════════════════════════════════════
 let _confirmResolve = null, _confirmReject = null;
-let _lastSaveTime = 0; // 내 마지막 저장 시각(ms) - 실시간 구독 덮어씀 방지용
+let _saveTasksTimeout = null;
 
 function showConfirm({ title='삭제할까요?', desc='', icon='🗑', okLabel='삭제', okColor='var(--red)' } = {}) {
   return new Promise((resolve, reject) => {
@@ -12363,7 +12384,7 @@ function confirmChStockEdit() {
 // ══════════════════════════════════════════════════
 function deleteTask(id) {
   state.tasks = state.tasks.filter(x => x.id !== id);
-  save(); renderTasks(); showToast('삭제됐어요');
+  saveTasks(); renderTasks(); showToast('삭제됐어요');
 }
 
 
