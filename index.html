@@ -2061,75 +2061,104 @@
 
 <!-- Add Content Modal -->
 <div class="modal-overlay hidden" id="modal-add-content">
-  <div class="modal">
+  <div class="modal" style="max-width:560px;">
     <div class="modal-title" id="ct-modal-title">콘텐츠 추가</div>
     <input type="hidden" id="ct-edit-id">
     <input type="hidden" id="ct-image-data">
-    <div class="form-group">
-      <label class="form-label">콘텐츠 제목</label>
-      <input class="form-input" id="ct-title" placeholder="예: 몽모 신상 리뷰 릴스">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">브랜드</label>
-        <select class="form-select" id="ct-brand">
-          <option value="mongmo">몽모</option>
-          <option value="palett">팔렛</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">채널</label>
-        <select class="form-select" id="ct-channel">
-          <option value="instagram">인스타그램</option>
-          <option value="naver">네이버 블로그</option>
-          <option value="kakao">카카오</option>
-          <option value="etc">기타</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">발행 예정일</label>
-        <input class="form-input" type="date" id="ct-date">
-      </div>
-      <div class="form-group">
-        <label class="form-label">상태</label>
-        <select class="form-select" id="ct-status">
-          <option value="todo">기획 중</option>
-          <option value="inprogress">제작 중</option>
-          <option value="done">발행 완료</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">메모</label>
-      <textarea class="form-textarea" id="ct-memo" placeholder="콘텐츠 방향, 키워드 등..."></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">이미지</label>
-      <div style="display:flex;gap:8px;margin-bottom:8px;">
-        <button type="button" class="btn btn-sm btn-secondary" id="ct-img-tab-url" onclick="setCtImgTab('url')" style="flex:1;background:var(--text);color:#fff;">🔗 인스타 URL</button>
-        <button type="button" class="btn btn-sm btn-secondary" id="ct-img-tab-file" onclick="setCtImgTab('file')" style="flex:1;">📁 직접 업로드</button>
-      </div>
-      <div id="ct-img-url-wrap">
-        <input class="form-input" id="ct-insta-url" placeholder="https://www.instagram.com/p/..." oninput="previewInstaThumb(this.value)">
-        <div id="ct-insta-preview" style="margin-top:6px;display:none;">
-          <img id="ct-insta-thumb" src="" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;" onerror="this.parentElement.style.display='none'">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <!-- 왼쪽: 이미지 -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">📸 이미지</div>
+        <!-- 이미지 미리보기 -->
+        <div id="ct-img-preview-box" style="width:100%;aspect-ratio:4/5;background:var(--surface2);border-radius:10px;overflow:hidden;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:10px;position:relative;">
+          <img id="ct-img-preview" src="" style="width:100%;height:100%;object-fit:cover;display:none;" onerror="this.style.display='none'">
+          <div id="ct-img-placeholder" style="text-align:center;color:var(--text-muted);font-size:12px;">
+            <div style="font-size:28px;margin-bottom:4px;">📷</div>
+            1080 × 1350
+          </div>
+        </div>
+        <!-- 인스타 URL -->
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="form-label">🔗 인스타그램 URL</label>
+          <input class="form-input" id="ct-insta-url" placeholder="https://instagram.com/p/..." style="font-size:12px;" oninput="onCtInstaUrlInput(this.value)">
+        </div>
+        <!-- 이미지 업로드 -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">📁 이미지 업로드</label>
+          <label style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--surface2);font-size:12px;">
+            <span id="ct-file-label">클릭해서 이미지 선택</span>
+            <input type="file" id="ct-image-file" accept="image/*" style="display:none;" onchange="previewUploadedImage(this)">
+          </label>
         </div>
       </div>
-      <div id="ct-img-file-wrap" style="display:none;">
-        <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--surface2);">
-          <span id="ct-file-label">📁 클릭해서 이미지 선택</span>
-          <input type="file" id="ct-image-file" accept="image/*" style="display:none;" onchange="previewUploadedImage(this)">
-        </label>
-        <div id="ct-upload-preview" style="margin-top:6px;display:none;">
-          <img id="ct-upload-thumb" src="" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;">
+      <!-- 오른쪽: 정보 -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">📝 콘텐츠 정보</div>
+        <div class="form-group">
+          <label class="form-label">제목</label>
+          <input class="form-input" id="ct-title" placeholder="예: 몽모 신상 릴스">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">브랜드</label>
+            <select class="form-select" id="ct-brand">
+              <option value="mongmo">몽모</option>
+              <option value="palett">팔렛</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">채널</label>
+            <select class="form-select" id="ct-channel">
+              <option value="instagram">인스타그램</option>
+              <option value="naver">네이버 블로그</option>
+              <option value="kakao">카카오</option>
+              <option value="etc">기타</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">발행일</label>
+            <input class="form-input" type="date" id="ct-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">상태</label>
+            <select class="form-select" id="ct-status">
+              <option value="todo">기획 중</option>
+              <option value="inprogress">제작 중</option>
+              <option value="done">발행 완료</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">메모</label>
+          <textarea class="form-textarea" id="ct-memo" placeholder="콘텐츠 방향, 키워드..." style="height:56px;"></textarea>
+        </div>
+        <!-- 실적 입력 -->
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;margin-top:4px;">📊 실적 (발행 후 입력)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">❤️ 좋아요</label>
+            <input class="form-input" type="number" id="ct-likes" placeholder="0" min="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">🔖 저장</label>
+            <input class="form-input" type="number" id="ct-saves" placeholder="0" min="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">💬 댓글</label>
+            <input class="form-input" type="number" id="ct-comments" placeholder="0" min="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">👁 조회수</label>
+            <input class="form-input" type="number" id="ct-views" placeholder="0" min="0">
+          </div>
         </div>
       </div>
     </div>
-    <div class="modal-actions">
+    <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-secondary" onclick="closeModal('add-content')">취소</button>
-      <button class="btn btn-primary" onclick="addContent()">추가</button>
+      <button class="btn btn-primary" onclick="addContent()">저장</button>
     </div>
   </div>
 </div>
@@ -5965,10 +5994,19 @@ function renderCalendar() {
 
     planned.forEach(ct => {
       const col = ct.brand==='mongmo'?'var(--mongmo)':'var(--palett)';
-      const thumb = ct.imageUrl
-        ? `<img src="${ct.imageUrl}" style="width:100%;height:40px;object-fit:cover;border-radius:4px;margin-bottom:2px;display:block;" onerror="this.style.display='none'">`
-        : '';
-      cellContent += `<div class="cal-event" style="font-size:11px;background:${col}18;color:${col};padding:3px 5px;overflow:hidden;" onclick="event.stopPropagation();openEditContent(${ct.id})">${thumb}${ct.title}</div>`;
+      let thumbHtml = '';
+      if (ct.imageUrl && !ct.imageUrl.startsWith('http://instagram') && !ct.imageUrl.startsWith('https://www.instagram') && !ct.imageUrl.startsWith('https://instagram')) {
+        // 직접 업로드 이미지
+        thumbHtml = `<a href="${ct.instaUrl||'#'}" target="_blank" onclick="event.stopPropagation();" style="display:block;width:100%;aspect-ratio:4/5;overflow:hidden;border-radius:4px;margin-bottom:3px;background:var(--surface2);">
+          <img src="${ct.imageUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">
+        </a>`;
+      } else if (ct.instaUrl) {
+        // 인스타 URL만 있는 경우
+        thumbHtml = `<a href="${ct.instaUrl}" target="_blank" onclick="event.stopPropagation();" style="display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:4/5;border-radius:4px;margin-bottom:3px;background:var(--surface2);font-size:20px;">📷</a>`;
+      }
+      // 실적 배지
+      const statsBadge = ct.likes ? `<span style="font-size:9px;color:var(--text-muted);">❤️${ct.likes} 🔖${ct.saves||0}</span>` : '';
+      cellContent += `<div style="font-size:11px;color:${col};overflow:hidden;cursor:pointer;" onclick="event.stopPropagation();openEditContent(${ct.id})">${thumbHtml}<div style="padding:2px 3px;background:${col}18;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ct.title}</div>${statsBadge}</div>`;
     });
 
     if (!isPast && plan && !planned.length && !feedsOnDay.length) {
@@ -6041,6 +6079,7 @@ function addContent() {
   if (!title) { showToast('제목을 입력해주세요'); return; }
   const editId = document.getElementById('ct-edit-id').value;
   const imageUrl = document.getElementById('ct-image-data').value || '';
+  const instaUrl = document.getElementById('ct-insta-url').value.trim() || '';
   const entry = {
     id: editId ? parseInt(editId) : Date.now(),
     title,
@@ -6050,6 +6089,11 @@ function addContent() {
     status: document.getElementById('ct-status').value,
     memo: document.getElementById('ct-memo').value,
     imageUrl,
+    instaUrl,
+    likes:    parseInt(document.getElementById('ct-likes').value) || 0,
+    saves:    parseInt(document.getElementById('ct-saves').value) || 0,
+    comments: parseInt(document.getElementById('ct-comments').value) || 0,
+    views:    parseInt(document.getElementById('ct-views').value) || 0,
   };
   if (editId) {
     const idx = state.content.findIndex(x => x.id === parseInt(editId));
@@ -12395,10 +12439,10 @@ function openContentModal(dateStr) {
   document.getElementById('ct-memo').value = '';
   document.getElementById('ct-image-data').value = '';
   document.getElementById('ct-insta-url').value = '';
-  document.getElementById('ct-insta-preview').style.display = 'none';
-  document.getElementById('ct-upload-preview').style.display = 'none';
-  document.getElementById('ct-file-label').textContent = '📁 클릭해서 이미지 선택';
-  setCtImgTab('url');
+  document.getElementById('ct-file-label').textContent = '클릭해서 이미지 선택';
+  document.getElementById('ct-img-preview').style.display = 'none';
+  document.getElementById('ct-img-placeholder').style.display = 'block';
+  ['ct-likes','ct-saves','ct-comments','ct-views'].forEach(id => document.getElementById(id).value = '');
   openModal('add-content');
 }
 
@@ -12414,51 +12458,28 @@ function openEditContent(id) {
   document.getElementById('ct-status').value = ct.status || 'todo';
   document.getElementById('ct-memo').value = ct.memo || '';
   document.getElementById('ct-image-data').value = ct.imageUrl || '';
-  document.getElementById('ct-insta-url').value = '';
-  // 기존 이미지 미리보기
-  if (ct.imageUrl) {
-    const isInsta = ct.instaUrl;
-    setCtImgTab(ct.instaUrl ? 'url' : 'file');
-    if (ct.instaUrl) {
-      document.getElementById('ct-insta-url').value = ct.instaUrl || '';
-      document.getElementById('ct-insta-thumb').src = ct.imageUrl;
-      document.getElementById('ct-insta-preview').style.display = 'block';
-    } else {
-      document.getElementById('ct-upload-thumb').src = ct.imageUrl;
-      document.getElementById('ct-upload-preview').style.display = 'block';
-    }
+  document.getElementById('ct-insta-url').value = ct.instaUrl || '';
+  document.getElementById('ct-likes').value = ct.likes || '';
+  document.getElementById('ct-saves').value = ct.saves || '';
+  document.getElementById('ct-comments').value = ct.comments || '';
+  document.getElementById('ct-views').value = ct.views || '';
+  // 이미지 미리보기
+  const previewImg = document.getElementById('ct-img-preview');
+  const placeholder = document.getElementById('ct-img-placeholder');
+  if (ct.imageUrl && !ct.imageUrl.startsWith('https://instagram') && !ct.imageUrl.startsWith('https://www.instagram')) {
+    previewImg.src = ct.imageUrl;
+    previewImg.style.display = 'block';
+    placeholder.style.display = 'none';
   } else {
-    setCtImgTab('url');
+    previewImg.style.display = 'none';
+    placeholder.style.display = 'block';
   }
   openModal('add-content');
 }
 
-function setCtImgTab(tab) {
-  document.getElementById('ct-img-url-wrap').style.display = tab === 'url' ? '' : 'none';
-  document.getElementById('ct-img-file-wrap').style.display = tab === 'file' ? '' : 'none';
-  document.getElementById('ct-img-tab-url').style.background = tab === 'url' ? 'var(--text)' : '';
-  document.getElementById('ct-img-tab-url').style.color = tab === 'url' ? '#fff' : '';
-  document.getElementById('ct-img-tab-file').style.background = tab === 'file' ? 'var(--text)' : '';
-  document.getElementById('ct-img-tab-file').style.color = tab === 'file' ? '#fff' : '';
-}
+function setCtImgTab(tab) {} // 탭 제거됨
 
-function previewInstaThumb(url) {
-  if (!url || !url.includes('instagram.com')) {
-    document.getElementById('ct-insta-preview').style.display = 'none';
-    document.getElementById('ct-image-data').value = '';
-    return;
-  }
-  // instagram oEmbed으로 썸네일 추출
-  const oembedUrl = `https://graph.facebook.com/v18.0/instagram_oembed?url=${encodeURIComponent(url)}&maxwidth=400`;
-  // oEmbed은 앱 토큰 필요해서 직접 접근 불가
-  // 대신 URL에서 shortcode 추출 후 cdninstagram 패턴으로 시도
-  // 실제로는 저장만 해두고 나중에 수동 업로드로 교체 가능하도록
-  // URL 자체를 imageUrl로 저장 (인스타 링크 저장)
-  document.getElementById('ct-image-data').value = url; // URL 자체 저장
-  // 썸네일은 직접 업로드 탭으로 안내
-  showToast('인스타 URL이 저장됐어요. 썸네일은 직접 업로드 탭에서 이미지를 올려주세요 📸');
-  document.getElementById('ct-insta-preview').style.display = 'none';
-}
+function previewInstaThumb(url) {} // onCtInstaUrlInput으로 대체
 
 function previewUploadedImage(input) {
   const file = input.files[0];
@@ -12466,12 +12487,31 @@ function previewUploadedImage(input) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const dataUrl = e.target.result;
-    document.getElementById('ct-upload-thumb').src = dataUrl;
-    document.getElementById('ct-upload-preview').style.display = 'block';
     document.getElementById('ct-image-data').value = dataUrl;
     document.getElementById('ct-file-label').textContent = '✅ ' + file.name;
+    // 중앙 미리보기 박스에 표시
+    const prev = document.getElementById('ct-img-preview');
+    const placeholder = document.getElementById('ct-img-placeholder');
+    prev.src = dataUrl;
+    prev.style.display = 'block';
+    placeholder.style.display = 'none';
   };
   reader.readAsDataURL(file);
+}
+
+function onCtInstaUrlInput(val) {
+  document.getElementById('ct-image-data').value = ''; // 이미지는 별도 업로드
+  // URL 입력 시 미리보기 박스에 인스타 아이콘 표시
+  const prev = document.getElementById('ct-img-preview');
+  const placeholder = document.getElementById('ct-img-placeholder');
+  if (val && val.includes('instagram.com')) {
+    prev.style.display = 'none';
+    placeholder.innerHTML = '<div style="font-size:28px;margin-bottom:4px;">📷</div><div style="font-size:11px;">이미지를 직접 업로드해주세요</div>';
+    placeholder.style.display = 'block';
+  } else if (!document.getElementById('ct-image-data').value) {
+    placeholder.innerHTML = '<div style="font-size:28px;margin-bottom:4px;">📷</div>1080 × 1350';
+    placeholder.style.display = 'block';
+  }
 }
 
 // ── 채널 재고 직접수정 ──
