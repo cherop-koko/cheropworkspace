@@ -152,6 +152,7 @@
   .calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; background: var(--border); border-radius: 8px; overflow: hidden; }
   .cal-header { background: var(--surface2); padding: 8px 0; text-align: center; font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.05em; }
   .cal-day { background: var(--surface); min-height: 80px; padding: 8px; cursor: pointer; transition: background 0.1s; }
+  #calendar-body .cal-day { min-height: 160px; }
   .cal-day:hover { background: var(--bg); }
   .cal-day.other-month .cal-num { color: var(--border); }
   .cal-day.today .cal-num { background: var(--text); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
@@ -432,8 +433,7 @@
       padding: 8px 12px !important;
       font-size: 12px !important;
     }
-    #dash-search-input { width: 100% !important; font-size: 16px !important; }
-    #dash-search-wrap { display: none !important; }
+
 
     /* 대시보드 페이지 헤더 - 모바일: 세로 배치 */
     #page-dashboard .page-header {
@@ -501,7 +501,6 @@
     .stat-label { font-size: 10px !important; }
 
     /* 검색 */
-    #dash-search-input { width: 100% !important; }
 
     /* 알림 패널 */
     #notif-panel { left: 0 !important; width: 100% !important; z-index: 800 !important; }
@@ -811,23 +810,21 @@
     <!-- ========== DASHBOARD ========== -->
     <div id="page-dashboard">
 
-      <!-- 공지 배너 + 통합검색 -->
-      <div id="dash-top-row" style="display:flex;gap:10px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap;">
-        <div id="dash-notice-banner" style="flex:1;min-width:200px;background:var(--mongmo-light);border:1px solid var(--mongmo);border-radius:10px;padding:9px 14px;cursor:pointer;font-size:13px;" onclick="showPage('notice')"></div>
-        <div id="dash-search-wrap" style="position:relative;flex:0 0 auto;width:220px;min-width:160px;">
-          <input id="dash-search-input" class="form-input" placeholder="🔍 통합검색..." oninput="renderDashSearch()" style="padding-right:32px;font-size:13px;">
-          <div id="dash-search-results" style="display:none;position:absolute;top:44px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);z-index:200;max-height:320px;overflow-y:auto;"></div>
-        </div>
+      <!-- 공지 배너 -->
+      <div id="dash-top-row" style="display:flex;gap:10px;align-items:stretch;margin-bottom:16px;">
+        <div id="dash-notice-banner" style="flex:1;background:var(--mongmo-light);border:1px solid var(--mongmo);border-radius:10px;padding:9px 14px;cursor:pointer;font-size:13px;" onclick="showPage('notice')"></div>
       </div>
 
       <div class="page-header" style="margin-bottom:16px;">
-        <div style="flex:1;min-width:0;">
-          <div class="page-title" id="dash-greeting">안녕하세요 👋</div>
-          <div class="page-sub" id="dash-date-sub"></div>
+        <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;flex-wrap:wrap;">
+          <div style="min-width:0;">
+            <div class="page-title" id="dash-greeting">안녕하세요 👋</div>
+            <div class="page-sub" id="dash-date-sub"></div>
+          </div>
+          <!-- D-day 인라인 박스 — 인삿말 바로 오른쪽 -->
+          <div id="dash-dday-inline" style="display:none;flex-shrink:0;"></div>
         </div>
-        <div class="header-actions" style="align-items:center;">
-          <!-- D-day 인라인 박스 -->
-          <div id="dash-dday-inline" style="display:none;"></div>
+        <div class="header-actions" style="align-items:center;flex-shrink:0;">
           <div id="dash-weather-badge" style="display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:12px;white-space:nowrap;"></div>
           <button class="btn btn-secondary" onclick="showPage('tasks')" style="font-size:12px;white-space:nowrap;">✅ 오늘 할 일</button>
         </div>
@@ -1381,47 +1378,53 @@
         </div>
       </div>
 
-      <!-- KPI: 월 1000만뷰 목표 그래프 -->
-      <div class="card" style="padding:18px 20px;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div style="font-size:13px;font-weight:700;">📊 이번달 KPI — 월 1,000만뷰 목표</div>
-          <div style="display:flex;gap:16px;font-size:12px;color:var(--text-muted);">
-            <span>이번달 업로드: <strong id="content-upload-count" style="color:var(--text);">-</strong></span>
-            <span>짤:비주얼 = <strong id="content-upload-ratio" style="color:var(--text);">-:-</strong></span>
+      <!-- KPI: 이번달 실적 자동집계 -->
+      <div class="card" style="padding:16px 20px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-size:13px;font-weight:700;">📊 이번달 콘텐츠 실적</div>
+          <div style="font-size:11px;color:var(--text-muted);">이번달 업로드: <strong id="content-upload-count" style="color:var(--text);">0</strong>개</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;" id="kpi-stats-wrap">
+          <div style="padding:10px 12px;background:var(--surface2);border-radius:8px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:4px;">❤️</div>
+            <div style="font-size:16px;font-weight:800;font-family:'DM Mono',monospace;" id="kpi-total-likes">-</div>
+            <div style="font-size:10px;color:var(--text-muted);">좋아요</div>
+          </div>
+          <div style="padding:10px 12px;background:var(--surface2);border-radius:8px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:4px;">💬</div>
+            <div style="font-size:16px;font-weight:800;font-family:'DM Mono',monospace;" id="kpi-total-comments">-</div>
+            <div style="font-size:10px;color:var(--text-muted);">댓글</div>
+          </div>
+          <div style="padding:10px 12px;background:var(--surface2);border-radius:8px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:4px;">✈️</div>
+            <div style="font-size:16px;font-weight:800;font-family:'DM Mono',monospace;" id="kpi-total-shares">-</div>
+            <div style="font-size:10px;color:var(--text-muted);">공유</div>
+          </div>
+          <div style="padding:10px 12px;background:var(--surface2);border-radius:8px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:4px;">🔄</div>
+            <div style="font-size:16px;font-weight:800;font-family:'DM Mono',monospace;" id="kpi-total-reposts">-</div>
+            <div style="font-size:10px;color:var(--text-muted);">리포스트</div>
+          </div>
+          <div style="padding:10px 12px;background:var(--mongmo-light);border-radius:8px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:4px;">🔖</div>
+            <div style="font-size:16px;font-weight:800;font-family:'DM Mono',monospace;color:var(--mongmo);" id="kpi-total-saves">-</div>
+            <div style="font-size:10px;color:var(--mongmo);">저장</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
-          <div style="flex:1;background:var(--surface2);border-radius:20px;height:12px;overflow:hidden;">
-            <div id="kpi-view-bar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,var(--mongmo),var(--palett));transition:width 0.4s;width:0%;"></div>
-          </div>
-          <div style="font-size:14px;font-weight:800;font-family:'DM Mono',monospace;min-width:60px;text-align:right;" id="kpi-view-pct">0%</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:14px;">
-          <span id="kpi-view-current">현재 조회수 직접 입력 필요</span>
-          <span>목표: 1,000만뷰</span>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:100px;padding:10px 14px;background:var(--mongmo-light);border-radius:8px;">
-            <div style="font-size:10px;color:var(--mongmo);margin-bottom:3px;">저장률 목표</div>
-            <div style="font-size:18px;font-weight:800;color:var(--mongmo);font-family:'DM Mono',monospace;">5%↑</div>
-            <div style="font-size:10px;color:var(--text-muted);">자존감/행복</div>
-          </div>
-          <div style="flex:1;min-width:100px;padding:10px 14px;background:var(--palett-light);border-radius:8px;">
-            <div style="font-size:10px;color:var(--palett);margin-bottom:3px;">공유율 목표</div>
-            <div style="font-size:18px;font-weight:800;color:var(--palett);font-family:'DM Mono',monospace;">3%↑</div>
-            <div style="font-size:10px;color:var(--text-muted);">사랑/우정</div>
-          </div>
-          <div style="flex:1;min-width:100px;padding:10px 14px;background:var(--green-light);border-radius:8px;">
-            <div style="font-size:10px;color:var(--green);margin-bottom:3px;">업로드 비율</div>
-            <div style="font-size:18px;font-weight:800;color:var(--green);font-family:'DM Mono',monospace;">3:1</div>
-            <div style="font-size:10px;color:var(--text-muted);">몽모짤:비주얼</div>
-          </div>
-          <div style="flex:2;min-width:200px;padding:10px 14px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;gap:10px;">
-            <div style="flex:1;">
-              <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">이번달 조회수 직접 입력</div>
-              <input id="kpi-views-input" class="form-input" type="number" placeholder="예: 3500000" style="padding:5px 10px;font-size:12px;height:32px;" oninput="updateKpiBar()">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+          <div style="padding:10px 14px;background:var(--mongmo-light);border-radius:8px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:10px;color:var(--mongmo);margin-bottom:2px;">저장률 (저장/조회수)</div>
+              <div style="font-size:20px;font-weight:800;color:var(--mongmo);font-family:'DM Mono',monospace;" id="kpi-save-rate">-</div>
             </div>
-            <div style="font-size:10px;color:var(--text-muted);text-align:center;">만뷰<br>단위</div>
+            <div style="font-size:28px;">🔖</div>
+          </div>
+          <div style="padding:10px 14px;background:var(--palett-light);border-radius:8px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:10px;color:var(--palett);margin-bottom:2px;">공유율 (공유/조회수)</div>
+              <div style="font-size:20px;font-weight:800;color:var(--palett);font-family:'DM Mono',monospace;" id="kpi-share-rate">-</div>
+            </div>
+            <div style="font-size:28px;">✈️</div>
           </div>
         </div>
       </div>
@@ -1456,6 +1459,39 @@
             <div style="font-size:10px;color:var(--text-muted);">당일 즉각 업로드</div>
           </div>
         </div>
+      </div>
+
+      <!-- TOP9 콘텐츠 -->
+      <div class="card" style="padding:16px 20px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:13px;font-weight:700;">🏆 잘된 콘텐츠 TOP 9</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <!-- 기간 필터 -->
+            <div style="display:flex;gap:4px;" id="top9-period-btns">
+              <button class="top9-pill active" onclick="setTop9Filter('period','1m',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--text);color:#fff;cursor:pointer;">최근 1개월</button>
+              <button class="top9-pill" onclick="setTop9Filter('period','3m',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">3개월</button>
+              <button class="top9-pill" onclick="setTop9Filter('period','1y',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">1년</button>
+            </div>
+            <!-- 유형 필터 -->
+            <div style="display:flex;gap:4px;" id="top9-type-btns">
+              <button class="top9-type-pill active" onclick="setTop9Filter('type','all',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--text);color:#fff;cursor:pointer;">전체</button>
+              <button class="top9-type-pill" onclick="setTop9Filter('type','reel',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">릴스</button>
+              <button class="top9-type-pill" onclick="setTop9Filter('type','visual',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">비주얼보드</button>
+              <button class="top9-type-pill" onclick="setTop9Filter('type','magazine',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">매거진</button>
+              <button class="top9-type-pill" onclick="setTop9Filter('type','meme',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">몽모짤</button>
+            </div>
+            <!-- 몽모짤 카테고리 (몽모짤 선택시 표시) -->
+            <div id="top9-meme-cats" style="display:none;gap:4px;flex-wrap:wrap;">
+              <button class="top9-meme-pill active" onclick="setTop9Filter('memecat','all',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--text);color:#fff;cursor:pointer;">전체</button>
+              <button class="top9-meme-pill" onclick="setTop9Filter('memecat','현대인공감',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">현대인 공감</button>
+              <button class="top9-meme-pill" onclick="setTop9Filter('memecat','사랑우정',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">사랑/우정</button>
+              <button class="top9-meme-pill" onclick="setTop9Filter('memecat','자존감행복',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">자존감/행복</button>
+              <button class="top9-meme-pill" onclick="setTop9Filter('memecat','기념일시리즈',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">기념일시리즈</button>
+              <button class="top9-meme-pill" onclick="setTop9Filter('memecat','날씨이슈공감',this)" style="padding:3px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">날씨/이슈 공감</button>
+            </div>
+          </div>
+        </div>
+        <div id="top9-grid" style="display:grid;grid-template-columns:repeat(9,1fr);gap:8px;"></div>
       </div>
 
       <!-- 캘린더 + 사이드 -->
@@ -2061,7 +2097,7 @@
 
 <!-- Add Content Modal -->
 <div class="modal-overlay hidden" id="modal-add-content">
-  <div class="modal" style="max-width:560px;">
+  <div class="modal" style="max-width:800px;width:95vw;max-height:90vh;overflow-y:auto;">
     <div class="modal-title" id="ct-modal-title">콘텐츠 추가</div>
     <input type="hidden" id="ct-edit-id">
     <input type="hidden" id="ct-image-data">
@@ -2070,7 +2106,7 @@
       <div>
         <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">📸 이미지</div>
         <!-- 이미지 미리보기 -->
-        <div id="ct-img-preview-box" style="width:100%;aspect-ratio:4/5;background:var(--surface2);border-radius:10px;overflow:hidden;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:10px;position:relative;">
+        <div id="ct-img-preview-box" style="width:100%;aspect-ratio:4/5;background:var(--surface2);border-radius:10px;overflow:hidden;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:10px;position:relative;max-height:320px;">
           <img id="ct-img-preview" src="" style="width:100%;height:100%;object-fit:cover;display:none;" onerror="this.style.display='none'">
           <div id="ct-img-placeholder" style="text-align:center;color:var(--text-muted);font-size:12px;">
             <div style="font-size:28px;margin-bottom:4px;">📷</div>
@@ -2093,29 +2129,9 @@
       </div>
       <!-- 오른쪽: 정보 -->
       <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">📝 콘텐츠 정보</div>
-        <div class="form-group">
-          <label class="form-label">제목</label>
-          <input class="form-input" id="ct-title" placeholder="예: 몽모 신상 릴스">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">브랜드</label>
-            <select class="form-select" id="ct-brand">
-              <option value="mongmo">몽모</option>
-              <option value="palett">팔렛</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">채널</label>
-            <select class="form-select" id="ct-channel">
-              <option value="instagram">인스타그램</option>
-              <option value="naver">네이버 블로그</option>
-              <option value="kakao">카카오</option>
-              <option value="etc">기타</option>
-            </select>
-          </div>
-        </div>
+        <input type="hidden" id="ct-title" value="">
+        <input type="hidden" id="ct-brand" value="mongmo">
+        <input type="hidden" id="ct-channel" value="instagram">
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">발행일</label>
@@ -2130,28 +2146,56 @@
             </select>
           </div>
         </div>
+        <!-- 콘텐츠 유형 -->
+        <div class="form-group">
+          <label class="form-label">콘텐츠 유형</label>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;" id="ct-type-btns">
+            <button type="button" class="ct-type-btn active" onclick="selectCtType('reel',this)" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--text);color:#fff;cursor:pointer;">🎬 릴스</button>
+            <button type="button" class="ct-type-btn" onclick="selectCtType('visual',this)" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">🖼 비주얼보드</button>
+            <button type="button" class="ct-type-btn" onclick="selectCtType('magazine',this)" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">📖 매거진</button>
+            <button type="button" class="ct-type-btn" onclick="selectCtType('meme',this)" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">😄 몽모짤</button>
+          </div>
+          <input type="hidden" id="ct-content-type" value="reel">
+          <!-- 몽모짤 카테고리 -->
+          <div id="ct-meme-cat-wrap" style="display:none;margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">
+            <button type="button" class="ct-meme-btn" onclick="selectCtMemeCat('현대인공감',this)" style="padding:3px 8px;border-radius:20px;font-size:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">현대인 공감</button>
+            <button type="button" class="ct-meme-btn" onclick="selectCtMemeCat('사랑우정',this)" style="padding:3px 8px;border-radius:20px;font-size:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">사랑/우정</button>
+            <button type="button" class="ct-meme-btn" onclick="selectCtMemeCat('자존감행복',this)" style="padding:3px 8px;border-radius:20px;font-size:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">자존감/행복</button>
+            <button type="button" class="ct-meme-btn" onclick="selectCtMemeCat('기념일시리즈',this)" style="padding:3px 8px;border-radius:20px;font-size:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">기념일시리즈</button>
+            <button type="button" class="ct-meme-btn" onclick="selectCtMemeCat('날씨이슈공감',this)" style="padding:3px 8px;border-radius:20px;font-size:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">날씨/이슈 공감</button>
+          </div>
+          <input type="hidden" id="ct-meme-cat" value="">
+        </div>
         <div class="form-group">
           <label class="form-label">메모</label>
-          <textarea class="form-textarea" id="ct-memo" placeholder="콘텐츠 방향, 키워드..." style="height:56px;"></textarea>
+          <textarea class="form-textarea" id="ct-memo" placeholder="콘텐츠 방향, 키워드..." style="height:40px;"></textarea>
         </div>
         <!-- 실적 입력 -->
         <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;margin-top:4px;">📊 실적 (발행 후 입력)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">❤️ 좋아요</label>
-            <input class="form-input" type="number" id="ct-likes" placeholder="0" min="0">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">❤️ 좋아요</div>
+            <input class="form-input" type="number" id="ct-likes" placeholder="0" min="0" style="font-size:14px;font-weight:600;text-align:center;">
           </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">🔖 저장</label>
-            <input class="form-input" type="number" id="ct-saves" placeholder="0" min="0">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">💬 댓글</div>
+            <input class="form-input" type="number" id="ct-comments" placeholder="0" min="0" style="font-size:14px;font-weight:600;text-align:center;">
           </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">💬 댓글</label>
-            <input class="form-input" type="number" id="ct-comments" placeholder="0" min="0">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">✈️ 공유</div>
+            <input class="form-input" type="number" id="ct-shares" placeholder="0" min="0" style="font-size:14px;font-weight:600;text-align:center;">
           </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">👁 조회수</label>
-            <input class="form-input" type="number" id="ct-views" placeholder="0" min="0">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">🔄 리포스트</div>
+            <input class="form-input" type="number" id="ct-reposts" placeholder="0" min="0" style="font-size:14px;font-weight:600;text-align:center;">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">🔖 저장</div>
+            <input class="form-input" type="number" id="ct-saves" placeholder="0" min="0" style="font-size:14px;font-weight:600;text-align:center;">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">👁 조회수 (만단위)</div>
+            <input class="form-input" type="number" id="ct-views" placeholder="0" step="0.1" min="0" style="font-size:14px;font-weight:600;text-align:center;">
           </div>
         </div>
       </div>
@@ -2733,6 +2777,10 @@
       <label class="form-label">메모</label>
       <input class="form-input" id="ops-memo" placeholder="상세 내용">
     </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--mongmo-light);border-radius:8px;margin-bottom:4px;">
+      <input type="checkbox" id="ops-important" style="width:15px;height:15px;accent-color:var(--mongmo);cursor:pointer;">
+      <label for="ops-important" style="font-size:13px;font-weight:500;color:var(--mongmo);cursor:pointer;">🎯 중요 일정 — 대시보드 D-Day에 표시</label>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-ops')">취소</button>
       <button class="btn btn-primary" id="ops-submit-btn" onclick="submitOps()">추가</button>
@@ -2810,6 +2858,40 @@
   </div>
 </div>
 
+<!-- ── BOM 연결재고 추가 모달 ── -->
+<div class="modal-overlay hidden" id="modal-bom-add">
+  <div class="modal" style="width:440px;">
+    <div class="modal-title">🔗 연결재고 추가</div>
+    <div class="form-group">
+      <label class="form-label">메인 상품 (판매 시 차감 기준)</label>
+      <select class="form-select" id="bom-main-product">
+        <option value="">-- 선택 --</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">연결 상품 (함께 차감될 상품들)</label>
+      <div id="bom-linked-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;padding:2px;"></div>
+      <button class="btn btn-sm btn-secondary" style="margin-top:8px;width:100%;" onclick="addBomLinkedRow()">+ 연결 상품 추가</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('bom-add')">취소</button>
+      <button class="btn btn-primary" onclick="submitBomAdd()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 커스텀 Prompt 모달 ── -->
+<div class="modal-overlay hidden" id="modal-prompt">
+  <div class="modal" style="width:380px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px;" id="prompt-title">입력</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;" id="prompt-desc"></div>
+    <input class="form-input" type="text" id="prompt-input" placeholder="" style="font-size:14px;" onkeydown="if(event.key==='Enter')_promptConfirm();if(event.key==='Escape')_promptCancel();">
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+      <button class="btn btn-secondary" style="min-width:80px;" onclick="_promptCancel()">취소</button>
+      <button class="btn btn-primary" style="min-width:80px;" id="prompt-ok-btn" onclick="_promptConfirm()">확인</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay hidden" id="modal-channel-stock">
   <div class="modal" style="width:520px;">
@@ -3295,6 +3377,14 @@ function onLoginSuccess() {
 
 // ============ 데이터 저장/불러오기 ============
 async function save() {
+  // 로그 데이터 상한선 — 장기 운영 시 JSON 5MB 초과 방지
+  if (state.salesLog?.length > 2000)    state.salesLog    = state.salesLog.slice(-2000);
+  if (state.revenueLog?.length > 1000)  state.revenueLog  = state.revenueLog.slice(-1000);
+  if (state.defectLog?.length > 500)    state.defectLog   = state.defectLog.slice(-500);
+  if (state.inboundLog?.length > 500)   state.inboundLog  = state.inboundLog.slice(-500);
+  if (state.activityLog?.length > 100)  state.activityLog = state.activityLog.slice(0, 100);
+  if (state.attendances?.length > 2000) state.attendances = state.attendances.slice(-2000);
+
   const data = {
     inventory: state.inventory, content: state.content, tasks: state.tasks,
     salesLog: state.salesLog, revenueLog: state.revenueLog,
@@ -3311,7 +3401,11 @@ async function save() {
   };
   clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(async () => {
-    await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
+    const { error } = await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
+    if (error) {
+      console.error('[Save Error]', error.message);
+      showToast('❌ 저장 실패 — 네트워크를 확인해주세요');
+    }
   }, 100);
 }
 
@@ -3395,6 +3489,22 @@ function subscribeRealtime() {
     .on('postgres_changes', {
       event: 'UPDATE', schema: 'public', table: 'app_state', filter: 'id=eq.cherop_main'
     }, (payload) => {
+      // 내가 저장 중이면 무시 (본인 변경분 중복 반영 방지)
+      if (_saveTimeout) return;
+
+      // 모달이 열려있거나 입력 중이면 리렌더 건너뜀
+      const modalOpen = document.querySelector('.modal-overlay:not(.hidden)');
+      const activeInput = document.activeElement;
+      const isTyping = activeInput && (
+        activeInput.tagName === 'INPUT' ||
+        activeInput.tagName === 'TEXTAREA' ||
+        activeInput.tagName === 'SELECT'
+      );
+      if (modalOpen || isTyping) {
+        showToast('🔄 변경사항이 있어요 — 작업 완료 후 새로고침해주세요');
+        return;
+      }
+
       applyState(payload.new.data);
       const activePage = document.querySelector('.page:not(.hidden)');
       const pageId = activePage?.id?.replace('page-', '');
@@ -3406,7 +3516,6 @@ function subscribeRealtime() {
       showToast('🔄 데이터가 업데이트됐어요');
     })
     .subscribe();
-
 }
 
 // ============ INIT ============
@@ -3554,16 +3663,7 @@ function applyMobileFlexFix() {
     noticeEl.style.setProperty('min-width', '0', 'important');
     noticeEl.style.setProperty('width', '100%', 'important');
   }
-  const searchWrap = document.getElementById('dash-search-wrap');
-  if (searchWrap) {
-    searchWrap.style.setProperty('width', '100%', 'important');
-    searchWrap.style.setProperty('flex', 'none', 'important');
-  }
-  const searchInput = document.getElementById('dash-search-input');
-  if (searchInput) {
-    searchInput.style.setProperty('width', '100%', 'important');
-    searchInput.style.setProperty('font-size', '16px', 'important');
-  }
+
 
   // 2. 바로가기 버튼 행 → 가로 스크롤
   const dash = document.getElementById('page-dashboard');
@@ -4041,7 +4141,6 @@ function showPage(page, pushState=true) {
 
 // ── 모바일 드로어 ──
 function toggleMobileSearch() {
-  const wrap = document.getElementById('dash-search-wrap');
   const input = document.getElementById('dash-search-input');
   if (!wrap) return;
   const isHidden = wrap.style.display === 'none' || wrap.style.display === '';
@@ -5657,12 +5756,51 @@ function renderBomList() {
 }
 
 function addBomRow() {
-  const prodId = prompt('메인 상품 ID (재고 테이블에서 확인):');
-  const linkIds = prompt('연결 상품 ID들 (쉼표 구분, 예: 98,45):');
-  if (!prodId || !linkIds) return;
-  const linkedIds = linkIds.split(',').map(s=>({ id:parseInt(s.trim()), qty:1 }));
-  state.invSettings.bom.push({ productId:parseInt(prodId), linkedIds });
-  save(); renderBomList(); showToast('연결재고 추가됐어요');
+  // BOM 모달 열기
+  const mainSel = document.getElementById('bom-main-product');
+  const active = (state.inventory || []).filter(i => i.status !== '판매 종료');
+  mainSel.innerHTML = '<option value="">-- 선택 --</option>' +
+    active.map(i => `<option value="${i.id}">${i.name}${i.size ? ' ' + i.size : ''}</option>`).join('');
+  // 연결 상품 행 초기화 (1행)
+  const listEl = document.getElementById('bom-linked-list');
+  listEl.innerHTML = '';
+  addBomLinkedRow();
+  openModal('bom-add');
+}
+
+function addBomLinkedRow() {
+  const listEl = document.getElementById('bom-linked-list');
+  const active = (state.inventory || []).filter(i => i.status !== '판매 종료');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  row.innerHTML = `
+    <select class="form-select bom-linked-sel" style="flex:1;">
+      <option value="">-- 상품 선택 --</option>
+      ${active.map(i => `<option value="${i.id}">${i.name}${i.size ? ' ' + i.size : ''}</option>`).join('')}
+    </select>
+    <input type="number" class="form-input bom-linked-qty" value="1" min="1" style="width:70px;" placeholder="수량">
+    <button class="btn btn-sm btn-danger" onclick="this.parentElement.remove()" style="flex-shrink:0;">✕</button>
+  `;
+  listEl.appendChild(row);
+}
+
+function submitBomAdd() {
+  const prodId = parseInt(document.getElementById('bom-main-product').value);
+  if (!prodId) { showToast('메인 상품을 선택해주세요'); return; }
+  const rows = document.querySelectorAll('#bom-linked-list > div');
+  const linkedIds = [];
+  let valid = true;
+  rows.forEach(row => {
+    const id = parseInt(row.querySelector('.bom-linked-sel').value);
+    const qty = parseInt(row.querySelector('.bom-linked-qty').value) || 1;
+    if (!id) { valid = false; return; }
+    linkedIds.push({ id, qty });
+  });
+  if (!valid || !linkedIds.length) { showToast('연결 상품을 모두 선택해주세요'); return; }
+  if (!state.invSettings.bom) state.invSettings.bom = [];
+  state.invSettings.bom.push({ productId: prodId, linkedIds });
+  save(); renderBomList(); closeModal('bom-add');
+  showToast('✅ 연결재고 추가됐어요');
 }
 
 function removeBom(idx) {
@@ -5985,33 +6123,52 @@ function renderCalendar() {
 
     let cellContent = '';
 
-    if (feedsOnDay.length > 0) {
-      cellContent = feedsOnDay.map(f => `
-        <div style="font-size:11px;padding:3px 5px;border-radius:4px;margin-bottom:2px;background:${FEED_TYPE_COLOR[f.type]||'var(--mongmo)'}22;color:${FEED_TYPE_COLOR[f.type]||'var(--mongmo)'};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${f.title}" onclick="showFeedDetail(${f.id})">
-          ${FEED_TYPE_LABEL[f.type]||'피드'} ${f.likes?'❤️'+f.likes:''}
-        </div>`).join('');
-    }
+    // 피드 실적은 content와 통합되었으므로 생략
 
     planned.forEach(ct => {
       const col = ct.brand==='mongmo'?'var(--mongmo)':'var(--palett)';
-      let thumbHtml = '';
-      if (ct.imageUrl && !ct.imageUrl.startsWith('http://instagram') && !ct.imageUrl.startsWith('https://www.instagram') && !ct.imageUrl.startsWith('https://instagram')) {
-        // 직접 업로드 이미지
-        thumbHtml = `<a href="${ct.instaUrl||'#'}" target="_blank" onclick="event.stopPropagation();" style="display:block;width:100%;aspect-ratio:4/5;overflow:hidden;border-radius:4px;margin-bottom:3px;background:var(--surface2);">
-          <img src="${ct.imageUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">
-        </a>`;
-      } else if (ct.instaUrl) {
-        // 인스타 URL만 있는 경우
-        thumbHtml = `<a href="${ct.instaUrl}" target="_blank" onclick="event.stopPropagation();" style="display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:4/5;border-radius:4px;margin-bottom:3px;background:var(--surface2);font-size:20px;">📷</a>`;
+      const TYPE_LABEL = { reel:'🎬 릴스', visual:'🖼 비주얼', magazine:'📖 매거진', meme:'😄 몽모짤' };
+      const typeLabel = TYPE_LABEL[ct.contentType] || '';
+      const memeCatLabel = ct.contentType==='meme' && ct.memeCat ? ct.memeCat : '';
+
+      const hasImage = (ct.imageUrl && ct.imageUrl.startsWith('data:')) || ct.instaUrl;
+
+      if (hasImage) {
+        // 이미지 있는 셀: 3/4 이미지 + 1/4 정보
+        let imgHtml = '';
+        if (ct.imageUrl && ct.imageUrl.startsWith('data:')) {
+          imgHtml = `<a href="${ct.instaUrl||'#'}" target="_blank" onclick="event.stopPropagation();" style="display:block;width:100%;aspect-ratio:4/5;overflow:hidden;border-radius:4px;">
+            <img src="${ct.imageUrl}" style="width:100%;height:100%;object-fit:cover;display:block;">
+          </a>`;
+        } else {
+          imgHtml = `<a href="${ct.instaUrl}" target="_blank" onclick="event.stopPropagation();" style="display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:4/5;border-radius:4px;background:var(--surface2);font-size:16px;text-decoration:none;">📷</a>`;
+        }
+        const hasStats = ct.likes || ct.saves || ct.comments || ct.shares || ct.views;
+        const statsHtml = hasStats ? `
+          ${ct.likes?`<div style="font-size:10px;color:var(--text-muted);">❤️${ct.likes>=1000?(ct.likes/1000).toFixed(1)+'k':ct.likes}</div>`:''}
+          ${ct.comments?`<div style="font-size:10px;color:var(--text-muted);">💬${ct.comments>=1000?(ct.comments/1000).toFixed(1)+'k':ct.comments}</div>`:''}
+          ${ct.shares?`<div style="font-size:10px;color:var(--text-muted);">✈️${ct.shares}</div>`:''}
+          ${ct.saves?`<div style="font-size:10px;color:var(--mongmo);">🔖${ct.saves}</div>`:''}
+          ${ct.views?`<div style="font-size:10px;color:var(--text-muted);">👁${ct.views}만</div>`:''}
+        ` : '';
+        cellContent += `<div style="display:grid;grid-template-columns:3fr 1fr;gap:3px;cursor:pointer;margin-bottom:4px;align-items:start;" onclick="event.stopPropagation();openEditContent(${ct.id})">
+          <div>${imgHtml}</div>
+          <div style="display:flex;flex-direction:column;gap:3px;padding-top:2px;">
+            <div style="font-size:11px;color:${col};font-weight:700;line-height:1.3;">${typeLabel}</div>
+            ${memeCatLabel?`<div style="font-size:10px;color:var(--text-muted);line-height:1.3;">${memeCatLabel}</div>`:''}
+            ${statsHtml}
+          </div>
+        </div>`;
+      } else {
+        // 이미지 없는 셀: 유형 텍스트만 표시
+        cellContent += `<div style="cursor:pointer;margin-bottom:3px;padding:2px 4px;" onclick="event.stopPropagation();openEditContent(${ct.id})">
+          <div style="font-size:10px;color:${col};font-weight:500;">${typeLabel}</div>
+          ${memeCatLabel?`<div style="font-size:9px;color:var(--text-muted);">${memeCatLabel}</div>`:''}
+        </div>`;
       }
-      // 실적 배지
-      const statsBadge = ct.likes ? `<span style="font-size:9px;color:var(--text-muted);">❤️${ct.likes} 🔖${ct.saves||0}</span>` : '';
-      cellContent += `<div style="font-size:11px;color:${col};overflow:hidden;cursor:pointer;" onclick="event.stopPropagation();openEditContent(${ct.id})">${thumbHtml}<div style="padding:2px 3px;background:${col}18;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ct.title}</div>${statsBadge}</div>`;
     });
 
-    if (!isPast && plan && !planned.length && !feedsOnDay.length) {
-      cellContent += `<div style="font-size:11px;padding:3px 5px;border-radius:4px;background:${plan.color}15;color:${plan.color};border:1px dashed ${plan.color}50;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${plan.icon} ${plan.label}</div>`;
-    }
+    // 기획 추천 제거
 
     cells += `<div class="cal-day${isToday?' today':''}${isPast?' ':' '}" style="${isPast?'background:#fafaf8;':''}cursor:pointer;" onclick="openContentModal('${dateStr}')">
       <div class="cal-num" style="font-size:11px;">${isToday?`<span style="background:var(--text);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">${d}</span>`:d}</div>
@@ -6024,6 +6181,8 @@ function renderCalendar() {
     cells += `<div class="cal-day other-month"><div class="cal-num">${i}</div></div>`;
   }
   document.getElementById('calendar-body').innerHTML = cells;
+  renderKpiStats();
+  renderTop9();
 
   // 목록
   const allItems = [
@@ -6074,26 +6233,47 @@ function changeMonth(dir) {
   renderCalendar();
 }
 
-function addContent() {
-  const title = document.getElementById('ct-title').value.trim();
-  if (!title) { showToast('제목을 입력해주세요'); return; }
+async function addContent() {
+  const title = document.getElementById('ct-title').value.trim() || '콘텐츠';
   const editId = document.getElementById('ct-edit-id').value;
-  const imageUrl = document.getElementById('ct-image-data').value || '';
   const instaUrl = document.getElementById('ct-insta-url').value.trim() || '';
+
+  // Storage 업로드 처리
+  let imageUrl = document.getElementById('ct-image-data').value || '';
+  if (window._pendingImageFile) {
+    try {
+      showToast('⏳ 이미지 업로드 중...');
+      const file = window._pendingImageFile;
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `content_${Date.now()}.${ext}`;
+      const { data, error } = await sb.storage.from('content-images').upload(fileName, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = sb.storage.from('content-images').getPublicUrl(fileName);
+      imageUrl = urlData.publicUrl;
+      window._pendingImageFile = null;
+    } catch (err) {
+      showToast('⚠️ 이미지 업로드 실패: ' + err.message);
+      imageUrl = '';
+    }
+  }
   const entry = {
     id: editId ? parseInt(editId) : Date.now(),
     title,
-    brand: document.getElementById('ct-brand').value,
-    channel: document.getElementById('ct-channel').value,
-    date: document.getElementById('ct-date').value,
-    status: document.getElementById('ct-status').value,
-    memo: document.getElementById('ct-memo').value,
+    brand:       document.getElementById('ct-brand').value,
+    channel:     document.getElementById('ct-channel').value,
+    date:        document.getElementById('ct-date').value,
+    status:      document.getElementById('ct-status').value,
+    memo:        document.getElementById('ct-memo').value,
     imageUrl,
     instaUrl,
-    likes:    parseInt(document.getElementById('ct-likes').value) || 0,
-    saves:    parseInt(document.getElementById('ct-saves').value) || 0,
-    comments: parseInt(document.getElementById('ct-comments').value) || 0,
-    views:    parseInt(document.getElementById('ct-views').value) || 0,
+    contentType: document.getElementById('ct-content-type').value || 'reel',
+    memeCat:     document.getElementById('ct-meme-cat').value || '',
+    likes:       parseInt(document.getElementById('ct-likes').value) || 0,
+    comments:    parseInt(document.getElementById('ct-comments').value) || 0,
+    shares:      parseInt(document.getElementById('ct-shares').value) || 0,
+    reposts:     parseInt(document.getElementById('ct-reposts').value) || 0,
+    saves:       parseInt(document.getElementById('ct-saves').value) || 0,
+    views:       parseFloat(document.getElementById('ct-views').value) || 0,
   };
   if (editId) {
     const idx = state.content.findIndex(x => x.id === parseInt(editId));
@@ -6284,7 +6464,7 @@ function filterTasks(f, el) {
   });
   if (el) { el.style.background = 'var(--text)'; el.style.color = '#fff'; }
   document.querySelectorAll('#task-type-tabs .tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+  if (el) el.classList.add('active');
   const member = state.memberFilter;
   if (member && member !== 'all') renderTaskKanban(member);
   else renderTasks();
@@ -6461,6 +6641,8 @@ function setTaskStatus(id, status) {
   if (status === 'done') { t.done = true; t.status = 'done'; }
   else if (status === 'doing') { t.done = false; t.status = 'doing'; }
   else { t.done = false; t.status = 'todo'; }
+  const statusLabel = {done:'완료', doing:'진행중', todo:'대기'}[status]||status;
+  logActivity('task', '업무 상태 변경: ' + t.title + ' → ' + statusLabel);
   save();
   const member = state.memberFilter;
   if (member && member !== 'all') renderTaskKanban(member);
@@ -6605,7 +6787,9 @@ function timeAgo(ts) {
 
 // ============ UNIFIED SEARCH ============
 function renderDashSearch() {
-  const q = document.getElementById('dash-search-input').value.trim().toLowerCase();
+  const searchEl = document.getElementById('dash-search-input');
+  if (!searchEl) return;
+  const q = searchEl.value.trim().toLowerCase();
   const resEl = document.getElementById('dash-search-results');
   if (!q) { resEl.style.display = 'none'; return; }
 
@@ -10438,13 +10622,12 @@ function addNotification(type, title, desc) {
 }
 
 function updateNotifBell() {
-  const notifs = state.notifications || [];
-  const unread = notifs.filter(n=>!n.read).length;
+  // 최근 30분 이내 활동 기준으로 뱃지 표시
+  const newCount = (state.activityLog||[]).filter(a=>(Date.now()-a.ts)<1800000).length;
   const count = document.getElementById('notif-count');
-  const bell = document.getElementById('notif-bell');
   if (!count) return;
-  if (unread > 0) {
-    count.textContent = unread > 9 ? '9+' : unread;
+  if (newCount > 0) {
+    count.textContent = newCount > 9 ? '9+' : newCount;
     count.style.display = 'flex';
   } else {
     count.style.display = 'none';
@@ -10458,29 +10641,37 @@ function toggleNotifPanel() {
   panel.style.display = isOpen ? 'none' : 'block';
   if (!isOpen) {
     renderNotifList();
-    // Mark all as read
-    (state.notifications||[]).forEach(n=>n.read=true);
-    save(); updateNotifBell();
+    updateNotifBell();
   }
 }
 
 function renderNotifList() {
   const el = document.getElementById('notif-list');
   if (!el) return;
-  const notifs = state.notifications || [];
-  if (!notifs.length) { el.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px;">알림이 없어요</div>'; return; }
-  const NOTIF_ICON = { urgent:'🚨', production:'🏭', channel:'🏪', reorder:'📦', info:'ℹ️' };
-  el.innerHTML = notifs.slice(0,20).map(n=>`
-    <div style="padding:10px 8px;border-bottom:1px solid var(--border);${!n.read?'background:var(--mongmo-light);border-radius:8px;margin-bottom:4px;':''}">
+  // activityLog + notifications 통합 표시
+  const TYPE_ICON = {
+    attendance:'👤', revenue:'💰', inventory:'📦', outbound:'📤',
+    production:'🏭', sales:'📊', task:'✅', info:'ℹ️'
+  };
+  const logs = [...(state.activityLog||[])].slice(0, 30);
+  if (!logs.length) {
+    el.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px;">활동 내역이 없어요</div>';
+    return;
+  }
+  el.innerHTML = logs.map(a => {
+    const icon = TYPE_ICON[a.type] || '🔔';
+    const isNew = (Date.now() - a.ts) < 1800000;
+    return `<div style="padding:10px 8px;border-bottom:1px solid var(--border);${isNew?'background:var(--mongmo-light);border-radius:8px;margin-bottom:3px;':''}">
       <div style="display:flex;gap:8px;align-items:flex-start;">
-        <span>${NOTIF_ICON[n.type]||'🔔'}</span>
-        <div>
-          <div style="font-size:12.5px;font-weight:600;">${n.title}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${n.desc}</div>
-          <div style="font-size:10px;color:var(--border);margin-top:3px;">${timeAgo(n.ts)}</div>
+        <span style="font-size:15px;flex-shrink:0;">${icon}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:500;line-height:1.4;">${a.desc}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${a.actor||''} · ${timeAgo(a.ts)}</div>
         </div>
+        ${isNew?'<span style="font-size:9px;padding:1px 5px;border-radius:8px;background:var(--mongmo);color:#fff;flex-shrink:0;">NEW</span>':''}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // 생산 필요 여부 체크 (출고 후 호출)
@@ -10817,17 +11008,18 @@ function _renderDashboard() {
   // ── D-day 카운터 ──
   const ddEl = document.getElementById('dash-dday-inline');
   if (ddEl) {
-    const bigEv = (state.ops||[]).filter(o=>['popup','delivery'].includes(o.type)&&o.start>=todayStr).sort((a,b)=>a.start.localeCompare(b.start))[0];
+    // 중요 체크된 일정 중 가장 가까운 것
+    const bigEv = (state.ops||[]).filter(o=>o.important&&o.start>=todayStr).sort((a,b)=>a.start.localeCompare(b.start))[0];
     if (bigEv) {
       const dd = Math.ceil((new Date(bigEv.start)-today0)/86400000);
       const ddc = dd<=3?'var(--red)':dd<=7?'var(--yellow)':'var(--mongmo)';
       ddEl.style.display = 'flex';
-      ddEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:${ddc}12;border:1px solid ${ddc}40;border-radius:10px;white-space:nowrap;">
+      ddEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:${ddc}15;border:1.5px solid ${ddc}50;border-radius:12px;white-space:nowrap;cursor:pointer;" onclick="showPage('ops')">
         <div>
-          <div style="font-size:10px;font-weight:600;color:${ddc};">🎯 ${bigEv.title}</div>
-          <div style="font-size:10px;color:var(--text-muted);">${bigEv.start}${bigEv.start!==bigEv.end?' ~ '+bigEv.end:''}</div>
+          <div style="font-size:12px;font-weight:700;color:${ddc};">🎯 ${bigEv.title}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">${bigEv.start}${bigEv.start!==bigEv.end?' ~ '+bigEv.end:''}</div>
         </div>
-        <div style="font-size:18px;font-weight:900;font-family:'DM Mono',monospace;color:${ddc};">${dd===0?'D-DAY':'D-'+dd}</div>
+        <div style="font-size:26px;font-weight:900;font-family:'DM Mono',monospace;color:${ddc};line-height:1;">${dd===0?'D-DAY':'D-'+dd}</div>
       </div>`;
     } else { ddEl.style.display = 'none'; }
   }
@@ -10864,14 +11056,14 @@ function _renderDashboard() {
     } else {
       let h='';
       if(ydayMissing) h+='<div data-ga="rev" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--red-light);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">⚠️ 어제 매출 미입력</div>';
-      if(stockDanger>0) h+='<div data-ga="inv" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--red-light);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">📦 재고 위험 '+stockDanger+'건</div>';
+      if(stockDanger>0) h+='<div data-ga="inventory" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--red-light);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">📦 재고 위험 '+stockDanger+'건</div>';
       if(overdueTasks>0) h+='<div data-ga="tasks" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--red-light);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">🚨 지연 업무 '+overdueTasks+'건</div>';
       if(urgentProds>0) h+='<div data-ga="production" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--red-light);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">🏭 생산 긴급 '+urgentProds+'건</div>';
       if(stockWarn>0) h+='<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--yellow-light);color:var(--yellow);font-size:12px;font-weight:500;">⚠ 재고 주의 '+stockWarn+'건</div>';
-      if(lowConsCount>0) h+='<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--yellow-light);color:var(--yellow);font-size:12px;font-weight:500;">🛍 소모품 발주 '+lowConsCount+'건</div>';
+      if(lowConsCount>0) h+='<div data-ga="consumables" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--yellow-light);color:var(--yellow);font-size:12px;font-weight:500;cursor:pointer;">🛍 소모품 발주 '+lowConsCount+'건</div>';
       if(pendingLeaves>0) h+='<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--palett-light);color:var(--palett);font-size:12px;font-weight:500;">🌴 결재 대기 '+pendingLeaves+'건</div>';
       if(opsToday>0) h+='<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--mongmo-light);color:var(--mongmo);font-size:12px;font-weight:500;">📅 오늘 운영 '+opsToday+'건</div>';
-      h+='<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--surface2);color:var(--text-muted);font-size:12px;">✅ 미완료 '+pendingTasks+'건</div>';
+      h+='<div data-ga="tasks" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--surface2);color:var(--text-muted);font-size:12px;cursor:pointer;">✅ 미완료 '+pendingTasks+'건</div>';
       summaryEl.innerHTML = h;
       summaryEl.querySelectorAll('[data-ga]').forEach(el=>{
         const p=el.getAttribute('data-ga');
@@ -10915,19 +11107,21 @@ function _renderDashboard() {
     const rec=(state.attendances||[]).find(a=>a.member===m&&a.date===todayStr);
     const leave=(state.leaves||[]).find(l=>l.status==='승인'&&l.start<=todayStr&&l.end>=todayStr&&l.member===m);
     let dot,st;
+    let nameStyle = '';
     if(leave){dot='var(--palett)';st=leave.type;}
-    else if(!rec){dot='var(--border)';st='미출근';}
-    else if(rec.clockIn&&!rec.clockOut){dot='var(--green)';st=rec.clockIn+' 출근';}
-    else{
+    else if(!rec){dot='var(--border)';st='미출근';nameStyle='opacity:0.45;';}
+    else if(rec.checkIn&&!rec.checkOut){dot='var(--green)';st=rec.checkIn+' 출근';}
+    else if(rec.checkIn&&rec.checkOut){
       let hrs='?';
-      if(rec.clockIn&&rec.clockOut){
-        const [ah,am]=rec.clockIn.split(':').map(Number);
-        const [bh,bm]=rec.clockOut.split(':').map(Number);
-        hrs=(((bh*60+bm)-(ah*60+am))/60).toFixed(1);
-      }
+      const [ah,am]=rec.checkIn.split(':').map(Number);
+      const [bh,bm]=rec.checkOut.split(':').map(Number);
+      let mins=(bh*60+bm)-(ah*60+am);
+      if(rec.lunchStart&&rec.lunchEnd){const [lh,lm]=rec.lunchStart.split(':').map(Number);const [eh,em]=rec.lunchEnd.split(':').map(Number);mins-=(eh*60+em)-(lh*60+lm);}
+      hrs=(Math.max(0,mins)/60).toFixed(1);
       dot='var(--text-muted)';st=hrs+'h 근무';
-    }
-    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;"><div style="display:flex;align-items:center;gap:7px;"><div style="width:7px;height:7px;border-radius:50%;background:'+dot+';flex-shrink:0;"></div><span style="font-size:12px;">'+m+'</span></div><span style="font-size:11px;color:var(--text-muted);">'+st+'</span></div>';
+    } else {dot='var(--border)';st='미출근';nameStyle='opacity:0.45;';}
+    const stColor = !rec||(!rec.checkIn&&!rec.checkOut) ? 'var(--border)' : rec.checkIn&&!rec.checkOut ? 'var(--green)' : 'var(--text-muted)';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;'+nameStyle+'"><div style="display:flex;align-items:center;gap:7px;"><div style="width:7px;height:7px;border-radius:50%;background:'+dot+';flex-shrink:0;"></div><span style="font-size:12px;">'+m+'</span></div><span style="font-size:11px;color:'+stColor+';">'+st+'</span></div>';
   }).join('');
 
   const topCardsEl = document.getElementById('dash-top-cards');
@@ -10937,9 +11131,11 @@ function _renderDashboard() {
     card1.className = 'card admin-only';
     card1.style.cssText = `padding:20px;cursor:pointer;${isAdmin ? '' : 'display:none;'}`;
     card1.onclick = ()=>showPage('revenue');
+    const ydayMissingCard = !ydayRev;
     card1.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div class="stat-label" style="margin:0;">매출 현황</div><span style="font-size:10px;color:var(--text-muted);">어제 '+yesterdayStr.slice(5)+'</span></div>'
+      +(ydayMissingCard ? '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--yellow-light);border-radius:8px;font-size:11px;color:var(--yellow);font-weight:600;margin-bottom:8px;">⚠️ 어제 매출가 미입력 상태예요 — 탭하여 입력</div>' : '')
       +'<div style="display:flex;gap:16px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border);">'
-      +'<div style="flex:1;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">어제 '+dayDiffBadge+'</div><div style="font-size:20px;font-weight:800;font-family:\'DM Mono\',monospace;">'+fmtWon(ydayTotal)+'</div></div>'
+      +'<div style="flex:1;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">어제 '+dayDiffBadge+'</div><div style="font-size:20px;font-weight:800;font-family:\'DM Mono\',monospace;'+(ydayMissingCard?'opacity:0.35;':'')+';">'+fmtWon(ydayTotal)+'</div></div>'
       +'<div style="flex:1;border-left:1px solid var(--border);padding-left:16px;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">이번주 '+(weekDiff!==null?'<span style="color:'+(weekDiff>=0?'var(--green)':'var(--red)')+';">'+(weekDiff>=0?'▲':'▼')+Math.abs(weekDiff)+'%</span>':'')+'</div><div style="font-size:18px;font-weight:700;font-family:\'DM Mono\',monospace;">'+fmtWon(weekTotal)+'</div></div></div>'
       +'<div style="margin-bottom:8px;">'+ydayChannels+'</div>'
       +'<div style="margin-top:8px;">'
@@ -11065,7 +11261,7 @@ function _renderDashboard() {
 async function resetAndReload() {
   if (!confirm('전체 데이터를 초기화하고 기본 샘플 데이터로 되돌릴까요?\n⚠️ 이 작업은 되돌릴 수 없어요.')) return;
   seedData();
-  await sb.from('app_state').upsert({ id: 'cherop_main', data: {
+  const { error: resetError } = await sb.from('app_state').upsert({ id: 'cherop_main', data: {
     inventory: state.inventory, content: state.content, tasks: state.tasks,
     salesLog: state.salesLog, revenueLog: state.revenueLog,
     projects: state.projects, pCards: state.pCards, goals: state.goals,
@@ -11077,7 +11273,9 @@ async function resetAndReload() {
     feedRecords: state.feedRecords, inboundLog: state.inboundLog,
     defectLog: state.defectLog, productions: state.productions,
     prodStockReady: state.prodStockReady,
+    productSalesLog: state.productSalesLog || [],
   }, updated_at: new Date().toISOString() });
+  if (resetError) { showToast('❌ 초기화 저장 실패 — ' + resetError.message); return; }
   showToast('✅ 초기화 완료');
   initApp();
 }
@@ -11101,6 +11299,37 @@ function showConfirm({ title='삭제할까요?', desc='', icon='🗑', okLabel='
     okBtn.style.borderColor = okColor;
     openModal('confirm');
   });
+}
+
+// ══════════════════════════════════════════════════
+// 커스텀 Prompt 모달 (브라우저 prompt() 대체)
+// ══════════════════════════════════════════════════
+let _promptResolve = null, _promptReject = null;
+
+function showPrompt({ title='입력', desc='', placeholder='', defaultValue='', okLabel='확인' } = {}) {
+  return new Promise((resolve, reject) => {
+    _promptResolve = resolve;
+    _promptReject = reject;
+    document.getElementById('prompt-title').textContent = title;
+    document.getElementById('prompt-desc').textContent = desc;
+    document.getElementById('prompt-ok-btn').textContent = okLabel;
+    const input = document.getElementById('prompt-input');
+    input.placeholder = placeholder;
+    input.value = defaultValue;
+    openModal('prompt');
+    setTimeout(() => input.focus(), 100);
+  });
+}
+
+function _promptConfirm() {
+  const val = document.getElementById('prompt-input').value;
+  closeModal('prompt');
+  if (_promptResolve) _promptResolve(val);
+}
+
+function _promptCancel() {
+  closeModal('prompt');
+  if (_promptReject) _promptReject(null);
 }
 
 // ══════════════════════════════════════════════════
@@ -11353,6 +11582,7 @@ function openAddOps(dateStr) {
   if (endEl) { endEl.value = dateStr || ''; endEl.min = dateStr || ''; }
   document.getElementById('ops-memo').value = '';
   document.getElementById('ops-end-toggle').checked = false;
+  const impEl = document.getElementById('ops-important'); if(impEl) impEl.checked = false;
   toggleOpsEnd();
   openModal('add-ops');
 }
@@ -11373,6 +11603,7 @@ function openEditOps(id) {
   document.getElementById('ops-end').value = hasEnd ? o.end : '';
   toggleOpsEnd();
   document.getElementById('ops-memo').value = o.memo || '';
+  const impElE = document.getElementById('ops-important'); if(impElE) impElE.checked = !!o.important;
   openModal('add-ops');
 }
 
@@ -11385,7 +11616,8 @@ function submitOps() {
   const start    = document.getElementById('ops-start')?.value;
   const hasEnd   = document.getElementById('ops-end-toggle')?.checked;
   const end      = hasEnd ? document.getElementById('ops-end')?.value : start;
-  const memo     = document.getElementById('ops-memo')?.value.trim();
+  const memo      = document.getElementById('ops-memo')?.value.trim();
+  const important = document.getElementById('ops-important')?.checked || false;
 
   if (!title || !start) { showToast('일정명과 시작일을 입력해주세요'); return; }
   if (hasEnd && end && end < start) {
@@ -11400,10 +11632,10 @@ function submitOps() {
 
   if (editId) {
     const idx = state.ops.findIndex(x=>x.id===editId);
-    if (idx>=0) state.ops[idx] = { ...state.ops[idx], title, type, assignee, brand, start, end: end||start, memo };
+    if (idx>=0) state.ops[idx] = { ...state.ops[idx], title, type, assignee, brand, start, end: end||start, memo, important };
     showToast('✅ 일정 수정됐어요');
   } else {
-    state.ops.push({ id: Date.now(), title, type, assignee, brand, start, end: end||start, memo, done: false });
+    state.ops.push({ id: Date.now(), title, type, assignee, brand, start, end: end||start, memo, important, done: false });
     showToast('✅ 일정 추가됐어요');
   }
 
@@ -11552,6 +11784,7 @@ function clockIn() {
   const todayRecs = state.attendances.filter(a=>a.member===member&&a.date===today);
   const seq = todayRecs.length + 1;
   state.attendances.push({ id:Date.now(), member, date:today, checkIn:now, checkOut:'', seq, lunchStart:'', lunchEnd:'' });
+  logActivity('attendance', member + ' 출근 (' + now + ')' + (seq>1?' · '+seq+'번째 출근':''));
   save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`✅ ${member} 출근 (${now})${seq>1?' · '+seq+'번째 출근':''}`);
 }
@@ -11566,6 +11799,7 @@ function clockOut() {
   const rec = recs[recs.length-1];
   rec.checkOut = now;
   const mins = calcWorkMins(rec);
+  logActivity('attendance', member + ' 퇴근 (' + now + ') · 근무 ' + fmtMins(mins));
   save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`✅ ${member} 퇴근 (${now}) · 근무 ${fmtMins(mins)}`);
 }
@@ -11580,6 +11814,7 @@ function lunchStart() {
   const rec = recs[recs.length-1];
   if (rec.lunchStart) { showToast('점심 시작이 이미 기록됐어요'); return; }
   rec.lunchStart = now;
+  logActivity('attendance', member + ' 점심 시작 (' + now + ')');
   save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`🍱 ${member} 점심 시작 (${now})`);
 }
@@ -11596,6 +11831,7 @@ function lunchEnd() {
   if (rec.lunchEnd) { showToast('점심 종료가 이미 기록됐어요'); return; }
   rec.lunchEnd = now;
   const lunchMins = calcMins(rec.lunchStart, now);
+  logActivity('attendance', member + ' 점심 종료 (' + now + ') · ' + fmtMins(lunchMins));
   save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`☕ ${member} 점심 종료 (${now}) · 점심 ${fmtMins(lunchMins)}`);
 }
@@ -12042,30 +12278,45 @@ function updateAssetSubtagSelect() {
 function addAssetTagInline() {
   const cat = document.getElementById('asset-category').value;
   if (cat !== 'popup' && cat !== 'ad') return;
-  const name = prompt(`새 ${cat==='popup'?'팝업':'광고소재'} 주제 이름:`);
-  if (!name || !name.trim()) return;
-  if (!state.assetTags) state.assetTags = {};
-  if (!state.assetTags[cat]) state.assetTags[cat] = [];
-  if (!state.assetTags[cat].includes(name.trim())) {
-    state.assetTags[cat].push(name.trim());
-    save();
-  }
-  updateAssetSubtagSelect();
-  document.getElementById('asset-subtag').value = name.trim();
+  const label = cat === 'popup' ? '팝업' : '광고소재';
+  showPrompt({
+    title: '새 ' + label + ' 주제 추가',
+    desc: '새로운 주제 이름을 입력해주세요',
+    placeholder: '예: 핑크 몽모월드',
+    okLabel: '추가',
+  }).then(val => {
+    if (!val || !val.trim()) return;
+    const name = val.trim();
+    if (!state.assetTags) state.assetTags = {};
+    if (!state.assetTags[cat]) state.assetTags[cat] = [];
+    if (!state.assetTags[cat].includes(name)) {
+      state.assetTags[cat].push(name);
+      save();
+    }
+    updateAssetSubtagSelect();
+    document.getElementById('asset-subtag').value = name;
+  }).catch(() => {});
 }
 
 // 서브태그 탭에서 추가
 function openAddAssetTag() {
   if (_assetCat !== 'popup' && _assetCat !== 'ad') return;
   const label = _assetCat === 'popup' ? '팝업' : '광고소재';
-  const name = prompt(`새 ${label} 주제 이름:`);
-  if (!name || !name.trim()) return;
-  if (!state.assetTags) state.assetTags = {};
-  if (!state.assetTags[_assetCat]) state.assetTags[_assetCat] = [];
-  if (!state.assetTags[_assetCat].includes(name.trim())) {
-    state.assetTags[_assetCat].push(name.trim());
-    save(); renderAssetSubtagBar();
-  }
+  showPrompt({
+    title: '새 ' + label + ' 주제 추가',
+    desc: '새로운 주제 이름을 입력해주세요',
+    placeholder: '예: 핑크 몽모월드',
+    okLabel: '추가',
+  }).then(val => {
+    if (!val || !val.trim()) return;
+    const name = val.trim();
+    if (!state.assetTags) state.assetTags = {};
+    if (!state.assetTags[_assetCat]) state.assetTags[_assetCat] = [];
+    if (!state.assetTags[_assetCat].includes(name)) {
+      state.assetTags[_assetCat].push(name);
+      save(); renderAssetSubtagBar();
+    }
+  }).catch(() => {});
 }
 
 // ── 수정 ──
@@ -12306,14 +12557,20 @@ function deleteConsumable(id) {
 function adjustConsumableStock(id) {
   const c = state.consumables.find(x => x.id === id);
   if (!c) return;
-  // 재고조정 미니 모달 대신 커스텀 입력
-  const qty = prompt(`${c.name} 재고 조정\n현재: ${c.stock}개\n추가(+) 또는 차감(-) 수량 입력:`, '0');
-  if (qty === null) return;
-  const n = parseInt(qty);
-  if (isNaN(n)) { showToast('숫자를 입력해주세요'); return; }
-  c.stock = Math.max(0, c.stock + n);
-  save(); renderConsumables();
-  showToast(`✅ ${c.name} 재고 ${n>=0?'+':''}${n}개 조정 → ${c.stock}개`);
+  showPrompt({
+    title: c.name + ' 재고 조정',
+    desc: '현재: ' + c.stock + '개 · 추가(+) 또는 차감(-) 수량을 입력해주세요',
+    placeholder: '예: 10 또는 -5',
+    defaultValue: '',
+    okLabel: '조정',
+  }).then(val => {
+    if (val === null || val === '') return;
+    const n = parseInt(val);
+    if (isNaN(n)) { showToast('숫자를 입력해주세요'); return; }
+    c.stock = Math.max(0, c.stock + n);
+    save(); renderConsumables();
+    showToast('✅ ' + c.name + ' 재고 ' + (n>=0?'+':'') + n + '개 조정 → ' + c.stock + '개');
+  }).catch(() => {});
 }
 
 // 소모품 추가 버튼 클릭 시 초기화
@@ -12431,7 +12688,7 @@ function deleteAttRecord(id) {
 function openContentModal(dateStr) {
   document.getElementById('ct-edit-id').value = '';
   document.getElementById('ct-modal-title').textContent = '콘텐츠 추가';
-  document.getElementById('ct-title').value = '';
+  document.getElementById('ct-title').value = dateStr || '콘텐츠';
   document.getElementById('ct-date').value = dateStr || '';
   document.getElementById('ct-brand').value = 'mongmo';
   document.getElementById('ct-channel').value = 'instagram';
@@ -12439,10 +12696,19 @@ function openContentModal(dateStr) {
   document.getElementById('ct-memo').value = '';
   document.getElementById('ct-image-data').value = '';
   document.getElementById('ct-insta-url').value = '';
+  window._pendingImageFile = null;
   document.getElementById('ct-file-label').textContent = '클릭해서 이미지 선택';
   document.getElementById('ct-img-preview').style.display = 'none';
   document.getElementById('ct-img-placeholder').style.display = 'block';
-  ['ct-likes','ct-saves','ct-comments','ct-views'].forEach(id => document.getElementById(id).value = '');
+  ['ct-likes','ct-comments','ct-shares','ct-reposts','ct-saves','ct-views'].forEach(id => document.getElementById(id).value = '');
+  // 유형 버튼 초기화
+  selectCtType('reel', document.querySelector('.ct-type-btn.active') || document.querySelector('.ct-type-btn'));
+  document.querySelectorAll('.ct-type-btn').forEach(b => { b.style.background='var(--surface2)'; b.style.color='var(--text-muted)'; });
+  const firstTypeBtn = document.querySelector('.ct-type-btn');
+  if (firstTypeBtn) { firstTypeBtn.style.background='var(--text)'; firstTypeBtn.style.color='#fff'; }
+  document.getElementById('ct-content-type').value = 'reel';
+  document.getElementById('ct-meme-cat').value = '';
+  document.getElementById('ct-meme-cat-wrap').style.display = 'none';
   openModal('add-content');
 }
 
@@ -12451,6 +12717,7 @@ function openEditContent(id) {
   if (!ct) return;
   document.getElementById('ct-edit-id').value = ct.id;
   document.getElementById('ct-modal-title').textContent = '콘텐츠 수정';
+  document.getElementById('ct-title').value = ct.title || ct.date || '콘텐츠';
   document.getElementById('ct-title').value = ct.title || '';
   document.getElementById('ct-date').value = ct.date || '';
   document.getElementById('ct-brand').value = ct.brand || 'mongmo';
@@ -12460,9 +12727,24 @@ function openEditContent(id) {
   document.getElementById('ct-image-data').value = ct.imageUrl || '';
   document.getElementById('ct-insta-url').value = ct.instaUrl || '';
   document.getElementById('ct-likes').value = ct.likes || '';
-  document.getElementById('ct-saves').value = ct.saves || '';
   document.getElementById('ct-comments').value = ct.comments || '';
+  document.getElementById('ct-shares').value = ct.shares || '';
+  document.getElementById('ct-reposts').value = ct.reposts || '';
+  document.getElementById('ct-saves').value = ct.saves || '';
   document.getElementById('ct-views').value = ct.views || '';
+  // 유형 버튼 복원
+  const ctType = ct.contentType || 'reel';
+  document.getElementById('ct-content-type').value = ctType;
+  document.querySelectorAll('.ct-type-btn').forEach(b => { b.style.background='var(--surface2)'; b.style.color='var(--text-muted)'; });
+  const activeTypeBtn = document.querySelector(`.ct-type-btn[onclick*="'${ctType}'"]`);
+  if (activeTypeBtn) { activeTypeBtn.style.background='var(--text)'; activeTypeBtn.style.color='#fff'; }
+  document.getElementById('ct-meme-cat-wrap').style.display = ctType==='meme' ? 'flex' : 'none';
+  document.getElementById('ct-meme-cat').value = ct.memeCat || '';
+  if (ct.memeCat) {
+    document.querySelectorAll('.ct-meme-btn').forEach(b => { b.style.background='var(--surface2)'; b.style.color='var(--text-muted)'; });
+    const memeCatBtn = document.querySelector(`.ct-meme-btn[onclick*="'${ct.memeCat}'"]`);
+    if (memeCatBtn) { memeCatBtn.style.background='var(--text)'; memeCatBtn.style.color='#fff'; }
+  }
   // 이미지 미리보기
   const previewImg = document.getElementById('ct-img-preview');
   const placeholder = document.getElementById('ct-img-placeholder');
@@ -12484,12 +12766,14 @@ function previewInstaThumb(url) {} // onCtInstaUrlInput으로 대체
 function previewUploadedImage(input) {
   const file = input.files[0];
   if (!file) return;
+  // 미리보기만 표시 (base64), 실제 저장은 addContent에서 Storage 업로드
+  window._pendingImageFile = file;
   const reader = new FileReader();
   reader.onload = (e) => {
     const dataUrl = e.target.result;
+    // 미리보기용으로만 임시 저장
     document.getElementById('ct-image-data').value = dataUrl;
     document.getElementById('ct-file-label').textContent = '✅ ' + file.name;
-    // 중앙 미리보기 박스에 표시
     const prev = document.getElementById('ct-img-preview');
     const placeholder = document.getElementById('ct-img-placeholder');
     prev.src = dataUrl;
@@ -12512,6 +12796,122 @@ function onCtInstaUrlInput(val) {
     placeholder.innerHTML = '<div style="font-size:28px;margin-bottom:4px;">📷</div>1080 × 1350';
     placeholder.style.display = 'block';
   }
+}
+
+
+// ── 콘텐츠 유형 선택 ──
+function selectCtType(type, el) {
+  document.getElementById('ct-content-type').value = type;
+  document.querySelectorAll('.ct-type-btn').forEach(b => { b.style.background='var(--surface2)'; b.style.color='var(--text-muted)'; });
+  if (el) { el.style.background='var(--text)'; el.style.color='#fff'; }
+  // 몽모짤 카테고리 표시/숨김
+  const memeWrap = document.getElementById('ct-meme-cat-wrap');
+  if (memeWrap) memeWrap.style.display = type==='meme' ? 'flex' : 'none';
+  if (type !== 'meme') document.getElementById('ct-meme-cat').value = '';
+}
+
+function selectCtMemeCat(cat, el) {
+  document.getElementById('ct-meme-cat').value = cat;
+  document.querySelectorAll('.ct-meme-btn').forEach(b => { b.style.background='var(--surface2)'; b.style.color='var(--text-muted)'; });
+  if (el) { el.style.background='var(--text)'; el.style.color='#fff'; }
+}
+
+// ── TOP9 필터 ──
+let _top9Period = '1m', _top9Type = 'all', _top9MemeCat = 'all';
+
+function setTop9Filter(kind, val, el) {
+  if (kind === 'period') {
+    _top9Period = val;
+    document.querySelectorAll('.top9-pill').forEach(b => { b.style.background='var(--surface2)'; b.style.color='var(--text-muted)'; });
+    if (el) { el.style.background='var(--text)'; el.style.color='#fff'; }
+  } else if (kind === 'type') {
+    _top9Type = val;
+    document.querySelectorAll('.top9-type-pill').forEach(b => { b.style.background='var(--surface2)'; b.style.color='var(--text-muted)'; });
+    if (el) { el.style.background='var(--text)'; el.style.color='#fff'; }
+    const memeCatWrap = document.getElementById('top9-meme-cats');
+    if (memeCatWrap) memeCatWrap.style.display = val==='meme' ? 'flex' : 'none';
+    if (val !== 'meme') _top9MemeCat = 'all';
+  } else if (kind === 'memecat') {
+    _top9MemeCat = val;
+    document.querySelectorAll('.top9-meme-pill').forEach(b => { b.style.background='var(--surface2)'; b.style.color='var(--text-muted)'; });
+    if (el) { el.style.background='var(--text)'; el.style.color='#fff'; }
+  }
+  renderTop9();
+}
+
+function renderTop9() {
+  const grid = document.getElementById('top9-grid');
+  if (!grid) return;
+
+  const now = new Date();
+  const cutoff = new Date();
+  if (_top9Period === '1m') cutoff.setMonth(cutoff.getMonth() - 1);
+  else if (_top9Period === '3m') cutoff.setMonth(cutoff.getMonth() - 3);
+  else cutoff.setFullYear(cutoff.getFullYear() - 1);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  let items = (state.content || []).filter(ct => {
+    if (!ct.date || ct.date < cutoffStr) return false;
+    if (_top9Type !== 'all' && ct.contentType !== _top9Type) return false;
+    if (_top9Type === 'meme' && _top9MemeCat !== 'all' && ct.memeCat !== _top9MemeCat) return false;
+    return ct.likes || ct.saves || ct.views;
+  });
+
+  // 종합 점수: 좋아요*1 + 댓글*2 + 공유*3 + 리포스트*2 + 저장*4 + 조회수만*0.1
+  items = items.map(ct => ({
+    ...ct,
+    score: (ct.likes||0) + (ct.comments||0)*2 + (ct.shares||0)*3 + (ct.reposts||0)*2 + (ct.saves||0)*4 + (ct.views||0)*1000
+  })).sort((a,b) => b.score - a.score).slice(0, 9);
+
+  if (!items.length) {
+    grid.innerHTML = `<div style="grid-column:span 9;text-align:center;color:var(--text-muted);font-size:12px;padding:20px;">실적이 입력된 콘텐츠가 없어요</div>`;
+    return;
+  }
+
+  const TYPE_LABEL = { reel:'🎬', visual:'🖼', magazine:'📖', meme:'😄' };
+
+  grid.innerHTML = items.map((ct, i) => {
+    const rank = i + 1;
+    const rankColor = rank===1?'#FFD700':rank===2?'#C0C0C0':rank===3?'#CD7F32':'var(--text-muted)';
+    const thumb = ct.imageUrl && ct.imageUrl.startsWith('data:')
+      ? `<a href="${ct.instaUrl||'#'}" target="_blank"><img src="${ct.imageUrl}" style="width:100%;aspect-ratio:4/5;object-fit:cover;display:block;" onerror="this.parentElement.innerHTML='📷'"></a>`
+      : ct.instaUrl
+        ? `<a href="${ct.instaUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;aspect-ratio:4/5;background:var(--surface2);font-size:24px;text-decoration:none;">📷</a>`
+        : `<div style="aspect-ratio:4/5;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;">📝</div>`;
+    return `<div style="cursor:pointer;position:relative;" onclick="openEditContent(${ct.id})">
+      <div style="position:absolute;top:3px;left:3px;background:${rankColor};color:${rank<=3?'#000':'var(--bg)'};font-size:10px;font-weight:800;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:1;">${rank}</div>
+      <div style="border-radius:6px;overflow:hidden;border:1px solid var(--border);">${thumb}</div>
+      <div style="font-size:9px;color:var(--text-muted);margin-top:3px;text-align:center;">${TYPE_LABEL[ct.contentType]||''} ${ct.saves?'🔖'+ct.saves:''} ${ct.likes?'❤️'+ct.likes:''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── KPI 실적 자동집계 ──
+function renderKpiStats() {
+  const monthKey = `${state.calYear}-${String(state.calMonth+1).padStart(2,'0')}`;
+  const monthItems = (state.content||[]).filter(ct => ct.date && ct.date.startsWith(monthKey));
+
+  const totalLikes = monthItems.reduce((s,ct) => s+(ct.likes||0), 0);
+  const totalComments = monthItems.reduce((s,ct) => s+(ct.comments||0), 0);
+  const totalShares = monthItems.reduce((s,ct) => s+(ct.shares||0), 0);
+  const totalReposts = monthItems.reduce((s,ct) => s+(ct.reposts||0), 0);
+  const totalSaves = monthItems.reduce((s,ct) => s+(ct.saves||0), 0);
+  const totalViews = monthItems.reduce((s,ct) => s+(ct.views||0), 0); // 만 단위
+
+  const fmt = n => n >= 10000 ? (n/10000).toFixed(1)+'만' : n.toLocaleString();
+
+  const el = id => document.getElementById(id);
+  if (el('kpi-total-likes')) el('kpi-total-likes').textContent = fmt(totalLikes);
+  if (el('kpi-total-comments')) el('kpi-total-comments').textContent = fmt(totalComments);
+  if (el('kpi-total-shares')) el('kpi-total-shares').textContent = fmt(totalShares);
+  if (el('kpi-total-reposts')) el('kpi-total-reposts').textContent = fmt(totalReposts);
+  if (el('kpi-total-saves')) el('kpi-total-saves').textContent = fmt(totalSaves);
+  if (el('content-upload-count')) el('content-upload-count').textContent = monthItems.length;
+
+  // 저장률/공유율 (조회수 기준, 만단위)
+  const viewsRaw = totalViews * 10000;
+  if (el('kpi-save-rate')) el('kpi-save-rate').textContent = viewsRaw > 0 ? (totalSaves/viewsRaw*100).toFixed(2)+'%' : '-';
+  if (el('kpi-share-rate')) el('kpi-share-rate').textContent = viewsRaw > 0 ? (totalShares/viewsRaw*100).toFixed(2)+'%' : '-';
 }
 
 // ── 채널 재고 직접수정 ──
