@@ -1905,6 +1905,10 @@
     <div id="page-attendance" class="hidden">
       <div class="page-header">
         <div><div class="page-title">🕐 근태 관리</div><div class="page-sub">출퇴근 체크 · 근무시간 · 휴가 신청</div></div>
+        <div class="header-actions admin-only">
+          <button class="btn btn-secondary" style="font-size:12px;" onclick="openAddAttRecord()">+ 근태 직접 추가</button>
+          <button class="btn btn-secondary" style="font-size:12px;" onclick="openAddLeaveAdmin()">+ 휴가 직접 추가</button>
+        </div>
       </div>
 
       <!-- Clock in/out panel -->
@@ -2941,6 +2945,88 @@
     <div style="display:flex;gap:8px;margin-top:20px;">
       <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('edit-att')">취소</button>
       <button class="btn btn-primary" style="flex:1;background:var(--mongmo);" onclick="submitEditAttRecord()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-add-att-admin">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">📝 근태 직접 추가 <span style="font-size:11px;color:var(--text-muted);font-weight:400;">대표 전용</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">직원</label>
+        <select class="form-select" id="add-att-member">
+          <option>김효민</option><option>고예흰</option><option>박영아</option><option>정현진</option><option>김성애</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">날짜</label>
+        <input class="form-input" type="date" id="add-att-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">출근</label>
+        <input class="form-input" type="time" id="add-att-checkin">
+      </div>
+      <div class="form-group">
+        <label class="form-label">퇴근 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label>
+        <input class="form-input" type="time" id="add-att-checkout">
+      </div>
+      <div class="form-group">
+        <label class="form-label">점심 시작 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label>
+        <input class="form-input" type="time" id="add-att-lunch-start">
+      </div>
+      <div class="form-group">
+        <label class="form-label">점심 종료 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label>
+        <input class="form-input" type="time" id="add-att-lunch-end">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('add-att-admin')">취소</button>
+      <button class="btn btn-primary" style="flex:1;background:var(--mongmo);" onclick="submitAddAttAdmin()">추가</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-add-leave-admin">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">🏖 휴가 직접 추가 <span style="font-size:11px;color:var(--text-muted);font-weight:400;">대표 전용</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">직원</label>
+        <select class="form-select" id="add-leave-admin-member">
+          <option>김효민</option><option>고예흰</option><option>박영아</option><option>정현진</option><option>김성애</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">종류</label>
+        <select class="form-select" id="add-leave-admin-type">
+          <option>연차</option><option>반차(오전)</option><option>반차(오후)</option><option>병가</option><option>경조사</option><option>기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">시작일</label>
+        <input class="form-input" type="date" id="add-leave-admin-start">
+      </div>
+      <div class="form-group">
+        <label class="form-label">종료일 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label>
+        <input class="form-input" type="date" id="add-leave-admin-end">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label">사유 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label>
+        <input class="form-input" type="text" id="add-leave-admin-reason" placeholder="예: 개인 사유">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label">상태</label>
+        <select class="form-select" id="add-leave-admin-status">
+          <option value="승인">승인</option>
+          <option value="대기">대기</option>
+          <option value="반려">반려</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('add-leave-admin')">취소</button>
+      <button class="btn btn-primary" style="flex:1;background:var(--mongmo);" onclick="submitAddLeaveAdmin()">추가</button>
     </div>
   </div>
 </div>
@@ -13441,6 +13527,9 @@ function clockIn() {
   const today = new Date().toISOString().split('T')[0];
   const now   = new Date().toTimeString().slice(0,5);
   if (!state.attendances) state.attendances = [];
+  // 오늘 날짜 기준 미퇴근 row 있으면 막기
+  const alreadyIn = (state.attendances).find(a => a.member===member && a.date===today && a.checkIn && !a.checkOut);
+  if (alreadyIn) { showToast(`이미 근무중이에요 (${alreadyIn.checkIn} 출근)`); return; }
   const todayRecs = state.attendances.filter(a=>a.member===member&&a.date===today);
   const seq = todayRecs.length + 1;
   const rec = { id:Date.now(), member, date:today, checkIn:now, checkOut:'', seq, lunchStart:'', lunchEnd:'' };
@@ -13455,8 +13544,9 @@ function clockOut() {
   if (!member) { showToast('로그인 후 이용해주세요'); return; }
   const today = new Date().toISOString().split('T')[0];
   const now   = new Date().toTimeString().slice(0,5);
+  // 오늘 날짜 기준 미퇴근 row만 찾기
   const recs = (state.attendances||[]).filter(a=>a.member===member&&a.date===today&&a.checkIn&&!a.checkOut);
-  if (!recs.length) { showToast('출근 기록이 없어요'); return; }
+  if (!recs.length) { showToast('오늘 출근 기록이 없어요'); return; }
   const rec = recs[recs.length-1];
   rec.checkOut = now;
   const mins = calcWorkMins(rec);
@@ -14302,6 +14392,75 @@ function stopTaskClock() {
   _taskClockTimer = null;
 }
 
+
+// ── 근태 직접 추가 (대표 전용) ──
+function openAddAttRecord() {
+  if (!isAdmin()) return;
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('add-att-member').value = '김효민';
+  document.getElementById('add-att-date').value = today;
+  document.getElementById('add-att-checkin').value = '';
+  document.getElementById('add-att-checkout').value = '';
+  document.getElementById('add-att-lunch-start').value = '';
+  document.getElementById('add-att-lunch-end').value = '';
+  openModal('add-att-admin');
+}
+
+function submitAddAttAdmin() {
+  if (!isAdmin()) return;
+  const member     = document.getElementById('add-att-member').value;
+  const date       = document.getElementById('add-att-date').value;
+  const checkIn    = document.getElementById('add-att-checkin').value || null;
+  const checkOut   = document.getElementById('add-att-checkout').value || null;
+  const lunchStart = document.getElementById('add-att-lunch-start').value || null;
+  const lunchEnd   = document.getElementById('add-att-lunch-end').value || null;
+  if (!date) { showToast('날짜를 선택해주세요'); return; }
+  if (!checkIn) { showToast('출근 시간을 입력해주세요'); return; }
+  const existingDay = (state.attendances||[]).filter(a=>a.member===member&&a.date===date);
+  const seq = existingDay.length + 1;
+  const rec = { id: Date.now(), member, date, seq, checkIn, checkOut: checkOut||'', lunchStart: lunchStart||'', lunchEnd: lunchEnd||'' };
+  if (!state.attendances) state.attendances = [];
+  state.attendances.push(rec);
+  saveAttendance(rec);
+  closeModal('add-att-admin');
+  renderAttLog(); renderAttTodaySummary();
+  showToast(`✅ ${member} ${date} 근태 추가됐어요`);
+}
+
+function openAddLeaveAdmin() {
+  if (!isAdmin()) return;
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('add-leave-admin-member').value = '김효민';
+  document.getElementById('add-leave-admin-type').value = '연차';
+  document.getElementById('add-leave-admin-start').value = today;
+  document.getElementById('add-leave-admin-end').value = '';
+  document.getElementById('add-leave-admin-reason').value = '';
+  document.getElementById('add-leave-admin-status').value = '승인';
+  openModal('add-leave-admin');
+}
+
+function submitAddLeaveAdmin() {
+  if (!isAdmin()) return;
+  const member = document.getElementById('add-leave-admin-member').value;
+  const type   = document.getElementById('add-leave-admin-type').value;
+  const start  = document.getElementById('add-leave-admin-start').value;
+  const end    = document.getElementById('add-leave-admin-end').value || start;
+  const reason = document.getElementById('add-leave-admin-reason').value.trim();
+  const status = document.getElementById('add-leave-admin-status').value;
+  if (!start) { showToast('시작일을 선택해주세요'); return; }
+  if (!state.leaves) state.leaves = [];
+  const rec = { id: Date.now(), member, type, start, end, reason, status };
+  state.leaves.push(rec);
+  if (status === '승인') {
+    if (!state.ops) state.ops = [];
+    state.ops.push({ id: Date.now()+1, leaveId: rec.id, title: `${member} ${type}`, type:'leave', assignee:member, start, end, memo:reason||'', brand:'all', done:false });
+    save();
+  }
+  saveLeave(rec);
+  closeModal('add-leave-admin');
+  renderLeaves();
+  showToast(`✅ ${member} ${type} 추가됐어요`);
+}
 
 // ── 근태 기록 수정/삭제 (대표 전용) ──
 function openEditAttRecord(id) {
