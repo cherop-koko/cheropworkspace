@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.1.2</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.1.9</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -1050,6 +1050,7 @@
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px;">
               <span style="font-size:13px;font-weight:700;">🏆 메가 SKU</span>
               <div class="tab-bar" style="margin-bottom:0;" id="mega-period-tabs">
+                <div class="tab" onclick="setMegaPeriodYesterday(this)">어제</div>
                 <div class="tab active" onclick="setMegaPeriod(7,this)">7일</div>
                 <div class="tab" onclick="setMegaPeriod(14,this)">14일</div>
                 <div class="tab" onclick="setMegaPeriod(30,this)">30일</div>
@@ -3520,8 +3521,8 @@ async function loadFromSupabase() {
     applyState(data.data);
   }
 
-  // channelSalesLog: 별도 테이블에서 최근 6개월치만 로딩
-  await loadChannelSalesLog();
+  // channelSalesLog: 별도 테이블에서 최근 18개월치 로딩
+  await loadChannelSalesLog(18);
 
   initApp();
 }
@@ -3554,6 +3555,7 @@ async function loadChannelSalesLog(months) {
     state.channelSalesLog = allData.map(r => ({
       id: r.id, date: r.date, channel: r.channel,
       inventoryId: r.inventory_id, productName: r.product_name,
+      productOption: r.product_option || '',
       qty: r.qty, amount: r.amount,
     }));
     console.log(`📊 channelSalesLog 로딩: ${state.channelSalesLog.length}건 (${cutoffStr} 이후)`);
@@ -5077,21 +5079,77 @@ function getDustbagSize(size) {
 // SKU별 최근 N일 출고량 계산
 // ── 채널 상품명 → inventoryId 매핑 ──
 // 채널(카카오/스마트스토어) 상품명에서 재고 상품을 찾는 함수
-function matchProductNameToInventory(productName) {
+function matchProductNameToInventory(productName, productOption) {
   if (!productName) return null;
   const pn = productName.toLowerCase().replace(/\s+/g, ' ').trim();
+  const opt = (productOption||'').toLowerCase().trim();
+
+  // 옵션에서 사이즈 추출
+  // 오리지널(앉은형): S=30, M=40, L=50, XL=80, 자이언트=120
+  // 플라잉(누운형):   XS=30, S=55, M=75, L=95
+  const isFlying = /플라잉|flying/i.test(pn);
+  function extractSizeFromOption(o) {
+    if (!o) return null;
+    if (/자이언트|giant|120/.test(o)) return '자이언트';
+    if (/\bxl\b|xl\(|\bxl\s|80cm|80\s*cm/.test(o)) return 'XL';
+    if (/\bxs\b|xs\(/.test(o)) return 'XS';
+    if (/95cm|95\s*cm/.test(o)) return isFlying ? 'L' : 'L';
+    if (/75cm|75\s*cm/.test(o)) return 'M';  // 플라잉 M 전용
+    if (/55cm|55\s*cm/.test(o)) return isFlying ? 'S' : 'S';  // 플라잉S
+    if (/50cm|50\s*cm/.test(o)) return isFlying ? 'M' : 'L';  // 오리지널L / 플라잉없음
+    if (/40cm|40\s*cm/.test(o)) return 'M';
+    if (/30cm|30\s*cm/.test(o)) return isFlying ? 'XS' : 'S';  // 오리지널S vs 플라잉XS
+    // 숫자 단독 패턴 (예: '55 Mongmo', '40 Coco', '40사이즈')
+    const numMatch = o.match(/(?<![0-9])(120|95|80|75|55|50|40|30)(?![0-9])/);
+    if (numMatch) {
+      const n = parseInt(numMatch[1]);
+      if (n===120) return '자이언트';
+      if (n===95)  return 'L';
+      if (n===80)  return 'XL';
+      if (n===75)  return 'M';
+      if (n===55)  return 'S';
+      if (n===50)  return 'L';
+      if (n===40)  return 'M';
+      if (n===30)  return isFlying ? 'XS' : 'S';
+    }
+    if (/\bl\b|l\(|l\s*\(/.test(o)) return 'L';
+    if (/\bm\b|m\(|m\s*\(/.test(o)) return 'M';
+    if (/\bs\b|s\(|s\s*\(/.test(o)) return 'S';
+    return null;
+  }
+  const optSize = extractSizeFromOption(opt);
 
   // 1단계: 재고 상품명이 채널 상품명 안에 포함되는 경우 (정확도 우선 - 긴 이름부터)
+  // 4글자 이상만 매칭 (카메라·안경 등 짧은 이름의 오매핑 방지)
   const sorted = [...state.inventory].sort((a, b) => b.name.length - a.name.length);
   for (const item of sorted) {
     if (item.status === '판매 종료') continue;
     const iname = item.name.toLowerCase();
-    if (pn.includes(iname)) return item.id;
+    if (iname.length < 4) continue;
+    if (!pn.includes(iname)) continue;
+    // 옵션 사이즈가 있으면 사이즈도 일치해야 함
+    if (optSize && item.size) {
+      const itemSize = item.size.toUpperCase();
+      if (itemSize === optSize) return item.id;
+      // 사이즈 불일치 → 계속 탐색
+      continue;
+    }
+    return item.id;
+  }
+  // 옵션 사이즈로 못찾았으면 사이즈 무시하고 재시도 (폴백)
+  if (optSize) {
+    for (const item of sorted) {
+      if (item.status === '판매 종료') continue;
+      const iname = item.name.toLowerCase();
+      if (iname.length < 4) continue;
+      if (pn.includes(iname)) return item.id;
+    }
   }
 
   // 2단계: 키워드 패턴 매핑 (채널 전용 긴 상품명 → 재고명 변환)
   const KEYWORD_MAP = [
     // ── 오리지널 모리 / 몽모리 / 코코 (체로프 prefix 있는 형태 먼저)
+    [/^모리 \(5size\)|^모리 \(s\/m\/l\/xl\)|모리 \(4size\)/i, '오리지널 모리'],
     [/체로프 모리\(s\/m\/l\)|모리\(s\/m\/l\).*애착인형|오리지널.*모리.*[sml]size/i, '오리지널 모리'],
     [/체로프 몽모리\(s\/m\/l\)|몽모리\(s\/m\/l\).*애착인형|오리지널.*몽모리/i, '오리지널 몽모리'],
     [/체로프 코코\(s\/m\/l\)|코코\(s\/m\/l\).*애착인형/i, '오리지널 코코'],
@@ -5113,6 +5171,7 @@ function matchProductNameToInventory(productName) {
     [/오리지널.*플라잉.*몽모.*코코/i, '플라잉 몽모'],
     [/[sml]\(\d+\).*플라잉.*몽모.*코코.*모리/i, '플라잉 몽모'],
     // ── 자이언트
+    [/\[pre-order\].*자이언트.*몽모|\[한정수량\].*자이언트.*몽모/i, '오리지널 몽모 자이언트'],
     [/자이언트.*몽모.*120|자이언트.*몽모.*5type/i, '자이언트 베이비 몽모'],
     // ── 소원/컬러 몽모
     [/컬러.*몽모.*행복.*행운.*사랑.*소원|컬러.*몽모.*4type/i, '소원 몽모'],
@@ -5127,6 +5186,10 @@ function matchProductNameToInventory(productName) {
     // ── 허그키링
     [/허그.*키링/i, '허그키링'],
     // ── 동물 키링
+    [/^몽달이 \(|^몽달이$/i, '몽달이'],
+    [/^몽돌이 \(|^몽돌이$/i, '몽돌이'],
+    [/^몽숭이 \(|^몽숭이$/i, '몽숭이'],
+    [/^몽 \(|^몽모 \(|^몽모$/i, '오리지널 몽모'],
     [/동물.*키링.*10type|동물.*키링/i, '몽달이 키링'],
     // ── 벨트커버 / 안전벨트커버
     [/동물.*몽모.*벨트커버/i, '오리지널 몽모 벨트커버'],
@@ -5134,17 +5197,81 @@ function matchProductNameToInventory(productName) {
     [/몽모\/코코.*벨트커버|몽모.*벨트커버/i, '오리지널 몽모 벨트커버'],
     [/동물.*안전벨트커버/i, '오리지널 몽모 벨트커버'],
     // ── 티슈커버
+    [/christmas.*edition.*티슈커버|baby mongmo tissue cover/i, null],  // 옵션 기반
     [/티슈케이스|인형.*티슈커버|티슈커버.*[46]type|티슈커버/i, '티슈커버 S'],
     // ── 텀블러
+    [/mongmo tumbler|mongmo.*tumbler.*keyring/i, '텀블러'],
     [/텀블러/i, '텀블러'],
     // ── 선물세트 (묶음) → 대표 상품으로 매핑
-    [/빼빼로데이.*선물.*세트|빼빼로.*증정.*컬러몽모/i, '오리지널 몽모'],
-    [/발렌타인.*선물세트|화이트데이.*선물세트/i, '오리지널 몽모'],
+    // 빼빼로/발렌타인 선물세트: 옵션명으로 분기되므로 상품명 단독 매칭 불가 → null
+    [/빼빼로.*증정.*선물세트|빼빼로데이.*선물.*세트|빼빼로.*증정.*컬러몽모/i, null],
+    [/발렌타인.*선물세트|화이트데이.*선물세트/i, null],
     [/크리스마스.*몽모.*선물.*set|루돌프.*몽모.*set|산타.*몽모.*set|트리.*몽모.*인형.*set/i, '오리지널 몽모'],
     [/limited edition.*크리스마스.*몽모/i, '오리지널 몽모'],
+    // ── 이름 충돌 방지 (1단계 오매칭 방지용 명시 패턴)
+    // 세트/기획전 상품 → null (옵션 기반 분기, 상품명만으론 매칭 불가)
+    [/\[new type\].*미니.*몽모.*키링/i, null],
+    [/\[발렌타인.*스페셜.*에디션\]|🍫발렌타인.*스페셜/i, null],
+    [/\[수능응원.*기획전\]/i, null],
+    [/동물.*키링.*시리즈.*type|컬러.*몽모.*키링.*type/i, null],
+    [/루돌프.*몽모.*set|루돌프.*몽모.*16type/i, null],
+    [/몽모.*동물시리즈.*안전벨트커버/i, '몽돌이 안전벨트커버'],
+    // ── 이름 충돌 방지 (1단계 오매칭 방지용 명시 패턴)
+    [/^몽모리.*키링/i, '몽모리 키링'],
+    [/^몽모리$/i, '오리지널 몽모리'],
+    // ── 영문 브라켓 케이스 패턴 (네이버 해외)
+    [/\[airpods.*buds\]|\[buds\]/i, '에어팟/버즈 케이스'],
+    [/\[i-pad.*galaxy.*tab\]|\[i-pad\]/i, '아이패드 케이스'],
+    [/\[phone\].*epoxy|epoxy.*범퍼.*\[phone\]/i, '에폭시 범퍼'],
+    [/\[phone\]/i, '젤하드 케이스'],
+    [/\[mix\].*mongmori|\[mix\].*몽모리/i, '오리지널 몽모리'],
+    // ── 영문 상품명 패턴
+    [/^mong mo \(|^mongmo \(/i, '오리지널 몽모'],
+    [/^mori \(/i, '오리지널 모리'],
+    [/^coco \(|^coco$/i, '오리지널 코코'],
+    [/^flying mongmo|duplicate mong mo/i, '플라잉 몽모'],
+    [/bear mongmo/i, '몽돌이'],
+    [/otter mongmo/i, '몽달이'],
+    [/mongkey mongmo/i, '몽숭이'],
+    [/fox mongmo/i, '여몽이'],
+    [/mongmo sunglasses/i, '썬글라스'],
+    [/mongmo blue glasses/i, '블루 안경'],
+    [/mongmo hoodie/i, '그레이 후드'],
+    [/dubai chewy mongmo bag charm/i, '두바이 쫀득 몽모 키링 기본형'],
+    [/sweet potato mongmo bag charm/i, '호박고구마 몽모 키링'],
+    [/mongmori keyring/i, '몽모리 키링'],
+    [/flying mongmo keyring|mini mongmo keyring.*flying/i, '플라잉 몽모 키링'],
+    [/mongdal.*bag charm|otter mongmo bag charm/i, '몽달이 키링'],
+    [/tomongi bag charm/i, '토몽이 키링'],
+    [/hug bag charm.*mongmo.*coco/i, '허그키링 몽모&코코'],
+    [/hug bag charm.*yemongi|hug bag charm.*tomongi/i, '허그키링 여몽이&토몽이'],
+    [/happy mong.*키링|happy mong.*keyring/i, '행복 몽모 키링'],
+    [/lovey mong.*키링|lovey mong.*keyring/i, '사랑 몽모 키링'],
+    [/lucky mong.*키링|lucky mong.*keyring/i, '행운 몽모 키링'],
+    [/happy mongmo keyring/i, '행복 몽모 키링'],
+    [/lovey mongmo keyring/i, '사랑 몽모 키링'],
+    [/ollie keyring/i, '올리 키링'],
+    [/mongdal seatbelt cover/i, '몽달이 안전벨트커버'],
+    [/lovey mongmo$/i, '사랑 몽모'],
+    [/happy mongmo$/i, '소원 몽모'],
+    [/^mongmo bag charm$/i, '몽모 키링'],
+    [/mini mongmo keychain/i, null],  // 옵션에 따라 몽모/올리/코코/모리 분기
+    [/\[new size\].*몽돌이|\[new.*\].*몽돌이/i, '몽돌이'],
+    [/\[new size\].*여몽이|\[new.*\].*여몽이/i, '여몽이'],
+    [/\[new size\].*토몽이|\[new.*\].*토몽이/i, '토몽이'],
+    [/\[new size\].*몽숭이|\[new.*\].*몽숭이/i, '몽숭이'],
+    // ── 신규 동물시리즈 (2025)
+    [/핑크.*토몽이|토몽이.*핑크/i, '핑크토몽이'],
+    [/핑크.*몽숭이|몽숭이.*핑크/i, '핑크몽숭이'],
+    [/공룡.*몽모|몽모.*공룡/i, '공룡몽모'],
+    [/쥐.*몽모|몽모.*쥐/i, '쥐몽모'],
+    [/소.*몽모|몽모.*소/i, '소몽모'],
+    [/다람쥐.*몽모|몽모.*다람쥐/i, '다람쥐몽모'],
     // ── 기프트 박스 / 리스 → 재고 없음 (null)
-    [/기프트.*박스|gift.*box|크리스마스.*리스/i, null],
+    [/기프트.*박스|gift.*box package|christmas.*gift.*box/i, '기프트 박스 '],
+    [/크리스마스.*리스/i, null],
     // ── 후드
+    [/gray hoodie|grey hoodie/i, '그레이 후드'],
     [/후드.*grey|grey.*후드|몽모.*후드.*grey/i, '그레이 후드'],
     [/후드.*black|black.*후드|몽모.*후드.*black/i, '블랙 후드'],
     [/크리스마스.*산타.*후드/i, null], // 재고 없음
@@ -5153,12 +5280,18 @@ function matchProductNameToInventory(productName) {
     [/딸기.*수트/i, '딸기 수트'],
     [/플라워.*원피스/i, '플라워 원피스'],
     [/레드.*체크.*원피스/i, '레드 체크 원피스'],
+    [/mongmo christmas headband|크리스마스.*머리띠/i, '크리스마스 머리띠'],
+    [/레드.*목도리|아이보리.*목도리.*키링|목도리.*키링/i, '레드 목도리 키링용'],
     [/크리스마스.*단가라.*목도리|목도리/i, '크리스마스 단가라 목도리'],
     [/멜빵.*팬츠/i, '연청 멜빵 팬츠'],
     // ── 파우치
     [/화장품.*파우치|몽모.*파우치/i, '베이비 몽모 파우치'],
     // ── 가방
     [/인형.*가방/i, '몽모 가방'],
+    // ── 우산
+    [/양산.*겸.*우산|우산.*2type|우산.*2color|몽모.*우산|미니.*양산.*우산/i, '우산'],
+    // ── 안경
+    [/몽모.*안경|멋있는.*안경/i, '안경'],
     // ── 터프팅
     [/터프팅.*러그/i, '사각 터프팅 러그'],
     // ── 핸드폰 케이스
@@ -5168,6 +5301,8 @@ function matchProductNameToInventory(productName) {
     // ── 에어팟
     [/에어팟.*케이스|버즈.*케이스/i, '에어팟/버즈 케이스'],
     // ── 그립톡
+    [/맥세이프.*캐릭터.*몽모톡|맥세이프.*몽모톡/i, '그립톡 맥세이프 캐릭터 몽모톡'],
+    [/mongmo phone grip|mongmo.*grip/i, '그립톡'],
     [/그립.*톡|맥세이프.*그립|맥세이프.*얼굴톡/i, '그립톡'],
     // ── 지비츠
     [/지비츠/i, '지비츠'],
@@ -5178,8 +5313,38 @@ function matchProductNameToInventory(productName) {
   for (const [pattern, targetName] of KEYWORD_MAP) {
     if (pattern.test(pn)) {
       if (!targetName) return null;
+      if (optSize) {
+        const withSize = state.inventory.find(i => i.name === targetName && i.size && i.size.toUpperCase() === optSize);
+        if (withSize) return withSize.id;
+        const noSize = state.inventory.find(i => i.name === targetName);
+        return noSize ? noSize.id : null;
+      }
       const found = state.inventory.find(i => i.name === targetName);
       return found ? found.id : null;
+    }
+  }
+
+  // 3단계: 옵션값에서 상품명 추출 매칭
+  if (opt) {
+    const optLower = opt.toLowerCase();
+    const sortedByName = [...state.inventory]
+      .filter(i => i.status !== '판매 종료')
+      .sort((a, b) => b.name.length - a.name.length);
+    for (const item of sortedByName) {
+      const iname = item.name.toLowerCase();
+      if (iname.length < 3) continue;
+      if (optLower.includes(iname)) {
+        if (optSize && item.size && item.size.toUpperCase() === optSize) return item.id;
+        if (!optSize) return item.id;
+      }
+    }
+    // 사이즈 폴백 - 옵션에 상품명 있지만 사이즈 불일치
+    if (optSize) {
+      for (const item of sortedByName) {
+        const iname = item.name.toLowerCase();
+        if (iname.length < 3) continue;
+        if (optLower.includes(iname)) return item.id;
+      }
     }
   }
 
@@ -5197,11 +5362,12 @@ function _getVelocityCacheKey() {
   return src ? src.length + '_' + (src[0]?.date||'') : 'none';
 }
 
-function matchProductNameCached(name) {
+function matchProductNameCached(name, option) {
   if (!name) return null;
-  if (_matchCache[name] !== undefined) return _matchCache[name];
-  _matchCache[name] = matchProductNameToInventory(name);
-  return _matchCache[name];
+  const cacheKey = name + '||' + (option||'');
+  if (_matchCache[cacheKey] !== undefined) return _matchCache[cacheKey];
+  _matchCache[cacheKey] = matchProductNameToInventory(name, option);
+  return _matchCache[cacheKey];
 }
 
 function getSalesVelocity(itemId, days) {
@@ -7411,6 +7577,7 @@ async function previewOutboundExcel() {
       const keys = Object.keys(raw[0]||{});
       const dateKey = keys.find(k=>k.includes('날짜')||k.includes('일자')||k.toLowerCase().includes('date'));
       const nameKey = keys.find(k=>k.includes('상품명')||k.includes('상품'));
+      const optionKey_h = keys.find(k=>k==='옵션') || keys.find(k=>k.includes('옵션'));
       const qtyKey = keys.find(k=>k.includes('수량')||k.includes('qty')||k.includes('개수'));
       const personKey = keys.find(k=>k.includes('입력자')||k.includes('담당'));
       const memoKey = keys.find(k=>k.includes('메모')||k.includes('비고'));
@@ -7639,6 +7806,7 @@ const salesState = {
   revChartDays: 7,
   revChartMode: 'total',
   megaDays: 7,
+  megaYesterday: false,
   slowDays: 7,
   prodTableDays: 7,
   prodTableSort: 'sales_desc',
@@ -7667,7 +7835,7 @@ function getSalesByPeriod(days, fromDate, toDate) {
   if (src === state.channelSalesLog) {
     return result.map(r => {
       if (r.inventoryId) return r;
-      const invId = matchProductNameCached(r.productName);
+      const invId = matchProductNameCached(r.productName, r.productOption);
       return invId ? { ...r, inventoryId: invId } : r;
     });
   }
@@ -7885,21 +8053,22 @@ function renderSalesChPie(year, month, thisMonthStr, thisM1, endStr) {
   const CH_KEYS = [
     {key:'imweb',   label:'자사몰',       color:'#E8849A'},
     {key:'kakao',   label:'카카오',       color:'#F5B800'},
-    {key:'naver',   label:'스마트스토어', color:'#6BA87A'}
+    {key:'naver',   label:'스마트스토어', color:'#6BA87A'},
+    {key:'hyundai', label:'더현대하이',   color:'#7B9ED9'},
   ];
   const chTotals = {};
   CH_KEYS.forEach(ch => { chTotals[ch.key] = 0; });
   chLogs.forEach(l => {
-    const ch = (l.channel || l.source || '').toLowerCase();
-    if (ch.includes('imweb')||ch.includes('아임웹')||ch.includes('자사')) chTotals.imweb += (l.qty||0);
-    else if (ch.includes('kakao')||ch.includes('카카오')) chTotals.kakao += (l.qty||0);
-    else if (ch.includes('naver')||ch.includes('네이버')||ch.includes('스마트')) chTotals.naver += (l.qty||0);
-    else if (ch.includes('hyundai')||ch.includes('현대')) chTotals.hyundai += (l.qty||0);
+    const ch = (l.channel||'').toLowerCase();
+    if (ch==='imweb'||ch.includes('아임웹')||ch.includes('자사')) chTotals.imweb += (l.qty||0);
+    else if (ch==='kakao'||ch.includes('카카오')) chTotals.kakao += (l.qty||0);
+    else if (ch==='naver'||ch.includes('네이버')||ch.includes('스마트')) chTotals.naver += (l.qty||0);
+    else if (ch==='hyundai'||ch.includes('현대')) chTotals.hyundai += (l.qty||0);
   });
   const chTotal = Object.values(chTotals).reduce((s,v)=>s+v,0) || 1;
   const active = CH_KEYS.filter(ch => chTotals[ch.key] > 0);
 
-  const cx=60, cy=60, outerR=54, innerR=34;
+  const cx=80, cy=80, outerR=72, innerR=46;
   let slices = '';
   let startAngle = -Math.PI/2;
   if (active.length > 0) {
@@ -7921,12 +8090,12 @@ function renderSalesChPie(year, month, thisMonthStr, thisM1, endStr) {
   const top = active.length > 0 ? active.reduce((a,b)=>chTotals[a.key]>chTotals[b.key]?a:b) : null;
   const topPct = top ? Math.round(chTotals[top.key]/chTotal*100) : 0;
   const centerText = top
-    ? `<text x="${cx}" y="${cy-7}" text-anchor="middle" font-size="9" fill="var(--text-muted)" font-family="Noto Sans KR">${year}년 ${month+1}월</text><text x="${cx}" y="${cy+6}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" font-family="DM Mono,monospace">${topPct}%</text><text x="${cx}" y="${cy+19}" text-anchor="middle" font-size="9" fill="var(--text-muted)" font-family="Noto Sans KR">${top.label}</text>`
-    : `<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-family="Noto Sans KR">데이터 없음</text>`;
+    ? `<text x="${cx}" y="${cy-10}" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-family="Noto Sans KR">${year}년 ${month+1}월</text><text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="16" font-weight="700" fill="var(--text)" font-family="DM Mono,monospace">${topPct}%</text><text x="${cx}" y="${cy+22}" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-family="Noto Sans KR">${top.label}</text>`
+    : `<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="11" fill="var(--text-muted)" font-family="Noto Sans KR">데이터 없음</text>`;
 
   const legend = CH_KEYS.map(ch=>{
     const qty=chTotals[ch.key], pct=Math.round(qty/chTotal*100);
-    return `<div style="display:flex;align-items:center;gap:6px;opacity:${qty>0?1:0.3};">
+    return `<div style="display:flex;align-items:center;gap:6px;opacity:${qty>0?1:0.35};">
       <div style="width:8px;height:8px;border-radius:2px;background:${ch.color};flex-shrink:0;"></div>
       <span style="font-size:11px;color:var(--text-muted);flex:1;">${ch.label}</span>
       <span style="font-size:11px;font-weight:600;">${qty.toLocaleString()}</span>
@@ -7936,13 +8105,13 @@ function renderSalesChPie(year, month, thisMonthStr, thisM1, endStr) {
 
   el.innerHTML = `
     <div style="font-size:13px;font-weight:700;margin-bottom:14px;">🏪 채널별 판매 비중</div>
-    <div style="display:flex;justify-content:center;margin-bottom:12px;">
-      <svg width="120" height="120" viewBox="0 0 120 120">${slices}<circle cx="${cx}" cy="${cy}" r="${innerR}" fill="var(--surface)"/>${centerText}</svg>
+    <div style="display:flex;justify-content:center;margin-bottom:14px;">
+      <svg width="160" height="160" viewBox="0 0 160 160">${slices}<circle cx="${cx}" cy="${cy}" r="${innerR}" fill="var(--surface)"/>${centerText}</svg>
     </div>
     <div style="display:flex;flex-direction:column;gap:7px;">${legend}</div>`;
 }
 
-// ── 매출 그래프 ──
+
 function setRevChartPeriod(days, el) {
   salesState.revChartDays = days;
   document.querySelectorAll('#rev-chart-period-tabs .tab').forEach(t=>t.classList.remove('active'));
@@ -8198,13 +8367,28 @@ function renderSalesCompare() {
 // ── 메가SKU ──
 function setMegaPeriod(days, el) {
   salesState.megaDays = days;
+  salesState.megaYesterday = false;
+  document.querySelectorAll('#mega-period-tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderMegaSKU();
+}
+
+function setMegaPeriodYesterday(el) {
+  salesState.megaYesterday = true;
   document.querySelectorAll('#mega-period-tabs .tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
   renderMegaSKU();
 }
 
 function renderMegaSKU() {
-  const logs = getSalesByPeriod(salesState.megaDays);
+  let logs;
+  if (salesState.megaYesterday) {
+    const yest = new Date(); yest.setDate(yest.getDate()-1);
+    const yestStr = yest.toISOString().split('T')[0];
+    logs = getSalesByPeriod(0, yestStr, yestStr);
+  } else {
+    logs = getSalesByPeriod(salesState.megaDays);
+  }
   const totals = {};
   logs.forEach(s => { totals[s.inventoryId]=(totals[s.inventoryId]||0)+s.qty; });
   const sorted = state.inventory.map(i=>({item:i,total:totals[i.id]||0}))
@@ -8572,6 +8756,7 @@ async function previewChannelSales() {
       const nameKey = keys.find(k=>k==='상품명');
       const qtyKey  = keys.find(k=>k==='수량');
       const amtKey  = keys.find(k=>k==='정산기준금액') || keys.find(k=>k.includes('정산기준금액'));
+      const optionKey = keys.find(k=>k==='옵션') || keys.find(k=>k.includes('옵션'));
       const statusKey = keys.find(k=>k==='주문상태') || keys.find(k=>k.includes('주문상태'));
       const cancelKey = keys.find(k=>k.includes('취소완료일'));
       const refundKey = keys.find(k=>k.includes('환불완료일'));
@@ -8591,7 +8776,8 @@ async function previewChannelSales() {
         const qty = parseInt(String(row[qtyKey]||'1').replace(/[^0-9]/g,''))||1;
         const name = String(row[nameKey]||'').trim();
         if (amt <= 0) continue;
-        parsed.push({ date:dateStr, productName:name, qty, amount:amt, channel:'kakao' });
+        const opt_k = optionKey ? String(row[optionKey]||'').trim() : '';
+        parsed.push({ date:dateStr, productName:name, productOption:opt_k, qty, amount:amt, channel:'kakao' });
       }
 
     } else if (_chUploadTab === 'imweb') {
@@ -8719,6 +8905,7 @@ async function previewChannelSales() {
                    || keys.find(k=>k.includes('주문일'));
       const nameKey = keys.find(k=>k==='상품명');
       const qtyKey  = keys.find(k=>k==='수량') || keys.find(k=>k.includes('수량'));
+      const optionKey_n = keys.find(k=>k==='옵션정보') || keys.find(k=>k==='옵션') || keys.find(k=>k.includes('옵션'));
       // 주문금액 기준 (카카오/자사몰과 동일하게 실제 판매금액 사용)
       // 정산내역: [28] 최종 상품별 총 주문금액
       // 발주발송: [32] 최종 상품별 총 주문금액
@@ -8754,7 +8941,8 @@ async function previewChannelSales() {
         if (amt <= 0) continue;
         const qty  = parseInt(String(row[qtyKey]||'1').replace(/[^0-9]/g,''))||1;
         const name = String(row[nameKey]||'').trim();
-        parsed.push({ date:dateStr, productName:name, qty, amount:amt, channel:'naver' });
+        const opt_n = optionKey_n ? String(row[optionKey_n]||'').trim() : '';
+        parsed.push({ date:dateStr, productName:name, productOption:opt_n, qty, amount:amt, channel:'naver' });
       }
 
     } else if (_chUploadTab === 'hyundai') {
@@ -8770,7 +8958,8 @@ async function previewChannelSales() {
         const qty = parseInt(String(row[qtyKey]||'1').replace(/[^0-9]/g,''))||1;
         const name = String(row[nameKey]||'').trim();
         if (!dateStr||amt<=0) continue;
-        parsed.push({ date:dateStr, productName:name, qty, amount:amt, channel:_chUploadTab });
+        const opt_h = optionKey_h ? String(row[optionKey_h]||'').trim() : '';
+        parsed.push({ date:dateStr, productName:name, productOption:opt_h, qty, amount:amt, channel:_chUploadTab });
       }
     }
 
@@ -8895,7 +9084,7 @@ async function submitChannelSales() {
   const newRows = [];
   let rowId = Date.now();
   parsed.forEach(r => {
-    const inventoryId = r.inventoryId || matchProductNameToInventory(r.productName) || null;
+    const inventoryId = r.inventoryId || matchProductNameToInventory(r.productName, r.productOption) || null;
     const row = { ...r, id: rowId++, inventoryId };
     state.channelSalesLog.push(row);
     newRows.push({
@@ -8904,6 +9093,7 @@ async function submitChannelSales() {
       channel: ch,
       inventory_id: inventoryId,
       product_name: r.productName || '',
+      product_option: r.productOption || '',
       qty: r.qty || 0,
       amount: r.amount || 0,
     });
@@ -9199,14 +9389,21 @@ function renderDailySalesChart() {
   const labels = [];
   for (let i=days-1;i>=0;i--) { const d=new Date(today); d.setDate(d.getDate()-i); labels.push(fmt(d)); }
 
+  // channelSalesLog 우선, 없으면 salesLog 폴백
+  const src = (state.channelSalesLog && state.channelSalesLog.length > 0)
+    ? state.channelSalesLog : state.salesLog;
   const byDay = {};
-  state.salesLog.forEach(s => { if (labels.includes(s.date)) byDay[s.date]=(byDay[s.date]||0)+s.qty; });
+  src.forEach(s => {
+    if (!labels.includes(s.date)) return;
+    byDay[s.date] = (byDay[s.date]||0) + (s.qty||0);
+  });
   const data = labels.map(d => byDay[d]||0);
   const maxVal = Math.max(...data, 1);
   const slotW = chartW / labels.length;
   const barW = Math.max(4, Math.floor(slotW * 0.6));
 
   ctx.clearRect(0,0,Math.floor(W),H);
+  // 그리드
   for (let i=0;i<=4;i++) {
     const y=padT+chartH-chartH*i/4;
     ctx.strokeStyle='#E2DDD5'; ctx.lineWidth=1;
@@ -9214,22 +9411,24 @@ function renderDailySalesChart() {
     ctx.fillStyle='#8C8680'; ctx.font='10px DM Mono'; ctx.textAlign='right';
     ctx.fillText(Math.round(maxVal*i/4), padL-3, y+3);
   }
+  // 막대
+  const mongmoColor = '#D4956A';
   data.forEach((v,i) => {
     const x = padL + i*slotW + (slotW-barW)/2;
     const h = chartH * v / maxVal;
-    ctx.fillStyle = v > 0 ? 'var(--mongmo)' : '#E2DDD5';
+    ctx.fillStyle = v > 0 ? mongmoColor : '#E2DDD5';
     ctx.fillRect(x, padT+chartH-Math.max(1,h), barW, Math.max(1,h));
     if (days <= 14) {
       ctx.fillStyle='#8C8680'; ctx.font='9px sans-serif'; ctx.textAlign='center';
       ctx.fillText(labels[i].slice(5), x+barW/2, H-5);
-    } else if (i%5===0) {
+    } else if (i%Math.ceil(days/10)===0) {
       ctx.fillStyle='#8C8680'; ctx.font='9px sans-serif'; ctx.textAlign='center';
       ctx.fillText(labels[i].slice(5), x+barW/2, H-5);
     }
   });
 }
 
-// ── 채널별 판매량 ──
+
 function setChSalesPeriod(days, el) {
   salesState.chSalesDays = days;
   document.querySelectorAll('#ch-sales-period-tabs .tab').forEach(t => t.classList.remove('active'));
@@ -9270,74 +9469,128 @@ function renderChannelSales() {
 function renderSalesTrend() {
   const el = document.getElementById('sales-trend-wrap');
   if (!el) return;
+
+  // 최근 30일 채널별 일별 판매량 집계
   const today = new Date();
   const fmt = d => d.toISOString().split('T')[0];
+  const days = 30;
+  const labels = [];
+  for (let i=days-1;i>=0;i--) {
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    labels.push(fmt(d));
+  }
 
-  // 이번 주 vs 지난 주 (판매량 기준 - channelSalesLog)
-  const dow = today.getDay(); // 0=일
-  const thisWeekStart = fmt(new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow));
-  const lastWeekStart = fmt(new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow - 7));
-  const lastWeekEnd   = fmt(new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow - 1));
+  const CH = [
+    {key:'imweb',   label:'자사몰',     color:'#E8849A'},
+    {key:'kakao',   label:'카카오',     color:'#F5B800'},
+    {key:'naver',   label:'스마트스토어', color:'#6BA87A'},
+    {key:'hyundai', label:'더현대하이', color:'#7B9ED9'},
+  ];
+
+  const byChDay = {};
+  CH.forEach(ch => { byChDay[ch.key] = {}; labels.forEach(d => { byChDay[ch.key][d]=0; }); });
+
   const csl = state.channelSalesLog || [];
-  const thisWQty = csl.filter(r=>r.date>=thisWeekStart&&r.date<=fmt(today)).reduce((s,r)=>s+(r.qty||0),0);
-  const lastWQty = csl.filter(r=>r.date>=lastWeekStart&&r.date<=lastWeekEnd).reduce((s,r)=>s+(r.qty||0),0);
+  csl.forEach(r => {
+    if (!labels.includes(r.date)) return;
+    const ch = (r.channel||'').toLowerCase();
+    if (ch==='imweb'||ch.includes('자사')||ch.includes('아임웹')) byChDay.imweb[r.date]=(byChDay.imweb[r.date]||0)+(r.qty||0);
+    else if (ch==='kakao'||ch.includes('카카오')) byChDay.kakao[r.date]=(byChDay.kakao[r.date]||0)+(r.qty||0);
+    else if (ch==='naver'||ch.includes('네이버')||ch.includes('스마트')) byChDay.naver[r.date]=(byChDay.naver[r.date]||0)+(r.qty||0);
+    else if (ch==='hyundai'||ch.includes('현대')) byChDay.hyundai[r.date]=(byChDay.hyundai[r.date]||0)+(r.qty||0);
+  });
 
-  // 이번 달 vs 작년 동월 (매출 기준 - revenueLog)
-  const thisYM  = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  const lastYYM = `${today.getFullYear()-1}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  const thisMAmt = (state.revenueLog||[]).filter(r=>r.date.startsWith(thisYM)).reduce((s,r)=>s+getRevTotal(r),0);
-  const lastYAmt = (state.revenueLog||[]).filter(r=>r.date.startsWith(lastYYM)).reduce((s,r)=>s+getRevTotal(r),0);
+  // 데이터 있는 채널만
+  const activeCH = CH.filter(ch => Object.values(byChDay[ch.key]).some(v=>v>0));
 
-  const wPct = lastWQty>0 ? Math.round((thisWQty-lastWQty)/lastWQty*100) : null;
-  const yPct = lastYAmt>0 ? Math.round((thisMAmt-lastYAmt)/lastYAmt*100) : null;
+  if (!activeCH.length) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:24px 0;">채널 판매 데이터 없음</div>`;
+    return;
+  }
 
-  const badge = (label, thisVal, lastVal, pct, unit) => {
-    const up = pct !== null && pct >= 0;
-    const color = pct!==null ? (up ? 'var(--green)' : 'var(--red)') : 'var(--text-muted)';
-    const valFmt = v => unit==='won' ? fmtWon(v) : `${v}개`;
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
-      <div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px;">${label}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${valFmt(thisVal)} <span style="opacity:.5;">/ 비교 ${valFmt(lastVal)}</span></div>
-      </div>
-      <div style="text-align:right;">
-        ${pct!==null
-          ? `<span style="color:${color};font-size:14px;font-weight:700;">${up?'▲':'▼'}${Math.abs(pct)}%</span>`
-          : `<span style="font-size:12px;color:var(--text-muted);">데이터 없음</span>`}
-      </div>
+  const allVals = activeCH.flatMap(ch => labels.map(d => byChDay[ch.key][d]));
+  const maxVal = Math.max(...allVals, 1);
+
+  // SVG 라인차트
+  const W = el.getBoundingClientRect().width || 320;
+  const H = 120, padL=28, padR=8, padT=10, padB=24;
+  const cW = W - padL - padR, cH = H - padT - padB;
+  const xStep = cW / (labels.length - 1);
+
+  const getX = i => padL + i * xStep;
+  const getY = v => padT + cH - (v / maxVal * cH);
+
+  // 그리드 라인
+  let gridSvg = '';
+  for (let i=0;i<=3;i++) {
+    const y = padT + cH * i / 3;
+    const val = Math.round(maxVal * (3-i) / 3);
+    gridSvg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#E2DDD5" stroke-width="1"/>`;
+    gridSvg += `<text x="${padL-3}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#8C8680" font-family="DM Mono">${val}</text>`;
+  }
+
+  // X축 레이블 (5일 간격)
+  let xLabels = '';
+  labels.forEach((d,i) => {
+    if (i===0||i===labels.length-1||i%7===0) {
+      xLabels += `<text x="${getX(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="9" fill="#8C8680" font-family="DM Mono">${d.slice(5)}</text>`;
+    }
+  });
+
+  // 채널별 라인
+  let linesSvg = '';
+  activeCH.forEach(ch => {
+    const pts = labels.map((d,i) => `${getX(i).toFixed(1)},${getY(byChDay[ch.key][d]).toFixed(1)}`).join(' ');
+    linesSvg += `<polyline points="${pts}" fill="none" stroke="${ch.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // 마지막 포인트 dot
+    const lastIdx = labels.length-1;
+    const lastV = byChDay[ch.key][labels[lastIdx]];
+    if (lastV > 0) {
+      linesSvg += `<circle cx="${getX(lastIdx).toFixed(1)}" cy="${getY(lastV).toFixed(1)}" r="3" fill="${ch.color}"/>`;
+    }
+  });
+
+  // 범례
+  const legend = activeCH.map(ch => {
+    const total = labels.reduce((s,d)=>s+byChDay[ch.key][d],0);
+    return `<div style="display:flex;align-items:center;gap:5px;">
+      <div style="width:16px;height:2px;background:${ch.color};border-radius:1px;"></div>
+      <span style="font-size:11px;color:var(--text-muted);">${ch.label}</span>
+      <span style="font-size:11px;font-weight:600;">${total.toLocaleString()}</span>
     </div>`;
-  };
+  }).join('');
 
-  const thisMonthLabel = `${today.getFullYear()}년 ${today.getMonth()+1}월`;
-  const lastYearLabel  = `${today.getFullYear()-1}년 ${today.getMonth()+1}월`;
-  el.innerHTML =
-    badge('이번 주 vs 지난 주 (판매량)', thisWQty, lastWQty, wPct, 'qty') +
-    badge(`${thisMonthLabel} vs ${lastYearLabel} (매출)`, thisMAmt, lastYAmt, yPct, 'won');
+  el.innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📈 채널별 판매 추이 <span style="font-size:11px;font-weight:400;color:var(--text-muted);">최근 30일</span></div>
+    <svg width="${W}" height="${H}" style="display:block;overflow:visible;">
+      ${gridSvg}${linesSvg}${xLabels}
+    </svg>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;">${legend}</div>`;
 }
 
-// ── 요일별 판매 패턴 ──
+
 function renderSalesWeekday() {
   const el = document.getElementById('sales-weekday-wrap');
   if (!el) return;
-  // channelSalesLog에서 최근 90일, qty > 0 인 것만
   const today = new Date();
   const from = new Date(today); from.setDate(from.getDate()-89);
   const fromStr = from.toISOString().split('T')[0];
   const todayStr = today.toISOString().split('T')[0];
-  const csl = (state.channelSalesLog||[]).filter(r=>r.date>=fromStr&&r.date<=todayStr&&(r.qty||0)>0);
+  const src = (state.channelSalesLog && state.channelSalesLog.length > 0)
+    ? state.channelSalesLog : state.salesLog;
+  const csl = src.filter(r=>r.date>=fromStr&&r.date<=todayStr&&(r.qty||0)>0);
 
-  const days = ['일','월','화','수','목','금','토'];
+  const dayLabels = ['일','월','화','수','목','금','토'];
   const totals = [0,0,0,0,0,0,0];
   const counts = [0,0,0,0,0,0,0];
-  // 날짜별로 먼저 합산 (같은 날 중복 방지)
   const byDate = {};
   csl.forEach(r => { byDate[r.date] = (byDate[r.date]||0) + (r.qty||0); });
   Object.entries(byDate).forEach(([date, qty]) => {
-    const dow = new Date(date).getDay();
+    const dow = new Date(date + 'T12:00:00').getDay();
     totals[dow] += qty;
     counts[dow]++;
   });
-  const avgs = totals.map((t,i) => counts[i]>0 ? +(t/counts[i]).toFixed(1) : 0);
+  const avgs = totals.map((t,i) => counts[i]>0 ? Math.round(t/counts[i]*10)/10 : 0);
   const maxVal = Math.max(...avgs, 0.1);
 
   if (Object.keys(byDate).length === 0) {
@@ -9345,20 +9598,26 @@ function renderSalesWeekday() {
     return;
   }
 
-  el.innerHTML = days.map((d,i) => {
-    const pct = Math.round(avgs[i]/maxVal*100);
-    const isTop = avgs[i] === Math.max(...avgs) && avgs[i] > 0;
-    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <div style="width:20px;font-size:12px;color:${i===0||i===6?'var(--red)':'var(--text-muted)'};text-align:center;">${d}</div>
-      <div class="progress-bar" style="flex:1;height:18px;">
-        <div class="progress-fill" style="width:${pct}%;background:${isTop?'var(--mongmo)':'var(--border)'};height:18px;display:flex;align-items:center;padding-left:6px;">
-          ${pct>20?`<span style="font-size:10px;color:#fff;font-weight:600;">${avgs[i]}</span>`:''}
-        </div>
+  // 가로 막대 그래프 — 색상은 상대값에 따라 농도 차등
+  const mongmo = '#D4956A';
+  el.innerHTML = dayLabels.map((d,i) => {
+    const pct = Math.round(avgs[i] / maxVal * 100);
+    const isTop = avgs[i] === maxVal && avgs[i] > 0;
+    const isWkend = i===0||i===6;
+    const barColor = isTop ? 'var(--mongmo)' : `rgba(212,149,106,${0.25 + (pct/100)*0.65})`;
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+      <div style="width:18px;font-size:12px;font-weight:600;color:${isWkend?'var(--red)':'var(--text-muted)'};text-align:center;flex-shrink:0;">${d}</div>
+      <div style="flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden;">
+        <div style="width:${Math.max(pct,2)}%;height:100%;background:${barColor};border-radius:4px;transition:width 0.3s;"></div>
       </div>
-      ${pct<=20?`<span style="font-size:11px;color:var(--text-muted);width:24px;">${avgs[i]}</span>`:''}
+      <div style="width:52px;text-align:right;flex-shrink:0;">
+        <span style="font-size:12px;font-weight:${isTop?'700':'500'};color:${isTop?'var(--mongmo)':'var(--text)'};">${avgs[i]>0?avgs[i]:'0'}</span>
+        <span style="font-size:10px;color:var(--text-muted);margin-left:1px;">개/일</span>
+      </div>
     </div>`;
-  }).join('');
+  }).join('') + `<div style="font-size:11px;color:var(--text-muted);text-align:right;margin-top:4px;">최근 90일 · 요일별 일평균 판매량</div>`;
 }
+
 
 function renderProdTable() {
   const sort = document.getElementById('prod-table-sort')?.value || 'sales_desc';
@@ -9387,8 +9646,10 @@ function renderProdTable() {
     const ratio = sold/totalSold;
     const vel7 = getSalesVelocity(item.id, 7);
     const risk = vel7>0 && item.stock>0 ? item.stock/vel7 : 999;
-    const price = parsePrice(item.price); // ₩39,000 → 39000 변환
-    const revenue = sold * price;
+    // 실제 채널 매출 합산 (channelSalesLog amount 우선)
+    const revenue = logs.filter(l=>l.inventoryId===item.id)
+      .reduce((s,l)=>s+(l.amount||0),0) ||
+      (sold * parsePrice(item.price));
     return { item, sold, avgDay, daysLeft, available, ratio, risk, revenue };
   });
 
