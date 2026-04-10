@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.0</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.2</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -13489,7 +13489,7 @@ function getAttMember() {
 function updateAttStatus() {
   const member = getAttMember();
   if (!member) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   // 오늘 이 직원의 가장 최근 기록
   const recs = (state.attendances||[]).filter(a=>a.member===member&&a.date===today).sort((a,b)=>a.seq-b.seq);
   const rec  = recs[recs.length-1];
@@ -13512,6 +13512,12 @@ function updateAttStatus() {
 }
 
 // 실 근무 시간 계산 (점심 차감)
+// 로컬 날짜 반환 (UTC 기준 아닌 한국시간 기준)
+function localDateStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function calcWorkMins(rec) {
   if (!rec.checkIn || !rec.checkOut) return 0;
   let mins = calcMins(rec.checkIn, rec.checkOut);
@@ -13524,7 +13530,7 @@ function calcWorkMins(rec) {
 function clockIn() {
   const member = getAttMember();
   if (!member) { showToast('로그인 후 이용해주세요'); return; }
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const now   = new Date().toTimeString().slice(0,5);
   if (!state.attendances) state.attendances = [];
   // 오늘 날짜 기준 미퇴근 row 있으면 막기
@@ -13542,7 +13548,7 @@ function clockIn() {
 function clockOut() {
   const member = getAttMember();
   if (!member) { showToast('로그인 후 이용해주세요'); return; }
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const now   = new Date().toTimeString().slice(0,5);
   // 오늘 날짜 기준 미퇴근 row만 찾기
   const recs = (state.attendances||[]).filter(a=>a.member===member&&a.date===today&&a.checkIn&&!a.checkOut);
@@ -13558,7 +13564,7 @@ function clockOut() {
 function lunchStart() {
   const member = getAttMember();
   if (!member) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const now   = new Date().toTimeString().slice(0,5);
   const recs = (state.attendances||[]).filter(a=>a.member===member&&a.date===today&&a.checkIn&&!a.checkOut);
   if (!recs.length) { showToast('출근 후 사용 가능해요'); return; }
@@ -13573,7 +13579,7 @@ function lunchStart() {
 function lunchEnd() {
   const member = getAttMember();
   if (!member) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const now   = new Date().toTimeString().slice(0,5);
   const recs = (state.attendances||[]).filter(a=>a.member===member&&a.date===today&&a.checkIn&&!a.checkOut);
   if (!recs.length) { showToast('출근 후 사용 가능해요'); return; }
@@ -13600,7 +13606,7 @@ function fmtMins(m) {
 function renderAttTodaySummary() {
   const el = document.getElementById('att-today-summary');
   if (!el) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const members = ['김효민','고예흰','박영아','정현진','김성애'];
   el.innerHTML = members.map(m => {
     const recs = (state.attendances||[]).filter(a=>a.member===m&&a.date===today).sort((a,b)=>(a.seq||1)-(b.seq||1));
