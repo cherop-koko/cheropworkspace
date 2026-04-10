@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.2.3</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.0</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -3476,21 +3476,21 @@ function onLoginSuccess() {
 }
 
 // ============ 데이터 저장/불러오기 ============
+// attendances / leaves / tasks / pCards → 별도 테이블 (충돌 방지 + Realtime)
+// 나머지 → app_state JSON (기존 방식 유지)
+
 async function save() {
-  // 로그 데이터 상한선 — 장기 운영 시 JSON 5MB 초과 방지
   if (state.salesLog?.length > 2000)    state.salesLog    = state.salesLog.slice(-2000);
   if (state.revenueLog?.length > 1000)  state.revenueLog  = state.revenueLog.slice(-1000);
   if (state.defectLog?.length > 500)    state.defectLog   = state.defectLog.slice(-500);
   if (state.inboundLog?.length > 500)   state.inboundLog  = state.inboundLog.slice(-500);
   if (state.activityLog?.length > 100)  state.activityLog = state.activityLog.slice(0, 100);
-  if (state.attendances?.length > 2000) state.attendances = state.attendances.slice(-2000);
 
   const data = {
-    inventory: state.inventory, content: state.content, tasks: state.tasks,
+    inventory: state.inventory, content: state.content,
     salesLog: state.salesLog, revenueLog: state.revenueLog,
-    projects: state.projects, pCards: state.pCards, goals: state.goals,
+    projects: state.projects, goals: state.goals,
     notices: state.notices, assets: state.assets, assetTags: state.assetTags,
-    attendances: state.attendances, leaves: state.leaves,
     expenses: state.expenses, activityLog: state.activityLog,
     ops: state.ops, invSettings: state.invSettings,
     channelStock: state.channelStock, consumables: state.consumables,
@@ -3507,23 +3507,225 @@ async function save() {
       console.error('[Save Error]', error.message);
       showToast('❌ 저장 실패 — 네트워크를 확인해주세요');
     }
+    _saveTimeout = null;
   }, 100);
 }
 
-function saveTasks() { save(); }
+// ── 근태 저장 (별도 테이블, row 단위 upsert) ──
+async function saveAttendance(rec) {
+  const row = {
+    id:          rec.id,
+    member:      rec.member,
+    date:        rec.date,
+    seq:         rec.seq || 1,
+    check_in:    rec.checkIn  || null,
+    check_out:   rec.checkOut || null,
+    lunch_start: rec.lunchStart || null,
+    lunch_end:   rec.lunchEnd   || null,
+  };
+  const { error } = await sb.from('attendances').upsert(row, { onConflict: 'id' });
+  if (error) { console.error('[Att Save]', error.message); showToast('❌ 근태 저장 실패'); }
+}
+
+async function deleteAttendanceRow(id) {
+  const { error } = await sb.from('attendances').delete().eq('id', id);
+  if (error) console.error('[Att Delete]', error.message);
+}
+
+// ── 연차 저장 ──
+async function saveLeave(rec) {
+  const row = { id: rec.id, member: rec.member, date: rec.date, type: rec.type||'연차', reason: rec.reason||'', status: rec.status||'대기' };
+  const { error } = await sb.from('leaves').upsert(row, { onConflict: 'id' });
+  if (error) { console.error('[Leave Save]', error.message); showToast('❌ 연차 저장 실패'); }
+}
+
+async function deleteLeaveRow(id) {
+  const { error } = await sb.from('leaves').delete().eq('id', id);
+  if (error) console.error('[Leave Delete]', error.message);
+}
+
+// ── 업무 체크리스트 저장 (별도 테이블) ──
+async function saveTask(task) {
+  const row = {
+    id: task.id, title: task.title, type: task.type||'daily',
+    brand: task.brand||'all', assignee: task.assignee||'',
+    due: task.due||null, memo: task.memo||'',
+    done: task.done||false, status: task.status||'todo',
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await sb.from('tasks').upsert(row, { onConflict: 'id' });
+  if (error) { console.error('[Task Save]', error.message); showToast('❌ 업무 저장 실패'); }
+}
+
+async function deleteTaskRow(id) {
+  const { error } = await sb.from('tasks').delete().eq('id', id);
+  if (error) console.error('[Task Delete]', error.message);
+}
+
+// 전체 tasks 배열 sync (resetDailyRoutine 등 다건 변경용)
+async function saveAllTasks() {
+  if (!state.tasks?.length) return;
+  const rows = state.tasks.map(t => ({
+    id: t.id, title: t.title, type: t.type||'daily',
+    brand: t.brand||'all', assignee: t.assignee||'',
+    due: t.due||null, memo: t.memo||'',
+    done: t.done||false, status: t.status||'todo',
+    updated_at: new Date().toISOString(),
+  }));
+  const { error } = await sb.from('tasks').upsert(rows, { onConflict: 'id' });
+  if (error) console.error('[Tasks SaveAll]', error.message);
+}
+
+function saveTasks() { saveAllTasks(); }
+
+// ── 프로젝트 카드 저장 (별도 테이블) ──
+async function savePCard(card) {
+  const row = {
+    id: card.id, project_id: card.projectId,
+    title: card.title, assignee: card.assignee||'',
+    due: card.due||null, memo: card.memo||'',
+    status: card.status||'todo', priority: card.priority||'보통',
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await sb.from('project_cards').upsert(row, { onConflict: 'id' });
+  if (error) { console.error('[PCard Save]', error.message); showToast('❌ 카드 저장 실패'); }
+}
+
+async function deletePCardRow(id) {
+  const { error } = await sb.from('project_cards').delete().eq('id', id);
+  if (error) console.error('[PCard Delete]', error.message);
+}
+
+async function saveAllPCards() {
+  if (!state.pCards?.length) return;
+  const rows = state.pCards.map(c => ({
+    id: c.id, project_id: c.projectId,
+    title: c.title, assignee: c.assignee||'',
+    due: c.due||null, memo: c.memo||'',
+    status: c.status||'todo', priority: c.priority||'보통',
+    updated_at: new Date().toISOString(),
+  }));
+  const { error } = await sb.from('project_cards').upsert(rows, { onConflict: 'id' });
+  if (error) console.error('[PCards SaveAll]', error.message);
+}
+
+// ── 별도 테이블 데이터 로딩 ──
+async function loadSeparateTables() {
+  // 근태 (최근 6개월)
+  const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth()-6);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  const [attRes, leaveRes, taskRes, pcardRes] = await Promise.all([
+    sb.from('attendances').select('*').gte('date', cutoffStr).order('date', {ascending:false}),
+    sb.from('leaves').select('*').order('date', {ascending:false}),
+    sb.from('tasks').select('*').order('created_at', {ascending:true}),
+    sb.from('project_cards').select('*').order('created_at', {ascending:true}),
+  ]);
+
+  if (!attRes.error && attRes.data) {
+    state.attendances = attRes.data.map(r => ({
+      id: r.id, member: r.member, date: r.date, seq: r.seq||1,
+      checkIn: r.check_in||'', checkOut: r.check_out||'',
+      lunchStart: r.lunch_start||'', lunchEnd: r.lunch_end||'',
+    }));
+  }
+  if (!leaveRes.error && leaveRes.data) {
+    state.leaves = leaveRes.data.map(r => ({
+      id: r.id, member: r.member, date: r.date,
+      type: r.type||'연차', reason: r.reason||'', status: r.status||'대기',
+    }));
+  }
+  if (!taskRes.error && taskRes.data) {
+    state.tasks = taskRes.data.map(r => ({
+      id: r.id, title: r.title, type: r.type||'daily',
+      brand: r.brand||'all', assignee: r.assignee||'',
+      due: r.due||'', memo: r.memo||'',
+      done: r.done||false, status: r.status||'todo',
+    }));
+  }
+  if (!pcardRes.error && pcardRes.data) {
+    state.pCards = pcardRes.data.map(r => ({
+      id: r.id, projectId: r.project_id,
+      title: r.title, assignee: r.assignee||'',
+      due: r.due||'', memo: r.memo||'',
+      status: r.status||'todo', priority: r.priority||'보통',
+    }));
+  }
+}
+
+// ── 데이터 마이그레이션: app_state 안의 기존 데이터 → 별도 테이블로 이동 ──
+async function migrateToSeparateTables(p) {
+  const migrated = { att: false, leave: false, task: false, pcard: false };
+
+  // 근태 마이그레이션
+  if (p.attendances?.length) {
+    const rows = p.attendances.map(r => ({
+      id: r.id, member: r.member, date: r.date, seq: r.seq||1,
+      check_in: r.checkIn||null, check_out: r.checkOut||null,
+      lunch_start: r.lunchStart||null, lunch_end: r.lunchEnd||null,
+    }));
+    const { error } = await sb.from('attendances').upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+    if (!error) migrated.att = true;
+  } else { migrated.att = true; }
+
+  // 연차 마이그레이션
+  if (p.leaves?.length) {
+    const rows = p.leaves.map(r => ({
+      id: r.id, member: r.member, date: r.date,
+      type: r.type||'연차', reason: r.reason||'', status: r.status||'대기',
+    }));
+    const { error } = await sb.from('leaves').upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+    if (!error) migrated.leave = true;
+  } else { migrated.leave = true; }
+
+  // tasks 마이그레이션
+  if (p.tasks?.length) {
+    const rows = p.tasks.map(t => ({
+      id: t.id, title: t.title, type: t.type||'daily',
+      brand: t.brand||'all', assignee: t.assignee||'',
+      due: t.due||null, memo: t.memo||'',
+      done: t.done||false, status: t.status||'todo',
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await sb.from('tasks').upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+    if (!error) migrated.task = true;
+  } else { migrated.task = true; }
+
+  // pCards 마이그레이션
+  if (p.pCards?.length) {
+    const rows = p.pCards.map(c => ({
+      id: c.id, project_id: c.projectId,
+      title: c.title, assignee: c.assignee||'',
+      due: c.due||null, memo: c.memo||'',
+      status: c.status||'todo', priority: c.priority||'보통',
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await sb.from('project_cards').upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+    if (!error) migrated.pcard = true;
+  } else { migrated.pcard = true; }
+
+  const allOk = Object.values(migrated).every(Boolean);
+  if (allOk) console.log('✅ 마이그레이션 완료: 근태/연차/업무/카드 → 별도 테이블');
+  else console.warn('⚠️ 일부 마이그레이션 실패:', migrated);
+  return allOk;
+}
 
 async function loadFromSupabase() {
   const { data, error } = await sb.from('app_state').select('data').eq('id', 'cherop_main').single();
   if (error || !data?.data || Object.keys(data.data).length === 0) {
     seedData();
     await save();
+    await saveAllTasks();
+    await saveAllPCards();
   } else {
     applyState(data.data);
+    // 최초 1회 마이그레이션: app_state 안의 tasks/pCards/attendances/leaves → 별도 테이블
+    await migrateToSeparateTables(data.data);
+    // 별도 테이블에서 최신 데이터로 덮어씀
+    await loadSeparateTables();
   }
 
-  // channelSalesLog: 별도 테이블에서 최근 18개월치 로딩
   await loadChannelSalesLog(18);
-
   initApp();
 }
 
@@ -3531,32 +3733,23 @@ async function loadChannelSalesLog(months) {
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - (months || 6));
   const cutoffStr = cutoff.toISOString().split('T')[0];
-
   const PAGE = 1000;
-  let allData = [];
-  let from = 0;
-  let hasMore = true;
-
+  let allData = [], from = 0, hasMore = true;
   try {
     while (hasMore) {
       const { data, error } = await sb
-        .from('channel_sales_log')
-        .select('*')
-        .gte('date', cutoffStr)
-        .order('date', { ascending: false })
+        .from('channel_sales_log').select('*')
+        .gte('date', cutoffStr).order('date', { ascending: false })
         .range(from, from + PAGE - 1);
-
       if (error) { console.warn('channelSalesLog 로딩 실패:', error?.message); break; }
       if (!data || data.length === 0) { hasMore = false; break; }
       allData = allData.concat(data);
-      if (data.length < PAGE) hasMore = false;
-      else from += PAGE;
+      if (data.length < PAGE) hasMore = false; else from += PAGE;
     }
     state.channelSalesLog = allData.map(r => ({
       id: r.id, date: r.date, channel: r.channel,
       inventoryId: r.inventory_id, productName: r.product_name,
-      productOption: r.product_option || '',
-      qty: r.qty, amount: r.amount,
+      productOption: r.product_option || '', qty: r.qty, amount: r.amount,
     }));
     console.log(`📊 channelSalesLog 로딩: ${state.channelSalesLog.length}건 (${cutoffStr} 이후)`);
   } catch(e) {
@@ -3568,17 +3761,17 @@ async function loadChannelSalesLog(months) {
 function applyState(p) {
   state.inventory = p.inventory || [];
   state.content = p.content || [];
-  state.tasks = p.tasks || [];
+  state.tasks = p.tasks || [];         // 별도 테이블 로드 후 덮어써짐
   state.salesLog = p.salesLog || [];
   state.revenueLog = p.revenueLog || [];
   state.projects = p.projects || [];
-  state.pCards = p.pCards || [];
+  state.pCards = p.pCards || [];       // 별도 테이블 로드 후 덮어써짐
   state.goals = p.goals || { annual: 2000000000, monthlyGoals: {} };
   state.notices = p.notices || [];
   state.assets = p.assets || [];
   state.assetTags = p.assetTags || { popup:[], ad:[] };
-  state.attendances = p.attendances || [];
-  state.leaves = p.leaves || [];
+  state.attendances = p.attendances || []; // 별도 테이블 로드 후 덮어써짐
+  state.leaves = p.leaves || [];           // 별도 테이블 로드 후 덮어써짐
   state.expenses = p.expenses || [];
   state.activityLog = p.activityLog || [];
   state.ops = p.ops || [];
@@ -3592,42 +3785,102 @@ function applyState(p) {
   state.prodStockReady = p.prodStockReady || {};
   state.productSalesLog = p.productSalesLog || [];
   state.inboundItems = p.inboundItems || [];
-  state.channelSalesLog = state.channelSalesLog || []; // 별도 테이블에서 로딩
+  state.channelSalesLog = state.channelSalesLog || [];
 }
 
-// 실시간 동기화 — 다른 사람이 수정하면 자동 반영
+// ── Realtime 구독 ──
+function _realtimeShouldSkipRender() {
+  const modalOpen = document.querySelector('.modal-overlay:not(.hidden)');
+  const el = document.activeElement;
+  const isTyping = el && (el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT');
+  if (modalOpen || isTyping) { showToast('🔄 변경사항 있음 — 작업 완료 후 반영돼요'); return true; }
+  return false;
+}
+
+function _realtimeRerenderPage() {
+  const activePage = document.querySelector('.page:not(.hidden)');
+  const pageId = activePage?.id?.replace('page-', '');
+  if (pageId) showPage(pageId);
+}
+
 function subscribeRealtime() {
+  // 1. app_state 변경 (재고·매출 등)
   sb.channel('app_state_changes')
-    .on('postgres_changes', {
-      event: 'UPDATE', schema: 'public', table: 'app_state', filter: 'id=eq.cherop_main'
-    }, (payload) => {
-      // 내가 저장 중이면 무시 (본인 변경분 중복 반영 방지)
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'app_state', filter:'id=eq.cherop_main' }, (payload) => {
       if (_saveTimeout) return;
-
-      // 모달이 열려있거나 입력 중이면 리렌더 건너뜀
-      const modalOpen = document.querySelector('.modal-overlay:not(.hidden)');
-      const activeInput = document.activeElement;
-      const isTyping = activeInput && (
-        activeInput.tagName === 'INPUT' ||
-        activeInput.tagName === 'TEXTAREA' ||
-        activeInput.tagName === 'SELECT'
-      );
-      if (modalOpen || isTyping) {
-        showToast('🔄 변경사항이 있어요 — 작업 완료 후 새로고침해주세요');
-        return;
-      }
-
+      if (_realtimeShouldSkipRender()) return;
       applyState(payload.new.data);
-      const activePage = document.querySelector('.page:not(.hidden)');
-      const pageId = activePage?.id?.replace('page-', '');
-      if (pageId === 'attendance') {
-        renderAttendance();
-      } else if (pageId) {
-        showPage(pageId);
-      }
+      _realtimeRerenderPage();
       showToast('🔄 데이터가 업데이트됐어요');
-    })
-    .subscribe();
+    }).subscribe();
+
+  // 2. 근태 변경 (row 단위 실시간)
+  sb.channel('att_changes')
+    .on('postgres_changes', { event:'*', schema:'public', table:'attendances' }, (payload) => {
+      if (payload.eventType === 'INSERT') {
+        const r = payload.new;
+        const rec = { id:r.id, member:r.member, date:r.date, seq:r.seq||1, checkIn:r.check_in||'', checkOut:r.check_out||'', lunchStart:r.lunch_start||'', lunchEnd:r.lunch_end||'' };
+        const exists = state.attendances.find(a=>a.id===rec.id);
+        if (!exists) state.attendances.push(rec);
+      } else if (payload.eventType === 'UPDATE') {
+        const r = payload.new;
+        const idx = state.attendances.findIndex(a=>a.id===r.id);
+        const rec = { id:r.id, member:r.member, date:r.date, seq:r.seq||1, checkIn:r.check_in||'', checkOut:r.check_out||'', lunchStart:r.lunch_start||'', lunchEnd:r.lunch_end||'' };
+        if (idx>=0) state.attendances[idx] = rec; else state.attendances.push(rec);
+      } else if (payload.eventType === 'DELETE') {
+        state.attendances = state.attendances.filter(a=>a.id!==payload.old.id);
+      }
+      const pageId = document.querySelector('.page:not(.hidden)')?.id?.replace('page-','');
+      if (pageId==='attendance') renderAttendance();
+      else if (pageId==='dashboard') renderDashboard();
+    }).subscribe();
+
+  // 3. 연차 변경
+  sb.channel('leave_changes')
+    .on('postgres_changes', { event:'*', schema:'public', table:'leaves' }, (payload) => {
+      if (payload.eventType==='DELETE') {
+        state.leaves = state.leaves.filter(l=>l.id!==payload.old.id);
+      } else {
+        const r = payload.new;
+        const rec = { id:r.id, member:r.member, date:r.date, type:r.type||'연차', reason:r.reason||'', status:r.status||'대기' };
+        const idx = state.leaves.findIndex(l=>l.id===r.id);
+        if (idx>=0) state.leaves[idx]=rec; else state.leaves.push(rec);
+      }
+      const pageId = document.querySelector('.page:not(.hidden)')?.id?.replace('page-','');
+      if (pageId==='attendance') renderAttendance();
+    }).subscribe();
+
+  // 4. 업무 체크리스트 변경
+  sb.channel('task_changes')
+    .on('postgres_changes', { event:'*', schema:'public', table:'tasks' }, (payload) => {
+      if (payload.eventType==='DELETE') {
+        state.tasks = state.tasks.filter(t=>t.id!==payload.old.id);
+      } else {
+        const r = payload.new;
+        const rec = { id:r.id, title:r.title, type:r.type||'daily', brand:r.brand||'all', assignee:r.assignee||'', due:r.due||'', memo:r.memo||'', done:r.done||false, status:r.status||'todo' };
+        const idx = state.tasks.findIndex(t=>t.id===r.id);
+        if (idx>=0) state.tasks[idx]=rec; else state.tasks.push(rec);
+      }
+      const pageId = document.querySelector('.page:not(.hidden)')?.id?.replace('page-','');
+      if (pageId==='tasks') renderTasks();
+      else if (pageId==='dashboard') renderDashboard();
+    }).subscribe();
+
+  // 5. 프로젝트 카드 변경
+  sb.channel('pcard_changes')
+    .on('postgres_changes', { event:'*', schema:'public', table:'project_cards' }, (payload) => {
+      if (payload.eventType==='DELETE') {
+        state.pCards = state.pCards.filter(c=>c.id!==payload.old.id);
+      } else {
+        const r = payload.new;
+        const rec = { id:r.id, projectId:r.project_id, title:r.title, assignee:r.assignee||'', due:r.due||'', memo:r.memo||'', status:r.status||'todo', priority:r.priority||'보통' };
+        const idx = state.pCards.findIndex(c=>c.id===r.id);
+        if (idx>=0) state.pCards[idx]=rec; else state.pCards.push(rec);
+      }
+      const pageId = document.querySelector('.page:not(.hidden)')?.id?.replace('page-','');
+      if (pageId==='project') renderProject();
+      else if (pageId==='tasks') renderTasks();
+    }).subscribe();
 }
 
 // ============ INIT ============
@@ -4851,12 +5104,12 @@ function openAddCardInCol(status) {
 
 function moveCard(id, newStatus) {
   const c = state.pCards.find(c=>c.id===id);
-  if (c) { c.status = newStatus; save(); renderKanban(); }
+  if (c) { c.status = newStatus; savePCard(c); renderKanban(); }
 }
 
 function deletePCard(id) {
   state.pCards = state.pCards.filter(c=>c.id!==id);
-  save(); renderKanban(); showToast('삭제됐어요');
+  deletePCardRow(id); renderKanban(); showToast('삭제됐어요');
 }
 
 function deleteProject(id) {
@@ -4865,7 +5118,9 @@ function deleteProject(id) {
     title: `"${p?.name||'프로젝트'}" 삭제할까요?`,
     desc: '이 프로젝트의 칸반 카드도 모두 삭제돼요.',
     icon: '📋', okLabel: '삭제'
-  }).then(() => {
+  }).then(async () => {
+    // project_cards 테이블에서 해당 프로젝트 카드 전체 삭제
+    await sb.from('project_cards').delete().eq('project_id', id);
     state.projects = state.projects.filter(x=>x.id!==id);
     state.pCards  = state.pCards.filter(x=>x.projectId!==id);
     if (state.activeProjectId === id) state.activeProjectId = state.projects[0]?.id || null;
@@ -4926,7 +5181,7 @@ function submitPCard() {
     state.pCards.push(entry);
     showToast('✅ 카드가 추가됐어요');
   }
-  save(); closeModal('add-pcard'); renderKanban();
+  savePCard(entry); closeModal('add-pcard'); renderKanban();
 }
 
 // 구버전 호환
@@ -7889,7 +8144,7 @@ function filterMemberDirect(name) {
 
 function toggleTask(id) {
   const t = state.tasks.find(t => t.id === id);
-  if (t) { t.done = !t.done; save(); renderTasks(); renderDashboard(); }
+  if (t) { t.done = !t.done; saveTask(t); renderTasks(); renderDashboard(); }
 }
 
 
@@ -7938,7 +8193,6 @@ function submitTask() {
   if (!title) { showToast('업무 내용을 입력해주세요'); return; }
   const _taskType = document.getElementById('task-type-input').value;
   const _todayDate = new Date().toISOString().split('T')[0];
-  // 데일리루틴은 due를 오늘 날짜로 자동 설정
   const _taskDue = _taskType === 'daily'
     ? _todayDate
     : document.getElementById('task-due-input').value;
@@ -7961,7 +8215,7 @@ function submitTask() {
     state.tasks.push(entry);
     showToast('✅ 업무가 추가됐어요');
   }
-  saveTasks(); closeModal('add-task');
+  saveTask(entry); closeModal('add-task');
   const member = state.memberFilter;
   if (member && member !== 'all') renderTaskKanban(member);
   else renderTasks();
@@ -13187,12 +13441,12 @@ function clockIn() {
   const today = new Date().toISOString().split('T')[0];
   const now   = new Date().toTimeString().slice(0,5);
   if (!state.attendances) state.attendances = [];
-  // 새 기록 추가 (이전 기록 유지)
   const todayRecs = state.attendances.filter(a=>a.member===member&&a.date===today);
   const seq = todayRecs.length + 1;
-  state.attendances.push({ id:Date.now(), member, date:today, checkIn:now, checkOut:'', seq, lunchStart:'', lunchEnd:'' });
+  const rec = { id:Date.now(), member, date:today, checkIn:now, checkOut:'', seq, lunchStart:'', lunchEnd:'' };
+  state.attendances.push(rec);
   logActivity('attendance', member + ' 출근 (' + now + ')' + (seq>1?' · '+seq+'번째 출근':''));
-  save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
+  saveAttendance(rec); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`✅ ${member} 출근 (${now})${seq>1?' · '+seq+'번째 출근':''}`);
 }
 
@@ -13207,7 +13461,7 @@ function clockOut() {
   rec.checkOut = now;
   const mins = calcWorkMins(rec);
   logActivity('attendance', member + ' 퇴근 (' + now + ') · 근무 ' + fmtMins(mins));
-  save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
+  saveAttendance(rec); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`✅ ${member} 퇴근 (${now}) · 근무 ${fmtMins(mins)}`);
 }
 
@@ -13222,7 +13476,7 @@ function lunchStart() {
   if (rec.lunchStart) { showToast('점심 시작이 이미 기록됐어요'); return; }
   rec.lunchStart = now;
   logActivity('attendance', member + ' 점심 시작 (' + now + ')');
-  save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
+  saveAttendance(rec); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`🍱 ${member} 점심 시작 (${now})`);
 }
 
@@ -13239,7 +13493,7 @@ function lunchEnd() {
   rec.lunchEnd = now;
   const lunchMins = calcMins(rec.lunchStart, now);
   logActivity('attendance', member + ' 점심 종료 (' + now + ') · ' + fmtMins(lunchMins));
-  save(); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
+  saveAttendance(rec); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`☕ ${member} 점심 종료 (${now}) · 점심 ${fmtMins(lunchMins)}`);
 }
 
@@ -13344,7 +13598,6 @@ function approveLeave(id, status) {
   const l = (state.leaves||[]).find(x=>x.id===id);
   if (!l) return;
   l.status = status;
-  // 승인 시 운영일정에 자동 등록
   if (status === '승인') {
     if (!state.ops) state.ops = [];
     const existing = state.ops.find(o=>o.leaveId===id);
@@ -13359,16 +13612,14 @@ function approveLeave(id, status) {
     }
     showToast(`✅ 승인됐어요 · 운영일정에 자동 등록됐어요`);
   } else {
-    // 반려 시 운영일정에서 제거
     state.ops = (state.ops||[]).filter(o=>o.leaveId!==id);
     showToast('반려 처리됐어요');
   }
-  save(); renderLeaves(); renderOpsCalendar();
+  saveLeave(l); save(); renderLeaves(); renderOpsCalendar();
 }
 
 function submitLeave() {
   const myName = getMyName();
-  // 본인 이름만 신청 가능 (대표는 다른 사람도 가능)
   const member = isAdmin()
     ? (document.getElementById('leave-member')?.value || myName)
     : myName;
@@ -13379,8 +13630,9 @@ function submitLeave() {
   const reason = document.getElementById('leave-reason')?.value.trim();
   if (!start) { showToast('기간을 입력해주세요'); return; }
   if (!state.leaves) state.leaves=[];
-  state.leaves.push({ id:Date.now(), member, type, start, end, reason, status:'대기' });
-  save(); closeModal('add-leave'); renderLeaves(); showToast('✅ 휴가 신청됐어요');
+  const rec = { id:Date.now(), member, type, start, end, reason, status:'대기' };
+  state.leaves.push(rec);
+  saveLeave(rec); closeModal('add-leave'); renderLeaves(); showToast('✅ 휴가 신청됐어요');
 }
 
 // ══════════════════════════════════════════════════
@@ -13841,7 +14093,7 @@ function togglePCardFromTask(pCardId) {
   const c = (state.pCards||[]).find(x=>x.id===pCardId);
   if (!c) return;
   c.status = c.status === 'done' ? 'todo' : 'done';
-  save();
+  savePCard(c);
   const member = state.memberFilter;
   if (member && member !== 'all') renderTaskKanban(member);
   else renderTasks();
@@ -14023,8 +14275,7 @@ function toggleTaskDoneFromKanban(id, labelEl) {
   t.done = !t.done;
   if (t.done) t.status = 'done';
   else if (t.status === 'done') t.status = 'todo';
-  save();
-  // 체크박스만 즉시 갱신 (전체 리렌더 대신)
+  saveTask(t);
   const member = state.memberFilter;
   renderTaskKanban(member);
   renderDashboard();
@@ -14078,7 +14329,7 @@ function submitEditAttRecord() {
   a.checkOut   = document.getElementById('edit-att-checkout').value || null;
   a.lunchStart = document.getElementById('edit-att-lunch-start').value || null;
   a.lunchEnd   = document.getElementById('edit-att-lunch-end').value || null;
-  save(); renderAttLog(); renderAttTodaySummary();
+  saveAttendance(a); renderAttLog(); renderAttTodaySummary();
   closeModal('edit-att');
   showToast('✅ 근태 기록이 수정됐어요');
 }
@@ -14086,7 +14337,7 @@ function submitEditAttRecord() {
 function deleteAttRecord(id) {
   if (!isAdmin()) return;
   state.attendances = (state.attendances||[]).filter(x => x.id != id);
-  save(); renderAttLog(); renderAttTodaySummary();
+  deleteAttendanceRow(id); renderAttLog(); renderAttTodaySummary();
   showToast('삭제됐어요');
 }
 
@@ -14420,7 +14671,7 @@ function confirmChStockEdit() {
 // ══════════════════════════════════════════════════
 function deleteTask(id) {
   state.tasks = state.tasks.filter(x => x.id !== id);
-  saveTasks(); renderTasks(); showToast('삭제됐어요');
+  deleteTaskRow(id); renderTasks(); showToast('삭제됐어요');
 }
 
 
