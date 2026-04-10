@@ -8267,13 +8267,19 @@ async function previewChannelSales() {
         const dateKey = keys.find(k=>k==='주문일') || keys.find(k=>k.includes('주문일'));
         const nameKey = keys.find(k=>k==='상품명') || keys.find(k=>k.includes('상품명'));
         const optKey  = keys.find(k=>k==='옵션명') || keys.find(k=>k.includes('옵션'));
-        // 품목실결제가: 할인 반영된 개별 상품가격
-        const itemAmtKey = keys.find(k=>k==='품목실결제가') || keys.find(k=>k.includes('품목실결제가'));
         // 결제번호별 결제금액: 주문 묶음의 최종 결제금액(배송비 포함), 중복행은 0
         const totalAmtKey = keys.find(k=>k==='결제번호별 결제금액') || keys.find(k=>k.includes('결제번호별'));
+        // 품목실결제가: 있으면 상품별 금액으로 사용 (없으면 최종결제금액 사용)
+        const itemAmtKey = keys.find(k=>k==='품목실결제가') || keys.find(k=>k.includes('품목실결제가'));
+        // 취소/반품 제외용 컬럼
+        const cancelKey = keys.find(k=>k==='취소승인일') || keys.find(k=>k.includes('취소승인일'));
+        const returnKey = keys.find(k=>k==='반품승인일') || keys.find(k=>k.includes('반품승인일'));
+        const statusKey = keys.find(k=>k==='주문상태') || keys.find(k=>k.includes('주문상태'));
+        // 상품별 금액: 품목실결제가 없으면 최종결제금액([18]) 사용
+        const finalAmtKey = keys.find(k=>k==='최종결제금액') || keys.find(k=>k.includes('최종결제금액'));
 
         if (!dateKey) throw new Error(`아임웹 날짜 컬럼 없음. 발견: ${keys.slice(0,10).join(', ')}`);
-        if (!itemAmtKey && !totalAmtKey) throw new Error(`아임웹 금액 컬럼 없음. 발견: ${keys.slice(0,10).join(', ')}`);
+        if (!totalAmtKey && !itemAmtKey && !finalAmtKey) throw new Error(`아임웹 금액 컬럼 없음. 발견: ${keys.slice(0,10).join(', ')}`);
 
         // 날짜별로 결제금액 집계 (결제번호별 결제금액 > 0인 행만 합산 → 중복 방지)
         // 동시에 상품명별 건수도 집계
@@ -8281,6 +8287,14 @@ async function previewChannelSales() {
         const dateItemRows = {}; // { date: [{name, option, itemAmt}] }
 
         for (const row of raw) {
+          // 취소/반품 건 제외
+          if (cancelKey && row[cancelKey] && String(row[cancelKey]).trim() !== '') continue;
+          if (returnKey && row[returnKey] && String(row[returnKey]).trim() !== '') continue;
+          if (statusKey) {
+            const st = String(row[statusKey]||'').trim();
+            if (st.includes('취소') || st.includes('반품') || st.includes('환불')) continue;
+          }
+
           const dateStr = parseDateStr(row[dateKey]);
           if (!dateStr) continue;
 
@@ -8291,17 +8305,19 @@ async function previewChannelSales() {
               dateOrderAmt[dateStr] = (dateOrderAmt[dateStr]||0) + totalAmt;
             }
           } else {
-            // 결제번호별 컬럼 없으면 품목실결제가 합산
-            const itemAmt = parseInt(String(row[itemAmtKey]||'').replace(/[^0-9.-]/g,''))||0;
-            if (itemAmt > 0) {
-              dateOrderAmt[dateStr] = (dateOrderAmt[dateStr]||0) + itemAmt;
+            // 결제번호별 컬럼 없으면 최종결제금액 or 품목실결제가 합산
+            const useKey = finalAmtKey || itemAmtKey;
+            const amt = parseInt(String(row[useKey]||'').replace(/[^0-9.-]/g,''))||0;
+            if (amt > 0) {
+              dateOrderAmt[dateStr] = (dateOrderAmt[dateStr]||0) + amt;
             }
           }
 
-          // 상품명 기록 (inventoryId 매칭용)
+          // 상품명 기록 (inventoryId 매칭용) — 품목실결제가 or 최종결제금액 기준
           const name = nameKey ? String(row[nameKey]||'').trim() : '';
           const opt  = optKey  ? String(row[optKey] ||'').trim() : '';
-          const itemAmt = itemAmtKey ? parseInt(String(row[itemAmtKey]||'').replace(/[^0-9.-]/g,''))||0 : 0;
+          const useAmtKey = itemAmtKey || finalAmtKey || totalAmtKey;
+          const itemAmt = useAmtKey ? parseInt(String(row[useAmtKey]||'').replace(/[^0-9.-]/g,''))||0 : 0;
           if (name && itemAmt > 0) {
             if (!dateItemRows[dateStr]) dateItemRows[dateStr] = [];
             // 같은 날짜+상품명+옵션 조합으로 수량 집계
@@ -8344,29 +8360,44 @@ async function previewChannelSales() {
       }
 
     } else if (_chUploadTab === 'naver') {
-      // 스마트스토어 정산내역: No. / 주문번호 / 구분 / 상품명 / 결제일 / 정산기준금액
-      // 실제 컬럼: No., 주문번호, 상품주문번호, 구분, 상품명, 구매자명, 결제일, 정산기준금액, ...
-      const dateKey = keys.find(k=>k==='결제일') || keys.find(k=>k.includes('결제일'))
-                   || keys.find(k=>k.includes('주문일')) || keys.find(k=>k.includes('정산기준일'));
+      // 스마트스토어 두 가지 형식 자동 감지
+      // [형식 A] 정산내역: 결제일[39], 상품명[16], 수량[22], 정산예정금액[44], 주문상태[4]
+      // [형식 B] 발주발송: 결제일[18] or 주문일시[62], 상품명[20], 수량[26], 정산예정금액[60], 주문상태[14]
+
+      const dateKey = keys.find(k=>k==='결제일')
+                   || keys.find(k=>k==='주문일시')
+                   || keys.find(k=>k.includes('결제일'))
+                   || keys.find(k=>k.includes('주문일'));
       const nameKey = keys.find(k=>k==='상품명');
       const qtyKey  = keys.find(k=>k==='수량') || keys.find(k=>k.includes('수량'));
-      // 정산기준금액 우선, 없으면 실결제금액 계열
-      const amtKey  = keys.find(k=>k==='정산기준금액')
-                   || keys.find(k=>k.includes('정산기준금액'))
-                   || keys.find(k=>k==='실결제금액'||k.includes('실결제금액'))
-                   || keys.find(k=>k.includes('총결제금액')||k.includes('결제금액'));
-      // 구분 컬럼: '상품주문' / '배송비' / '취소' 등 구분
-      const divKey  = keys.find(k=>k==='구분') || keys.find(k=>k.includes('구분')&&k.length<=4);
+      // 주문금액 기준 (카카오/자사몰과 동일하게 실제 판매금액 사용)
+      // 정산내역: [28] 최종 상품별 총 주문금액
+      // 발주발송: [32] 최종 상품별 총 주문금액
+      const amtKey  = keys.find(k=>k==='최종 상품별 총 주문금액')
+                   || keys.find(k=>k.includes('총 주문금액'))
+                   || keys.find(k=>k==='정산예정금액')
+                   || keys.find(k=>k.includes('정산예정금액'))
+                   || keys.find(k=>k.includes('결제금액'));
+      const statusKey = keys.find(k=>k==='주문상태') || keys.find(k=>k.includes('주문상태'));
 
       if (!dateKey) throw new Error(`스마트스토어 날짜 컬럼 없음. 발견: ${keys.slice(0,10).join(', ')}`);
       if (!amtKey)  throw new Error(`스마트스토어 금액 컬럼 없음. 발견: ${keys.slice(0,10).join(', ')}`);
 
+      // 형식 A (정산내역): 주문상태 = '구매확정' or '교환'만 있음 → 이것만 포함
+      // 형식 B (발주발송): 주문상태 = '배송완료','발송대기' 등 → 취소/반품만 제외
+      // 감지 기준: '구매확정일' 컬럼 있으면 정산내역, 없으면 발주발송
+      const isSettleFormat = keys.includes('구매확정일');
+
       for (const row of raw) {
-        // 구분 컬럼 있을 때: '상품주문'만 포함 (배송비·취소·환불 제외)
-        if (divKey) {
-          const div = String(row[divKey]||'').trim();
-          if (div === '') continue; // 빈 행 제외
-          if (!div.includes('상품주문')) continue;
+        if (statusKey) {
+          const st = String(row[statusKey]||'').trim();
+          if (isSettleFormat) {
+            // 정산내역: 구매확정/교환만 포함
+            if (!st.includes('구매확정') && !st.includes('교환')) continue;
+          } else {
+            // 발주발송: 취소/반품/환불 상태 제외
+            if (st.includes('취소') || st.includes('반품') || st.includes('환불')) continue;
+          }
         }
         const dateStr = parseDateStr(row[dateKey]);
         if (!dateStr) continue;
