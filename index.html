@@ -5627,7 +5627,7 @@ function _importInventoryXlsx(file, input) {
         const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
         // header:1 → 2D 배열 (첫 행=헤더명)
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
         if (rows.length < 2) { showToast('❌ 데이터가 없어요'); return; }
         _processInventoryRows(rows);
       } catch(err) { showToast('❌ 파일 오류: ' + err.message); }
@@ -5664,8 +5664,8 @@ function _processInventoryRows(rows) {
   const kakaoIdx = headers.findIndex(h => h === '카카오재고');
   const naverIdx = headers.findIndex(h => h === '스마트스토어재고');
   const hdIdx    = headers.findIndex(h => h === '더현대재고');
-  const prodIdx  = headers.findIndex(h => h.includes('상품화완료'));
-  const priceIdx = headers.findIndex(h => h === '판매가' || h === '판매가격');
+  const prodIdx  = headers.findIndex(h => h === '상품화완료재고' || h.includes('상품화완료'));
+  const priceIdx = headers.findIndex(h => h === '판매가' || h === '판매가격' || h.includes('판매가'));
 
   if (nameIdx < 0 || stockIdx < 0) {
     showToast('❌ 상품명, 원재고 컬럼이 필요해요 — 제공된 엑셀 양식을 사용해주세요');
@@ -5699,18 +5699,15 @@ function _processInventoryRows(rows) {
     // 상품화완료재고
     const prodReady = prodIdx >= 0 ? (parseInt(row[prodIdx])||0) : 0;
 
-    // 가용·대기 자동 계산
-    const avail   = Math.max(0, prodReady - totalCh);
-    const isInf   = rawStock === 9999;
-    const waiting = isInf ? 9999 : Math.max(0, rawStock - prodReady);
-
-    // 무한재고 상태 판정
+    // 무한재고 판정 — 모바일 케이스류만 (커스텀옷 해당 없음)
     const isMobileCase = (() => {
       if (catIdx < 0) return false;
       const c = String(row[catIdx]||'').trim();
       return c === '모바일' && !name.includes('그립톡');
     })();
-    const stockStatus = (isInf || isMobileCase) ? '무한재고' : '';
+    const stockStatus = isMobileCase ? '무한재고' : '';
+    // 모바일 케이스는 원재고 0으로 저장 (생산일정 오염 방지)
+    const finalStock = isMobileCase ? 0 : rawStock;
 
     const existing = state.inventory.find(inv =>
       inv.name === name && (size ? inv.size === size : !inv.size || inv.size === '')
@@ -5718,7 +5715,7 @@ function _processInventoryRows(rows) {
 
     if (existing) {
       // 재고 전체 업데이트
-      existing.stock = rawStock;
+      existing.stock = finalStock;
       existing.prodStockReady = prodReady;
       if (priceIdx >= 0 && row[priceIdx]) existing.price = parseInt(row[priceIdx]) || existing.price;
       if (stockStatus) existing.stockStatus = stockStatus;
@@ -5737,7 +5734,7 @@ function _processInventoryRows(rows) {
         name, size,
         category: catMap[catRaw] || 'etc',
         brand: 'mongmo',
-        stock: rawStock,
+        stock: finalStock,
         price: priceIdx >= 0 ? (parseInt(row[priceIdx])||0) : 0,
         status: '판매 중',
         stockStatus: stockStatus,
