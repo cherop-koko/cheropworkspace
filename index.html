@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.2</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.3</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -1265,56 +1265,77 @@
       <div class="page-header">
         <div>
           <div class="page-title">🧾 세무 관리</div>
-          <div class="page-sub">월별 손익 · 부가세 · 종합소득세 예상액 — 대표 전용</div>
+          <div class="page-sub">순이익 · 비용 관리 · 세금 예상 — 대표 전용</div>
         </div>
         <div class="header-actions">
           <div class="tab-bar" style="margin-bottom:0;">
-            <div class="tab active" onclick="setTaxView('monthly',this)">월별 손익</div>
+            <div class="tab active" onclick="setTaxView('monthly',this)">손익 현황</div>
             <div class="tab" onclick="setTaxView('vat',this)">부가세</div>
             <div class="tab" onclick="setTaxView('income',this)">종합소득세</div>
           </div>
-          <button class="btn btn-primary" onclick="openModal('add-expense')">+ 비용 입력</button>
+          <button class="btn btn-secondary" onclick="openFixedCostModal()" style="font-size:12px;">⚙️ 고정비 설정</button>
+          <button class="btn btn-primary" onclick="openAddExpenseModal()">+ 비용 입력</button>
         </div>
       </div>
 
-      <!-- ── 월별 손익 뷰 ── -->
+      <!-- ── 손익 현황 뷰 ── -->
       <div id="tax-view-monthly">
-        <!-- 연간 요약 -->
-        <div class="grid-3 section" id="tax-annual-summary"></div>
 
-        <!-- 월 선택 -->
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;">
-          <select class="form-select" id="tax-year-select" onchange="renderTax()" style="width:100px;">
-            <option value="2026">2026년</option>
-            <option value="2025">2025년</option>
-          </select>
-          <select class="form-select" id="tax-month-select" onchange="renderTaxMonthDetail()" style="width:100px;">
-            <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
-            <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
-            <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
-            <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
-          </select>
+        <!-- 연도 선택 + 기간 탭 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <select class="form-select" id="tax-year-select" onchange="renderTax()" style="width:100px;">
+              <option value="2026">2026년</option>
+              <option value="2025">2025년</option>
+            </select>
+            <div class="tab-bar" style="margin-bottom:0;">
+              <div class="tab active" id="tax-period-tab-monthly" onclick="setTaxPeriod('monthly',this)">월별</div>
+              <div class="tab" id="tax-period-tab-quarter" onclick="setTaxPeriod('quarter',this)">분기별</div>
+              <div class="tab" id="tax-period-tab-annual" onclick="setTaxPeriod('annual',this)">연간</div>
+            </div>
+          </div>
+          <!-- 월별일 때만 월 선택 표시 -->
+          <div id="tax-month-wrap" style="display:flex;align-items:center;gap:8px;">
+            <select class="form-select" id="tax-month-select" onchange="renderTaxDetail()" style="width:90px;">
+              <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+              <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+              <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+              <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+            </select>
+          </div>
         </div>
 
-        <!-- 월별 바 차트 -->
+        <!-- 요약 카드 3개 -->
+        <div class="grid-3 section" id="tax-annual-summary"></div>
+
+        <!-- 차트 -->
         <div class="card section">
-          <div class="card-title"><span>월별 매출 · 비용 · 순이익</span></div>
+          <div class="card-title"><span id="tax-chart-title">월별 매출 · 비용 · 순이익</span></div>
           <div style="overflow-x:auto;"><canvas id="tax-monthly-chart" height="300"></canvas></div>
         </div>
 
-        <!-- 선택 월 상세 -->
+        <!-- 상세: 손익 + 비용내역 -->
         <div class="grid-2 section">
           <div class="card">
             <div class="card-title">
-              <span id="tax-detail-title">월 상세 손익</span>
+              <span id="tax-detail-title">손익 상세</span>
               <span id="tax-net-badge"></span>
             </div>
             <div id="tax-month-detail"></div>
           </div>
           <div class="card">
-            <div class="card-title">비용 내역</div>
+            <div class="card-title">
+              <span>비용 내역</span>
+              <button class="btn btn-sm btn-secondary" onclick="openAddExpenseModal()" style="font-size:11px;">+ 입력</button>
+            </div>
             <div id="tax-expense-list"></div>
           </div>
+        </div>
+
+        <!-- 비용 항목별 누적 -->
+        <div class="card section">
+          <div class="card-title"><span id="tax-category-title">비용 항목별 분석</span></div>
+          <div id="tax-category-breakdown"></div>
         </div>
       </div>
 
@@ -1325,21 +1346,19 @@
           <div id="vat-content"></div>
         </div>
         <div class="card section">
-          <div class="card-title" style="font-size:13px;color:var(--text-muted);font-weight:400;">⚠️ 부가세는 참고용 예상액이에요. 실제 신고 시 세무사 확인을 권장해요.</div>
+          <div style="font-size:12px;color:var(--text-muted);">⚠️ 부가세는 참고용 예상액이에요. 실제 신고 시 세무사 확인을 권장해요.</div>
         </div>
       </div>
 
       <!-- ── 종합소득세 뷰 ── -->
       <div id="tax-view-income" class="hidden">
         <div class="card section">
-          <div class="card-title">종합소득세 예상액 <span style="font-size:11px;font-weight:400;color:var(--text-muted);">개인사업자 기준 · 2026년</span></div>
+          <div class="card-title">종합소득세 예상액 <span style="font-size:11px;font-weight:400;color:var(--text-muted);">개인사업자 기준</span></div>
           <div id="income-tax-content"></div>
         </div>
         <div class="card section">
           <div style="font-size:12px;color:var(--text-muted);line-height:1.8;">
-            ⚠️ <strong>중요 안내:</strong> 이 계산은 <strong>참고용 예상치</strong>예요.<br>
-            실제 종합소득세는 필요경비 인정 범위, 공제 항목, 세무사 조정에 따라 크게 달라질 수 있어요.<br>
-            4월 법인 전환 이후에는 법인세 탭이 추가될 예정이에요.
+            ⚠️ 이 계산은 참고용 예상치예요. 실제 종합소득세는 필요경비 인정 범위, 공제 항목, 세무사 조정에 따라 크게 달라질 수 있어요.
           </div>
         </div>
       </div>
@@ -2653,9 +2672,9 @@
 
 <!-- Add Expense Modal -->
 <div class="modal-overlay hidden" id="modal-add-expense">
-  <div class="modal" style="width:520px;">
-    <div class="modal-title">🧾 비용 입력</div>
-    <div class="form-row">
+  <div class="modal" style="width:600px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-title">🧾 비용 입력 <span id="exp-modal-period" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
+    <div class="form-row" style="margin-bottom:16px;">
       <div class="form-group">
         <label class="form-label">연도</label>
         <select class="form-select" id="exp-year">
@@ -2672,32 +2691,138 @@
         </select>
       </div>
     </div>
-    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:4px;">
-      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">💼 인건비</div>
+
+    <!-- 고정비 자동반영 버튼 -->
+    <div style="padding:10px 14px;background:var(--palett-light);border-radius:8px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:12px;color:var(--palett);">💡 고정비 설정값을 자동으로 불러올 수 있어요</span>
+      <button class="btn btn-sm" onclick="applyFixedCosts()" style="font-size:11px;background:var(--palett);color:#fff;border:none;">고정비 자동입력</button>
+    </div>
+
+    <!-- 인건비 -->
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">👥 인건비</div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">직원 급여 합계 (세전)</label><input class="form-input" type="number" id="exp-salary" placeholder="0"></div>
-        <div class="form-group"><label class="form-label">4대보험 (회사 부담분)</label><input class="form-input" type="number" id="exp-insurance" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">직원 급여 합계 (세전)</label><input class="form-input exp-field" type="number" id="exp-salary" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">4대보험 (회사 부담분)</label><input class="form-input exp-field" type="number" id="exp-insurance" placeholder="0" oninput="updateExpTotal()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">퇴직금 적립</label><input class="form-input exp-field" type="number" id="exp-severance" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">교육훈련비</label><input class="form-input exp-field" type="number" id="exp-training" placeholder="0" oninput="updateExpTotal()"></div>
       </div>
     </div>
-    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:4px;">
-      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">📦 매입 / 물류</div>
+
+    <!-- 매입/물류 -->
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">📦 매입 · 물류</div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">매입 원가 (재고 구매)</label><input class="form-input" type="number" id="exp-cogs" placeholder="0"></div>
-        <div class="form-group"><label class="form-label">배송비 · 포장비</label><input class="form-input" type="number" id="exp-shipping" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">매입 원가 (재고 구매)</label><input class="form-input exp-field" type="number" id="exp-cogs" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">배송비</label><input class="form-input exp-field" type="number" id="exp-shipping" placeholder="0" oninput="updateExpTotal()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">포장재 · 박스</label><input class="form-input exp-field" type="number" id="exp-packaging" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">창고 · 물류비</label><input class="form-input exp-field" type="number" id="exp-warehouse" placeholder="0" oninput="updateExpTotal()"></div>
       </div>
     </div>
-    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:4px;">
-      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">🏢 고정비</div>
+
+    <!-- 고정비 -->
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">🏢 고정비</div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">사무실 월세</label><input class="form-input" type="number" id="exp-rent" placeholder="0"></div>
-        <div class="form-group"><label class="form-label">광고비 (인스타·네이버)</label><input class="form-input" type="number" id="exp-ads" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">사무실 · 물류센터 월세</label><input class="form-input exp-field" type="number" id="exp-rent" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">관리비 · 공과금</label><input class="form-input exp-field" type="number" id="exp-utility" placeholder="0" oninput="updateExpTotal()"></div>
       </div>
-      <div class="form-group"><label class="form-label">기타 고정비</label><input class="form-input" type="number" id="exp-other" placeholder="0"><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">통신비, 소모품, 수수료 등</div></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">통신비 (인터넷 · 전화)</label><input class="form-input exp-field" type="number" id="exp-telecom" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">보안 · CCTV</label><input class="form-input exp-field" type="number" id="exp-security" placeholder="0" oninput="updateExpTotal()"></div>
+      </div>
     </div>
-    <div style="padding:12px 14px;background:var(--surface2);border-radius:8px;font-size:13px;font-weight:600;margin-top:4px;" id="exp-total-preview">총 비용: 0원</div>
+
+    <!-- 마케팅 -->
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">📣 마케팅 · 광고</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">SNS 광고 (인스타 · 네이버)</label><input class="form-input exp-field" type="number" id="exp-ads" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">콘텐츠 제작비</label><input class="form-input exp-field" type="number" id="exp-content" placeholder="0" oninput="updateExpTotal()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">팝업 · 행사비</label><input class="form-input exp-field" type="number" id="exp-event" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">샘플 · 협찬비</label><input class="form-input exp-field" type="number" id="exp-sample" placeholder="0" oninput="updateExpTotal()"></div>
+      </div>
+    </div>
+
+    <!-- 세금 · 수수료 -->
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">🏛 세금 · 수수료</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">세금 · 공과금 (부가세 등)</label><input class="form-input exp-field" type="number" id="exp-tax" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">세무사 · 회계 수수료</label><input class="form-input exp-field" type="number" id="exp-accounting" placeholder="0" oninput="updateExpTotal()"></div>
+      </div>
+    </div>
+
+    <!-- 기타 -->
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">📁 기타</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">소모품 구매</label><input class="form-input exp-field" type="number" id="exp-supplies" placeholder="0" oninput="updateExpTotal()"></div>
+        <div class="form-group"><label class="form-label">업무 식대 · 교통비</label><input class="form-input exp-field" type="number" id="exp-meal" placeholder="0" oninput="updateExpTotal()"></div>
+      </div>
+      <div class="form-group"><label class="form-label">기타 (직접 입력)</label><input class="form-input exp-field" type="number" id="exp-other" placeholder="0" oninput="updateExpTotal()"><input class="form-input" type="text" id="exp-other-label" placeholder="항목명 (예: 인증비용)" style="margin-top:6px;font-size:12px;"></div>
+    </div>
+
+    <!-- 추가 항목 (커스텀) -->
+    <div id="exp-custom-rows"></div>
+    <button onclick="addExpCustomRow()" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:none;cursor:pointer;font-size:12px;color:var(--text-muted);margin-bottom:12px;">+ 항목 직접 추가</button>
+
+    <div style="padding:12px 14px;background:var(--mongmo-light);border-radius:8px;font-size:14px;font-weight:700;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+      <span>총 비용</span>
+      <span id="exp-total-preview" style="color:var(--mongmo);">0원</span>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-expense')">취소</button>
       <button class="btn btn-primary" onclick="submitExpense()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 고정비 설정 모달 -->
+<div class="modal-overlay hidden" id="modal-tax-fixed-cost">
+  <div class="modal" style="width:520px;max-height:80vh;overflow-y:auto;">
+    <div class="modal-title">⚙️ 고정비 설정 <span style="font-size:12px;font-weight:400;color:var(--text-muted);">매달 자동 반영되는 비용</span></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;padding:10px;background:var(--surface2);border-radius:8px;">
+      여기 입력한 금액이 비용 입력 시 "고정비 자동입력" 버튼을 누르면 자동으로 채워져요.
+    </div>
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">👥 인건비 (매월 고정)</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">직원 급여 합계</label><input class="form-input" type="number" id="fixed-salary" placeholder="0" oninput="updateFixedTotal()"></div>
+        <div class="form-group"><label class="form-label">4대보험 (회사부담)</label><input class="form-input" type="number" id="fixed-insurance" placeholder="0" oninput="updateFixedTotal()"></div>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">🏢 고정비</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">월세</label><input class="form-input" type="number" id="fixed-rent" placeholder="0" oninput="updateFixedTotal()"></div>
+        <div class="form-group"><label class="form-label">관리비 · 공과금</label><input class="form-input" type="number" id="fixed-utility" placeholder="0" oninput="updateFixedTotal()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">통신비</label><input class="form-input" type="number" id="fixed-telecom" placeholder="0" oninput="updateFixedTotal()"></div>
+        <div class="form-group"><label class="form-label">보안 · CCTV</label><input class="form-input" type="number" id="fixed-security" placeholder="0" oninput="updateFixedTotal()"></div>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">📁 기타 고정비</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">세무사 수수료</label><input class="form-input" type="number" id="fixed-accounting" placeholder="0" oninput="updateFixedTotal()"></div>
+        <div class="form-group"><label class="form-label">기타</label><input class="form-input" type="number" id="fixed-other" placeholder="0" oninput="updateFixedTotal()"></div>
+      </div>
+    </div>
+    <div style="padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:13px;font-weight:600;margin-bottom:16px;display:flex;justify-content:space-between;">
+      <span>월 고정비 합계</span>
+      <span id="fixed-total-preview">0원</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('tax-fixed-cost')">취소</button>
+      <button class="btn btn-primary" onclick="saveFixedCosts()">저장</button>
     </div>
   </div>
 </div>
@@ -3585,17 +3710,7 @@ async function save() {
     prodStockReady: state.prodStockReady,
     productSalesLog: state.productSalesLog||[],
     inboundItems: state.inboundItems||[],
-  };
-  clearTimeout(_saveTimeout);
-  _saveTimeout = setTimeout(async () => {
-    const { error } = await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
-    if (error) {
-      console.error('[Save Error]', error.message);
-      showToast('❌ 저장 실패 — 네트워크를 확인해주세요');
-    }
-    _saveTimeout = null;
-  }, 100);
-}
+    fixedCosts: state.fixedCosts||{},
 
 // ── 근태 저장 (별도 테이블, row 단위 upsert) ──
 async function saveAttendance(rec) {
@@ -3859,6 +3974,7 @@ function applyState(p) {
   state.attendances = p.attendances || []; // 별도 테이블 로드 후 덮어써짐
   state.leaves = p.leaves || [];           // 별도 테이블 로드 후 덮어써짐
   state.expenses = p.expenses || [];
+  state.fixedCosts = p.fixedCosts || {};
   state.activityLog = p.activityLog || [];
   state.ops = p.ops || [];
   state.invSettings = p.invSettings || { dustbagS:500, dustbagL:200, dustbagSThreshold:200, dustbagLThreshold:100, reorderDays:60, dangerDays:45, bom:[] };
@@ -3983,7 +4099,7 @@ function initApp() {
       'renderConsumables','renderAssets','renderAttendance',
       'renderNotice','renderProject','renderTasks',
       'renderInventory','renderCalendar','renderOpsCalendar',
-      'renderChannelBreakdown','renderTaxMonthDetail',
+      'renderChannelBreakdown','renderTaxDetail',
     ].forEach(name => {
       if (typeof window[name] === 'function') {
         const _orig = window[name];
@@ -4201,7 +4317,8 @@ let state = {
   assetTags: { popup:[], ad:[] }, // 동적 서브태그
   attendances: [],  // { id, member, date, clockIn, clockOut }
   leaves: [],       // { id, member, type, start, end, reason, status }
-  expenses: [],     // { id, year, month, salary, insurance, cogs, shipping, rent, ads, other }
+  expenses: [],     // { id, year, month, ... }
+  fixedCosts: {},   // { salary, insurance, rent, utility, telecom, security, accounting, other }
   activityLog: [],  // { id, ts, type, actor, desc } — 활동 알림 피드
   ops: [],          // { id, title, type, brand, start, end, memo } — 운영 일정
   opsYear: new Date().getFullYear(), opsMonth: new Date().getMonth(),
@@ -10839,10 +10956,39 @@ function deleteOutbound(id) {
 
 // ============ TAX MANAGEMENT ============
 let taxView = 'monthly';
+let taxPeriod = 'monthly'; // monthly | quarter | annual
+
+// ── 비용 항목 정의 (세분화) ──
+const EXP_FIELDS = [
+  { id:'salary',     label:'직원 급여',           icon:'👥', group:'인건비' },
+  { id:'insurance',  label:'4대보험 (회사부담)',   icon:'🏥', group:'인건비' },
+  { id:'severance',  label:'퇴직금 적립',          icon:'💰', group:'인건비' },
+  { id:'training',   label:'교육훈련비',            icon:'📚', group:'인건비' },
+  { id:'cogs',       label:'매입 원가',             icon:'📦', group:'매입·물류' },
+  { id:'shipping',   label:'배송비',                icon:'🚚', group:'매입·물류' },
+  { id:'packaging',  label:'포장재·박스',           icon:'📫', group:'매입·물류' },
+  { id:'warehouse',  label:'창고·물류비',           icon:'🏭', group:'매입·물류' },
+  { id:'rent',       label:'월세',                  icon:'🏢', group:'고정비' },
+  { id:'utility',    label:'관리비·공과금',          icon:'💡', group:'고정비' },
+  { id:'telecom',    label:'통신비',                icon:'📡', group:'고정비' },
+  { id:'security',   label:'보안·CCTV',             icon:'🔒', group:'고정비' },
+  { id:'ads',        label:'SNS·광고비',            icon:'📣', group:'마케팅' },
+  { id:'content',    label:'콘텐츠 제작비',          icon:'🎨', group:'마케팅' },
+  { id:'event',      label:'팝업·행사비',            icon:'🏪', group:'마케팅' },
+  { id:'sample',     label:'샘플·협찬비',            icon:'🎁', group:'마케팅' },
+  { id:'tax',        label:'세금·공과금',            icon:'🏛', group:'세금·수수료' },
+  { id:'accounting', label:'세무사·회계 수수료',     icon:'📋', group:'세금·수수료' },
+  { id:'supplies',   label:'소모품',                icon:'🛍', group:'기타' },
+  { id:'meal',       label:'식대·교통비',            icon:'🍱', group:'기타' },
+  { id:'other',      label:'기타',                  icon:'📁', group:'기타' },
+];
+const FIXED_FIELDS = ['salary','insurance','rent','utility','telecom','security','accounting','other'];
 
 function setTaxView(view, el) {
   taxView = view;
-  document.querySelectorAll('#page-tax .tab-bar .tab').forEach(t => t.classList.remove('active'));
+  // 상위 탭바만 (헤더 안의 첫번째 탭바)
+  const headerTabs = document.querySelectorAll('#page-tax .page-header .tab-bar .tab');
+  headerTabs.forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('tax-view-monthly').classList.toggle('hidden', view !== 'monthly');
   document.getElementById('tax-view-vat').classList.toggle('hidden', view !== 'vat');
@@ -10852,67 +10998,68 @@ function setTaxView(view, el) {
   if (view === 'income') renderIncomeTax();
 }
 
+function setTaxPeriod(period, el) {
+  taxPeriod = period;
+  document.querySelectorAll('#tax-view-monthly .tab-bar .tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const mw = document.getElementById('tax-month-wrap');
+  if (mw) mw.style.display = period === 'monthly' ? 'flex' : 'none';
+  renderTax();
+}
+
 function getMonthRevenue(year, month) {
   const mk = `${year}-${String(month).padStart(2,'0')}`;
-  return state.revenueLog
+  return (state.revenueLog||[])
     .filter(r => r.date.startsWith(mk))
-    .reduce((s, r) => s + (r.imweb||0) + (r.kakao||0) + (r.naver||0) + (r.popup||0) + (r.emoji||0) + (r.line||0) + (r.ncp||0), 0);
+    .reduce((s, r) => s + (r.imweb||0)+(r.kakao||0)+(r.naver||0)+(r.popup||0)+(r.emoji||0)+(r.line||0)+(r.ncp||0), 0);
 }
 
 function getMonthPlatformFees(year, month) {
-  // revenueLog에서 해당 월 채널별 매출 합산 후 수수료 계산
   const mk = `${year}-${String(month).padStart(2,'0')}`;
   const logs = (state.revenueLog||[]).filter(r => r.date.startsWith(mk));
-  const kakaoRev  = logs.reduce((s,r) => s+(r.kakao||0), 0);
-  const imwebRev  = logs.reduce((s,r) => s+(r.imweb||0), 0);
-  const naverRev  = logs.reduce((s,r) => s+(r.naver||0), 0);
-  // 네이버는 정산예정금액이 이미 있으면 그 차이, 없으면 5.7%
-  const kakaoFee  = Math.round(kakaoRev * 0.15);
-  const imwebFee  = Math.round(imwebRev * 0.0255);
-  const naverFee  = Math.round(naverRev * 0.057);
-  return { kakaoFee, imwebFee, naverFee,
-           total: kakaoFee + imwebFee + naverFee,
-           kakaoRev, imwebRev, naverRev };
+  const kakaoRev = logs.reduce((s,r)=>s+(r.kakao||0),0);
+  const imwebRev = logs.reduce((s,r)=>s+(r.imweb||0),0);
+  const naverRev = logs.reduce((s,r)=>s+(r.naver||0),0);
+  const kakaoFee = Math.round(kakaoRev*0.15);
+  const imwebFee = Math.round(imwebRev*0.0255);
+  const naverFee = Math.round(naverRev*0.057);
+  return { kakaoFee, imwebFee, naverFee, total:kakaoFee+imwebFee+naverFee, kakaoRev, imwebRev, naverRev };
 }
 
 function getMonthExpense(year, month) {
-  const e = state.expenses.find(x => x.year == year && x.month == month);
+  const e = (state.expenses||[]).find(x => x.year==year && x.month==month);
   const fees = getMonthPlatformFees(year, month);
-  const baseItems = e ? [
-    { label: '직원 급여', value: e.salary || 0, icon: '👥' },
-    { label: '4대보험 (회사부담)', value: e.insurance || 0, icon: '🏥' },
-    { label: '매입 원가', value: e.cogs || 0, icon: '📦' },
-    { label: '배송·포장비', value: e.shipping || 0, icon: '🚚' },
-    { label: '사무실 월세', value: e.rent || 0, icon: '🏢' },
-    { label: '광고비', value: e.ads || 0, icon: '📣' },
-    { label: '기타 고정비', value: e.other || 0, icon: '💳' },
-  ].filter(i => i.value > 0) : [];
-  // 플랫폼 수수료 자동 추가
+  const baseItems = e ? EXP_FIELDS.map(f => ({
+    label:f.label, icon:f.icon, group:f.group,
+    value:(e[f.id]||0) + (f.id==='other'&&e.customRows ? e.customRows.reduce((s,r)=>s+(r.amount||0),0) : 0),
+  })).filter(i=>i.value>0) : [];
   const feeItems = [
-    fees.kakaoFee  > 0 ? { label: `카카오 수수료 (15%)`,    value: fees.kakaoFee,  icon: '💛' } : null,
-    fees.imwebFee  > 0 ? { label: `자사몰 수수료 (2.55%)`,  value: fees.imwebFee,  icon: '🏪' } : null,
-    fees.naverFee  > 0 ? { label: `스마트스토어 수수료 (5.7%)`, value: fees.naverFee, icon: '🟢' } : null,
+    fees.kakaoFee>0 ? {label:'카카오 수수료 (15%)',          icon:'💛',group:'수수료',value:fees.kakaoFee}  : null,
+    fees.imwebFee>0 ? {label:'자사몰 수수료 (2.55%)',        icon:'🏪',group:'수수료',value:fees.imwebFee} : null,
+    fees.naverFee>0 ? {label:'스마트스토어 수수료 (5.7%)',   icon:'🟢',group:'수수료',value:fees.naverFee} : null,
   ].filter(Boolean);
-  const items = [...baseItems, ...feeItems];
-  const total = items.reduce((s, i) => s + i.value, 0);
-  return { total, items, raw: e, fees };
+  const items=[...baseItems,...feeItems];
+  const total=items.reduce((s,i)=>s+i.value,0);
+  return { total, items, raw:e, fees };
+}
+
+function getRangeRevExp(year, months) {
+  let rev=0, exp=0;
+  months.forEach(m=>{rev+=getMonthRevenue(year,m);exp+=getMonthExpense(year,m).total;});
+  return { rev, exp, net:rev-exp };
 }
 
 function renderTax() {
   const year = parseInt(document.getElementById('tax-year-select')?.value || 2026);
   const now = new Date();
-  document.getElementById('tax-month-select').value = now.getMonth() + 1;
-
-  // Annual summary
-  let annualRev = 0, annualExp = 0;
-  for (let m = 1; m <= 12; m++) {
-    annualRev += getMonthRevenue(year, m);
-    annualExp += getMonthExpense(year, m).total;
-  }
-  const annualNet = annualRev - annualExp;
-  const taxRate = getIncomeTaxRate(annualNet);
-
-  document.getElementById('tax-annual-summary').innerHTML = `
+  // 세무탭 진입 시 항상 현재월로 초기화
+  document.getElementById('tax-month-select').value = now.getMonth()+1;
+  let annualRev=0, annualExp=0;
+  for(let m=1;m<=12;m++){annualRev+=getMonthRevenue(year,m);annualExp+=getMonthExpense(year,m).total;}
+  const annualNet=annualRev-annualExp;
+  const taxRate=getIncomeTaxRate(annualNet);
+  const netColor=annualNet>=0?'var(--green)':'var(--red)';
+  document.getElementById('tax-annual-summary').innerHTML=`
     <div class="stat-card">
       <div class="stat-label">연간 총 매출</div>
       <div class="stat-value" style="font-size:20px;">${fmtWon(annualRev)}</div>
@@ -10921,284 +11068,319 @@ function renderTax() {
     <div class="stat-card">
       <div class="stat-label">연간 총 비용</div>
       <div class="stat-value" style="font-size:20px;color:var(--red);">${fmtWon(annualExp)}</div>
-      <div class="stat-change">입력된 비용 합계</div>
+      <div class="stat-change">플랫폼 수수료 포함</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">연간 순이익 (예상)</div>
-      <div class="stat-value" style="font-size:20px;color:${annualNet >= 0 ? 'var(--green)' : 'var(--red)'};">${fmtWon(annualNet)}</div>
-      <div class="stat-change">예상 세율 ${taxRate.rate}%</div>
-    </div>
-  `;
-
+    <div class="stat-card" style="border:1.5px solid ${netColor};">
+      <div class="stat-label">연간 순이익</div>
+      <div class="stat-value" style="font-size:20px;color:${netColor};">${fmtWon(annualNet)}</div>
+      <div class="stat-change">예상 세율 ${taxRate.rate}% · 예상세금 ${fmtWon(taxRate.tax+taxRate.localTax)}</div>
+    </div>`;
+  const chartTitles={monthly:'월별 매출 · 비용 · 순이익',quarter:'분기별 매출 · 비용 · 순이익',annual:'연간 요약'};
+  const tEl=document.getElementById('tax-chart-title');
+  if(tEl) tEl.textContent=chartTitles[taxPeriod];
   renderTaxChart(year);
-  renderTaxMonthDetail();
-  if (window.innerWidth <= 768) setTimeout(mobileFixAll, 50);
+  renderTaxDetail();
+  renderTaxCategoryBreakdown(year);
+  if(window.innerWidth<=768) setTimeout(mobileFixAll,50);
 }
 
 function renderTaxChart(year) {
-  const canvas = document.getElementById('tax-monthly-chart');
-  if (!canvas) return;
-  const wrap = canvas.parentElement;
-  const months = Array.from({length:12}, (_,i) => i+1);
-  const revData = months.map(m => getMonthRevenue(year, m));
-  const expData = months.map(m => getMonthExpense(year, m).total);
-  const netData = months.map((m,i) => revData[i] - expData[i]);
-  const maxVal = Math.max(...revData, ...expData, 1);
-  const mag = Math.pow(10, Math.floor(Math.log10(maxVal)));
-  const niceMax = Math.ceil(maxVal/mag)*mag;
-
-  const DPR = window.devicePixelRatio||1;
-  const W = Math.max(wrap.clientWidth||700, 600);
-  const H = 300;
-  canvas.width = W*DPR; canvas.height = H*DPR;
-  canvas.style.width = W+'px'; canvas.style.height = H+'px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(DPR, DPR);
-
-  const padL=58, padB=32, padT=20, padR=16;
-  const chartW = W-padL-padR, chartH = H-padB-padT;
-  const slotW = chartW/12;
-  const barW = Math.floor(slotW*0.28);
-  const radius = 3;
-
-  ctx.clearRect(0,0,W,H);
-
-  // 그리드
-  for(let i=0;i<=5;i++){
-    const y=padT+chartH-chartH*i/5;
-    ctx.strokeStyle=i===0?'#D5CFC8':'#EAE5DF'; ctx.lineWidth=i===0?1.5:1;
-    ctx.setLineDash(i===0?[]:[4,4]);
-    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle='#A09890'; ctx.font=`10px 'DM Mono',monospace`; ctx.textAlign='right';
-    const lbl=niceMax*i/5>=100000000?`${(niceMax*i/5/100000000).toFixed(1)}억`:niceMax*i/5>=10000?`${Math.round(niceMax*i/5/10000)}만`:`${Math.round(niceMax*i/5).toLocaleString()}`;
-    ctx.fillText(lbl, padL-5, y+3.5);
+  const canvas=document.getElementById('tax-monthly-chart');
+  if(!canvas) return;
+  const wrap=canvas.parentElement;
+  let labels=[],revData=[],expData=[],netData=[];
+  if(taxPeriod==='monthly'){
+    labels=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    for(let m=1;m<=12;m++){const r=getMonthRevenue(year,m);const e=getMonthExpense(year,m).total;revData.push(r);expData.push(e);netData.push(r-e);}
+  } else if(taxPeriod==='quarter'){
+    labels=['1분기','2분기','3분기','4분기'];
+    [[1,2,3],[4,5,6],[7,8,9],[10,11,12]].forEach(ms=>{const {rev,exp,net}=getRangeRevExp(year,ms);revData.push(rev);expData.push(exp);netData.push(net);});
+  } else {
+    const years=[year-2,year-1,year];
+    labels=years.map(y=>y+'년');
+    years.forEach(y=>{let r=0,e=0;for(let m=1;m<=12;m++){r+=getMonthRevenue(y,m);e+=getMonthExpense(y,m).total;}revData.push(r);expData.push(e);netData.push(r-e);});
   }
-
-  // 바 + 선
-  const netPoints = [];
-  months.forEach((m,i) => {
-    const slotX = padL + i*slotW;
-    const cx = slotX + slotW/2;
-
-    // 매출 바 (그라데이션)
-    const rh = Math.max(2, chartH*revData[i]/niceMax);
-    const rg = ctx.createLinearGradient(0, padT+chartH-rh, 0, padT+chartH);
-    rg.addColorStop(0,'#D4956A'); rg.addColorStop(1,'#D4956A88');
-    ctx.fillStyle=rg;
-    const rx=cx-barW-1;
-    ctx.beginPath();
-    ctx.moveTo(rx+radius,padT+chartH-rh); ctx.lineTo(rx+barW-radius,padT+chartH-rh);
-    ctx.quadraticCurveTo(rx+barW,padT+chartH-rh,rx+barW,padT+chartH-rh+radius);
-    ctx.lineTo(rx+barW,padT+chartH); ctx.lineTo(rx,padT+chartH);
-    ctx.lineTo(rx,padT+chartH-rh+radius);
-    ctx.quadraticCurveTo(rx,padT+chartH-rh,rx+radius,padT+chartH-rh);
-    ctx.closePath(); ctx.fill();
-
-    // 비용 바 (그라데이션)
-    if(expData[i]>0){
-      const eh = Math.max(2, chartH*expData[i]/niceMax);
-      const eg = ctx.createLinearGradient(0, padT+chartH-eh, 0, padT+chartH);
-      eg.addColorStop(0,'#C4736A'); eg.addColorStop(1,'#C4736A88');
-      ctx.fillStyle=eg;
-      const ex=cx+1;
+  const DPR=window.devicePixelRatio||1;
+  const W=Math.max(wrap.clientWidth||700,400);
+  const H=300;
+  canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(DPR,DPR);
+  const allVals=[...revData,...expData,...netData.filter(v=>v>0)];
+  const maxVal=Math.max(...allVals,1);
+  const mag=Math.pow(10,Math.floor(Math.log10(maxVal)));
+  const niceMax=Math.ceil(maxVal/mag)*mag;
+  const padL=62,padB=36,padT=24,padR=16;
+  const chartW=W-padL-padR,chartH=H-padB-padT;
+  const n=labels.length;
+  const slotW=chartW/n;
+  const barW=Math.floor(slotW*0.22);
+  const radius=3;
+  ctx.clearRect(0,0,W,H);
+  for(let i=0;i<=4;i++){
+    const y=padT+chartH-chartH*i/4;
+    ctx.strokeStyle=i===0?'#D5CFC8':'#EAE5DF';ctx.lineWidth=i===0?1.5:1;
+    ctx.setLineDash(i===0?[]:[4,4]);
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(padL+chartW,y);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#A09890';ctx.font=`10px 'DM Mono',monospace`;ctx.textAlign='right';
+    const v=niceMax*i/4;
+    const lbl=v>=100000000?`${(v/100000000).toFixed(1)}억`:v>=10000?`${Math.round(v/10000)}만`:`${Math.round(v).toLocaleString()}`;
+    ctx.fillText(lbl,padL-5,y+3.5);
+  }
+  const netPoints=[];
+  labels.forEach((lbl,i)=>{
+    const cx=padL+i*slotW+slotW/2;
+    const drawBar=(val,color,offset)=>{
+      if(val<=0) return;
+      const bh=Math.max(2,chartH*val/niceMax);
+      const bx=cx+offset;
+      ctx.fillStyle=color;
       ctx.beginPath();
-      ctx.moveTo(ex+radius,padT+chartH-eh); ctx.lineTo(ex+barW-radius,padT+chartH-eh);
-      ctx.quadraticCurveTo(ex+barW,padT+chartH-eh,ex+barW,padT+chartH-eh+radius);
-      ctx.lineTo(ex+barW,padT+chartH); ctx.lineTo(ex,padT+chartH);
-      ctx.lineTo(ex,padT+chartH-eh+radius);
-      ctx.quadraticCurveTo(ex,padT+chartH-eh,ex+radius,padT+chartH-eh);
-      ctx.closePath(); ctx.fill();
-    }
-
-    // 순이익 선 포인트
-    const ny = padT+chartH - Math.max(0,chartH*netData[i]/niceMax);
-    netPoints.push({x:cx, y:ny, net:netData[i]});
-
-    // X축 레이블
-    ctx.fillStyle='#A09890'; ctx.font=`10px 'Noto Sans KR',sans-serif`; ctx.textAlign='center';
-    ctx.fillText(`${m}월`, cx, H-8);
-  });
-
-  // 순이익 꺾은선
-  ctx.strokeStyle='#6B9E7A'; ctx.lineWidth=2.5; ctx.setLineDash([]);
-  ctx.beginPath();
-  netPoints.forEach((p,i) => i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-  ctx.stroke();
-  netPoints.forEach(p => {
-    ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2);
-    ctx.fillStyle=p.net>=0?'#6B9E7A':'#C4736A'; ctx.fill();
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
-  });
-
-  // X축 선
-  ctx.strokeStyle='#D5CFC8'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(padL,padT+chartH); ctx.lineTo(padL+chartW,padT+chartH); ctx.stroke();
-
-  // 범례
-  const legends=[['#D4956A','매출'],['#C4736A','비용'],['#6B9E7A','순이익']];
-  legends.forEach(([c,l],i)=>{
-    const lx=padL+i*80;
-    ctx.fillStyle=c; ctx.beginPath(); ctx.roundRect?ctx.roundRect(lx,4,12,10,2):ctx.fillRect(lx,4,12,10); ctx.fill();
-    ctx.fillStyle='#6B6459'; ctx.font=`11px 'Noto Sans KR',sans-serif`; ctx.textAlign='left';
-    ctx.fillText(l, lx+15, 13);
-  });
-
-  // 툴팁 이벤트
-  setTimeout(()=>{
-    const c2=document.getElementById('tax-monthly-chart');
-    if(!c2) return;
-    let tip=document.getElementById('tax-chart-tooltip');
-    if(!tip){
-      tip=document.createElement('div');
-      tip.id='tax-chart-tooltip';
-      tip.style.cssText='position:fixed;background:rgba(26,23,20,0.95);color:#fff;border-radius:10px;padding:10px 14px;font-size:12px;pointer-events:none;display:none;z-index:9999;min-width:160px;box-shadow:0 4px 20px rgba(0,0,0,0.25);';
-      document.body.appendChild(tip);
-    }
-    const old=c2._taxTTCleanup;
-    if(old){c2.removeEventListener('mousemove',old.mm);c2.removeEventListener('mouseleave',old.ml);}
-    const _slotW=slotW,_padL=padL,_revData=revData,_expData=expData,_netData=netData;
-    const mm=e=>{
-      const rr=c2.getBoundingClientRect();
-      const x=e.clientX-rr.left-_padL;
-      const idx=Math.floor(x/_slotW);
-      if(idx<0||idx>=12){tip.style.display='none';return;}
-      const m=idx+1;
-      const rev=_revData[idx],exp=_expData[idx],net=_netData[idx];
-      if(!rev&&!exp){tip.style.display='none';return;}
-      tip.innerHTML=`<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:7px;">${year}년 ${m}월</div>
-        <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;"><span style="color:rgba(255,255,255,0.65);">매출</span><span style="font-weight:600;color:#D4956A;">${fmtWon(rev)}</span></div>
-        <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;"><span style="color:rgba(255,255,255,0.65);">비용</span><span style="font-weight:600;color:#C4736A;">${fmtWon(exp)}</span></div>
-        <div style="border-top:1px solid rgba(255,255,255,0.15);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;gap:16px;"><span style="color:rgba(255,255,255,0.65);">순이익</span><span style="font-weight:700;color:${net>=0?'#6B9E7A':'#C4736A'};">${fmtWon(net)}</span></div>`;
-      tip.style.display='block';
-      tip.style.left=Math.min(e.clientX+14,window.innerWidth-180)+'px';
-      tip.style.top=Math.max(e.clientY-80,8)+'px';
+      ctx.moveTo(bx+radius,padT+chartH-bh);ctx.lineTo(bx+barW-radius,padT+chartH-bh);
+      ctx.quadraticCurveTo(bx+barW,padT+chartH-bh,bx+barW,padT+chartH-bh+radius);
+      ctx.lineTo(bx+barW,padT+chartH);ctx.lineTo(bx,padT+chartH);
+      ctx.lineTo(bx,padT+chartH-bh+radius);
+      ctx.quadraticCurveTo(bx,padT+chartH-bh,bx+radius,padT+chartH-bh);ctx.closePath();ctx.fill();
     };
-    const ml=()=>{tip.style.display='none';};
-    c2.addEventListener('mousemove',mm);c2.addEventListener('mouseleave',ml);
-    c2._taxTTCleanup={mm,ml};
-  },150);
+    drawBar(revData[i],'#D4956A',-barW-2);
+    drawBar(expData[i],'#C4736A',2);
+    const ny=netData[i]>=0?padT+chartH-Math.max(2,chartH*netData[i]/niceMax):padT+chartH;
+    netPoints.push({x:cx,y:ny,net:netData[i]});
+    ctx.fillStyle='#888';ctx.font=`9px Noto Sans KR`;ctx.textAlign='center';
+    ctx.fillText(lbl,cx,H-6);
+  });
+  if(netPoints.length>1){
+    ctx.strokeStyle='#6B9E7A';ctx.lineWidth=2;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(netPoints[0].x,netPoints[0].y);
+    netPoints.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();
+    netPoints.forEach(p=>{ctx.fillStyle=p.net>=0?'#6B9E7A':'#C4736A';ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,Math.PI*2);ctx.fill();});
+  }
+  const legends=[['#D4956A','매출'],['#C4736A','비용'],['#6B9E7A','순이익']];
+  legends.forEach(([c,l],i)=>{ctx.fillStyle=c;ctx.fillRect(padL+i*70,4,10,8);ctx.fillStyle='#8C8680';ctx.font=`10px Noto Sans KR`;ctx.textAlign='left';ctx.fillText(l,padL+i*70+14,12);});
 }
 
-function renderTaxMonthDetail() {
-  const year = parseInt(document.getElementById('tax-year-select')?.value || 2026);
-  const month = parseInt(document.getElementById('tax-month-select')?.value || new Date().getMonth()+1);
-  const rev = getMonthRevenue(year, month);
-  const { total: exp, items, raw } = getMonthExpense(year, month);
-  const net = rev - exp;
-  const margin = rev > 0 ? Math.round(net/rev*100) : 0;
-
-  document.getElementById('tax-detail-title').textContent = `${year}년 ${month}월 손익`;
-  document.getElementById('tax-net-badge').innerHTML = `<span style="font-size:16px;font-weight:700;color:${net>=0?'var(--green)':'var(--red)'};">${fmtWon(net)}</span>`;
-
-  document.getElementById('tax-month-detail').innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:2px solid var(--border);">
-        <span style="font-size:13px;font-weight:600;">총 매출</span>
+function renderTaxDetail() {
+  const year=parseInt(document.getElementById('tax-year-select')?.value||2026);
+  let months=[],periodLabel='';
+  if(taxPeriod==='monthly'){
+    const m=parseInt(document.getElementById('tax-month-select')?.value||new Date().getMonth()+1);
+    months=[m];periodLabel=`${year}년 ${m}월`;
+  } else if(taxPeriod==='quarter'){
+    const q=Math.ceil((new Date().getMonth()+1)/3);
+    months=[[1,2,3],[4,5,6],[7,8,9],[10,11,12]][q-1];periodLabel=`${year}년 ${q}분기`;
+  } else {
+    months=Array.from({length:12},(_,i)=>i+1);periodLabel=`${year}년 전체`;
+  }
+  const titleEl=document.getElementById('tax-detail-title');
+  if(titleEl) titleEl.textContent=`${periodLabel} 손익`;
+  let rev=0,exp=0;
+  months.forEach(m=>{rev+=getMonthRevenue(year,m);exp+=getMonthExpense(year,m).total;});
+  const net=rev-exp;
+  const netColor=net>=0?'var(--green)':'var(--red)';
+  const nbEl=document.getElementById('tax-net-badge');
+  if(nbEl) nbEl.innerHTML=`<span style="font-size:14px;font-weight:700;color:${netColor};">${net>=0?'+':''}${fmtWon(net)}</span>`;
+  const detEl=document.getElementById('tax-month-detail');
+  if(detEl) detEl.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg);border-radius:8px;">
+        <span style="font-size:13px;color:var(--text-muted);">📈 총 매출</span>
         <span style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${fmtWon(rev)}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:2px solid var(--border);">
-        <span style="font-size:13px;font-weight:600;">총 비용</span>
-        <span style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red);">- ${fmtWon(exp)}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg);border-radius:8px;">
+        <span style="font-size:13px;color:var(--text-muted);">📉 총 비용</span>
+        <span style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red);">${fmtWon(exp)}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:${net>=0?'var(--green-light)':'var(--red-light)'};border-radius:10px;">
-        <span style="font-size:14px;font-weight:700;">순이익</span>
-        <div style="text-align:right;">
-          <div style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;color:${net>=0?'var(--green)':'var(--red)'};">${fmtWon(net)}</div>
-          <div style="font-size:11px;color:var(--text-muted);">이익률 ${margin}%</div>
-        </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:${net>=0?'var(--green-light)':'var(--red-light)'};border-radius:8px;border:1.5px solid ${netColor};">
+        <span style="font-size:14px;font-weight:700;color:${netColor};">💰 순이익</span>
+        <span style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;color:${netColor};">${fmtWon(net)}</span>
       </div>
-      ${rev === 0 ? '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px;">이 달 매출 데이터가 없어요</div>' : ''}
-      ${exp === 0 ? `<button class="btn btn-secondary" style="width:100%;margin-top:4px;" onclick="prefillExpenseModal(${year},${month})">+ 이 달 비용 입력하기</button>` : `<button class="btn btn-sm btn-secondary" style="width:100%;margin-top:4px;" onclick="prefillExpenseModal(${year},${month})">비용 수정</button>`}
-    </div>
-  `;
-
-  const listEl = document.getElementById('tax-expense-list');
-  if (!items.length) {
-    listEl.innerHTML = `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px;">비용을 입력해주세요</div>`;
-    return;
-  }
-  listEl.innerHTML = items.map(item => {
-    const pct = exp > 0 ? Math.round(item.value/exp*100) : 0;
-    return `<div style="margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-        <span style="font-size:13px;">${item.icon} ${item.label}</span>
-        <span style="font-size:13px;font-family:'DM Mono',monospace;">${fmtWon(item.value)} <span style="color:var(--text-muted);font-size:11px;">(${pct}%)</span></span>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--mongmo);"></div></div>
+      ${rev>0?`<div style="font-size:12px;color:var(--text-muted);padding:8px 12px;background:var(--surface2);border-radius:6px;">이익률 <strong>${Math.round(net/rev*100)}%</strong> · 매출 대비 비용 <strong>${Math.round(exp/rev*100)}%</strong></div>`:''}
     </div>`;
-  }).join('');
+  const expEl=document.getElementById('tax-expense-list');
+  if(!expEl) return;
+  let allItems=[];
+  months.forEach(m=>{allItems=[...allItems,...getMonthExpense(year,m).items];});
+  const merged={};
+  allItems.forEach(i=>{merged[i.label]=(merged[i.label]||{...i,value:0});merged[i.label].value+=i.value;});
+  const items=Object.values(merged).sort((a,b)=>b.value-a.value);
+  if(!items.length){expEl.innerHTML=`<div style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">비용을 입력해주세요<br><button class="btn btn-secondary" style="margin-top:8px;font-size:12px;" onclick="openAddExpenseModal()">+ 비용 입력</button></div>`;return;}
+  const totalExp=items.reduce((s,i)=>s+i.value,0);
+  expEl.innerHTML=items.map(i=>{
+    const pct=totalExp>0?Math.round(i.value/totalExp*100):0;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:14px;">${i.icon}</span>
+        <div><div style="font-size:13px;">${i.label}</div>
+        <div style="width:${Math.max(pct,2)*1.2}px;height:3px;background:var(--mongmo);border-radius:2px;margin-top:3px;opacity:0.6;"></div></div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;">${fmtWon(i.value)}</div>
+        <div style="font-size:10px;color:var(--text-muted);">${pct}%</div>
+      </div></div>`;
+  }).join('')+`<div style="display:flex;justify-content:space-between;padding:12px 0 0;font-size:13px;font-weight:700;"><span>합계</span><span style="font-family:'DM Mono',monospace;">${fmtWon(totalExp)}</span></div>`;
+}
+
+function renderTaxCategoryBreakdown(year) {
+  const el=document.getElementById('tax-category-breakdown');
+  if(!el) return;
+  const titleEl=document.getElementById('tax-category-title');
+  let months=[],label='';
+  if(taxPeriod==='monthly'){const m=parseInt(document.getElementById('tax-month-select')?.value||new Date().getMonth()+1);months=[m];label=`${m}월`;}
+  else if(taxPeriod==='quarter'){const q=Math.ceil((new Date().getMonth()+1)/3);months=[[1,2,3],[4,5,6],[7,8,9],[10,11,12]][q-1];label=`${q}분기`;}
+  else{months=Array.from({length:12},(_,i)=>i+1);label='연간';}
+  if(titleEl) titleEl.textContent=`${label} 비용 항목별 분석`;
+  const groups={};
+  months.forEach(m=>{
+    const {raw,fees}=getMonthExpense(year,m);
+    if(raw) EXP_FIELDS.forEach(f=>{
+      if(!groups[f.group])groups[f.group]={total:0,items:{}};
+      groups[f.group].total+=(raw[f.id]||0);
+      groups[f.group].items[f.label]=(groups[f.group].items[f.label]||0)+(raw[f.id]||0);
+    });
+    const feeTotal=fees.kakaoFee+fees.imwebFee+fees.naverFee;
+    if(feeTotal>0){
+      if(!groups['수수료'])groups['수수료']={total:0,items:{}};
+      groups['수수료'].total+=feeTotal;
+      if(fees.kakaoFee>0)groups['수수료'].items['카카오 수수료']=(groups['수수료'].items['카카오 수수료']||0)+fees.kakaoFee;
+      if(fees.imwebFee>0)groups['수수료'].items['자사몰 수수료']=(groups['수수료'].items['자사몰 수수료']||0)+fees.imwebFee;
+      if(fees.naverFee>0)groups['수수료'].items['스마트스토어 수수료']=(groups['수수료'].items['스마트스토어 수수료']||0)+fees.naverFee;
+    }
+  });
+  const totalAll=Object.values(groups).reduce((s,g)=>s+g.total,0);
+  if(!totalAll){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px;">비용 데이터가 없어요</div>';return;}
+  const sorted=Object.entries(groups).filter(([,g])=>g.total>0).sort((a,b)=>b[1].total-a[1].total);
+  const colors=['var(--mongmo)','var(--palett)','var(--accent)','var(--green)','var(--yellow)','var(--red)'];
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">`+
+    sorted.map(([gName,g],gi)=>{
+      const pct=Math.round(g.total/totalAll*100);
+      const color=colors[gi%colors.length];
+      const topItems=Object.entries(g.items).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,4);
+      return `<div style="padding:14px;background:var(--bg);border-radius:10px;border-left:3px solid ${color};">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:600;">${gName}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${color}20;color:${color};font-weight:600;">${pct}%</span>
+        </div>
+        <div style="font-size:17px;font-weight:800;font-family:'DM Mono',monospace;margin-bottom:8px;">${fmtWon(g.total)}</div>
+        <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px;">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:2px;"></div>
+        </div>
+        ${topItems.map(([n,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:3px;"><span>${n}</span><span style="font-family:'DM Mono',monospace;">${fmtWon(v)}</span></div>`).join('')}
+      </div>`;
+    }).join('')+`</div>`;
+}
+
+function openAddExpenseModal() {
+  const now=new Date();
+  document.getElementById('exp-year').value=now.getFullYear();
+  document.getElementById('exp-month').value=now.getMonth()+1;
+  EXP_FIELDS.forEach(f=>{const el=document.getElementById('exp-'+f.id);if(el)el.value='';});
+  const ol=document.getElementById('exp-other-label');if(ol)ol.value='';
+  const cr=document.getElementById('exp-custom-rows');if(cr)cr.innerHTML='';
+  const tp=document.getElementById('exp-total-preview');if(tp)tp.textContent='0원';
+  const mp=document.getElementById('exp-modal-period');if(mp)mp.textContent='';
+  openModal('add-expense');
 }
 
 function prefillExpenseModal(year, month) {
   openModal('add-expense');
-  document.getElementById('exp-year').value = year;
-  document.getElementById('exp-month').value = month;
-  const existing = state.expenses.find(e => e.year == year && e.month == month);
-  if (existing) {
-    document.getElementById('exp-salary').value = existing.salary || '';
-    document.getElementById('exp-insurance').value = existing.insurance || '';
-    document.getElementById('exp-cogs').value = existing.cogs || '';
-    document.getElementById('exp-shipping').value = existing.shipping || '';
-    document.getElementById('exp-rent').value = existing.rent || '';
-    document.getElementById('exp-ads').value = existing.ads || '';
-    document.getElementById('exp-other').value = existing.other || '';
-    updateExpTotal();
-  }
+  document.getElementById('exp-year').value=year;
+  document.getElementById('exp-month').value=month;
+  const mp=document.getElementById('exp-modal-period');if(mp)mp.textContent=`— ${year}년 ${month}월`;
+  const existing=(state.expenses||[]).find(e=>e.year==year&&e.month==month);
+  EXP_FIELDS.forEach(f=>{const el=document.getElementById('exp-'+f.id);if(el)el.value=existing?.[f.id]||'';});
+  if(existing?.otherLabel){const ol=document.getElementById('exp-other-label');if(ol)ol.value=existing.otherLabel;}
+  const cr=document.getElementById('exp-custom-rows');if(cr)cr.innerHTML='';
+  if(existing?.customRows)existing.customRows.forEach(r=>addExpCustomRow(r.label,r.amount));
+  updateExpTotal();
+}
+
+function applyFixedCosts() {
+  const fc=state.fixedCosts||{};
+  FIXED_FIELDS.forEach(f=>{const el=document.getElementById('exp-'+f);if(el&&fc[f])el.value=fc[f];});
+  updateExpTotal();
+  showToast('✅ 고정비 자동입력됐어요');
+}
+
+let _expCustomCount=0;
+function addExpCustomRow(label='',amount='') {
+  _expCustomCount++;
+  const id=_expCustomCount;
+  const div=document.createElement('div');
+  div.id=`exp-custom-${id}`;
+  div.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:6px;';
+  div.innerHTML=`<input class="form-input exp-field" type="text" placeholder="항목명" value="${label}" style="flex:1;font-size:13px;" oninput="updateExpTotal()"><input class="form-input exp-field" type="number" placeholder="금액" value="${amount}" style="width:120px;font-size:13px;" oninput="updateExpTotal()"><button onclick="document.getElementById('exp-custom-${id}').remove();updateExpTotal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:0 4px;">✕</button>`;
+  const cr=document.getElementById('exp-custom-rows');if(cr)cr.appendChild(div);
 }
 
 function updateExpTotal() {
-  const fields = ['exp-salary','exp-insurance','exp-cogs','exp-shipping','exp-rent','exp-ads','exp-other'];
-  const total = fields.reduce((s,id) => s + (parseInt(document.getElementById(id)?.value)||0), 0);
-  const el = document.getElementById('exp-total-preview');
-  if (el) el.textContent = `총 비용: ${total.toLocaleString()}원`;
+  let total=0;
+  document.querySelectorAll('.exp-field[type="number"]').forEach(el=>{total+=parseInt(el.value)||0;});
+  const el=document.getElementById('exp-total-preview');
+  if(el)el.textContent=total.toLocaleString()+'원';
 }
 
 function submitExpense() {
-  const year = parseInt(document.getElementById('exp-year').value);
-  const month = parseInt(document.getElementById('exp-month').value);
-  const entry = {
-    id: Date.now(), year, month,
-    salary: parseInt(document.getElementById('exp-salary').value)||0,
-    insurance: parseInt(document.getElementById('exp-insurance').value)||0,
-    cogs: parseInt(document.getElementById('exp-cogs').value)||0,
-    shipping: parseInt(document.getElementById('exp-shipping').value)||0,
-    rent: parseInt(document.getElementById('exp-rent').value)||0,
-    ads: parseInt(document.getElementById('exp-ads').value)||0,
-    other: parseInt(document.getElementById('exp-other').value)||0,
-  };
-  const existing = state.expenses.findIndex(e => e.year == year && e.month == month);
-  if (existing >= 0) state.expenses[existing] = entry;
-  else state.expenses.push(entry);
-  save(); closeModal('add-expense');
-  ['exp-salary','exp-insurance','exp-cogs','exp-shipping','exp-rent','exp-ads','exp-other']
-    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  renderTax();
-  showToast(`✅ ${year}년 ${month}월 비용 저장 완료`);
+  const year=parseInt(document.getElementById('exp-year').value);
+  const month=parseInt(document.getElementById('exp-month').value);
+  const entry={id:Date.now(),year,month};
+  EXP_FIELDS.forEach(f=>{entry[f.id]=parseInt(document.getElementById('exp-'+f.id)?.value)||0;});
+  entry.otherLabel=document.getElementById('exp-other-label')?.value||'';
+  entry.customRows=[];
+  document.querySelectorAll('#exp-custom-rows > div').forEach(row=>{
+    const inputs=row.querySelectorAll('input');
+    const label=inputs[0]?.value.trim();const amount=parseInt(inputs[1]?.value)||0;
+    if(label&&amount>0)entry.customRows.push({label,amount});
+  });
+  if(!state.expenses)state.expenses=[];
+  const idx=state.expenses.findIndex(e=>e.year==year&&e.month==month);
+  if(idx>=0)state.expenses[idx]=entry;else state.expenses.push(entry);
+  save();closeModal('add-expense');renderTax();
+  showToast(`✅ ${year}년 ${month}월 비용 저장됐어요`);
 }
 
-// ── 부가세 계산 ──
+function openFixedCostModal() {
+  const fc = state.fixedCosts || {};
+  FIXED_FIELDS.forEach(f => {
+    const el = document.getElementById('fixed-'+f);
+    if (el) el.value = fc[f] || '';
+  });
+  let ft = 0;
+  FIXED_FIELDS.forEach(f => { ft += parseInt(fc[f]||0); });
+  const el = document.getElementById('fixed-total-preview');
+  if (el) el.textContent = ft.toLocaleString() + '원';
+  openModal('tax-fixed-cost');
+}
+
+function updateFixedTotal() {
+  let ft = 0;
+  FIXED_FIELDS.forEach(f => { const e=document.getElementById('fixed-'+f); ft+=parseInt(e?.value||0); });
+  const el = document.getElementById('fixed-total-preview');
+  if (el) el.textContent = ft.toLocaleString() + '원';
+}
+
+function saveFixedCosts() {
+  if(!state.fixedCosts)state.fixedCosts={};
+  FIXED_FIELDS.forEach(f=>{const el=document.getElementById('fixed-'+f);state.fixedCosts[f]=parseInt(el?.value)||0;});
+  save();closeModal('tax-fixed-cost');
+  showToast('✅ 고정비 설정 저장됐어요');
+}
+
 function renderVAT() {
-  const now = new Date();
-  const year = now.getFullYear();
-  // 상반기: 1~6월, 하반기: 7~12월
-  const half = now.getMonth() < 6 ? 1 : 2;
-  const startM = half === 1 ? 1 : 7;
-  const endM = half === 1 ? 6 : 12;
-
-  let revTotal = 0, cogsTotal = 0;
-  for (let m = startM; m <= endM; m++) {
-    revTotal += getMonthRevenue(year, m);
-    const { raw } = getMonthExpense(year, m);
-    if (raw) cogsTotal += (raw.cogs||0) + (raw.shipping||0);
+  const now=new Date();
+  const year=parseInt(document.getElementById('tax-year-select')?.value||now.getFullYear());
+  const half=now.getMonth()<6?1:2;
+  const startM=half===1?1:7;const endM=half===1?6:12;
+  let revTotal=0,cogsTotal=0;
+  for(let m=startM;m<=endM;m++){
+    revTotal+=getMonthRevenue(year,m);
+    const {raw}=getMonthExpense(year,m);
+    if(raw)cogsTotal+=(raw.cogs||0)+(raw.shipping||0)+(raw.packaging||0);
   }
-
-  // 부가세: 매출세액(10%) - 매입세액(10%)
-  const outputVAT = Math.round(revTotal / 11);   // 공급가액 기준
-  const inputVAT = Math.round(cogsTotal / 11);
-  const vatDue = Math.max(0, outputVAT - inputVAT);
-
-  document.getElementById('vat-content').innerHTML = `
+  const outputVAT=Math.round(revTotal/11);
+  const inputVAT=Math.round(cogsTotal/11);
+  const vatDue=Math.max(0,outputVAT-inputVAT);
+  document.getElementById('vat-content').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
       <div style="padding:16px;background:var(--bg);border-radius:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">매출세액 (10%)</div>
@@ -11213,58 +11395,43 @@ function renderVAT() {
       <div style="padding:16px;background:var(--mongmo-light);border-radius:10px;border:1px solid var(--mongmo);">
         <div style="font-size:11px;color:var(--mongmo);margin-bottom:6px;font-weight:600;">납부 예상 부가세</div>
         <div style="font-size:22px;font-weight:800;font-family:'DM Mono',monospace;color:var(--mongmo);">${fmtWon(vatDue)}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${year}년 ${half === 1 ? '상반기 (1~6월)' : '하반기 (7~12월)'}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${year}년 ${half===1?'상반기 (1~6월)':'하반기 (7~12월)'}</div>
       </div>
     </div>
     <div style="font-size:12px;color:var(--text-muted);padding:12px 16px;background:var(--surface2);border-radius:8px;line-height:1.8;">
-      📌 신고 기한: ${half === 1 ? `${year}년 7월 25일` : `${year+1}년 1월 25일`}<br>
-      📌 매입세액은 세금계산서가 발행된 매입원가·배송비 기준으로 계산했어요.<br>
-      📌 실제 공제 가능 매입세액은 세금계산서 수취 여부에 따라 달라져요.
-    </div>
-  `;
+      📌 신고 기한: ${half===1?`${year}년 7월 25일`:`${year+1}년 1월 25일`}<br>
+      📌 매입세액 공제: 매입원가, 배송비, 포장재 등 세금계산서 수취 항목<br>
+      ⚠️ 참고용 예상액이에요. 실제 신고 시 세무사 확인을 권장해요.
+    </div>`;
 }
 
-// ── 종합소득세 계산 ──
 function getIncomeTaxRate(income) {
-  const brackets = [
-    { limit: 14000000, rate: 6, deduct: 0 },
-    { limit: 50000000, rate: 15, deduct: 1260000 },
-    { limit: 88000000, rate: 24, deduct: 5760000 },
-    { limit: 150000000, rate: 35, deduct: 15440000 },
-    { limit: 300000000, rate: 38, deduct: 19940000 },
-    { limit: 500000000, rate: 40, deduct: 25940000 },
-    { limit: 1000000000, rate: 42, deduct: 35940000 },
-    { limit: Infinity, rate: 45, deduct: 65940000 },
+  const brackets=[
+    {limit:14000000,rate:6,deduct:0},{limit:50000000,rate:15,deduct:1260000},
+    {limit:88000000,rate:24,deduct:5760000},{limit:150000000,rate:35,deduct:15440000},
+    {limit:300000000,rate:38,deduct:19940000},{limit:500000000,rate:40,deduct:25940000},
+    {limit:1000000000,rate:42,deduct:35940000},{limit:Infinity,rate:45,deduct:65940000},
   ];
-  const b = brackets.find(b => income <= b.limit) || brackets[brackets.length-1];
-  const tax = Math.max(0, Math.round(income * b.rate / 100 - b.deduct));
-  return { rate: b.rate, tax, localTax: Math.round(tax * 0.1) };
+  const b=brackets.find(x=>income<=x.limit)||brackets[brackets.length-1];
+  const tax=Math.max(0,Math.round(income*b.rate/100-b.deduct));
+  const localTax=Math.round(tax*0.1);
+  return {rate:b.rate,tax,localTax};
 }
 
 function renderIncomeTax() {
-  const year = parseInt(document.getElementById('tax-year-select')?.value || 2026);
-  let annualRev = 0, annualExp = 0;
-  for (let m = 1; m <= 12; m++) {
-    annualRev += getMonthRevenue(year, m);
-    annualExp += getMonthExpense(year, m).total;
-  }
-  const netIncome = Math.max(0, annualRev - annualExp);
-  const { rate, tax, localTax } = getIncomeTaxRate(netIncome);
-  const totalTax = tax + localTax;
-
-  // Progressive bracket display
-  const brackets = [
-    { label: '1,400만원 이하', limit: 14000000, rate: 6 },
-    { label: '1,400~5,000만원', limit: 50000000, rate: 15 },
-    { label: '5,000~8,800만원', limit: 88000000, rate: 24 },
-    { label: '8,800만~1.5억', limit: 150000000, rate: 35 },
-    { label: '1.5억~3억', limit: 300000000, rate: 38 },
-    { label: '3억~5억', limit: 500000000, rate: 40 },
-    { label: '5억~10억', limit: 1000000000, rate: 42 },
-    { label: '10억 초과', limit: Infinity, rate: 45 },
+  const year=parseInt(document.getElementById('tax-year-select')?.value||2026);
+  let annualRev=0,annualExp=0;
+  for(let m=1;m<=12;m++){annualRev+=getMonthRevenue(year,m);annualExp+=getMonthExpense(year,m).total;}
+  const netIncome=Math.max(0,annualRev-annualExp);
+  const {rate,tax,localTax}=getIncomeTaxRate(netIncome);
+  const totalTax=tax+localTax;
+  const brackets=[
+    {label:'1,400만원 이하',limit:14000000,rate:6},{label:'1,400~5,000만원',limit:50000000,rate:15},
+    {label:'5,000~8,800만원',limit:88000000,rate:24},{label:'8,800만~1.5억',limit:150000000,rate:35},
+    {label:'1.5억~3억',limit:300000000,rate:38},{label:'3억~5억',limit:500000000,rate:40},
+    {label:'5억~10억',limit:1000000000,rate:42},{label:'10억 초과',limit:Infinity,rate:45},
   ];
-
-  document.getElementById('income-tax-content').innerHTML = `
+  document.getElementById('income-tax-content').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
       <div style="padding:14px;background:var(--bg);border-radius:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">연간 총 매출</div>
@@ -11287,21 +11454,20 @@ function renderIncomeTax() {
     </div>
     <div style="margin-bottom:20px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px;">📊 종합소득세 세율 구간</div>
-      ${brackets.map(b => {
-        const active = netIncome <= b.limit && (b.limit === 14000000 || netIncome > brackets[brackets.indexOf(b)-1]?.limit);
+      ${brackets.map((b,bi)=>{
+        const active=netIncome<=b.limit&&(bi===0||netIncome>brackets[bi-1]?.limit);
         return `<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;margin-bottom:4px;${active?'background:var(--mongmo-light);border:1px solid var(--mongmo);':''}">
-          <div style="font-size:11px;color:${active?'var(--mongmo)':'var(--text-muted)'};width:120px;">${b.label}</div>
+          <div style="font-size:11px;color:${active?'var(--mongmo)':'var(--text-muted)'};width:130px;">${b.label}</div>
           <div style="font-size:13px;font-weight:${active?700:400};color:${active?'var(--mongmo)':'var(--text)'};width:40px;">${b.rate}%</div>
           ${active?'<span style="font-size:11px;background:var(--mongmo);color:#fff;padding:2px 8px;border-radius:20px;font-weight:600;">현재 구간</span>':''}
         </div>`;
       }).join('')}
     </div>
     <div style="font-size:12px;color:var(--text-muted);padding:12px 16px;background:var(--surface2);border-radius:8px;line-height:1.8;">
-      📌 신고 기한: ${year+1}년 5월 31일 (종합소득세 확정신고)<br>
+      📌 신고 기한: ${year+1}년 5월 31일<br>
       📌 중간예납: ${year}년 11월 (예상세액의 50%)<br>
-      📌 이 계산은 기본 세율 구간만 반영해요. 각종 공제(인적공제, 표준세액공제 등) 적용 전 금액이에요.
-    </div>
-  `;
+      ⚠️ 기본 세율 구간만 반영해요. 각종 공제 적용 전 금액이에요.
+    </div>`;
 }
 
 // 생산 상품 검색
