@@ -3711,6 +3711,17 @@ async function save() {
     productSalesLog: state.productSalesLog||[],
     inboundItems: state.inboundItems||[],
     fixedCosts: state.fixedCosts||{},
+  };
+  clearTimeout(_saveTimeout);
+  _saveTimeout = setTimeout(async () => {
+    const { error } = await sb.from('app_state').upsert({ id: 'cherop_main', data, updated_at: new Date().toISOString() });
+    if (error) {
+      console.error('[Save Error]', error.message);
+      showToast('❌ 저장 실패 — 네트워크를 확인해주세요');
+    }
+    _saveTimeout = null;
+  }, 100);
+}
 
 // ── 근태 저장 (별도 테이블, row 단위 upsert) ──
 async function saveAttendance(rec) {
