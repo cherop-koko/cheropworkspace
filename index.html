@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.7</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.8</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -1990,6 +1990,7 @@
             <button class="btn btn-secondary" style="padding:10px;font-size:12px;" onclick="lunchStart()">🍱 점심 시작</button>
             <button class="btn btn-secondary" style="padding:10px;font-size:12px;" onclick="lunchEnd()">☕ 점심 종료</button>
           </div>
+          <button class="btn btn-secondary" style="width:100%;margin-top:6px;padding:7px;font-size:11px;color:var(--text-muted);" onclick="lunchReset()">🗑 점심 기록 삭제</button>
           <div style="margin-top:12px;font-size:11px;color:var(--text-muted);" id="att-today-info"></div>
         </div>
         <div class="card">
@@ -14418,6 +14419,21 @@ function lunchEnd() {
   logActivity('attendance', member + ' 점심 종료 (' + now + ') · ' + fmtMins(lunchMins));
   saveAttendance(rec); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
   showToast(`☕ ${member} 점심 종료 (${now}) · 점심 ${fmtMins(lunchMins)}`);
+}
+
+function lunchReset() {
+  const member = getAttMember();
+  if (!member) return;
+  const today = localDateStr();
+  const recs = (state.attendances||[]).filter(a=>a.member===member&&a.date===today&&a.checkIn);
+  if (!recs.length) { showToast('오늘 출근 기록이 없어요'); return; }
+  const rec = recs[recs.length-1];
+  if (!rec.lunchStart) { showToast('점심 기록이 없어요'); return; }
+  rec.lunchStart = '';
+  rec.lunchEnd = '';
+  logActivity('attendance', member + ' 점심 기록 삭제');
+  saveAttendance(rec); updateAttStatus(); renderAttTodaySummary(); renderAttLog();
+  showToast('🗑 점심 기록이 삭제됐어요');
 }
 
 function calcMins(start, end) {
