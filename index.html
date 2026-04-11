@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.4</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.5</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -11676,10 +11676,10 @@ function exportLedgerCSV() {
   }));
   const expRows=(state.taxLedger||[]).filter(r=>r.date.startsWith(String(year))).map(r=>({...r,type:{purchase:'매입',fixed:'고정비',marketing:'마케팅',tax:'세금·수수료',etc:'기타'}[r.type]||r.type}));
   const rows=[...(ledgerTab==='all'?[...revRows,...expRows]:ledgerTab==='revenue'?revRows:expRows)].sort((a,b)=>b.date.localeCompare(a.date));
-  const csv=[headers,...rows.map(r=>[r.date,r.type,r.category,r.vendor,r.amount,r.memo].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','))].join('
-');
-  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`cherop_세무내역_${year}.csv`;a.click();
+  const escape = v => '"' + String(v||'').replace(/"/g, '""') + '"';
+  const csv = [headers.map(escape).join(','), ...rows.map(r=>[r.date,r.type,r.category,r.vendor,r.amount,r.memo].map(escape).join(','))].join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cherop_세무내역_'+year+'.csv';a.click();
   showToast('📥 내보내기 완료');
 }
 
