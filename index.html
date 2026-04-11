@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.6</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.7</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -1280,7 +1280,7 @@
       <!-- ── 손익 현황 뷰 ── -->
       <div id="tax-view-monthly">
 
-        <!-- 연도 + 기간 탭 + 월 선택 -->
+        <!-- 연도 + 기간 탭 + 화살표 네비 -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <select class="form-select" id="tax-year-select" onchange="renderTax()" style="width:100px;">
@@ -1292,14 +1292,23 @@
               <div class="tab" id="tax-period-tab-annual" onclick="setTaxPeriod('annual',this)">연간</div>
             </div>
           </div>
-          <div id="tax-month-wrap" style="display:flex;align-items:center;gap:8px;">
-            <select class="form-select" id="tax-month-select" onchange="renderTaxDetail();renderExpenseCards();renderTaxCategoryBreakdown(parseInt(document.getElementById('tax-year-select').value))" style="width:90px;">
-              <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
-              <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
-              <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
-              <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
-            </select>
+          <!-- 화살표 네비 (월별/분기별에서 표시) -->
+          <div id="tax-period-nav" style="display:flex;align-items:center;gap:6px;">
+            <button onclick="taxNavPrev()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">‹</button>
+            <div id="tax-period-nav-label" style="font-size:14px;font-weight:600;min-width:70px;text-align:center;"></div>
+            <button onclick="taxNavNext()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">›</button>
           </div>
+          <!-- 숨겨진 월 선택기 (내부 값 유지용) -->
+          <select id="tax-month-select" style="display:none;">
+            <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+            <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+            <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+            <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+          </select>
+          <select id="tax-quarter-select" style="display:none;">
+            <option value="1">1분기</option><option value="2">2분기</option>
+            <option value="3">3분기</option><option value="4">4분기</option>
+          </select>
         </div>
 
         <!-- 요약 카드 3개 (기간 연동) -->
@@ -1331,9 +1340,6 @@
         </div>
 
         <!-- 비용 그룹 카드 -->
-        <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-          <div style="font-size:15px;font-weight:600;" id="tax-expense-card-title">비용 입력</div>
-        </div>
         <div id="tax-expense-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px;"></div>
 
         <!-- 비용 항목별 분석 -->
@@ -1360,6 +1366,7 @@
           <div class="tab-bar" style="margin-bottom:16px;">
             <div class="tab active" onclick="setLedgerTab('all',this)">전체</div>
             <div class="tab" onclick="setLedgerTab('revenue',this)">매출</div>
+            <div class="tab" onclick="setLedgerTab('labor',this)">인건비</div>
             <div class="tab" onclick="setLedgerTab('purchase',this)">매입</div>
             <div class="tab" onclick="setLedgerTab('fixed',this)">고정비</div>
             <div class="tab" onclick="setLedgerTab('marketing',this)">마케팅</div>
@@ -2741,28 +2748,33 @@
 
 <!-- 내역 추가 모달 -->
 <div class="modal-overlay hidden" id="modal-add-ledger">
-  <div class="modal" style="width:460px;">
-    <div class="modal-title">📋 내역 추가</div>
+  <div class="modal" style="width:500px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-title" id="ledger-modal-title">📋 내역 추가</div>
     <input type="hidden" id="ledger-edit-id">
+
+    <!-- 구분 + 날짜 -->
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">날짜</label>
-        <input class="form-input" type="date" id="ledger-date">
-      </div>
-      <div class="form-group">
         <label class="form-label">구분</label>
-        <select class="form-select" id="ledger-type" onchange="updateLedgerCategoryOptions()">
-          <option value="purchase">매입</option>
+        <select class="form-select" id="ledger-type" onchange="onLedgerTypeChange()">
+          <option value="labor">인건비</option>
+          <option value="purchase">매입·물류</option>
           <option value="fixed">고정비</option>
           <option value="marketing">마케팅</option>
           <option value="tax">세금·수수료</option>
           <option value="etc">기타</option>
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label">지출일</label>
+        <input class="form-input" type="date" id="ledger-date">
+      </div>
     </div>
+
+    <!-- 계정과목 + 금액 -->
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">계정과목</label>
+        <label class="form-label" id="ledger-category-label">계정과목</label>
         <select class="form-select" id="ledger-category"></select>
       </div>
       <div class="form-group">
@@ -2770,16 +2782,70 @@
         <input class="form-input" type="number" id="ledger-amount" placeholder="0">
       </div>
     </div>
+
+    <!-- 인건비 전용: 직원 선택 -->
+    <div id="ledger-labor-fields" style="display:none;">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">직원</label>
+          <select class="form-select" id="ledger-employee">
+            <option value="김효민">김효민</option>
+            <option value="박영아">박영아</option>
+            <option value="정현진">정현진</option>
+            <option value="김성애">김성애</option>
+            <option value="고예흰">고예흰 (대표)</option>
+            <option value="직접입력">직접 입력</option>
+          </select>
+        </div>
+        <div class="form-group" id="ledger-employee-custom-wrap" style="display:none;">
+          <label class="form-label">직원명 직접입력</label>
+          <input class="form-input" type="text" id="ledger-employee-custom" placeholder="이름">
+        </div>
+      </div>
+    </div>
+
+    <!-- 매입·물류 전용: 품목 + 입고일 -->
+    <div id="ledger-purchase-fields" style="display:none;">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">품목명</label>
+          <input class="form-input" type="text" id="ledger-item-name" placeholder="예: 몽숭이 인형 500개">
+        </div>
+        <div class="form-group">
+          <label class="form-label">입고 예정일</label>
+          <input class="form-input" type="date" id="ledger-inbound-date">
+        </div>
+      </div>
+    </div>
+
+    <!-- 마케팅 전용: 채널 -->
+    <div id="ledger-marketing-fields" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">채널 / 플랫폼</label>
+        <select class="form-select" id="ledger-marketing-channel">
+          <option value="인스타그램">인스타그램</option>
+          <option value="메타 광고">메타 광고</option>
+          <option value="네이버 광고">네이버 광고</option>
+          <option value="카카오 광고">카카오 광고</option>
+          <option value="유튜브">유튜브</option>
+          <option value="팝업·오프라인">팝업·오프라인</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 공통: 거래처 + 메모 -->
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">거래처 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label>
         <input class="form-input" type="text" id="ledger-vendor" placeholder="거래처명">
       </div>
       <div class="form-group">
-        <label class="form-label">적요 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label>
+        <label class="form-label" id="ledger-memo-label">메모 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label>
         <input class="form-input" type="text" id="ledger-memo" placeholder="메모">
       </div>
     </div>
+
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-ledger')">취소</button>
       <button class="btn btn-primary" onclick="submitLedger()">저장</button>
@@ -11036,8 +11102,75 @@ function setTaxPeriod(period, el) {
   taxPeriod = period;
   document.querySelectorAll('#tax-view-monthly .tab-bar .tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
-  const mw = document.getElementById('tax-month-wrap');
-  if (mw) mw.style.display = period === 'monthly' ? 'flex' : 'none';
+  // 연간이면 화살표 숨김
+  const nav = document.getElementById('tax-period-nav');
+  if (nav) nav.style.display = period === 'annual' ? 'none' : 'flex';
+  updateTaxNavLabel();
+  renderTax();
+}
+
+function updateTaxNavLabel() {
+  const lbl = document.getElementById('tax-period-nav-label');
+  if (!lbl) return;
+  if (taxPeriod === 'monthly') {
+    const m = parseInt(document.getElementById('tax-month-select')?.value || new Date().getMonth()+1);
+    lbl.textContent = m + '월';
+  } else if (taxPeriod === 'quarter') {
+    const q = parseInt(document.getElementById('tax-quarter-select')?.value || Math.ceil((new Date().getMonth()+1)/3));
+    lbl.textContent = q + '분기';
+  }
+}
+
+function taxNavPrev() {
+  if (taxPeriod === 'monthly') {
+    const sel = document.getElementById('tax-month-select');
+    let m = parseInt(sel.value);
+    if (m <= 1) {
+      // 전년도로
+      const ySel = document.getElementById('tax-year-select');
+      ySel.value = parseInt(ySel.value) - 1;
+      sel.value = 12;
+    } else {
+      sel.value = m - 1;
+    }
+  } else if (taxPeriod === 'quarter') {
+    const sel = document.getElementById('tax-quarter-select');
+    let q = parseInt(sel.value);
+    if (q <= 1) {
+      const ySel = document.getElementById('tax-year-select');
+      ySel.value = parseInt(ySel.value) - 1;
+      sel.value = 4;
+    } else {
+      sel.value = q - 1;
+    }
+  }
+  updateTaxNavLabel();
+  renderTax();
+}
+
+function taxNavNext() {
+  if (taxPeriod === 'monthly') {
+    const sel = document.getElementById('tax-month-select');
+    let m = parseInt(sel.value);
+    if (m >= 12) {
+      const ySel = document.getElementById('tax-year-select');
+      ySel.value = parseInt(ySel.value) + 1;
+      sel.value = 1;
+    } else {
+      sel.value = m + 1;
+    }
+  } else if (taxPeriod === 'quarter') {
+    const sel = document.getElementById('tax-quarter-select');
+    let q = parseInt(sel.value);
+    if (q >= 4) {
+      const ySel = document.getElementById('tax-year-select');
+      ySel.value = parseInt(ySel.value) + 1;
+      sel.value = 1;
+    } else {
+      sel.value = q + 1;
+    }
+  }
+  updateTaxNavLabel();
   renderTax();
 }
 
@@ -11061,29 +11194,54 @@ function getMonthPlatformFees(year, month) {
 }
 
 function getMonthExpense(year, month) {
-  const e = (state.expenses||[]).find(x => x.year==year && x.month==month);
+  const mk = `${year}-${String(month).padStart(2,'0')}`;
   const fees = getMonthPlatformFees(year, month);
-  // 그룹별 합산
-  let baseTotal = 0;
+
+  // taxLedger에서 해당 월 비용 집계
+  const ledgerRows = (state.taxLedger||[]).filter(r => r.date.startsWith(mk) && r.type !== 'revenue');
   const items = [];
+  const grouped = {};
+  ledgerRows.forEach(r => {
+    const key = r.category || r.type;
+    grouped[key] = (grouped[key]||0) + (r.amount||0);
+  });
+  // 그룹 정보 매핑
+  const categoryToGroup = {};
+  EXP_GROUPS.forEach(g => { g.fields.forEach(f => { categoryToGroup[f] = { label:g.label, icon:g.icon }; }); });
+  Object.entries(grouped).forEach(([cat, val]) => {
+    if (val > 0) {
+      const grp = categoryToGroup[cat] || { label:'기타', icon:'📁' };
+      items.push({ label:cat, icon:grp.icon, group:grp.label, value:val });
+    }
+  });
+
+  // 레거시 expenses 데이터도 합산 (기존 입력값 보존)
+  const e = (state.expenses||[]).find(x => x.year==year && x.month==month);
   if (e) {
     EXP_GROUPS.forEach(g => {
       g.fields.forEach(f => {
-        const val = e[g.key+'_'+f.replace(/[^a-zA-Z가-힣]/g,'_')] || e[f] || 0;
-        if (val > 0) { items.push({ label:f, icon:g.icon, group:g.label, value:val }); baseTotal += val; }
+        const legacyKey = g.key+'_'+f.replace(/[^a-zA-Z가-힣]/g,'_');
+        const val = e[legacyKey] || e[f] || 0;
+        if (val > 0) {
+          const existing = items.find(i => i.label === f);
+          if (existing) existing.value += val;
+          else items.push({ label:f, icon:g.icon, group:g.label, value:val });
+        }
       });
-      // 커스텀 항목
-      const custom = e['custom_'+g.key] || [];
-      custom.forEach(c => { if(c.amount>0){ items.push({label:c.label,icon:g.icon,group:g.label,value:c.amount}); baseTotal+=c.amount; } });
+      (e['custom_'+g.key]||[]).forEach(c => {
+        if (c.amount > 0) items.push({ label:c.label, icon:g.icon, group:g.label, value:c.amount });
+      });
     });
   }
+
   const feeItems = [
-    fees.kakaoFee>0?{label:'카카오 수수료 (15%)',   icon:'💛',group:'수수료',value:fees.kakaoFee}:null,
-    fees.imwebFee>0?{label:'자사몰 수수료 (2.55%)', icon:'🏪',group:'수수료',value:fees.imwebFee}:null,
-    fees.naverFee>0?{label:'스마트스토어 수수료',   icon:'🟢',group:'수수료',value:fees.naverFee}:null,
+    fees.kakaoFee>0?{label:'카카오 수수료 (15%)',        icon:'💛',group:'수수료',value:fees.kakaoFee}:null,
+    fees.imwebFee>0?{label:'자사몰 수수료 (2.55%)',      icon:'🏪',group:'수수료',value:fees.imwebFee}:null,
+    fees.naverFee>0?{label:'스마트스토어 수수료 (5.7%)', icon:'🟢',group:'수수료',value:fees.naverFee}:null,
   ].filter(Boolean);
+
   const allItems = [...items, ...feeItems];
-  const total = allItems.reduce((s,i)=>s+i.value, 0);
+  const total = allItems.reduce((s,i) => s+i.value, 0);
   return { total, items:allItems, raw:e, fees };
 }
 
@@ -11108,7 +11266,7 @@ function getTaxPeriodMonths() {
     const m = parseInt(document.getElementById('tax-month-select')?.value || now.getMonth()+1);
     return [m];
   } else if (taxPeriod === 'quarter') {
-    const q = Math.ceil((now.getMonth()+1)/3);
+    const q = parseInt(document.getElementById('tax-quarter-select')?.value || Math.ceil((now.getMonth()+1)/3));
     return [[1,2,3],[4,5,6],[7,8,9],[10,11,12]][q-1];
   }
   return Array.from({length:12},(_,i)=>i+1);
@@ -11120,7 +11278,7 @@ function getTaxPeriodLabel() {
     const m = parseInt(document.getElementById('tax-month-select')?.value||new Date().getMonth()+1);
     return `${year}년 ${m}월`;
   } else if (taxPeriod === 'quarter') {
-    const q = Math.ceil((new Date().getMonth()+1)/3);
+    const q = parseInt(document.getElementById('tax-quarter-select')?.value||Math.ceil((new Date().getMonth()+1)/3));
     return `${year}년 ${q}분기`;
   }
   return `${year}년`;
@@ -11129,7 +11287,16 @@ function getTaxPeriodLabel() {
 function renderTax() {
   const year = parseInt(document.getElementById('tax-year-select')?.value||2026);
   const now = new Date();
-  document.getElementById('tax-month-select').value = now.getMonth()+1;
+  const mSel = document.getElementById('tax-month-select');
+  const qSel = document.getElementById('tax-quarter-select');
+  if (!mSel._inited) {
+    mSel.value = now.getMonth()+1;
+    qSel.value = Math.ceil((now.getMonth()+1)/3);
+    mSel._inited = true;
+  }
+  updateTaxNavLabel();
+  const nav = document.getElementById('tax-period-nav');
+  if (nav) nav.style.display = taxPeriod === 'annual' ? 'none' : 'flex';
 
   const months = getTaxPeriodMonths();
   let rev=0, exp=0;
@@ -11338,43 +11505,45 @@ function renderTaxDetail() {
 function renderExpenseCards() {
   const year=parseInt(document.getElementById('tax-year-select')?.value||2026);
   const months=getTaxPeriodMonths();
-  const periodLabel=getTaxPeriodLabel();
-  const titleEl=document.getElementById('tax-expense-card-title');
-  if(titleEl) titleEl.textContent=`${periodLabel} 비용 입력`;
   const container=document.getElementById('tax-expense-cards');
   if(!container) return;
 
   container.innerHTML = EXP_GROUPS.map(g => {
-    // 해당 기간 그룹 합계
-    let groupTotal=0;
-    months.forEach(m=>{
+    // taxLedger 기반 합계
+    let groupTotal = 0;
+    const subTotals = {}; // category별 합산
+    months.forEach(m => {
+      const mk = `${year}-${String(m).padStart(2,'0')}`;
+      (state.taxLedger||[]).filter(r => r.date.startsWith(mk) && r.type === g.key).forEach(r => {
+        groupTotal += r.amount||0;
+        const cat = r.category || (r.type==='labor' ? (r.employee||'인건비') : g.label);
+        subTotals[cat] = (subTotals[cat]||0) + (r.amount||0);
+      });
+      // 레거시 expenses도 포함
       const e=(state.expenses||[]).find(x=>x.year==year&&x.month==m);
-      if(!e) return;
-      g.fields.forEach(f=>{groupTotal+=(e[g.key+'_'+f.replace(/[^a-zA-Z가-힣]/g,'_')]||e[f]||0);});
-      const custom=e['custom_'+g.key]||[];
-      custom.forEach(c=>{groupTotal+=c.amount||0;});
+      if(e) {
+        g.fields.forEach(f=>{
+          const val=(e[g.key+'_'+f.replace(/[^a-zA-Z가-힣]/g,'_')]||e[f]||0);
+          if(val>0){groupTotal+=val;subTotals[f]=(subTotals[f]||0)+val;}
+        });
+        (e['custom_'+g.key]||[]).forEach(c=>{if(c.amount>0){groupTotal+=c.amount;subTotals[c.label]=(subTotals[c.label]||0)+c.amount;}});
+      }
     });
-    // 고정비 카드는 자동입력 버튼
-    const isFixed=g.key==='fixed'||g.key==='labor';
+
+    const topSubs = Object.entries(subTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,4);
+
     return `<div class="card" style="padding:16px;border-left:3px solid ${g.color};">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="font-size:15px;">${g.icon}</span>
           <span style="font-size:13px;font-weight:600;">${g.label}</span>
         </div>
-        <div style="display:flex;gap:6px;">
-          ${isFixed?`<button class="btn btn-sm" onclick="applyFixedToGroup('${g.key}')" style="font-size:10px;padding:2px 8px;background:var(--palett-light);color:var(--palett);border-color:var(--palett);">자동입력</button>`:''}
-          <button class="btn btn-sm btn-secondary" onclick="openExpGroupModal('${g.key}')" style="font-size:10px;padding:2px 8px;">수정</button>
-        </div>
+        <button class="btn btn-sm btn-primary" onclick="openAddLedgerModalWithType('${g.key}')" style="font-size:10px;padding:2px 10px;">+ 추가</button>
       </div>
       <div style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;color:${groupTotal>0?'var(--text)':'var(--text-muted)'};">
         ${groupTotal>0?fmtWon(groupTotal):'미입력'}
       </div>
-      ${groupTotal>0?`<div style="margin-top:8px;">${g.fields.slice(0,3).map(f=>{
-        let val=0;
-        months.forEach(m=>{const e=(state.expenses||[]).find(x=>x.year==year&&x.month==m);if(e)val+=(e[g.key+'_'+f.replace(/[^a-zA-Z가-힣]/g,'_')]||e[f]||0);});
-        return val>0?`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:2px;"><span>${f}</span><span>${fmtWon(val)}</span></div>`:'';
-      }).join('')}</div>`:''}
+      ${topSubs.length>0?`<div style="margin-top:8px;">${topSubs.map(([n,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:2px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">${n}</span><span style="font-family:'DM Mono',monospace;">${fmtWon(v)}</span></div>`).join('')}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -11511,34 +11680,61 @@ function renderTaxCategoryBreakdown(year) {
   const label=getTaxPeriodLabel();
   if(titleEl) titleEl.textContent=`${label} 비용 항목별 분석`;
 
-  const groups={};
-  months.forEach(m=>{
-    const {items,fees}=getMonthExpense(year,m);
-    items.forEach(i=>{
-      if(!groups[i.group]) groups[i.group]={total:0,items:{}};
-      groups[i.group].total+=i.value;
-      groups[i.group].items[i.label]=(groups[i.group].items[i.label]||0)+i.value;
-    });
+  // taxLedger + 레거시 expenses 합산
+  const groups = {};
+  const categoryToGroup = {};
+  EXP_GROUPS.forEach(g => {
+    groups[g.label] = { total:0, icon:g.icon, color:g.color, items:{} };
+    g.fields.forEach(f => { categoryToGroup[f] = g.label; });
   });
-  const totalAll=Object.values(groups).reduce((s,g)=>s+g.total,0);
+  groups['수수료'] = { total:0, icon:'💳', color:'var(--text-muted)', items:{} };
+
+  months.forEach(m => {
+    const mk = `${year}-${String(m).padStart(2,'0')}`;
+    // taxLedger
+    (state.taxLedger||[]).filter(r => r.date.startsWith(mk) && r.type !== 'revenue').forEach(r => {
+      const g = EXP_GROUPS.find(x => x.key === r.type);
+      const gLabel = g ? g.label : '기타';
+      if (!groups[gLabel]) groups[gLabel] = { total:0, icon:'📁', color:'var(--text-muted)', items:{} };
+      // 인건비는 직원명으로 표시
+      const itemKey = r.type==='labor' && r.employee ? `${r.category||'급여'} - ${r.employee}` : (r.category||gLabel);
+      groups[gLabel].total += r.amount||0;
+      groups[gLabel].items[itemKey] = (groups[gLabel].items[itemKey]||0) + (r.amount||0);
+    });
+    // 레거시
+    const e=(state.expenses||[]).find(x=>x.year==year&&x.month==m);
+    if(e) EXP_GROUPS.forEach(g=>{
+      g.fields.forEach(f=>{
+        const val=(e[g.key+'_'+f.replace(/[^a-zA-Z가-힣]/g,'_')]||e[f]||0);
+        if(val>0){groups[g.label].total+=val;groups[g.label].items[f]=(groups[g.label].items[f]||0)+val;}
+      });
+    });
+    // 플랫폼 수수료
+    const fees = getMonthPlatformFees(year,m);
+    if(fees.kakaoFee>0){groups['수수료'].total+=fees.kakaoFee;groups['수수료'].items['카카오 수수료']=(groups['수수료'].items['카카오 수수료']||0)+fees.kakaoFee;}
+    if(fees.imwebFee>0){groups['수수료'].total+=fees.imwebFee;groups['수수료'].items['자사몰 수수료']=(groups['수수료'].items['자사몰 수수료']||0)+fees.imwebFee;}
+    if(fees.naverFee>0){groups['수수료'].total+=fees.naverFee;groups['수수료'].items['스마트스토어 수수료']=(groups['수수료'].items['스마트스토어 수수료']||0)+fees.naverFee;}
+  });
+
+  const totalAll = Object.values(groups).reduce((s,g)=>s+g.total,0);
   if(!totalAll){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px;">비용 데이터가 없어요</div>';return;}
-  const sorted=Object.entries(groups).filter(([,g])=>g.total>0).sort((a,b)=>b[1].total-a[1].total);
-  const colors=['var(--mongmo)','var(--palett)','var(--accent)','var(--green)','var(--yellow)','var(--red)'];
+  const sorted = Object.entries(groups).filter(([,g])=>g.total>0).sort((a,b)=>b[1].total-a[1].total);
+
   el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">`+
-    sorted.map(([gName,g],gi)=>{
+    sorted.map(([gName,g])=>{
       const pct=Math.round(g.total/totalAll*100);
-      const color=colors[gi%colors.length];
-      const topItems=Object.entries(g.items).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,4);
+      const color=g.color||'var(--text-muted)';
+      const topItems=Object.entries(g.items).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
       return `<div style="padding:14px;background:var(--bg);border-radius:10px;border-left:3px solid ${color};">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <span style="font-size:13px;font-weight:600;">${gName}</span>
+          <span style="font-size:13px;font-weight:600;">${g.icon} ${gName}</span>
           <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${color}20;color:${color};font-weight:600;">${pct}%</span>
         </div>
         <div style="font-size:17px;font-weight:800;font-family:'DM Mono',monospace;margin-bottom:8px;">${fmtWon(g.total)}</div>
         <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px;">
           <div style="width:${pct}%;height:100%;background:${color};border-radius:2px;"></div>
         </div>
-        ${topItems.map(([n,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:3px;"><span>${n}</span><span style="font-family:'DM Mono',monospace;">${fmtWon(v)}</span></div>`).join('')}
+        ${topItems.map(([n,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:3px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;">${n}</span><span style="font-family:'DM Mono',monospace;">${fmtWon(v)}</span></div>`).join('')}
       </div>`;
     }).join('')+`</div>`;
 }
@@ -11546,10 +11742,9 @@ function renderTaxCategoryBreakdown(year) {
 // ── 내역(Ledger) 관련 ──
 function setLedgerTab(tab, el) {
   ledgerTab = tab;
+  const ledgerTabTexts = ['전체','매출','인건비','매입','고정비','마케팅','세금·수수료','기타'];
   document.querySelectorAll('#page-tax .tab-bar .tab').forEach(t=>{
-    if(t.textContent==='전체'||t.textContent==='매출'||t.textContent==='매입'||
-       t.textContent==='고정비'||t.textContent==='마케팅'||t.textContent==='세금·수수료'||t.textContent==='기타')
-      t.classList.remove('active');
+    if(ledgerTabTexts.includes(t.textContent)) t.classList.remove('active');
   });
   if(el) el.classList.add('active');
   renderLedger();
@@ -11568,7 +11763,7 @@ function renderLedger() {
   const from=document.getElementById('ledger-from')?.value||'';
   const to=document.getElementById('ledger-to')?.value||'';
 
-  // 매출: revenueLog에서
+  // 매출: revenueLog
   let revRows=[];
   if(ledgerTab==='all'||ledgerTab==='revenue'){
     (state.revenueLog||[]).filter(r=>{
@@ -11587,7 +11782,8 @@ function renderLedger() {
     if(!r.date.startsWith(String(year))) return false;
     if(from&&r.date<from) return false;
     if(to&&r.date>to) return false;
-    if(ledgerTab==='all'||ledgerTab==='revenue') return true;
+    if(ledgerTab==='all') return true;
+    if(ledgerTab==='revenue') return false;
     return r.type===ledgerTab;
   });
 
@@ -11598,45 +11794,78 @@ function renderLedger() {
     return;
   }
 
-  const typeLabel={revenue:'매출',purchase:'매입',fixed:'고정비',marketing:'마케팅',tax:'세금·수수료',etc:'기타'};
-  const typeColor={revenue:'var(--green)',purchase:'var(--palett)',fixed:'var(--accent)',marketing:'var(--mongmo)',tax:'var(--yellow)',etc:'var(--text-muted)'};
+  const typeLabel={revenue:'매출',labor:'인건비',purchase:'매입',fixed:'고정비',marketing:'마케팅',tax:'세금·수수료',etc:'기타'};
+  const typeColor={revenue:'var(--green)',labor:'var(--mongmo)',purchase:'var(--palett)',fixed:'var(--accent)',marketing:'var(--green)',tax:'var(--yellow)',etc:'var(--text-muted)'};
 
-  el.innerHTML=`<table class="data-table" style="width:100%;">
+  el.innerHTML=`<div style="overflow-x:auto;"><table class="data-table" style="width:100%;min-width:700px;">
     <thead><tr>
-      <th>날짜</th><th>구분</th><th>계정과목</th><th>거래처</th>
+      <th>날짜</th><th>구분</th><th>항목</th><th>상세</th>
       <th style="text-align:right;">금액</th><th>메모</th><th></th>
     </tr></thead>
     <tbody>${allRows.map(r=>{
       const color=typeColor[r.type]||'var(--text-muted)';
       const isRev=r.type==='revenue';
+      // 상세: 인건비=직원명, 매입=입고일, 마케팅=채널
+      let detail = r.vendor||'-';
+      if(r.type==='labor' && r.employee) detail = r.employee;
+      else if(r.type==='purchase' && r.inboundDate) detail = '입고 '+r.inboundDate;
+      else if(r.type==='marketing' && r.channel) detail = r.channel;
+      // 항목: 인건비에 품목명도 표시
+      let category = r.category||'-';
+      if(r.type==='purchase' && r.itemName) category = r.itemName;
       return `<tr>
-        <td style="color:var(--text-muted);font-size:12px;">${r.date}</td>
-        <td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${color}20;color:${color};font-weight:500;">${typeLabel[r.type]||r.type}</span></td>
-        <td style="font-size:13px;">${r.category||'-'}</td>
-        <td style="font-size:12px;color:var(--text-muted);">${r.vendor||'-'}</td>
-        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${isRev?'var(--green)':'var(--text)'};">${isRev?'+':''}${fmtWon(r.amount)}</td>
-        <td style="font-size:12px;color:var(--text-muted);">${r.memo||'-'}</td>
+        <td style="color:var(--text-muted);font-size:12px;white-space:nowrap;">${r.date}</td>
+        <td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${color}20;color:${color};font-weight:500;white-space:nowrap;">${typeLabel[r.type]||r.type}</span></td>
+        <td style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${category}</td>
+        <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${detail}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${isRev?'var(--green)':'var(--text)'};white-space:nowrap;">${isRev?'+':''}${fmtWon(r.amount)}</td>
+        <td style="font-size:12px;color:var(--text-muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;">${r.memo||'-'}</td>
         <td style="white-space:nowrap;">${isRev?'':`<button class="btn btn-sm btn-danger" onclick="deleteLedger(${r.id})" style="font-size:11px;">삭제</button>`}</td>
       </tr>`;
     }).join('')}</tbody>
-  </table>`;
+  </table></div>`;
 }
 
-function openAddLedgerModal() {
+function openAddLedgerModal(type) {
   document.getElementById('ledger-edit-id').value='';
-  const today=localDateStr();
-  document.getElementById('ledger-date').value=today;
-  document.getElementById('ledger-type').value='purchase';
+  document.getElementById('ledger-date').value=localDateStr();
+  document.getElementById('ledger-type').value=type||'purchase';
   document.getElementById('ledger-amount').value='';
   document.getElementById('ledger-vendor').value='';
   document.getElementById('ledger-memo').value='';
-  updateLedgerCategoryOptions();
+  if(document.getElementById('ledger-item-name')) document.getElementById('ledger-item-name').value='';
+  if(document.getElementById('ledger-inbound-date')) document.getElementById('ledger-inbound-date').value='';
+  onLedgerTypeChange();
   openModal('add-ledger');
+}
+
+function openAddLedgerModalWithType(type) {
+  openAddLedgerModal(type);
+}
+
+function onLedgerTypeChange() {
+  const type = document.getElementById('ledger-type')?.value;
+  // 타입별 추가 필드 표시/숨김
+  document.getElementById('ledger-labor-fields').style.display    = type==='labor'    ? '' : 'none';
+  document.getElementById('ledger-purchase-fields').style.display = type==='purchase' ? '' : 'none';
+  document.getElementById('ledger-marketing-fields').style.display= type==='marketing'? '' : 'none';
+  // 직원 직접입력 처리
+  const empSel = document.getElementById('ledger-employee');
+  if(empSel) empSel.onchange = () => {
+    const wrap = document.getElementById('ledger-employee-custom-wrap');
+    if(wrap) wrap.style.display = empSel.value==='직접입력' ? '' : 'none';
+  };
+  // 계정과목 옵션 업데이트
+  updateLedgerCategoryOptions();
+  // 모달 타이틀
+  const titles = {labor:'👥 인건비 입력', purchase:'📦 매입·물류 입력', fixed:'🏢 고정비 입력', marketing:'📣 마케팅 입력', tax:'🏛 세금·수수료 입력', etc:'📁 기타 입력'};
+  const titleEl = document.getElementById('ledger-modal-title');
+  if(titleEl) titleEl.textContent = titles[type] || '📋 내역 추가';
 }
 
 function updateLedgerCategoryOptions() {
   const type=document.getElementById('ledger-type')?.value;
-  const cats=LEDGER_CATEGORY_MAP[type]||['기타'];
+  const cats = LEDGER_CATEGORY_MAP[type] || ['기타'];
   const sel=document.getElementById('ledger-category');
   if(sel) sel.innerHTML=cats.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
@@ -11650,21 +11879,40 @@ function submitLedger() {
   const memo=document.getElementById('ledger-memo').value.trim();
   if(!date){showToast('날짜를 입력해주세요');return;}
   if(!amount){showToast('금액을 입력해주세요');return;}
+
+  const entry = {id:Date.now(), date, type, category, amount, vendor, memo};
+
+  // 타입별 추가 필드
+  if(type==='labor'){
+    const empSel = document.getElementById('ledger-employee');
+    const empCustom = document.getElementById('ledger-employee-custom');
+    entry.employee = empSel?.value==='직접입력' ? (empCustom?.value.trim()||'') : (empSel?.value||'');
+  }
+  if(type==='purchase'){
+    entry.itemName    = document.getElementById('ledger-item-name')?.value.trim()||'';
+    entry.inboundDate = document.getElementById('ledger-inbound-date')?.value||'';
+  }
+  if(type==='marketing'){
+    entry.channel = document.getElementById('ledger-marketing-channel')?.value||'';
+  }
+
   if(!state.taxLedger) state.taxLedger=[];
   const editId=parseInt(document.getElementById('ledger-edit-id').value)||0;
   if(editId){
     const idx=state.taxLedger.findIndex(x=>x.id===editId);
-    if(idx>=0) state.taxLedger[idx]={...state.taxLedger[idx],date,type,category,amount,vendor,memo};
+    if(idx>=0) state.taxLedger[idx]={...state.taxLedger[idx],...entry,id:editId};
   } else {
-    state.taxLedger.push({id:Date.now(),date,type,category,amount,vendor,memo});
+    state.taxLedger.push(entry);
   }
-  save(); closeModal('add-ledger'); renderLedger();
+  save(); closeModal('add-ledger');
+  renderExpenseCards(); renderTaxDetail(); renderLedger();
+  renderTaxCategoryBreakdown(parseInt(document.getElementById('tax-year-select')?.value||2026));
   showToast('✅ 내역이 추가됐어요');
 }
 
 function deleteLedger(id) {
   state.taxLedger=(state.taxLedger||[]).filter(x=>x.id!==id);
-  save(); renderLedger(); showToast('삭제됐어요');
+  save(); renderTax(); showToast('삭제됐어요');
 }
 
 function exportLedgerCSV() {
