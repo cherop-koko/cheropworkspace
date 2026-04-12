@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.4.3</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.4.4</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -11846,7 +11846,7 @@ function renderLedger() {
   const typeLabel={revenue:'매출',labor:'인건비',purchase:'매입',fixed:'고정비',marketing:'마케팅',tax:'세금·수수료',etc:'기타'};
   const typeColor={revenue:'var(--green)',labor:'var(--mongmo)',purchase:'var(--palett)',fixed:'var(--accent)',marketing:'var(--green)',tax:'var(--yellow)',etc:'var(--text-muted)'};
 
-  el.innerHTML=`<div style="overflow-x:auto;"><table class="data-table" style="width:100%;min-width:700px;">
+  el.innerHTML=`<div style="overflow-x:auto;"><table class="data-table" style="width:100%;min-width:750px;">
     <thead><tr>
       <th>날짜</th><th>구분</th><th>항목</th><th>상세</th>
       <th style="text-align:right;">금액</th><th>메모</th><th></th>
@@ -11854,21 +11854,21 @@ function renderLedger() {
     <tbody>${allRows.map(r=>{
       const color=typeColor[r.type]||'var(--text-muted)';
       const isRev=r.type==='revenue';
-      // 상세: 인건비=직원명, 매입=입고일, 마케팅=채널
       let detail = r.vendor||'-';
       if(r.type==='labor' && r.employee) detail = r.employee;
       else if(r.type==='purchase' && r.inboundDate) detail = '입고 '+r.inboundDate;
       else if(r.type==='marketing' && r.channel) detail = r.channel;
-      // 항목: 인건비에 품목명도 표시
       let category = r.category||'-';
       if(r.type==='purchase' && r.itemName) category = r.itemName;
-      return `<tr style="${isRev?'':'cursor:default;'}">
-        <td style="color:var(--text-muted);font-size:12px;white-space:nowrap;">${r.date}</td>
-        <td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${color}20;color:${color};font-weight:500;white-space:nowrap;">${typeLabel[r.type]||r.type}</span></td>
-        <td id="ledger-cell-${r.id}-category" style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:${isRev?'default':'pointer'};" onclick="${isRev?'':'startLedgerEdit('+r.id+',\'category\',\''+String(category).replace(/'/g,'')+'\')'}" title="${isRev?'':'클릭해서 수정'}">${category}</td>
-        <td id="ledger-cell-${r.id}-vendor" style="font-size:12px;color:var(--text-muted);white-space:nowrap;cursor:${isRev?'default':'pointer'};" onclick="${isRev?'':'startLedgerEdit('+r.id+',\'vendor\',\''+String(r.vendor||'').replace(/'/g,'')+'\')'}" title="${isRev?'':'클릭해서 수정'}">${detail}</td>
-        <td id="ledger-cell-${r.id}-amount" style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${isRev?'var(--green)':'var(--text)'};white-space:nowrap;cursor:${isRev?'default':'pointer'};" onclick="${isRev?'':'startLedgerEdit('+r.id+',\'amount\','+r.amount+')'}" title="${isRev?'':'클릭해서 수정'}">${isRev?'+':''}${fmtWonFull(r.amount)}</td>
-        <td id="ledger-cell-${r.id}-memo" style="font-size:12px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;cursor:${isRev?'default':'pointer'};" onclick="${isRev?'':'startLedgerEdit('+r.id+',\'memo\',\''+String(r.memo||'').replace(/'/g,'')+'\')'}" title="${isRev?'':'클릭해서 수정'}">${r.memo||'-'}</td>
+      const editStyle = 'cursor:pointer;border-bottom:1px dashed transparent;' + (isRev?'cursor:default;':'');
+      const rid = String(r.id).replace(/\./g,'_');
+      return `<tr style="vertical-align:middle;">
+        <td id="lc-${rid}-date" style="font-size:12px;white-space:nowrap;color:var(--text-muted);${isRev?'':'cursor:pointer;'}" onclick="${isRev?'':'lEdit(\''+rid+'\',\'date\')'}">${r.date}</td>
+        <td id="lc-${rid}-type" style="white-space:nowrap;${isRev?'':'cursor:pointer;'}" onclick="${isRev?'':'lEdit(\''+rid+'\',\'type\')'}"><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${color}20;color:${color};font-weight:500;">${typeLabel[r.type]||r.type}</span></td>
+        <td id="lc-${rid}-category" style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isRev?'':'cursor:pointer;'}" onclick="${isRev?'':'lEdit(\''+rid+'\',\'category\')'}">  ${category}</td>
+        <td id="lc-${rid}-vendor" style="font-size:12px;color:var(--text-muted);white-space:nowrap;${isRev?'':'cursor:pointer;'}" onclick="${isRev?'':'lEdit(\''+rid+'\',\'vendor\')'}">${detail}</td>
+        <td id="lc-${rid}-amount" style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${isRev?'var(--green)':'var(--text)'};white-space:nowrap;${isRev?'':'cursor:pointer;'}" onclick="${isRev?'':'lEdit(\''+rid+'\',\'amount\')'}">${isRev?'+':''}${fmtWonFull(r.amount)}</td>
+        <td id="lc-${rid}-memo" style="font-size:12px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;${isRev?'':'cursor:pointer;'}" onclick="${isRev?'':'lEdit(\''+rid+'\',\'memo\')'}">${r.memo||'-'}</td>
         <td style="white-space:nowrap;">${isRev?'':`<button class="btn btn-sm btn-danger" onclick="deleteLedger(${r.id})" style="font-size:11px;">삭제</button>`}</td>
       </tr>`;
     }).join('')}</tbody>
@@ -12068,23 +12068,103 @@ function submitCardUpload() {
 }
 
 // ── 내역 인라인 수정 ──
-function startLedgerEdit(id, field, currentVal) {
-  const cellId = `ledger-cell-${id}-${field}`;
-  const cell = document.getElementById(cellId);
+const TYPE_LABELS_MAP = {
+  labor:'인건비', purchase:'매입·물류', fixed:'고정비',
+  marketing:'마케팅', tax:'세금·수수료', etc:'기타'
+};
+
+function lEdit(rid, field) {
+  // rid는 id에서 .을 _로 바꾼 값 — 원본 id 복원
+  const entry = (state.taxLedger||[]).find(x => String(x.id).replace(/\./g,'_') === rid);
+  if (!entry) return;
+  const cell = document.getElementById(`lc-${rid}-${field}`);
   if (!cell) return;
-  const isAmount = field === 'amount';
-  const input = document.createElement(isAmount ? 'input' : 'input');
-  input.type = isAmount ? 'number' : 'text';
-  input.value = currentVal;
-  input.style.cssText = 'width:100%;font-size:12px;padding:2px 6px;border:1px solid var(--mongmo);border-radius:4px;background:var(--surface);color:var(--text);';
-  input.onblur = () => saveLedgerEdit(id, field, input.value);
-  input.onkeydown = (e) => { if(e.key==='Enter') input.blur(); if(e.key==='Escape') { renderLedger(); } };
+
+  let el;
+
+  if (field === 'type') {
+    // 구분 드롭다운
+    el = document.createElement('select');
+    el.style.cssText = 'font-size:12px;padding:2px 4px;border:1px solid var(--mongmo);border-radius:4px;background:var(--surface);color:var(--text);';
+    Object.entries(TYPE_LABELS_MAP).forEach(([k,v]) => {
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = v;
+      if (k === entry.type) opt.selected = true;
+      el.appendChild(opt);
+    });
+    el.onchange = () => {
+      entry.type = el.value;
+      entry.category = ''; // 구분 바뀌면 항목 초기화
+      save(); renderLedger();
+    };
+    el.onblur = () => renderLedger();
+
+  } else if (field === 'category') {
+    // 항목 드롭다운 + 직접입력
+    const cats = LEDGER_CATEGORY_MAP[entry.type] || ['기타'];
+    const hasCustom = !cats.includes(entry.category) && entry.category && entry.category !== '-';
+    el = document.createElement('select');
+    el.style.cssText = 'font-size:12px;padding:2px 4px;border:1px solid var(--mongmo);border-radius:4px;background:var(--surface);color:var(--text);max-width:160px;';
+    cats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      if (c === entry.category) opt.selected = true;
+      el.appendChild(opt);
+    });
+    // 직접입력 옵션
+    const customOpt = document.createElement('option');
+    customOpt.value = '__custom__'; customOpt.textContent = '+ 직접 입력';
+    if (hasCustom) { customOpt.selected = true; customOpt.textContent = entry.category + ' (직접입력)'; }
+    el.appendChild(customOpt);
+    el.onchange = () => {
+      if (el.value === '__custom__') {
+        // 직접입력 모드로 전환
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = hasCustom ? entry.category : '';
+        input.placeholder = '항목명 직접입력';
+        input.style.cssText = 'font-size:12px;padding:2px 6px;border:1px solid var(--mongmo);border-radius:4px;background:var(--surface);color:var(--text);width:140px;';
+        input.onblur = () => { entry.category = input.value.trim()||entry.category; save(); renderLedger(); };
+        input.onkeydown = (e) => { if(e.key==='Enter') input.blur(); if(e.key==='Escape') renderLedger(); };
+        cell.innerHTML = ''; cell.appendChild(input); input.focus();
+        return;
+      }
+      entry.category = el.value;
+      save(); renderLedger();
+    };
+    el.onblur = () => { if(document.activeElement !== el) renderLedger(); };
+
+  } else if (field === 'date') {
+    el = document.createElement('input');
+    el.type = 'date'; el.value = entry.date;
+    el.style.cssText = 'font-size:12px;padding:2px 4px;border:1px solid var(--mongmo);border-radius:4px;background:var(--surface);color:var(--text);';
+    el.onblur = () => { entry.date = el.value || entry.date; save(); renderLedger(); };
+    el.onkeydown = (e) => { if(e.key==='Enter') el.blur(); if(e.key==='Escape') renderLedger(); };
+
+  } else if (field === 'amount') {
+    el = document.createElement('input');
+    el.type = 'number'; el.value = entry.amount;
+    el.style.cssText = 'font-size:12px;padding:2px 6px;border:1px solid var(--mongmo);border-radius:4px;background:var(--surface);color:var(--text);width:110px;text-align:right;';
+    el.onblur = () => { entry.amount = parseInt(el.value)||0; save(); renderLedger(); };
+    el.onkeydown = (e) => { if(e.key==='Enter') el.blur(); if(e.key==='Escape') renderLedger(); };
+
+  } else {
+    // vendor, memo — 텍스트
+    el = document.createElement('input');
+    el.type = 'text'; el.value = entry[field]||'';
+    el.style.cssText = 'font-size:12px;padding:2px 6px;border:1px solid var(--mongmo);border-radius:4px;background:var(--surface);color:var(--text);width:120px;';
+    el.onblur = () => { entry[field] = el.value.trim(); save(); renderLedger(); };
+    el.onkeydown = (e) => { if(e.key==='Enter') el.blur(); if(e.key==='Escape') renderLedger(); };
+  }
+
   cell.innerHTML = '';
-  cell.appendChild(input);
-  input.focus();
-  input.select();
+  cell.appendChild(el);
+  if (el.tagName === 'SELECT') el.focus();
+  else { el.focus(); el.select && el.select(); }
 }
 
+// 구버전 호환
+function startLedgerEdit(id, field, currentVal) { lEdit(String(id).replace(/\./g,'_'), field); }
 function saveLedgerEdit(id, field, newVal) {
   const entry = (state.taxLedger||[]).find(x => String(x.id) === String(id));
   if (!entry) return;
