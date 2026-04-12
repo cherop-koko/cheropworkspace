@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.4.0</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.4.3</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -1359,6 +1359,7 @@
               <input type="date" id="ledger-to" class="form-input" style="width:130px;font-size:12px;" onchange="renderLedger()">
               <button class="btn btn-sm btn-secondary" onclick="resetLedgerFilter()" style="font-size:11px;">초기화</button>
               <button class="btn btn-sm btn-primary" onclick="openAddLedgerModal()" style="font-size:12px;">+ 내역 추가</button>
+              <button class="btn btn-sm btn-secondary" onclick="openCardUploadModal()" style="font-size:12px;">💳 카드내역 업로드</button>
               <button class="btn btn-sm btn-secondary" onclick="exportLedgerCSV()" style="font-size:12px;">📥 내보내기</button>
             </div>
           </div>
@@ -2850,6 +2851,37 @@
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('add-ledger')">취소</button>
       <button class="btn btn-primary" onclick="submitLedger()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 카드내역 업로드 모달 -->
+<div class="modal-overlay hidden" id="modal-card-upload">
+  <div class="modal" style="width:500px;">
+    <div class="modal-title">💳 카드 이용내역 업로드</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;padding:10px;background:var(--surface2);border-radius:8px;line-height:1.7;">
+      삼성카드 개인사업자용 카드 이용내역 엑셀(.xlsx) 파일을 업로드하세요.<br>
+      <strong>매출일자 · 매출금액 · 부가세 · 가맹점명 · 사업자등록번호</strong>가 자동으로 추가돼요.
+    </div>
+    <div class="form-group">
+      <label class="form-label">구분 (업로드된 내역의 기본 구분)</label>
+      <select class="form-select" id="card-upload-type">
+        <option value="etc">기타 (분류 후 수정)</option>
+        <option value="purchase">매입·물류</option>
+        <option value="marketing">마케팅</option>
+        <option value="fixed">고정비</option>
+      </select>
+    </div>
+    <div style="border:2px dashed var(--border);border-radius:10px;padding:30px;text-align:center;margin-bottom:16px;cursor:pointer;" onclick="document.getElementById('card-xlsx-input').click()">
+      <div style="font-size:24px;margin-bottom:8px;">📂</div>
+      <div style="font-size:13px;font-weight:500;" id="card-upload-filename">클릭해서 엑셀 파일 선택</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">.xlsx 파일만 지원</div>
+      <input type="file" id="card-xlsx-input" accept=".xlsx" style="display:none;" onchange="onCardXlsxSelected(this)">
+    </div>
+    <div id="card-upload-preview" style="display:none;margin-bottom:16px;max-height:200px;overflow-y:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('card-upload')">취소</button>
+      <button class="btn btn-primary" id="card-upload-btn" onclick="submitCardUpload()" disabled>가져오기</button>
     </div>
   </div>
 </div>
@@ -8116,9 +8148,10 @@ function renderTasks() {
   }
 
   // 전체 필터일 때만 오늘 할일로 제한 (특정 유형 선택 시엔 전체 표시)
-  const _todayStr = new Date().toISOString().split('T')[0];
+  const _todayStr = localDateStr();
   if (!state.taskFilter || state.taskFilter === 'all') {
-    items = items.filter(t => t.due === _todayStr || t.status === 'doing' || t.type === 'daily');
+    items = items.filter(t => t.due === _todayStr || t.status === 'doing' || t.type === 'daily'
+      || (t.due && t.due < _todayStr && !t.done)); // 마감기한 초과된 것도 포함
   }
 
   // 완료/미완료 필터
@@ -8150,21 +8183,24 @@ function renderTasks() {
       const memberColor = MEMBER_COLORS[t.assignee] || 'var(--text-muted)';
       const assigneeBadge = t.assignee ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:${memberColor}20;color:${memberColor};">👤 ${t.assignee}</span>` : '';
       const projBadge = t.isPCard && t.projName ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--mongmo-light);color:var(--mongmo);">📋 ${t.projName}</span>` : '';
+      const isOverdue = t.due && t.due < _todayStr && !t.done;
+      const overdueBadge = isOverdue ? `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--red-light);color:var(--red);font-weight:600;">⏰ 마감기한 초과</span>` : '';
+      const dueBadge = t.due ? `<span style="font-size:11px;color:${isOverdue?'var(--red)':'var(--text-muted)'};">마감: ${t.due}</span>` : '';
       if (t.isPCard) {
-        return `<div class="checklist-item" style="cursor:pointer;" onclick="openEditPCard(${t.pCardId})">
+        return `<div class="checklist-item" style="cursor:pointer;${isOverdue?'border-left:3px solid var(--red);padding-left:10px;':''}" onclick="openEditPCard(${t.pCardId})">
           <div class="check-box${t.done?' checked':''}" onclick="event.stopPropagation();togglePCardFromTask(${t.pCardId})"></div>
           <div class="check-text">
             <div class="check-title${t.done?' done':''}">${typeLabel} ${t.title}</div>
-            <div class="check-meta" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">${projBadge}${assigneeBadge}${t.due?`<span style="font-size:11px;color:var(--text-muted);">마감: ${t.due}</span>`:''}${t.memo?`<span style="font-size:11px;color:var(--text-muted);">💬 ${t.memo}</span>`:''}</div>
+            <div class="check-meta" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">${projBadge}${assigneeBadge}${overdueBadge}${dueBadge}${t.memo?`<span style="font-size:11px;color:var(--text-muted);">💬 ${t.memo}</span>`:''}</div>
           </div>
           <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletePCard(${t.pCardId})">삭제</button>
         </div>`;
       }
-      return `<div class="checklist-item" style="cursor:pointer;" onclick="openEditTask(${t.id})">
+      return `<div class="checklist-item" style="cursor:pointer;${isOverdue?'border-left:3px solid var(--red);padding-left:10px;':''}" onclick="openEditTask(${t.id})">
         <div class="check-box${t.done?' checked':''}" onclick="event.stopPropagation();toggleTask(${t.id})"></div>
         <div class="check-text">
           <div class="check-title${t.done?' done':''}">${typeLabel} ${t.title}</div>
-          <div class="check-meta" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">${brandBadge}${assigneeBadge}${t.due ? `<span style="font-size:11px;color:var(--text-muted);">마감: ${t.due}</span>` : ''}${t.memo ? `<span style="font-size:11px;color:var(--text-muted);">💬 ${t.memo}</span>` : ''}</div>
+          <div class="check-meta" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">${brandBadge}${assigneeBadge}${overdueBadge}${dueBadge}${t.memo ? `<span style="font-size:11px;color:var(--text-muted);">💬 ${t.memo}</span>` : ''}</div>
         </div>
         <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTask(${t.id})">삭제</button>
       </div>`;
@@ -8270,7 +8306,7 @@ function renderTaskKanban(member) {
   if (!board) return;
 
   // ── 오늘 할일 체크리스트 렌더 ──
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
   const checkEl = document.getElementById('today-task-checklist');
   const progEl  = document.getElementById('today-task-progress');
   if (checkEl) {
@@ -8363,10 +8399,14 @@ function renderTaskKanban(member) {
           const deleteFn = t.isPCard
             ? `event.stopPropagation();deletePCard(${t.pCardId})`
             : `event.stopPropagation();deleteTask(${t.id})`;
-          return `<div style="background:var(--surface);border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);cursor:pointer;" onclick="${clickFn}">
+          const today = localDateStr();
+          const isOverdue = t.due && t.due < today && !t.done;
+          const overdueBadge = isOverdue ? `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:var(--red-light);color:var(--red);font-weight:600;">⏰ 마감기한 초과</span>` : '';
+          return `<div style="background:var(--surface);border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1px solid ${isOverdue?'var(--red)':'var(--border)'};cursor:pointer;${isOverdue?'border-left:3px solid var(--red);':''}" onclick="${clickFn}">
             <div style="font-size:13px;font-weight:500;${t.done?'text-decoration:line-through;color:var(--text-muted);':''}">${typeLabel} ${t.title}</div>
             ${projBadge ? `<div style="margin-top:4px;">${projBadge}</div>` : ''}
-            ${t.due  ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">📅 ${t.due}</div>`  : ''}
+            ${overdueBadge ? `<div style="margin-top:4px;">${overdueBadge}</div>` : ''}
+            ${t.due  ? `<div style="font-size:11px;color:${isOverdue?'var(--red)':'var(--text-muted)'};margin-top:4px;">📅 ${t.due}</div>`  : ''}
             ${t.memo ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">💬 ${t.memo}</div>` : ''}
             <div style="display:flex;gap:5px;margin-top:8px;justify-content:flex-end;">
               ${col.key === 'todo'  ? `<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px;" onclick="${moveFn('doing')}">진행 →</button>` : ''}
@@ -8402,19 +8442,20 @@ function movePCardStatus(id, status) {
   else renderTasks();
 }
 
-function setTaskStatus(id, status) {
-  const t = (state.tasks||[]).find(x=>x.id===id);
-  if (!t) return;
+async function setTaskStatus(id, status) {
+  const t = (state.tasks||[]).find(x => String(x.id) === String(id));
+  if (!t) { showToast('업무를 찾을 수 없어요'); return; }
   if (status === 'done') { t.done = true; t.status = 'done'; }
   else if (status === 'doing') { t.done = false; t.status = 'doing'; }
   else { t.done = false; t.status = 'todo'; }
   const statusLabel = {done:'완료', doing:'진행중', todo:'대기'}[status]||status;
   logActivity('task', '업무 상태 변경: ' + t.title + ' → ' + statusLabel);
-  saveTask(t);
-  renderDashboard();
+  await saveTask(t);
+  showToast(`✅ "${t.title}" → ${statusLabel}`);
   const member = state.memberFilter;
   if (member && member !== 'all') renderTaskKanban(member);
   else renderTasks();
+  renderDashboard();
 }
 
 function openAddTaskForMember(member) {
@@ -11821,13 +11862,13 @@ function renderLedger() {
       // 항목: 인건비에 품목명도 표시
       let category = r.category||'-';
       if(r.type==='purchase' && r.itemName) category = r.itemName;
-      return `<tr>
+      return `<tr style="${isRev?'':'cursor:default;'}">
         <td style="color:var(--text-muted);font-size:12px;white-space:nowrap;">${r.date}</td>
         <td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${color}20;color:${color};font-weight:500;white-space:nowrap;">${typeLabel[r.type]||r.type}</span></td>
-        <td style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${category}</td>
-        <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${detail}</td>
-        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${isRev?'var(--green)':'var(--text)'};white-space:nowrap;">${isRev?'+':''}${fmtWonFull(r.amount)}</td>
-        <td style="font-size:12px;color:var(--text-muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;">${r.memo||'-'}</td>
+        <td id="ledger-cell-${r.id}-category" style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:${isRev?'default':'pointer'};" onclick="${isRev?'':'startLedgerEdit('+r.id+',\'category\',\''+String(category).replace(/'/g,'')+'\')'}" title="${isRev?'':'클릭해서 수정'}">${category}</td>
+        <td id="ledger-cell-${r.id}-vendor" style="font-size:12px;color:var(--text-muted);white-space:nowrap;cursor:${isRev?'default':'pointer'};" onclick="${isRev?'':'startLedgerEdit('+r.id+',\'vendor\',\''+String(r.vendor||'').replace(/'/g,'')+'\')'}" title="${isRev?'':'클릭해서 수정'}">${detail}</td>
+        <td id="ledger-cell-${r.id}-amount" style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${isRev?'var(--green)':'var(--text)'};white-space:nowrap;cursor:${isRev?'default':'pointer'};" onclick="${isRev?'':'startLedgerEdit('+r.id+',\'amount\','+r.amount+')'}" title="${isRev?'':'클릭해서 수정'}">${isRev?'+':''}${fmtWonFull(r.amount)}</td>
+        <td id="ledger-cell-${r.id}-memo" style="font-size:12px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis;cursor:${isRev?'default':'pointer'};" onclick="${isRev?'':'startLedgerEdit('+r.id+',\'memo\',\''+String(r.memo||'').replace(/'/g,'')+'\')'}" title="${isRev?'':'클릭해서 수정'}">${r.memo||'-'}</td>
         <td style="white-space:nowrap;">${isRev?'':`<button class="btn btn-sm btn-danger" onclick="deleteLedger(${r.id})" style="font-size:11px;">삭제</button>`}</td>
       </tr>`;
     }).join('')}</tbody>
@@ -11921,6 +11962,135 @@ function submitLedger() {
 function deleteLedger(id) {
   state.taxLedger=(state.taxLedger||[]).filter(x=>x.id!==id);
   save(); renderTax(); showToast('삭제됐어요');
+}
+
+// ── 카드내역 업로드 ──
+let _cardUploadRows = [];
+
+function openCardUploadModal() {
+  _cardUploadRows = [];
+  document.getElementById('card-upload-filename').textContent = '클릭해서 엑셀 파일 선택';
+  document.getElementById('card-upload-preview').style.display = 'none';
+  document.getElementById('card-upload-preview').innerHTML = '';
+  document.getElementById('card-upload-btn').disabled = true;
+  openModal('card-upload');
+}
+
+function onCardXlsxSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('card-upload-filename').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      // 헤더 찾기 (매출일자 컬럼)
+      let headerRow = -1;
+      let colMap = {};
+      for (let i = 0; i < Math.min(rows.length, 10); i++) {
+        const r = rows[i];
+        r.forEach((v, ci) => {
+          const s = String(v).trim();
+          if (s === '매출일자') { headerRow = i; colMap.date = ci; }
+          if (s === '매출금액(원)') colMap.amount = ci;
+          if (s === '부가세(원)') colMap.vat = ci;
+          if (s === '가맹점명') colMap.vendor = ci;
+          if (s === '사업자등록번호') colMap.bizno = ci;
+        });
+        if (headerRow >= 0) break;
+      }
+      if (headerRow < 0) { showToast('❌ 올바른 카드내역 파일이 아니에요'); return; }
+
+      _cardUploadRows = [];
+      for (let i = headerRow + 1; i < rows.length; i++) {
+        const r = rows[i];
+        const rawDate = String(r[colMap.date]||'').trim();
+        if (!rawDate || rawDate.length < 8) continue;
+        const dateStr = rawDate.slice(0,4)+'-'+rawDate.slice(4,6)+'-'+rawDate.slice(6,8);
+        const amount = parseInt(String(r[colMap.amount]||'0').replace(/,/g,''))||0;
+        if (!amount) continue;
+        const vat = parseInt(String(r[colMap.vat]||'0').replace(/,/g,''))||0;
+        const vendor = String(r[colMap.vendor]||'').trim();
+        const bizno = String(r[colMap.bizno]||'').trim();
+        _cardUploadRows.push({dateStr, amount, vat, vendor, bizno});
+      }
+
+      // 미리보기
+      const prev = document.getElementById('card-upload-preview');
+      prev.style.display = 'block';
+      prev.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:8px;">총 ${_cardUploadRows.length}건 미리보기 (최대 5건)</div>
+        <table style="width:100%;font-size:11px;border-collapse:collapse;">
+          <thead><tr style="background:var(--surface2);">
+            <th style="padding:4px 8px;text-align:left;">날짜</th>
+            <th style="padding:4px 8px;text-align:right;">금액</th>
+            <th style="padding:4px 8px;text-align:right;">부가세</th>
+            <th style="padding:4px 8px;text-align:left;">가맹점</th>
+            <th style="padding:4px 8px;text-align:left;">사업자번호</th>
+          </tr></thead>
+          <tbody>${_cardUploadRows.slice(0,5).map(r=>`<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:4px 8px;">${r.dateStr}</td>
+            <td style="padding:4px 8px;text-align:right;">${r.amount.toLocaleString()}</td>
+            <td style="padding:4px 8px;text-align:right;">${r.vat.toLocaleString()}</td>
+            <td style="padding:4px 8px;">${r.vendor}</td>
+            <td style="padding:4px 8px;color:var(--text-muted);">${r.bizno}</td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+      document.getElementById('card-upload-btn').disabled = _cardUploadRows.length === 0;
+    } catch(err) {
+      showToast('❌ 파일을 읽을 수 없어요: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function submitCardUpload() {
+  if (!_cardUploadRows.length) return;
+  const type = document.getElementById('card-upload-type').value;
+  if (!state.taxLedger) state.taxLedger = [];
+  let added = 0;
+  _cardUploadRows.forEach(r => {
+    state.taxLedger.push({
+      id: Date.now() + Math.random(),
+      date: r.dateStr,
+      type,
+      category: '카드사용',
+      amount: r.amount,
+      vendor: r.vendor,
+      memo: r.bizno ? '사업자번호: ' + r.bizno + (r.vat ? ' / 부가세: ' + r.vat.toLocaleString() + '원' : '') : (r.vat ? '부가세: ' + r.vat.toLocaleString() + '원' : ''),
+    });
+    added++;
+  });
+  save(); closeModal('card-upload'); renderTax();
+  showToast(`✅ 카드내역 ${added}건 추가됐어요`);
+  _cardUploadRows = [];
+}
+
+// ── 내역 인라인 수정 ──
+function startLedgerEdit(id, field, currentVal) {
+  const cellId = `ledger-cell-${id}-${field}`;
+  const cell = document.getElementById(cellId);
+  if (!cell) return;
+  const isAmount = field === 'amount';
+  const input = document.createElement(isAmount ? 'input' : 'input');
+  input.type = isAmount ? 'number' : 'text';
+  input.value = currentVal;
+  input.style.cssText = 'width:100%;font-size:12px;padding:2px 6px;border:1px solid var(--mongmo);border-radius:4px;background:var(--surface);color:var(--text);';
+  input.onblur = () => saveLedgerEdit(id, field, input.value);
+  input.onkeydown = (e) => { if(e.key==='Enter') input.blur(); if(e.key==='Escape') { renderLedger(); } };
+  cell.innerHTML = '';
+  cell.appendChild(input);
+  input.focus();
+  input.select();
+}
+
+function saveLedgerEdit(id, field, newVal) {
+  const entry = (state.taxLedger||[]).find(x => String(x.id) === String(id));
+  if (!entry) return;
+  if (field === 'amount') entry.amount = parseInt(newVal)||0;
+  else entry[field] = newVal.trim();
+  save(); renderLedger();
 }
 
 function exportLedgerCSV() {
