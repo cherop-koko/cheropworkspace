@@ -800,7 +800,7 @@
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="date" id="sidebar-date"></div>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.8</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;letter-spacing:0.04em;">v1.3.9</span>
       </div>
       <div id="login-user-info" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
 
@@ -4900,6 +4900,12 @@ function fmtWon(n) {
   if (n >= 100000000) return (n/100000000).toFixed(1)+'억';
   if (n >= 10000) return Math.round(n/10000)+'만원';
   return n.toLocaleString()+'원';
+}
+
+// 세무관리 전용: 1원 단위까지 전부 표시
+function fmtWonFull(n) {
+  if (!n && n !== 0) return '0원';
+  return Math.round(n).toLocaleString()+'원';
 }
 
 function getMonthKey(dateStr) { return dateStr.slice(0,7); }
@@ -11310,17 +11316,17 @@ function renderTax() {
   document.getElementById('tax-annual-summary').innerHTML = `
     <div class="stat-card">
       <div class="stat-label">${periodLabel} 매출</div>
-      <div class="stat-value" style="font-size:20px;">${fmtWon(rev)}</div>
+      <div class="stat-value" style="font-size:20px;">${fmtWonFull(rev)}</div>
       <div class="stat-change">${taxPeriod==='annual'?'연간 누계':taxPeriod==='quarter'?'분기 합계':'이번달 합계'}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">${periodLabel} 비용</div>
-      <div class="stat-value" style="font-size:20px;color:var(--red);">${fmtWon(exp)}</div>
+      <div class="stat-value" style="font-size:20px;color:var(--red);">${fmtWonFull(exp)}</div>
       <div class="stat-change">플랫폼 수수료 포함</div>
     </div>
     <div class="stat-card" style="border:1.5px solid ${netColor};">
       <div class="stat-label">${periodLabel} 순이익</div>
-      <div class="stat-value" style="font-size:20px;color:${netColor};">${fmtWon(net)}</div>
+      <div class="stat-value" style="font-size:20px;color:${netColor};">${fmtWonFull(net)}</div>
       <div class="stat-change">${rev>0?`이익률 ${Math.round(net/rev*100)}%`:''}${taxPeriod==='annual'?` · 예상세율 ${taxRate.rate}%`:''}</div>
     </div>`;
 
@@ -11426,13 +11432,13 @@ function renderTaxChart(year) {
     tooltip.innerHTML = `
       <div style="font-weight:600;margin-bottom:6px;font-size:12px;">${slot.label}</div>
       <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;">
-        <span style="color:#D4956A;">매출</span><span style="font-family:'DM Mono',monospace;">${fmtWon(slot.rev)}</span>
+        <span style="color:#D4956A;">매출</span><span style="font-family:'DM Mono',monospace;">${fmtWonFull(slot.rev)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;">
-        <span style="color:#C4736A;">비용</span><span style="font-family:'DM Mono',monospace;">${fmtWon(slot.exp)}</span>
+        <span style="color:#C4736A;">비용</span><span style="font-family:'DM Mono',monospace;">${fmtWonFull(slot.exp)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;gap:16px;border-top:1px solid rgba(255,255,255,0.2);padding-top:4px;margin-top:2px;">
-        <span style="color:${netColor};font-weight:600;">순이익</span><span style="font-family:'DM Mono',monospace;color:${netColor};font-weight:600;">${fmtWon(slot.net)}</span>
+        <span style="color:${netColor};font-weight:600;">순이익</span><span style="font-family:'DM Mono',monospace;color:${netColor};font-weight:600;">${fmtWonFull(slot.net)}</span>
       </div>
       ${slot.rev>0?`<div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:4px;">이익률 ${Math.round(slot.net/slot.rev*100)}%</div>`:''}`;
     // 툴팁 위치 (캔버스 기준 → 래퍼 기준)
@@ -11458,21 +11464,21 @@ function renderTaxDetail() {
   const net=rev-exp;
   const netColor=net>=0?'var(--green)':'var(--red)';
   const nbEl=document.getElementById('tax-net-badge');
-  if(nbEl) nbEl.innerHTML=`<span style="font-size:14px;font-weight:700;color:${netColor};">${net>=0?'+':''}${fmtWon(net)}</span>`;
+  if(nbEl) nbEl.innerHTML=`<span style="font-size:14px;font-weight:700;color:${netColor};">${net>=0?'+':''}${fmtWonFull(net)}</span>`;
   const detEl=document.getElementById('tax-month-detail');
   if(detEl) detEl.innerHTML=`
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg);border-radius:8px;">
         <span style="font-size:13px;color:var(--text-muted);">📈 총 매출</span>
-        <span style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${fmtWon(rev)}</span>
+        <span style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${fmtWonFull(rev)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg);border-radius:8px;">
         <span style="font-size:13px;color:var(--text-muted);">📉 총 비용</span>
-        <span style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red);">${fmtWon(exp)}</span>
+        <span style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red);">${fmtWonFull(exp)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:${net>=0?'var(--green-light)':'var(--red-light)'};border-radius:8px;border:1.5px solid ${netColor};">
         <span style="font-size:14px;font-weight:700;color:${netColor};">💰 순이익</span>
-        <span style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;color:${netColor};">${fmtWon(net)}</span>
+        <span style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;color:${netColor};">${fmtWonFull(net)}</span>
       </div>
       ${rev>0?`<div style="font-size:12px;color:var(--text-muted);padding:8px 12px;background:var(--surface2);border-radius:6px;">이익률 <strong>${Math.round(net/rev*100)}%</strong> · 매출 대비 비용 <strong>${Math.round(exp/rev*100)}%</strong></div>`:''}
     </div>`;
@@ -11496,10 +11502,10 @@ function renderTaxDetail() {
         <div style="width:${Math.max(pct,2)*1.2}px;height:3px;background:var(--mongmo);border-radius:2px;margin-top:3px;opacity:0.6;"></div></div>
       </div>
       <div style="text-align:right;">
-        <div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;">${fmtWon(i.value)}</div>
+        <div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;">${fmtWonFull(i.value)}</div>
         <div style="font-size:10px;color:var(--text-muted);">${pct}%</div>
       </div></div>`;
-  }).join('')+`<div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:13px;font-weight:700;"><span>합계</span><span style="font-family:'DM Mono',monospace;">${fmtWon(totalExp)}</span></div>`;
+  }).join('')+`<div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:13px;font-weight:700;"><span>합계</span><span style="font-family:'DM Mono',monospace;">${fmtWonFull(totalExp)}</span></div>`;
 }
 
 // ── 비용 그룹 카드 ──
@@ -11542,9 +11548,9 @@ function renderExpenseCards() {
         <button class="btn btn-sm btn-primary" onclick="openAddLedgerModalWithType('${g.key}')" style="font-size:10px;padding:2px 10px;">+ 추가</button>
       </div>
       <div style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;color:${groupTotal>0?'var(--text)':'var(--text-muted)'};">
-        ${groupTotal>0?fmtWon(groupTotal):'미입력'}
+        ${groupTotal>0?fmtWonFull(groupTotal):'미입력'}
       </div>
-      ${topSubs.length>0?`<div style="margin-top:8px;">${topSubs.map(([n,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:2px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">${n}</span><span style="font-family:'DM Mono',monospace;">${fmtWon(v)}</span></div>`).join('')}</div>`:''}
+      ${topSubs.length>0?`<div style="margin-top:8px;">${topSubs.map(([n,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:2px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">${n}</span><span style="font-family:'DM Mono',monospace;">${fmtWonFull(v)}</span></div>`).join('')}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -11612,7 +11618,7 @@ function updateExpGTotal() {
   let total=0;
   document.querySelectorAll('.exp-g-field').forEach(el=>{total+=parseInt(el.value)||0;});
   const el=document.getElementById('exp-g-total');
-  if(el) el.textContent=fmtWon(total);
+  if(el) el.textContent=fmtWonFull(total);
 }
 
 function submitExpenseGroup() {
@@ -11731,11 +11737,11 @@ function renderTaxCategoryBreakdown(year) {
           <span style="font-size:13px;font-weight:600;">${g.icon} ${gName}</span>
           <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${color}20;color:${color};font-weight:600;">${pct}%</span>
         </div>
-        <div style="font-size:17px;font-weight:800;font-family:'DM Mono',monospace;margin-bottom:8px;">${fmtWon(g.total)}</div>
+        <div style="font-size:17px;font-weight:800;font-family:'DM Mono',monospace;margin-bottom:8px;">${fmtWonFull(g.total)}</div>
         <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px;">
           <div style="width:${pct}%;height:100%;background:${color};border-radius:2px;"></div>
         </div>
-        ${topItems.map(([n,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:3px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;">${n}</span><span style="font-family:'DM Mono',monospace;">${fmtWon(v)}</span></div>`).join('')}
+        ${topItems.map(([n,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:3px;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;">${n}</span><span style="font-family:'DM Mono',monospace;">${fmtWonFull(v)}</span></div>`).join('')}
       </div>`;
     }).join('')+`</div>`;
 }
@@ -11819,7 +11825,7 @@ function renderLedger() {
         <td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${color}20;color:${color};font-weight:500;white-space:nowrap;">${typeLabel[r.type]||r.type}</span></td>
         <td style="font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${category}</td>
         <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${detail}</td>
-        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${isRev?'var(--green)':'var(--text)'};white-space:nowrap;">${isRev?'+':''}${fmtWon(r.amount)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${isRev?'var(--green)':'var(--text)'};white-space:nowrap;">${isRev?'+':''}${fmtWonFull(r.amount)}</td>
         <td style="font-size:12px;color:var(--text-muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;">${r.memo||'-'}</td>
         <td style="white-space:nowrap;">${isRev?'':`<button class="btn btn-sm btn-danger" onclick="deleteLedger(${r.id})" style="font-size:11px;">삭제</button>`}</td>
       </tr>`;
@@ -12041,17 +12047,17 @@ function renderVAT() {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
       <div style="padding:16px;background:var(--bg);border-radius:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">매출세액 (10%)</div>
-        <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;">${fmtWon(outputVAT)}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">매출 ${fmtWon(revTotal)} 기준</div>
+        <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;">${fmtWonFull(outputVAT)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">매출 ${fmtWonFull(revTotal)} 기준</div>
       </div>
       <div style="padding:16px;background:var(--bg);border-radius:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">매입세액 (공제)</div>
-        <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green);">- ${fmtWon(inputVAT)}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">매입원가 ${fmtWon(cogsTotal)} 기준</div>
+        <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green);">- ${fmtWonFull(inputVAT)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">매입원가 ${fmtWonFull(cogsTotal)} 기준</div>
       </div>
       <div style="padding:16px;background:var(--mongmo-light);border-radius:10px;border:1px solid var(--mongmo);">
         <div style="font-size:11px;color:var(--mongmo);margin-bottom:6px;font-weight:600;">납부 예상 부가세</div>
-        <div style="font-size:22px;font-weight:800;font-family:'DM Mono',monospace;color:var(--mongmo);">${fmtWon(vatDue)}</div>
+        <div style="font-size:22px;font-weight:800;font-family:'DM Mono',monospace;color:var(--mongmo);">${fmtWonFull(vatDue)}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${year}년 ${half===1?'상반기':'하반기'}</div>
       </div>
     </div>
@@ -12090,21 +12096,21 @@ function renderIncomeTax() {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
       <div style="padding:14px;background:var(--bg);border-radius:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">연간 총 매출</div>
-        <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${fmtWon(annualRev)}</div>
+        <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${fmtWonFull(annualRev)}</div>
       </div>
       <div style="padding:14px;background:var(--bg);border-radius:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">필요경비</div>
-        <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red);">${fmtWon(annualExp)}</div>
+        <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red);">${fmtWonFull(annualExp)}</div>
       </div>
       <div style="padding:14px;background:var(--bg);border-radius:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">과세표준 (순이익)</div>
-        <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${fmtWon(netIncome)}</div>
+        <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;">${fmtWonFull(netIncome)}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">적용세율 ${rate}%</div>
       </div>
       <div style="padding:14px;background:var(--mongmo-light);border-radius:10px;border:1px solid var(--mongmo);">
         <div style="font-size:11px;color:var(--mongmo);margin-bottom:4px;font-weight:600;">예상 세금 합계</div>
-        <div style="font-size:18px;font-weight:800;font-family:'DM Mono',monospace;color:var(--mongmo);">${fmtWon(totalTax)}</div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">소득세 ${fmtWon(tax)} + 지방세 ${fmtWon(localTax)}</div>
+        <div style="font-size:18px;font-weight:800;font-family:'DM Mono',monospace;color:var(--mongmo);">${fmtWonFull(totalTax)}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">소득세 ${fmtWonFull(tax)} + 지방세 ${fmtWonFull(localTax)}</div>
       </div>
     </div>
     <div style="margin-bottom:20px;">
