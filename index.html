@@ -3649,7 +3649,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.2</div>
+<div id="version">v3.9.4</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5946,10 +5946,13 @@ const CH_COLS = {
     date: 19, dateType: 'string',
   },
   '스마트스토어': {
-    name: 9, option: 10, qty: 12,
-    amount: null, itemAmount: null,
-    orderNo: null, itemNo: null,
-    date: 2, dateType: 'serial',
+    name: 16, option: 20, qty: 22,
+    amount: 28,       // 최종 상품별 총 주문금액 (소비자 결제금액)
+    itemAmount: 28,
+    orderNo: null,
+    itemNo: 0,        // 상품주문번호 (upsert 고유키)
+    date: 39,         // 결제일 (datetime → JS에서 serial로 읽힘)
+    dateType: 'serial',
   },
 };
 
@@ -7736,11 +7739,11 @@ async function loadSalesData() {
 
   const totalAmt  = salesRows.reduce((s, r) => s + (r.amount || 0), 0);
   const totalQty  = salesRows.reduce((s, r) => s + (r.quantity || 0), 0);
-  // 주문 건수: sales_log 행 수 (주문섹션품목번호 단위)
-  // 건당 평균: amount > 0 인 행(실결제금액 붙은 행)만 기준 → 아임웹 대시보드와 동일
-  const orderCnt  = salesRows.length;
+  // 주문 건수: amount > 0 인 행 = 고유 주문번호 단위 (최종주문금액이 붙은 첫 행)
+  // 건당 평균: 총매출 / 주문 건수
   const paidRows  = salesRows.filter(r => (r.amount || 0) > 0);
-  const avgAmt    = paidRows.length ? Math.round(totalAmt / paidRows.length) : 0;
+  const orderCnt  = paidRows.length;
+  const avgAmt    = orderCnt ? Math.round(totalAmt / orderCnt) : 0;
 
   const prevAmt   = prevRows.reduce((s,r) => s+(r.amount||0), 0);
   const prevQty   = prevRows.reduce((s,r) => s+(r.quantity||0), 0);
