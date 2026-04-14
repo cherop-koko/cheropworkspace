@@ -3649,7 +3649,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.7</div>
+<div id="version">v3.9.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5920,115 +5920,145 @@ function setInvUpChannel(ch, el) {
   if(el) el.classList.add('on');
 }
 
-/* 채널별 엑셀 컬럼 설정 */
+/* ════════════════════════════════
+   채널별 엑셀 컬럼 설정
+   자사몰(아임웹):
+     - itemNo[15]  : 주문섹션품목번호 → upsert 고유키
+     - orderNo[1]  : 주문번호 (최종주문금액 중복 제거용)
+     - amount[7]   : 최종주문금액 (배송비 포함, 아임웹 대시보드 기준)
+     - itemAmount[23]: 품목실결제가 (상품별 금액 — inventory 차감용)
+     - country[26] / validCountry:'KR' : 해외주문 제외
+════════════════════════════════ */
 const CH_COLS = {
-  '자사몰':        { name:17, option:18, qty:16, amount:7, orderNo:1, date:36, dateType:'string', status:2, validStatus:'거래종료' },
-  '카카오선물하기': { name:7,  option:8,  qty:9,  amount:14, date:19, dateType:'string' },
-  '스마트스토어':  { name:9,  option:10, qty:12, amount:null, date:2, dateType:'serial' },
+  '자사몰': {
+    name: 17, option: 18, qty: 16,
+    amount: 7,        // 최종주문금액 (아임웹 대시보드 기준)
+    itemAmount: 23,   // 품목실결제가 (inventory 차감용)
+    orderNo: 1,       // 주문번호 (금액 중복방지 키)
+    itemNo: 15,       // 주문섹션품목번호 (upsert 고유키)
+    date: 36, dateType: 'string',
+    country: 26, validCountry: 'KR',
+  },
+  '카카오선물하기': {
+    name: 7, option: 8, qty: 9,
+    amount: 14, itemAmount: 14,
+    orderNo: null, itemNo: null,
+    date: 19, dateType: 'string',
+  },
+  '스마트스토어': {
+    name: 9, option: 10, qty: 12,
+    amount: null, itemAmount: null,
+    orderNo: null, itemNo: null,
+    date: 2, dateType: 'serial',
+  },
 };
 
+/* ─── 날짜 파싱 ─── */
 function excelSerialToDate(serial) {
   const epoch = new Date(1899, 11, 30);
-  const d = new Date(epoch.getTime() + serial * 86400000);
-  return dateStr(d);
+  return dateStr(new Date(epoch.getTime() + Number(serial) * 86400000));
 }
-
 function parseSaleDate(val, dateType) {
-  if(!val) return dateStr();
-  if(dateType === 'serial') return excelSerialToDate(Number(val));
-  const s = String(val).trim();
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!val) return dateStr();
+  if (dateType === 'serial') return excelSerialToDate(val);
+  const m = String(val).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[1]}-${m[2]}-${m[3]}` : dateStr();
 }
 
+/* ─── 파일 선택 → 파싱 ─── */
 async function handleInvUpload(input) {
-  const file = input.files[0]; if(!file) return;
+  const file = input.files[0];
+  if (!file) return;
   const XLSX = window.XLSX;
-  if(!XLSX){ toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요'); return; }
+  if (!XLSX) { toast('엑셀 라이브러리 로딩 중... 잠시 후 다시 시도해주세요'); return; }
   const cols = CH_COLS[invUploadChannel];
-  if(!cols){ toast('채널을 먼저 선택해주세요'); return; }
+  if (!cols) { toast('채널을 먼저 선택해주세요'); return; }
   try {
     const ab  = await file.arrayBuffer();
-    const wb  = XLSX.read(ab, { type:'array' });
+    const wb  = XLSX.read(ab, { type: 'array' });
     const ws  = wb.Sheets[wb.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json(ws, { header:1 });
-    if(raw.length < 2){ toast('데이터가 없어요'); return; }
-    // 헤더 건너뛰고 데이터만
+    const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    if (raw.length < 2) { toast('데이터가 없어요'); return; }
     invUploadData = raw.slice(1).filter(r => {
-      if(!r[cols.name]) return false;
-      // 주문상태 필터 (자사몰: 거래종료만)
-      if(cols.status!=null && cols.validStatus) {
-        if(String(r[cols.status]||'').trim() !== cols.validStatus) return false;
-      }
-      // 외화 필터: amount가 소수점이면 제외
-      if(cols.amount!=null) {
-        const a = r[cols.amount];
-        if(a!=null && a !== Math.floor(a)) return false;
+      if (!r[cols.name]) return false;
+      // 해외주문 제외 (자사몰: KR만)
+      if (cols.country != null && cols.validCountry) {
+        if (String(r[cols.country] || '').trim() !== cols.validCountry) return false;
       }
       return true;
     });
-    if($('inv-up-file-lbl')) $('inv-up-file-lbl').textContent = `✓ ${file.name} (${invUploadData.length}건)`;
+    if ($('inv-up-file-lbl')) $('inv-up-file-lbl').textContent = `✓ ${file.name} (${invUploadData.length}건)`;
     await renderUploadPreview(cols);
-  } catch(e){ toast('파일 파싱 실패: '+e.message); console.error(e); }
+  } catch (e) { toast('파일 파싱 실패: ' + e.message); console.error(e); }
 }
 
+/* ─── 미리보기 & 상품 매칭 준비 ─────────────────────────────────────────
+   agg 구조: { [matchKey]: { pname, opt, matchKey, rows:[{saleDate,itemNo,qty,orderAmt,itemAmt}] } }
+   - matchKey: 상품명+옵션 조합 (날짜 미포함) — 매핑 단위
+   - rows    : 행(주문섹션품목번호) 단위 데이터 — upsert 단위
+   - orderAmt: 최종주문금액[7] (주문번호 첫 행에서만 반영) — 판매탭 매출
+   - itemAmt : 품목실결제가[23] — inventory 차감용
+──────────────────────────────────────────────────────────────────────── */
 async function renderUploadPreview(cols) {
-  const maps = (await db.from('channel_product_mapping').select('*').eq('channel',invUploadChannel)).data||[];
-  const prods = (await db.from('products').select('id,name,option_name').eq('is_discontinued',false)).data||[];
+  const [maps, prods] = await Promise.all([
+    db.from('channel_product_mapping').select('*').eq('channel', invUploadChannel).then(r => r.data || []),
+    db.from('products').select('id,name,option_name').eq('is_discontinued', false).then(r => r.data || []),
+  ]);
+
   const agg = {};
-  const seenOrderAmt = {};  // 주문번호별 금액 중복 방지 (최종주문금액은 주문당 1번만)
-  for(const row of invUploadData) {
-    const pname    = String(row[cols.name]||'').trim();
-    const opt      = cols.option!=null ? String(row[cols.option]||'').trim() : '';
-    const saleDate = parseSaleDate(row[cols.date], cols.dateType);
+  const seenOrderAmt = {}; // 주문번호별 최종주문금액 중복 방지
+
+  for (const row of invUploadData) {
+    const pname    = String(row[cols.name] || '').trim();
+    const opt      = cols.option != null ? String(row[cols.option] || '').trim() : '';
     const matchKey = opt ? `${pname}|||${opt}` : pname;
-    const key      = `${saleDate}__${matchKey}`;
-    const qty    = parseInt(row[cols.qty])||0;
-    // 주문번호 기준 금액 중복 제거: 같은 주문번호는 첫 행에서만 금액 반영
-    let amount = 0;
-    if(cols.amount!=null) {
-      if(cols.orderNo!=null) {
-        const orderNo = String(row[cols.orderNo]||'').trim();
-        if(orderNo && !seenOrderAmt[orderNo]) {
-          amount = parseInt(row[cols.amount])||0;
+    const saleDate = parseSaleDate(row[cols.date], cols.dateType);
+    const qty      = parseInt(row[cols.qty]) || 0;
+
+    // 주문섹션품목번호: 자사몰 upsert 고유키
+    const itemNo = (cols.itemNo != null && row[cols.itemNo])
+      ? String(row[cols.itemNo]).trim()
+      : null;
+
+    // 최종주문금액: 같은 주문번호는 첫 행에서만 (아임웹 대시보드 기준)
+    let orderAmt = 0;
+    if (cols.amount != null) {
+      if (cols.orderNo != null) {
+        const orderNo = String(row[cols.orderNo] || '').trim();
+        if (orderNo && !seenOrderAmt[orderNo]) {
+          orderAmt = parseInt(row[cols.amount]) || 0;
           seenOrderAmt[orderNo] = true;
         }
       } else {
-        amount = parseInt(row[cols.amount])||0;
+        orderAmt = parseInt(row[cols.amount]) || 0;
       }
     }
-    if(!agg[key]) agg[key] = { pname, opt, qty:0, amount:0, saleDate, key, matchKey };
-    agg[key].qty    += qty;
-    agg[key].amount += amount;
+
+    // 품목실결제가: inventory 차감용
+    const itemAmt = cols.itemAmount != null ? (parseInt(row[cols.itemAmount]) || 0) : 0;
+
+    if (!agg[matchKey]) agg[matchKey] = { pname, opt, matchKey, rows: [] };
+    agg[matchKey].rows.push({ saleDate, itemNo, qty, orderAmt, itemAmt });
   }
+
   window._invUploadAgg      = agg;
-  window._invUploadMappings = {};
+  window._invUploadMappings = {}; // { matchKey → productId }
   window._invUploadSkipped  = new Set();
   window._invUploadProds    = prods;
-  // matchKey별로 그룹핑
-  const matchKeyGroups = {};
-  for(const key of Object.keys(agg)){
-    const { matchKey } = agg[key];
-    if(!matchKeyGroups[matchKey]) matchKeyGroups[matchKey] = [];
-    matchKeyGroups[matchKey].push(key);
-  }
+
+  // 기존 채널 매핑으로 자동 매칭
   const unmatched = [];
-  const seenMatchKey = {};
-  for(const key of Object.keys(agg)){
-    const { pname, matchKey } = agg[key];
+  for (const matchKey of Object.keys(agg)) {
+    const { pname } = agg[matchKey];
     const m = maps.find(x => x.channel_name === matchKey || x.channel_name === pname);
-    if(m){
-      // 이미 매핑된 상품 → 같은 matchKey의 모든 날짜 key에 전파
-      (matchKeyGroups[matchKey]||[key]).forEach(k => {
-        window._invUploadMappings[k] = m.product_id;
-      });
-    } else if(!seenMatchKey[matchKey]) {
-      unmatched.push(key);
-      seenMatchKey[matchKey] = true;
+    if (m) {
+      window._invUploadMappings[matchKey] = m.product_id;
+    } else {
+      unmatched.push(matchKey);
     }
-    // skipped에 넣지 않음 - 사용자가 매핑하면 invSelectMatch에서 전파됨
   }
-  if(!unmatched.length){
+
+  if (!unmatched.length) {
     $('inv-up-preview').style.display = 'none';
     $('inv-up-submit').style.display  = '';
     toast('모든 상품이 자동 매칭됐어요. 업로드 처리를 눌러주세요.');
@@ -6041,21 +6071,26 @@ async function renderUploadPreview(cols) {
   updateUploadProgress();
 }
 
-function renderMatchList(keys) {
-  const agg  = window._invUploadAgg||{};
-  const skip = window._invUploadSkipped||new Set();
-  const maps = window._invUploadMappings||{};
-  $('inv-up-match-list').innerHTML = keys.map(key => {
-    const { pname, opt, qty, saleDate } = agg[key];
+/* ─── 매칭 목록 렌더 ─── */
+function renderMatchList(matchKeys) {
+  const agg  = window._invUploadAgg || {};
+  const skip = window._invUploadSkipped || new Set();
+  const maps = window._invUploadMappings || {};
+
+  $('inv-up-match-list').innerHTML = matchKeys.map(matchKey => {
+    const { pname, opt, rows } = agg[matchKey] || {};
+    const totalQty = (rows || []).reduce((s, r) => s + r.qty, 0);
+    const totalAmt = (rows || []).reduce((s, r) => s + r.orderAmt, 0);
     const dispName = opt ? `${pname} / ${opt}` : pname;
-    const enc = encodeURIComponent(key);
-    const isDone    = !!maps[key];
-    const isSkipped = skip.has(key);
-    if(isDone) {
-      const prod = (window._invUploadProds||[]).find(p=>p.id===maps[key]);
-      const prodLabel = prod ? prod.name+(prod.option_name?' / '+prod.option_name:'') : '매칭됨';
+    const enc      = encodeURIComponent(matchKey);
+    const isDone    = !!maps[matchKey];
+    const isSkipped = skip.has(matchKey);
+
+    if (isDone) {
+      const prod = (window._invUploadProds || []).find(p => p.id === maps[matchKey]);
+      const prodLabel = prod ? prod.name + (prod.option_name ? ' / ' + prod.option_name : '') : '매칭됨';
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--surface2);">
-        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;" title="${dispName}">${dispName} <span class="inv-faint">(${qty}개)</span></div>
+        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;" title="${dispName}">${dispName} <span class="inv-faint">(${totalQty}개 · ${fmtWon(totalAmt)})</span></div>
         <div style="color:var(--light);font-size:14px;flex-shrink:0;">→</div>
         <div style="flex:1;display:flex;align-items:center;gap:6px;">
           <span style="font-size:12px;color:var(--green);font-weight:500;">✓ ${prodLabel}</span>
@@ -6063,16 +6098,16 @@ function renderMatchList(keys) {
         </div>
       </div>`;
     }
-    if(isSkipped) {
+    if (isSkipped) {
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--surface2);opacity:.45;">
-        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${dispName} <span class="inv-faint">(${qty}개)</span></div>
+        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${dispName} <span class="inv-faint">(${totalQty}개)</span></div>
         <span style="font-size:11px;color:var(--light);">건너뜀</span>
         <span class="card-link" style="font-size:11px;" onclick="invUnskip('${enc}')">복구</span>
       </div>`;
     }
     return `<div style="padding:10px 0;border-bottom:0.5px solid var(--surface2);">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;" title="${dispName}">${dispName} <span class="inv-faint">(${qty}개)</span></div>
+        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;" title="${dispName}">${dispName} <span class="inv-faint">(${totalQty}개 · ${fmtWon(totalAmt)})</span></div>
         <div style="color:var(--light);font-size:14px;flex-shrink:0;">→</div>
         <div style="flex:1;position:relative;">
           <input type="text" class="inv-search-inp" style="width:100%;" placeholder="상품 검색..."
@@ -6085,192 +6120,231 @@ function renderMatchList(keys) {
   }).join('');
 }
 
+/* ─── 진행률 바 업데이트 ─── */
 function updateUploadProgress() {
-  const agg   = window._invUploadAgg||{};
-  const maps  = window._invUploadMappings||{};
-  const skip  = window._invUploadSkipped||new Set();
-  const total = Object.keys(agg).length;
-  const done  = Object.keys(maps).length;
+  const agg     = window._invUploadAgg || {};
+  const maps    = window._invUploadMappings || {};
+  const skip    = window._invUploadSkipped || new Set();
+  const total   = Object.keys(agg).length;
+  const done    = Object.keys(maps).length;
   const skipped = skip.size;
-  const resolved = done + skipped;
-  const pct = total ? Math.round(resolved/total*100) : 100;
+  const pct     = total ? Math.round((done + skipped) / total * 100) : 100;
   const bar = $('inv-up-progress-bar');
-  if(bar) bar.style.width = pct+'%';
+  if (bar) bar.style.width = pct + '%';
   const st = $('inv-up-match-status');
-  if(st) {
-    if(resolved===total) st.innerHTML = `<span style="color:var(--green);">✓ 전체 ${total}개 처리 완료</span>`;
-    else st.textContent = `매칭 ${done}/${total}개 완료 · 남은 항목 ${total-done}개`;
+  if (st) {
+    if (done + skipped === total)
+      st.innerHTML = `<span style="color:var(--green);">✓ 전체 ${total}개 처리 완료</span>`;
+    else
+      st.textContent = `매칭 ${done}/${total}개 완료 · 남은 항목 ${total - done - skipped}개`;
   }
 }
 
+/* ─── + 상품 추가 ─── */
 function invOpenAddProduct(enc) {
-  const key    = decodeURIComponent(enc);
-  const data   = (window._invUploadAgg||{})[key]||{};
-  const pname  = data.pname||'';
-  const opt    = data.opt||'';
-  window._invPendingMatchKey = key;
-  invProdIsNew=true; invProdIsDisc=false; invProdEditId=null;
+  const matchKey = decodeURIComponent(enc);
+  const data     = (window._invUploadAgg || {})[matchKey] || {};
+  window._invPendingMatchKey = matchKey;
+  invProdIsNew = true; invProdIsDisc = false; invProdEditId = null;
   $('inv-product-kind').textContent = '상품 추가';
   $('inv-product-del-btn').style.display = 'none';
-  $('inv-p-name').value   = pname;
-  $('inv-p-option').value = opt;
+  $('inv-p-name').value   = data.pname || '';
+  $('inv-p-option').value = data.opt   || '';
   $('inv-p-sku').value    = '';
   loadCatSelectOptions('');
-  // 채널 매핑명 자동 채우기
-  const chMap = {'자사몰':'inv-p-map-own','카카오선물하기':'inv-p-map-kakao','스마트스토어':'inv-p-map-smart'};
-  Object.values(chMap).forEach(id=>{ const el=$(id); if(el) el.value=''; });
+  const chMap = { '자사몰': 'inv-p-map-own', '카카오선물하기': 'inv-p-map-kakao', '스마트스토어': 'inv-p-map-smart' };
+  Object.values(chMap).forEach(id => { const el = $(id); if (el) el.value = ''; });
   const mapEl = $(chMap[invUploadChannel]);
-  if(mapEl) mapEl.value = key;
-  // 업로드 모달 잠시 숨기고 상품 모달을 위에 표시
-  $('inv-upload-modal').style.zIndex = '400';
+  if (mapEl) mapEl.value = matchKey;
+  $('inv-upload-modal').style.zIndex  = '400';
   $('inv-product-modal').style.zIndex = '600';
   $('inv-product-modal').classList.add('on');
-  setTimeout(()=>$('inv-p-name').focus(), 80);
+  setTimeout(() => $('inv-p-name').focus(), 80);
 }
 
+/* ─── 매칭 취소 ─── */
 function invUnmatch(enc) {
-  const key = decodeURIComponent(enc);
-  delete (window._invUploadMappings||{})[key];
-  renderMatchList(Object.keys(window._invUploadAgg||{}));
+  const matchKey = decodeURIComponent(enc);
+  delete (window._invUploadMappings || {})[matchKey];
+  renderMatchList(Object.keys(window._invUploadAgg || {}));
   updateUploadProgress();
 }
 
+/* ─── 자동 추천 ─── */
 async function invAutoMatch() {
-  const agg   = window._invUploadAgg||{};
-  const maps  = window._invUploadMappings||{};
-  const prods = window._invUploadProds||[];
+  const agg   = window._invUploadAgg || {};
+  const maps  = window._invUploadMappings || {};
+  const prods = window._invUploadProds || [];
   let matched = 0;
-  for(const [key, {pname, opt, matchKey}] of Object.entries(agg)) {
-    if(maps[key]) continue;
-    const clean = pname.replace(/\[.*?\]/g,'').replace(/\(.*?\)/g,'').trim();
-    const keywords = clean.split(/[\s/·,]+/).filter(w=>w.length>=2);
-    const optKeywords = (opt||'').replace(/[^가-힣a-zA-Z0-9\s]/g,' ').trim().split(/\s+/).filter(w=>w.length>=1);
+  for (const [matchKey, { pname, opt }] of Object.entries(agg)) {
+    if (maps[matchKey]) continue;
+    const clean    = pname.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
+    const keywords = clean.split(/[\s/·,]+/).filter(w => w.length >= 2);
+    const optKw    = (opt || '').replace(/[^가-힣a-zA-Z0-9\s]/g, ' ').trim().split(/\s+/).filter(w => w.length >= 1);
     let best = null, bestScore = 0;
-    for(const prod of prods) {
-      const pStr = ((prod.name||'')+(prod.option_name||'')).toLowerCase();
+    for (const prod of prods) {
+      const pStr = ((prod.name || '') + (prod.option_name || '')).toLowerCase();
       let score = 0;
-      keywords.forEach(kw=>{ if(pStr.includes(kw.toLowerCase())) score+=2; });
-      optKeywords.forEach(kw=>{ if(pStr.includes(kw.toLowerCase())) score+=1; });
-      if(score > bestScore) { bestScore = score; best = prod; }
+      keywords.forEach(kw => { if (pStr.includes(kw.toLowerCase())) score += 2; });
+      optKw.forEach(kw => { if (pStr.includes(kw.toLowerCase())) score += 1; });
+      if (score > bestScore) { bestScore = score; best = prod; }
     }
-    if(best && bestScore >= 2) { window._invUploadMappings[key] = best.id; matched++; }
+    if (best && bestScore >= 2) { window._invUploadMappings[matchKey] = best.id; matched++; }
   }
   renderMatchList(Object.keys(agg));
   updateUploadProgress();
   toast(matched ? `${matched}개 자동 추천 완료 — 확인 후 업로드해주세요` : '자동 매칭할 수 있는 항목이 없어요');
 }
 
-async function invSearchForMatch(input, encodedPname) {
-  const q=input.value.trim(); const dropId=`match-drop-${encodedPname}`;
-  const drop=$(dropId); if(!drop) return;
-  if(!q){ drop.classList.remove('open'); drop.innerHTML=''; return; }
-  // 항상 DB에서 최신 상품 목록 조회 (상품 추가 후 즉시 반영)
-  const {data} = await db.from('products').select('id,name,option_name').eq('is_discontinued',false);
-  window._invUploadProds = data||[];
-  const prods = window._invUploadProds;
-  const results=prods.filter(p=>(p.name+' '+(p.option_name||'')).toLowerCase().includes(q.toLowerCase())).slice(0,8);
-  if(!results.length){ drop.classList.remove('open'); drop.innerHTML=''; return; }
-  drop.innerHTML=results.map(p=>
-    `<div class="inv-search-item" onclick="invSelectMatch('${encodedPname}','${p.id}')">
-      ${p.name}${p.option_name?` <span class="inv-faint">/ ${p.option_name}</span>`:''}
+/* ─── 상품 검색 드롭다운 ─── */
+async function invSearchForMatch(input, encodedKey) {
+  const q    = input.value.trim();
+  const drop = $(`match-drop-${encodedKey}`);
+  if (!drop) return;
+  if (!q) { drop.classList.remove('open'); drop.innerHTML = ''; return; }
+  const { data } = await db.from('products').select('id,name,option_name').eq('is_discontinued', false);
+  window._invUploadProds = data || [];
+  const results = window._invUploadProds
+    .filter(p => (p.name + ' ' + (p.option_name || '')).toLowerCase().includes(q.toLowerCase()))
+    .slice(0, 8);
+  if (!results.length) { drop.classList.remove('open'); drop.innerHTML = ''; return; }
+  drop.innerHTML = results.map(p =>
+    `<div class="inv-search-item" onclick="invSelectMatch('${encodedKey}','${p.id}')">
+      ${p.name}${p.option_name ? ` <span class="inv-faint">/ ${p.option_name}</span>` : ''}
     </div>`).join('');
   drop.classList.add('open');
 }
 
-function invSelectMatch(encodedPname, productId) {
-  const key = decodeURIComponent(encodedPname);
-  window._invUploadMappings = window._invUploadMappings||{};
-  const selData = (window._invUploadAgg||{})[key]||{};
-  const selMatchKey = selData.matchKey || key;
-  // 같은 matchKey(상품명+옵션)를 가진 모든 날짜 행에 동일 매핑 전파
-  Object.keys(window._invUploadAgg||{}).forEach(k => {
-    const d = window._invUploadAgg[k];
-    if((d.matchKey||k) === selMatchKey) {
-      window._invUploadMappings[k] = productId;
-      (window._invUploadSkipped||new Set()).delete(k);
-    }
-  });
-  const drop=$(`match-drop-${encodedPname}`); if(drop) drop.classList.remove('open');
-  renderMatchList(Object.keys(window._invUploadAgg||{}));
+/* ─── 매칭 선택 ─── */
+function invSelectMatch(encodedKey, productId) {
+  const matchKey = decodeURIComponent(encodedKey);
+  window._invUploadMappings = window._invUploadMappings || {};
+  window._invUploadMappings[matchKey] = productId;
+  (window._invUploadSkipped || new Set()).delete(matchKey);
+  const drop = $(`match-drop-${encodedKey}`);
+  if (drop) drop.classList.remove('open');
+  renderMatchList(Object.keys(window._invUploadAgg || {}));
   updateUploadProgress();
 }
 
-
+/* ─── 업로드 처리 ────────────────────────────────────────────────────────
+   sales_log upsert 키:
+     자사몰  → `sale-item-{주문섹션품목번호}` (행 단위, 진짜 중복 방지)
+     기타    → `sale-{날짜}-{채널}-{상품ID}` (날짜+상품 합산)
+   재고 차감 : 품목실결제가 기준 totalQty (상품별)
+   channel_sales_log : matchKey별 날짜 합산 1건
+──────────────────────────────────────────────────────────────────────── */
 async function processUpload() {
   const btn = $('inv-up-submit');
-  if(btn && btn.disabled) return; // 중복 클릭 방지
+  if (btn && btn.disabled) return;
 
-  const agg      = window._invUploadAgg||{};
-  const mappings = window._invUploadMappings||{};
-  const skipped  = window._invUploadSkipped||new Set();
-  const unresolved = Object.keys(agg).filter(k=>!mappings[k]&&!skipped.has(k));
-  if(unresolved.length){
+  const agg      = window._invUploadAgg || {};
+  const mappings = window._invUploadMappings || {};
+  const skipped  = window._invUploadSkipped || new Set();
+
+  const unresolved = Object.keys(agg).filter(k => !mappings[k] && !skipped.has(k));
+  if (unresolved.length) {
     const ok = await customConfirm(
       `매칭 안된 항목 ${unresolved.length}개`,
       '매칭된 항목만 업로드하고 나머지는 건너뛸까요?'
     );
-    if(!ok) return;
-    unresolved.forEach(k=>skipped.add(k));
+    if (!ok) return;
+    unresolved.forEach(k => skipped.add(k));
     window._invUploadSkipped = skipped;
   }
 
-  // 버튼 비활성화 + 로딩 표시
-  if(btn){ btn.disabled=true; btn.textContent='업로드 중...'; btn.style.opacity='0.6'; }
+  if (btn) { btn.disabled = true; btn.textContent = '업로드 중...'; btn.style.opacity = '0.6'; }
 
   try {
-    const total = Object.keys(mappings).length;
-    let done = 0;
+    // 진행률 계산용 총 행 수
+    const totalRows = Object.entries(agg)
+      .filter(([k]) => mappings[k])
+      .reduce((s, [, d]) => s + d.rows.length, 0);
+    let doneRows = 0;
 
-    for(const [key, data] of Object.entries(agg)){
-      const productId = mappings[key];
-      if(!productId) continue;
+    for (const [matchKey, data] of Object.entries(agg)) {
+      const productId = mappings[matchKey];
+      if (!productId) continue;
 
-      // 덮어쓰기: 날짜+채널+상품 기준 upsert (날짜별 1건으로 합산)
-      const upsertId = `sale-${data.saleDate}-${invUploadChannel.replace(/[^a-z0-9]/gi,'')}-${productId}`;
-      await db.from('sales_log').upsert([{
-        id: upsertId,
-        product_id: productId,
-        channel: invUploadChannel,
-        quantity: data.qty,
-        amount: data.amount,
-        sale_date: data.saleDate||dateStr(),
-        created_at: new Date().toISOString()
-      }], {onConflict:'id'});
+      let totalQtyForInv = 0;
 
-      // 채널재고 차감
-      const {data:ci} = await db.from('channel_inventory').select('*').eq('product_id',productId).eq('channel',invUploadChannel).maybeSingle();
-      if(ci) await db.from('channel_inventory').update({stock:Math.max(0,(ci.stock||0)-data.qty),updated_at:new Date().toISOString()}).eq('id',ci.id);
+      for (const row of data.rows) {
+        /*
+         * 자사몰: 주문섹션품목번호 기준 upsert → 같은 파일 재업로드 시 덮어쓰기
+         * 카카오/스마트: 날짜+채널+상품 합산 upsert
+         */
+        const upsertId = row.itemNo
+          ? `sale-item-${row.itemNo}`
+          : `sale-${row.saleDate}-${invUploadChannel.replace(/[^a-z0-9]/gi, '')}-${productId}`;
+
+        await db.from('sales_log').upsert([{
+          id:         upsertId,
+          product_id: productId,
+          channel:    invUploadChannel,
+          quantity:   row.qty,
+          amount:     row.orderAmt,   // 최종주문금액 (아임웹 대시보드 기준)
+          sale_date:  row.saleDate || dateStr(),
+          created_at: new Date().toISOString(),
+        }], { onConflict: 'id' });
+
+        totalQtyForInv += row.qty;
+        doneRows++;
+        if (btn) btn.textContent = `업로드 중... ${Math.round(doneRows / totalRows * 100)}%`;
+      }
+
+      // 채널 재고 차감
+      const { data: ci } = await db.from('channel_inventory').select('*')
+        .eq('product_id', productId).eq('channel', invUploadChannel).maybeSingle();
+      if (ci) await db.from('channel_inventory').update({
+        stock:      Math.max(0, (ci.stock || 0) - totalQtyForInv),
+        updated_at: new Date().toISOString(),
+      }).eq('id', ci.id);
+
       // 총재고 차감
-      const {data:inv} = await db.from('inventory').select('*').eq('product_id',productId).maybeSingle();
-      if(inv) await db.from('inventory').update({total_stock:Math.max(0,(inv.total_stock||0)-data.qty),updated_at:new Date().toISOString()}).eq('product_id',productId);
-      // 채널 매출 로그
-      await db.from('channel_sales_log').upsert([{
-        id:`csl-${data.saleDate}-${invUploadChannel}-${productId}`,
-        channel:invUploadChannel, date:data.saleDate, amount:data.amount, note:data.pname
-      }],{onConflict:'id'});
+      const { data: inv } = await db.from('inventory').select('*')
+        .eq('product_id', productId).maybeSingle();
+      if (inv) await db.from('inventory').update({
+        total_stock: Math.max(0, (inv.total_stock || 0) - totalQtyForInv),
+        updated_at:  new Date().toISOString(),
+      }).eq('product_id', productId);
 
-      done++;
-      if(btn) btn.textContent = `업로드 중... ${Math.round(done/total*100)}%`;
+      // channel_sales_log: 이 matchKey의 날짜별 합산 upsert
+      const byDate = {};
+      for (const row of data.rows) {
+        if (!byDate[row.saleDate]) byDate[row.saleDate] = 0;
+        byDate[row.saleDate] += row.orderAmt;
+      }
+      for (const [saleDate, amt] of Object.entries(byDate)) {
+        await db.from('channel_sales_log').upsert([{
+          id:      `csl-${saleDate}-${invUploadChannel}-${productId}`,
+          channel: invUploadChannel,
+          date:    saleDate,
+          amount:  amt,
+          note:    data.pname,
+        }], { onConflict: 'id' });
+      }
     }
 
-    // 채널 매핑 저장
-    for(const [key, productId] of Object.entries(mappings)){
+    // 채널 매핑 신규 저장 (기존에 없는 것만)
+    for (const [matchKey, productId] of Object.entries(mappings)) {
       const existing = (await db.from('channel_product_mapping').select('id')
-        .eq('product_id',productId).eq('channel',invUploadChannel).eq('channel_name',key).maybeSingle()).data;
-      if(!existing) await db.from('channel_product_mapping').insert([{
-        id:`map-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
-        product_id:productId, channel:invUploadChannel, channel_name:key
+        .eq('product_id', productId).eq('channel', invUploadChannel)
+        .eq('channel_name', matchKey).maybeSingle()).data;
+      if (!existing) await db.from('channel_product_mapping').insert([{
+        id:           `map-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        product_id:   productId,
+        channel:      invUploadChannel,
+        channel_name: matchKey,
       }]);
     }
 
-    toast(`판매내역 ${done}건이 업로드됐어요 ✓`);
+    toast(`판매내역 업로드 완료 ✓`);
     closeModal('inv-upload-modal');
     loadInvOverview();
-  } catch(e){
-    toast('업로드 실패: '+e.message);
+  } catch (e) {
+    toast('업로드 실패: ' + e.message);
     console.error(e);
-    // 실패 시 버튼 복구
-    if(btn){ btn.disabled=false; btn.textContent='업로드 처리'; btn.style.opacity=''; }
+    if (btn) { btn.disabled = false; btn.textContent = '업로드 처리'; btn.style.opacity = ''; }
   }
 }
 
@@ -7660,10 +7734,13 @@ async function loadSalesData() {
     })(),
   ]);
 
-  const totalAmt  = salesRows.reduce((s,r) => s+(r.amount||0), 0);
-  const totalQty  = salesRows.reduce((s,r) => s+(r.quantity||0), 0);
-  const orderCnt  = new Set(salesRows.map(r => r.id)).size;
-  const avgAmt    = orderCnt ? Math.round(totalAmt / orderCnt) : 0;
+  const totalAmt  = salesRows.reduce((s, r) => s + (r.amount || 0), 0);
+  const totalQty  = salesRows.reduce((s, r) => s + (r.quantity || 0), 0);
+  // 주문 건수: sales_log 행 수 (주문섹션품목번호 단위)
+  // 건당 평균: amount > 0 인 행(실결제금액 붙은 행)만 기준 → 아임웹 대시보드와 동일
+  const orderCnt  = salesRows.length;
+  const paidRows  = salesRows.filter(r => (r.amount || 0) > 0);
+  const avgAmt    = paidRows.length ? Math.round(totalAmt / paidRows.length) : 0;
 
   const prevAmt   = prevRows.reduce((s,r) => s+(r.amount||0), 0);
   const prevQty   = prevRows.reduce((s,r) => s+(r.quantity||0), 0);
