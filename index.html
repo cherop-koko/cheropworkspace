@@ -2275,13 +2275,13 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 <!-- ═══ 재고: 상품 추가/편집 ═══ -->
-<div class="modal-overlay" id="inv-product-modal" onclick="if(event.target===this)closeModal('inv-product-modal')">
+<div class="modal-overlay" id="inv-product-modal" onclick="if(event.target===this)cancelProductModal()">
   <div class="modal" style="max-width:520px;" onclick="event.stopPropagation()">
     <div class="modal-bar">
       <div class="modal-kind" id="inv-product-kind">상품 추가</div>
       <div class="modal-bar-right">
         <div class="mbtn" id="inv-product-del-btn" onclick="deleteProduct()" style="display:none;">🗑</div>
-        <div class="mbtn" onclick="closeModal('inv-product-modal')">✕</div>
+        <div class="mbtn" onclick="cancelProductModal()">✕</div>
       </div>
     </div>
     <div class="modal-body">
@@ -2331,7 +2331,7 @@ a { text-decoration:none; color:inherit; }
       </div>
     </div>
     <div class="modal-footer">
-      <button class="f-btn f-btn-cancel" onclick="closeModal('inv-product-modal')">취소</button>
+      <button class="f-btn f-btn-cancel" onclick="cancelProductModal()">취소</button>
       <button class="f-btn f-btn-save" onclick="saveProduct()">저장</button>
     </div>
   </div>
@@ -2504,9 +2504,12 @@ a { text-decoration:none; color:inherit; }
         <div id="inv-up-match-list"></div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="f-btn f-btn-cancel" onclick="closeModal('inv-upload-modal')">취소</button>
-      <button class="f-btn f-btn-save" id="inv-up-submit" onclick="processUpload()" style="display:none;">업로드 처리</button>
+    <div class="modal-footer" style="flex-direction:column;gap:8px;align-items:stretch;">
+      <div style="font-size:11px;color:var(--light);text-align:center;">⚠ 업로드 처리 버튼은 한 번만 눌러주세요 · 완료될 때까지 기다려주세요</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="f-btn f-btn-cancel" onclick="closeModal('inv-upload-modal')">취소</button>
+        <button class="f-btn f-btn-save" id="inv-up-submit" onclick="processUpload()" style="display:none;min-width:120px;">업로드 처리</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3646,7 +3649,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.8.6</div>
+<div id="version">v3.9.1</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -3696,12 +3699,16 @@ function toast(msg, dur=2400) {
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('on'), dur);
 }
 
+let _appStateCache = null;
 async function getAppState() {
+  if(_appStateCache) return _appStateCache;
   const { data, error } = await db.from('app_state').select('data').eq('id','cherop_main').single();
   if (error) throw error;
-  return data?.data || {};
+  _appStateCache = data?.data || {};
+  return _appStateCache;
 }
 async function setAppState(state) {
+  _appStateCache = state;
   const { error } = await db.from('app_state').upsert({ id:'cherop_main', data:state, updated_at:new Date().toISOString() });
   if (error) throw error;
 }
@@ -4503,12 +4510,17 @@ function customConfirm(msg, sub='이 작업은 되돌릴 수 없어요.') {
 ═══════════════════════════════════════ */
 function closeModal(id) {
   $(id).classList.remove('on');
-  // 업로드 모달 위에서 상품 모달 닫을 때 z-index 복원
-  if(id==='inv-product-modal' && window._invPendingMatchKey) {
+  // 업로드 모달 위에서 상품 모달 닫을 때 z-index만 복원 (key 초기화는 saveProduct에서)
+  if(id==='inv-product-modal') {
     $('inv-upload-modal').style.zIndex = '';
     $('inv-product-modal').style.zIndex = '';
-    window._invPendingMatchKey = null;
   }
+}
+
+function cancelProductModal() {
+  // 취소/✕ 로 닫을 때 — 상품 추가 안 한 것이므로 key 초기화
+  window._invPendingMatchKey = null;
+  closeModal('inv-product-modal');
 }
 
 function openTaskModal(id) {
@@ -6111,10 +6123,9 @@ async function invSearchForMatch(input, encodedPname) {
   const q=input.value.trim(); const dropId=`match-drop-${encodedPname}`;
   const drop=$(dropId); if(!drop) return;
   if(!q){ drop.classList.remove('open'); drop.innerHTML=''; return; }
-  // 캐시 없으면 항상 DB 재조회 (상품 추가 후 즉시 반영)
-  if(!window._invUploadProds) {
-    window._invUploadProds = (await db.from('products').select('id,name,option_name').eq('is_discontinued',false)).data||[];
-  }
+  // 항상 DB에서 최신 상품 목록 조회 (상품 추가 후 즉시 반영)
+  const {data} = await db.from('products').select('id,name,option_name').eq('is_discontinued',false);
+  window._invUploadProds = data||[];
   const prods = window._invUploadProds;
   const results=prods.filter(p=>(p.name+' '+(p.option_name||'')).toLowerCase().includes(q.toLowerCase())).slice(0,8);
   if(!results.length){ drop.classList.remove('open'); drop.innerHTML=''; return; }
@@ -6137,38 +6148,63 @@ function invSelectMatch(encodedPname, productId) {
 
 
 async function processUpload() {
+  const btn = $('inv-up-submit');
+  if(btn && btn.disabled) return; // 중복 클릭 방지
+
   const agg      = window._invUploadAgg||{};
   const mappings = window._invUploadMappings||{};
   const skipped  = window._invUploadSkipped||new Set();
-  // 건너뛰지 않았고 매칭도 안 된 항목 체크
   const unresolved = Object.keys(agg).filter(k=>!mappings[k]&&!skipped.has(k));
-  if(unresolved.length){ toast(`매칭 안된 상품이 ${unresolved.length}개 있어요 · 검색하거나 상품을 추가해주세요`); return; }
+  if(unresolved.length){
+    const ok = await customConfirm(
+      `매칭 안된 항목 ${unresolved.length}개`,
+      '매칭된 항목만 업로드하고 나머지는 건너뛸까요?'
+    );
+    if(!ok) return;
+    unresolved.forEach(k=>skipped.add(k));
+    window._invUploadSkipped = skipped;
+  }
+
+  // 버튼 비활성화 + 로딩 표시
+  if(btn){ btn.disabled=true; btn.textContent='업로드 중...'; btn.style.opacity='0.6'; }
+
   try {
-    const rows = [];
+    const total = Object.keys(mappings).length;
+    let done = 0;
+
     for(const [key, data] of Object.entries(agg)){
       const productId = mappings[key];
       if(!productId) continue;
-      rows.push({
-        id:`sale-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
-        product_id:productId, channel:invUploadChannel,
-        quantity:data.qty, amount:data.amount,
-        sale_date:data.saleDate||dateStr(),
-        created_at:new Date().toISOString()
-      });
+
+      // 덮어쓰기: 날짜+채널+상품 기준 upsert
+      const upsertId = `sale-${data.saleDate}-${invUploadChannel}-${productId}`;
+      await db.from('sales_log').upsert([{
+        id: upsertId,
+        product_id: productId,
+        channel: invUploadChannel,
+        quantity: data.qty,
+        amount: data.amount,
+        sale_date: data.saleDate||dateStr(),
+        created_at: new Date().toISOString()
+      }], {onConflict:'id'});
+
       // 채널재고 차감
       const {data:ci} = await db.from('channel_inventory').select('*').eq('product_id',productId).eq('channel',invUploadChannel).maybeSingle();
       if(ci) await db.from('channel_inventory').update({stock:Math.max(0,(ci.stock||0)-data.qty),updated_at:new Date().toISOString()}).eq('id',ci.id);
       // 총재고 차감
       const {data:inv} = await db.from('inventory').select('*').eq('product_id',productId).maybeSingle();
       if(inv) await db.from('inventory').update({total_stock:Math.max(0,(inv.total_stock||0)-data.qty),updated_at:new Date().toISOString()}).eq('product_id',productId);
-      // 매출 로그 (매출현황/세무관리용)
+      // 채널 매출 로그
       await db.from('channel_sales_log').upsert([{
         id:`csl-${data.saleDate}-${invUploadChannel}-${productId}`,
         channel:invUploadChannel, date:data.saleDate, amount:data.amount, note:data.pname
       }],{onConflict:'id'});
+
+      done++;
+      if(btn) btn.textContent = `업로드 중... ${Math.round(done/total*100)}%`;
     }
-    if(rows.length) await db.from('sales_log').insert(rows);
-    // 채널 매핑 저장 (다음 업로드 자동)
+
+    // 채널 매핑 저장
     for(const [key, productId] of Object.entries(mappings)){
       const existing = (await db.from('channel_product_mapping').select('id')
         .eq('product_id',productId).eq('channel',invUploadChannel).eq('channel_name',key).maybeSingle()).data;
@@ -6177,10 +6213,16 @@ async function processUpload() {
         product_id:productId, channel:invUploadChannel, channel_name:key
       }]);
     }
-    toast(`판매내역 ${rows.length}건이 업로드됐어요 ✓`);
+
+    toast(`판매내역 ${done}건이 업로드됐어요 ✓`);
     closeModal('inv-upload-modal');
     loadInvOverview();
-  } catch(e){ toast('업로드 실패: '+e.message); console.error(e); }
+  } catch(e){
+    toast('업로드 실패: '+e.message);
+    console.error(e);
+    // 실패 시 버튼 복구
+    if(btn){ btn.disabled=false; btn.textContent='업로드 처리'; btn.style.opacity=''; }
+  }
 }
 
 /* ════════════════════════════════
@@ -9379,27 +9421,44 @@ async function loadContentCal() {
     const isWk = dow>=5;
     const tc   = post ? (CONTENT_TYPES[post.type]?.color||'var(--text)') : null;
 
-    html+=`<div onclick="openContentModal('${ds}')" style="border-radius:10px;border:${isToday?'1.5px solid var(--text)':'0.5px solid var(--border)'};overflow:hidden;cursor:pointer;min-height:88px;background:var(--surface);"
+    html+=`<div onclick="openContentModal('${ds}')" style="border-radius:10px;border:${isToday?'1.5px solid var(--text)':'0.5px solid var(--border)'};overflow:hidden;cursor:pointer;background:var(--surface);"
       onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='${isToday?'var(--text)':'var(--border)'}'">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 7px 3px;">
+      <div style="padding:4px 6px 3px;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:10px;color:${isWk?'var(--red)':isToday?'var(--text)':'var(--light)'};font-weight:${isToday?'500':'400'};">${day}</div>
-        ${tc?`<div style="width:6px;height:6px;border-radius:50%;background:${tc};"></div>`:''}
-      </div>`;
+        ${tc?`<div style="width:5px;height:5px;border-radius:50%;background:${tc};flex-shrink:0;"></div>`:''}
+      </div>
+      <div style="display:flex;gap:0;align-items:stretch;">`;
 
+    // 왼쪽: 이미지 3:4
     if(post?.imgData){
-      html+=`<div style="width:100%;aspect-ratio:1;background:var(--surface2);overflow:hidden;">
+      html+=`<div style="flex-shrink:0;width:54%;aspect-ratio:3/4;overflow:hidden;background:var(--surface2);">
         <img src="${post.imgData}" style="width:100%;height:100%;object-fit:cover;" alt="">
       </div>`;
     } else if(post){
-      html+=`<div style="width:100%;aspect-ratio:1;background:${tc}18;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;" style="color:${tc};">${CONTENT_TYPES[post.type]?.label||''}</div>`;
+      html+=`<div style="flex-shrink:0;width:54%;aspect-ratio:3/4;background:${tc}18;display:flex;align-items:center;justify-content:center;">
+        <div style="font-size:10px;font-weight:500;color:${tc};">${CONTENT_TYPES[post.type]?.label||''}</div>
+      </div>`;
     } else {
-      html+=`<div style="width:100%;aspect-ratio:1;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--faint);">+</div>`;
+      html+=`<div style="flex-shrink:0;width:54%;aspect-ratio:3/4;background:var(--surface2);display:flex;align-items:center;justify-content:center;">
+        <div style="font-size:14px;color:var(--faint);">+</div>
+      </div>`;
     }
 
-    if(post?.title){
-      html+=`<div style="font-size:9px;color:var(--muted);padding:2px 5px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${post.title}</div>`;
+    // 오른쪽: 콘텐츠 유형 + 실적
+    html+=`<div style="flex:1;padding:4px 5px;display:flex;flex-direction:column;gap:3px;min-width:0;">`;
+    if(post){
+      const typeLabel = CONTENT_TYPES[post.type]?.label||post.type||'';
+      html+=`<div style="font-size:9px;font-weight:500;color:${tc};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${typeLabel}</div>`;
+      if(post.title) html+=`<div style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${post.title}</div>`;
+      if(post.likes||post.comments||post.saves||post.reach){
+        html+=`<div style="margin-top:2px;display:flex;flex-direction:column;gap:1px;">`;
+        if(post.reach)    html+=`<div style="font-size:8px;color:var(--light);">👁 ${Number(post.reach).toLocaleString()}</div>`;
+        if(post.likes)    html+=`<div style="font-size:8px;color:var(--light);">♥ ${Number(post.likes).toLocaleString()}</div>`;
+        if(post.saves)    html+=`<div style="font-size:8px;color:var(--light);">🔖 ${Number(post.saves).toLocaleString()}</div>`;
+        html+=`</div>`;
+      }
     }
-    html+='</div>';
+    html+=`</div></div></div>`;
   }
   html+='</div>';
   $('content-cal').innerHTML = html;
