@@ -3649,7 +3649,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.1</div>
+<div id="version">v3.9.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -9421,44 +9421,59 @@ async function loadContentCal() {
     const isWk = dow>=5;
     const tc   = post ? (CONTENT_TYPES[post.type]?.color||'var(--text)') : null;
 
-    html+=`<div onclick="openContentModal('${ds}')" style="border-radius:10px;border:${isToday?'1.5px solid var(--text)':'0.5px solid var(--border)'};overflow:hidden;cursor:pointer;background:var(--surface);"
-      onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='${isToday?'var(--text)':'var(--border)'}'">
-      <div style="padding:4px 6px 3px;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:10px;color:${isWk?'var(--red)':isToday?'var(--text)':'var(--light)'};font-weight:${isToday?'500':'400'};">${day}</div>
-        ${tc?`<div style="width:5px;height:5px;border-radius:50%;background:${tc};flex-shrink:0;"></div>`:''}
-      </div>
-      <div style="display:flex;gap:0;align-items:stretch;">`;
+    // 셀 전체 구조 - 이미지 꽉 차게, 정보는 하단에
+    const typeLabel = post ? (CONTENT_TYPES[post.type]?.label||post.type||'') : '';
+    const st = post?.stats||{};
+    const hasStats = st.views||st.likes||st.saves||st.comments;
 
-    // 왼쪽: 이미지 3:4
-    if(post?.imgData){
-      html+=`<div style="flex-shrink:0;width:54%;aspect-ratio:3/4;overflow:hidden;background:var(--surface2);">
-        <img src="${post.imgData}" style="width:100%;height:100%;object-fit:cover;" alt="">
-      </div>`;
-    } else if(post){
-      html+=`<div style="flex-shrink:0;width:54%;aspect-ratio:3/4;background:${tc}18;display:flex;align-items:center;justify-content:center;">
-        <div style="font-size:10px;font-weight:500;color:${tc};">${CONTENT_TYPES[post.type]?.label||''}</div>
-      </div>`;
-    } else {
-      html+=`<div style="flex-shrink:0;width:54%;aspect-ratio:3/4;background:var(--surface2);display:flex;align-items:center;justify-content:center;">
-        <div style="font-size:14px;color:var(--faint);">+</div>
-      </div>`;
-    }
+    html+=`<div onclick="openContentModal('${ds}')" style="border-radius:10px;border:${isToday?'1.5px solid var(--text)':'0.5px solid var(--border)'};overflow:hidden;cursor:pointer;background:var(--surface);position:relative;"
+      onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='${isToday?'var(--text)':'var(--border)'}'">`;
 
-    // 오른쪽: 콘텐츠 유형 + 실적
-    html+=`<div style="flex:1;padding:4px 5px;display:flex;flex-direction:column;gap:3px;min-width:0;">`;
+    // 날짜 숫자 (이미지 위 절대 위치)
+    html+=`<div style="position:absolute;top:5px;left:7px;z-index:2;font-size:10px;color:${isWk?'var(--red)':isToday?'var(--text)':'var(--light)'};font-weight:${isToday?'600':'400'};line-height:1;text-shadow:0 0 4px rgba(255,255,255,.9);">${day}</div>`;
+
     if(post){
-      const typeLabel = CONTENT_TYPES[post.type]?.label||post.type||'';
-      html+=`<div style="font-size:9px;font-weight:500;color:${tc};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${typeLabel}</div>`;
-      if(post.title) html+=`<div style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${post.title}</div>`;
-      if(post.likes||post.comments||post.saves||post.reach){
-        html+=`<div style="margin-top:2px;display:flex;flex-direction:column;gap:1px;">`;
-        if(post.reach)    html+=`<div style="font-size:8px;color:var(--light);">👁 ${Number(post.reach).toLocaleString()}</div>`;
-        if(post.likes)    html+=`<div style="font-size:8px;color:var(--light);">♥ ${Number(post.likes).toLocaleString()}</div>`;
-        if(post.saves)    html+=`<div style="font-size:8px;color:var(--light);">🔖 ${Number(post.saves).toLocaleString()}</div>`;
+      // 이미지 영역 - 3:4 비율로 꽉 채움 / 이미지 클릭 시 인스타 링크 새창
+      const imgArea = post.imgData
+        ? `<img src="${post.imgData}" style="width:100%;height:100%;object-fit:cover;display:block;${post.link?'cursor:pointer;':''}" alt=""
+            onclick="${post.link?`(function(e){e.stopPropagation();window.open('${post.link}','_blank');})(event)`:'event.stopPropagation();openContentModal(\''+ds+'\')'}">`
+        : `<div style="width:100%;height:100%;background:${tc}18;display:flex;align-items:center;justify-content:center;"><div style="font-size:11px;font-weight:500;color:${tc};">${typeLabel}</div></div>`;
+
+      html+=`<div style="width:100%;aspect-ratio:3/4;overflow:hidden;background:var(--surface2);">${imgArea}</div>`;
+
+      // 하단 정보 영역
+      html+=`<div style="padding:5px 6px 5px;background:var(--surface);">`;
+
+      // 제목
+      if(post.title) html+=`<div style="font-size:9px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;margin-bottom:2px;">${post.title}</div>`;
+
+      // 콘텐츠 유형 (몽모짤은 주제 추가)
+      let typeLine = `<span style="color:${tc};font-weight:500;">${typeLabel}</span>`;
+      if(post.type==='mongmozzal' && post.topic && CONTENT_TOPICS[post.topic]){
+        typeLine += `<span style="color:var(--light);"> · ${CONTENT_TOPICS[post.topic]}</span>`;
+      }
+      html+=`<div style="font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${typeLine}</div>`;
+
+      // 콘텐츠 반응
+      if(hasStats){
+        html+=`<div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap;">`;
+        if(st.views)    html+=`<span style="font-size:8px;color:var(--light);">👁 ${Number(st.views).toLocaleString()}</span>`;
+        if(st.likes)    html+=`<span style="font-size:8px;color:var(--light);">♥ ${Number(st.likes).toLocaleString()}</span>`;
+        if(st.saves)    html+=`<span style="font-size:8px;color:var(--light);">🔖 ${Number(st.saves).toLocaleString()}</span>`;
+        if(st.comments) html+=`<span style="font-size:8px;color:var(--light);">💬 ${Number(st.comments).toLocaleString()}</span>`;
         html+=`</div>`;
       }
+
+      html+=`</div>`;
+
+    } else {
+      // 빈 날짜 - 3:4 비율 빈 셀
+      html+=`<div style="width:100%;aspect-ratio:3/4;background:var(--surface2);display:flex;align-items:center;justify-content:center;">
+        <div style="font-size:16px;color:var(--faint);">+</div>
+      </div>`;
     }
-    html+=`</div></div></div>`;
+
+    html+=`</div>`;
   }
   html+='</div>';
   $('content-cal').innerHTML = html;
