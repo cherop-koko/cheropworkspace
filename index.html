@@ -3646,7 +3646,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.8.3</div>
+<div id="version">v3.8.4</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4273,8 +4273,8 @@ async function loadRoutines() {
     $('routine-count').textContent=`${cnt}/${routines.length}`;
     $('routine-list').innerHTML=routines.length
       ? routines.map(r=>`
-          <div class="ritem" style="display:flex;align-items:center;gap:0;padding-right:4px;">
-            <div style="flex:1;display:flex;align-items:center;gap:0;" onclick="toggleRoutine('${r.id}')">
+          <div class="ritem" style="padding-right:8px;">
+            <div style="flex:1;display:flex;align-items:center;gap:10px;" onclick="toggleRoutine('${r.id}')">
               <div class="rcheck${done.has(r.id)?' on':''}"></div>
               <div class="rlabel${done.has(r.id)?' on':''}">${r.label}</div>
             </div>
