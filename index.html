@@ -3649,7 +3649,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.2</div>
+<div id="version">v3.9.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5922,7 +5922,7 @@ function setInvUpChannel(ch, el) {
 
 /* 채널별 엑셀 컬럼 설정 */
 const CH_COLS = {
-  '자사몰':        { name:17, option:18, qty:16, amount:23, date:36, dateType:'string' },
+  '자사몰':        { name:17, option:18, qty:16, amount:7, orderNo:1, date:36, dateType:'string', status:2, validStatus:'거래종료' },
   '카카오선물하기': { name:7,  option:8,  qty:9,  amount:14, date:19, dateType:'string' },
   '스마트스토어':  { name:9,  option:10, qty:12, amount:null, date:2, dateType:'serial' },
 };
@@ -5954,7 +5954,19 @@ async function handleInvUpload(input) {
     const raw = XLSX.utils.sheet_to_json(ws, { header:1 });
     if(raw.length < 2){ toast('데이터가 없어요'); return; }
     // 헤더 건너뛰고 데이터만
-    invUploadData = raw.slice(1).filter(r => r[cols.name]);
+    invUploadData = raw.slice(1).filter(r => {
+      if(!r[cols.name]) return false;
+      // 주문상태 필터 (자사몰: 거래종료만)
+      if(cols.status!=null && cols.validStatus) {
+        if(String(r[cols.status]||'').trim() !== cols.validStatus) return false;
+      }
+      // 외화 필터: amount가 소수점이면 제외
+      if(cols.amount!=null) {
+        const a = r[cols.amount];
+        if(a!=null && a !== Math.floor(a)) return false;
+      }
+      return true;
+    });
     if($('inv-up-file-lbl')) $('inv-up-file-lbl').textContent = `✓ ${file.name} (${invUploadData.length}건)`;
     await renderUploadPreview(cols);
   } catch(e){ toast('파일 파싱 실패: '+e.message); console.error(e); }
@@ -5964,28 +5976,43 @@ async function renderUploadPreview(cols) {
   const maps = (await db.from('channel_product_mapping').select('*').eq('channel',invUploadChannel)).data||[];
   const prods = (await db.from('products').select('id,name,option_name').eq('is_discontinued',false)).data||[];
   const agg = {};
+  const seenOrderAmt = {};  // 주문번호별 금액 중복 방지 (최종주문금액은 주문당 1번만)
   for(const row of invUploadData) {
-    const pname  = String(row[cols.name]||'').trim();
-    const opt    = cols.option!=null ? String(row[cols.option]||'').trim() : '';
-    const key    = opt ? `${pname}|||${opt}` : pname;
-    const qty    = parseInt(row[cols.qty])||0;
-    const amount = cols.amount!=null ? parseInt(row[cols.amount])||0 : 0;
+    const pname    = String(row[cols.name]||'').trim();
+    const opt      = cols.option!=null ? String(row[cols.option]||'').trim() : '';
     const saleDate = parseSaleDate(row[cols.date], cols.dateType);
-    if(!agg[key]) agg[key] = { pname, opt, qty:0, amount:0, saleDate, key };
+    const matchKey = opt ? `${pname}|||${opt}` : pname;
+    const key      = `${saleDate}__${matchKey}`;
+    const qty    = parseInt(row[cols.qty])||0;
+    // 주문번호 기준 금액 중복 제거: 같은 주문번호는 첫 행에서만 금액 반영
+    let amount = 0;
+    if(cols.amount!=null) {
+      if(cols.orderNo!=null) {
+        const orderNo = String(row[cols.orderNo]||'').trim();
+        if(orderNo && !seenOrderAmt[orderNo]) {
+          amount = parseInt(row[cols.amount])||0;
+          seenOrderAmt[orderNo] = true;
+        }
+      } else {
+        amount = parseInt(row[cols.amount])||0;
+      }
+    }
+    if(!agg[key]) agg[key] = { pname, opt, qty:0, amount:0, saleDate, key, matchKey };
     agg[key].qty    += qty;
     agg[key].amount += amount;
-    agg[key].saleDate = saleDate;
   }
   window._invUploadAgg      = agg;
   window._invUploadMappings = {};
   window._invUploadSkipped  = new Set();
   window._invUploadProds    = prods;
   const unmatched = [];
+  const seenMatchKey = {};  // matchKey별 첫 번째 key만 매핑 UI 노출
   for(const key of Object.keys(agg)){
-    const { pname } = agg[key];
-    const m = maps.find(x => x.channel_name === key || x.channel_name === pname);
+    const { pname, matchKey } = agg[key];
+    const m = maps.find(x => x.channel_name === matchKey || x.channel_name === pname);
     if(m) window._invUploadMappings[key] = m.product_id;
-    else  unmatched.push(key);
+    else if(!seenMatchKey[matchKey]) { unmatched.push(key); seenMatchKey[matchKey] = true; }
+    else { window._invUploadSkipped.add(key); }  // 같은 상품 다른 날짜는 매핑 상속 대기
   }
   if(!unmatched.length){
     $('inv-up-preview').style.display = 'none';
@@ -6005,7 +6032,7 @@ function renderMatchList(keys) {
   const skip = window._invUploadSkipped||new Set();
   const maps = window._invUploadMappings||{};
   $('inv-up-match-list').innerHTML = keys.map(key => {
-    const { pname, opt, qty } = agg[key];
+    const { pname, opt, qty, saleDate } = agg[key];
     const dispName = opt ? `${pname} / ${opt}` : pname;
     const enc = encodeURIComponent(key);
     const isDone    = !!maps[key];
@@ -6099,7 +6126,7 @@ async function invAutoMatch() {
   const maps  = window._invUploadMappings||{};
   const prods = window._invUploadProds||[];
   let matched = 0;
-  for(const [key, {pname, opt}] of Object.entries(agg)) {
+  for(const [key, {pname, opt, matchKey}] of Object.entries(agg)) {
     if(maps[key]) continue;
     const clean = pname.replace(/\[.*?\]/g,'').replace(/\(.*?\)/g,'').trim();
     const keywords = clean.split(/[\s/·,]+/).filter(w=>w.length>=2);
@@ -6139,8 +6166,16 @@ async function invSearchForMatch(input, encodedPname) {
 function invSelectMatch(encodedPname, productId) {
   const key = decodeURIComponent(encodedPname);
   window._invUploadMappings = window._invUploadMappings||{};
-  window._invUploadMappings[key] = productId;
-  (window._invUploadSkipped||new Set()).delete(key);
+  const selData = (window._invUploadAgg||{})[key]||{};
+  const selMatchKey = selData.matchKey || key;
+  // 같은 matchKey(상품명+옵션)를 가진 모든 날짜 행에 동일 매핑 전파
+  Object.keys(window._invUploadAgg||{}).forEach(k => {
+    const d = window._invUploadAgg[k];
+    if((d.matchKey||k) === selMatchKey) {
+      window._invUploadMappings[k] = productId;
+      (window._invUploadSkipped||new Set()).delete(k);
+    }
+  });
   const drop=$(`match-drop-${encodedPname}`); if(drop) drop.classList.remove('open');
   renderMatchList(Object.keys(window._invUploadAgg||{}));
   updateUploadProgress();
@@ -6176,8 +6211,8 @@ async function processUpload() {
       const productId = mappings[key];
       if(!productId) continue;
 
-      // 덮어쓰기: 날짜+채널+상품 기준 upsert
-      const upsertId = `sale-${data.saleDate}-${invUploadChannel}-${productId}`;
+      // 덮어쓰기: 날짜+채널+상품 기준 upsert (날짜별 1건으로 합산)
+      const upsertId = `sale-${data.saleDate}-${invUploadChannel.replace(/[^a-z0-9]/gi,'')}-${productId}`;
       await db.from('sales_log').upsert([{
         id: upsertId,
         product_id: productId,
