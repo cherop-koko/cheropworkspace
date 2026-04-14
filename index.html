@@ -3649,7 +3649,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.6</div>
+<div id="version">v3.9.7</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -6005,14 +6005,28 @@ async function renderUploadPreview(cols) {
   window._invUploadMappings = {};
   window._invUploadSkipped  = new Set();
   window._invUploadProds    = prods;
+  // matchKey별로 그룹핑
+  const matchKeyGroups = {};
+  for(const key of Object.keys(agg)){
+    const { matchKey } = agg[key];
+    if(!matchKeyGroups[matchKey]) matchKeyGroups[matchKey] = [];
+    matchKeyGroups[matchKey].push(key);
+  }
   const unmatched = [];
-  const seenMatchKey = {};  // matchKey별 첫 번째 key만 매핑 UI 노출
+  const seenMatchKey = {};
   for(const key of Object.keys(agg)){
     const { pname, matchKey } = agg[key];
     const m = maps.find(x => x.channel_name === matchKey || x.channel_name === pname);
-    if(m) window._invUploadMappings[key] = m.product_id;
-    else if(!seenMatchKey[matchKey]) { unmatched.push(key); seenMatchKey[matchKey] = true; }
-    else { window._invUploadSkipped.add(key); }  // 같은 상품 다른 날짜는 매핑 상속 대기
+    if(m){
+      // 이미 매핑된 상품 → 같은 matchKey의 모든 날짜 key에 전파
+      (matchKeyGroups[matchKey]||[key]).forEach(k => {
+        window._invUploadMappings[k] = m.product_id;
+      });
+    } else if(!seenMatchKey[matchKey]) {
+      unmatched.push(key);
+      seenMatchKey[matchKey] = true;
+    }
+    // skipped에 넣지 않음 - 사용자가 매핑하면 invSelectMatch에서 전파됨
   }
   if(!unmatched.length){
     $('inv-up-preview').style.display = 'none';
