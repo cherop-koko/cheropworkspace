@@ -3646,7 +3646,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.8.5</div>
+<div id="version">v3.8.6</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5778,7 +5778,11 @@ async function saveProduct() {
     if(invProdIsNew && window._invPendingMatchKey) {
       window._invUploadMappings = window._invUploadMappings||{};
       window._invUploadMappings[window._invPendingMatchKey] = id;
-      window._invUploadProds = null;
+      // 캐시에 새 상품 추가 (검색 시 즉시 반영)
+      window._invUploadProds = window._invUploadProds||[];
+      if(!window._invUploadProds.find(p=>p.id===id)) {
+        window._invUploadProds.push({id, name:row.name, option_name:row.option_name||null});
+      }
       // z-index 복원
       $('inv-upload-modal').style.zIndex = '';
       $('inv-product-modal').style.zIndex = '';
@@ -6107,8 +6111,11 @@ async function invSearchForMatch(input, encodedPname) {
   const q=input.value.trim(); const dropId=`match-drop-${encodedPname}`;
   const drop=$(dropId); if(!drop) return;
   if(!q){ drop.classList.remove('open'); drop.innerHTML=''; return; }
-  const prods = window._invUploadProds || (await db.from('products').select('id,name,option_name').eq('is_discontinued',false)).data||[];
-  window._invUploadProds = prods;
+  // 캐시 없으면 항상 DB 재조회 (상품 추가 후 즉시 반영)
+  if(!window._invUploadProds) {
+    window._invUploadProds = (await db.from('products').select('id,name,option_name').eq('is_discontinued',false)).data||[];
+  }
+  const prods = window._invUploadProds;
   const results=prods.filter(p=>(p.name+' '+(p.option_name||'')).toLowerCase().includes(q.toLowerCase())).slice(0,8);
   if(!results.length){ drop.classList.remove('open'); drop.innerHTML=''; return; }
   drop.innerHTML=results.map(p=>
