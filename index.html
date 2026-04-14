@@ -2491,7 +2491,13 @@ a { text-decoration:none; color:inherit; }
         <input type="file" id="inv-up-file" accept=".xlsx,.xls" style="display:none;" onchange="handleInvUpload(this)">
       </label>
       <div id="inv-up-preview" style="margin-top:16px;display:none;">
-        <div style="font-size:12px;color:var(--light);margin-bottom:8px;">미매칭 항목 — 워크스페이스 상품을 선택해주세요</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:500;" id="inv-up-match-status">미매칭 항목 — 상품을 연결해주세요</div>
+          <div class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;cursor:pointer;" onclick="invAutoMatch()">✨ 자동 추천</div>
+        </div>
+        <div style="height:4px;background:var(--surface2);border-radius:2px;margin-bottom:12px;overflow:hidden;">
+          <div id="inv-up-progress-bar" style="height:100%;background:#6B9E7A;border-radius:2px;width:0%;transition:width .3s;"></div>
+        </div>
         <div id="inv-up-match-list"></div>
       </div>
     </div>
@@ -5164,10 +5170,47 @@ async function renderCatManageList() {
     return;
   }
   el.innerHTML = cats.map((c,i) => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
-      <span style="font-size:13px;">${c}</span>
-      <div class="mbtn" onclick="deleteCategory('${c}')" title="삭제">✕</div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);" id="cat-row-${i}">
+      <div style="flex:1;font-size:13px;cursor:pointer;" id="cat-label-${i}" onclick="startEditCat(${i},'${c.replace(/'/g,"\\'")}')">${c}</div>
+      <div class="mbtn" onclick="startEditCat(${i},'${c.replace(/'/g,"\\'")}')">✏</div>
+      <div class="mbtn" onclick="deleteCategory('${c.replace(/'/g,"\\'")}')">✕</div>
     </div>`).join('');
+}
+
+function startEditCat(idx, currentName) {
+  const row = $(`cat-row-${idx}`);
+  if(!row) return;
+  row.innerHTML = `
+    <input type="text" class="inv-search-inp" id="cat-edit-inp-${idx}" value="${currentName}"
+      style="flex:1;padding:5px 10px;font-size:13px;"
+      onkeydown="if(event.key==='Enter')saveEditCat(${idx},'${currentName.replace(/'/g,"\\'")}');if(event.key==='Escape')renderCatManageList();">
+    <button class="f-btn f-btn-save" style="padding:5px 12px;font-size:12px;" onclick="saveEditCat(${idx},'${currentName.replace(/'/g,"\\'")}')">저장</button>
+    <button class="f-btn f-btn-cancel" style="padding:5px 10px;font-size:12px;" onclick="renderCatManageList()">취소</button>`;
+  setTimeout(() => {
+    const inp = $(`cat-edit-inp-${idx}`);
+    if(inp){ inp.focus(); inp.select(); }
+  }, 30);
+}
+
+async function saveEditCat(idx, oldName) {
+  const inp = $(`cat-edit-inp-${idx}`);
+  if(!inp) return;
+  const newName = inp.value.trim();
+  if(!newName){ toast('카테고리명을 입력해주세요'); inp.focus(); return; }
+  if(newName === oldName){ renderCatManageList(); return; }
+  const s = await getAppState();
+  s.inv_categories = s.inv_categories||[];
+  if(s.inv_categories.includes(newName)){ toast('이미 있는 카테고리예요'); inp.focus(); return; }
+  // 카테고리명 변경
+  s.inv_categories = s.inv_categories.map(c => c===oldName ? newName : c);
+  // 상품의 카테고리도 일괄 변경
+  try {
+    await db.from('products').update({category: newName}).eq('category', oldName);
+  } catch(e) { console.error('상품 카테고리 일괄 변경 실패', e); }
+  await setAppState(s);
+  await renderCatManageList();
+  await loadInvCatPills();
+  toast(`'${oldName}' → '${newName}' 수정됐어요 ✓`);
 }
 
 async function addCategory() {
@@ -5672,7 +5715,19 @@ async function saveProduct() {
       if(!exists) await db.from('inventory').insert([{id:`inv-${Date.now()}`,product_id:id,total_stock:0,produced_stock:0,pending_production:0,available_stock:0,updated_at:new Date().toISOString()}]);
     }
     toast(invProdIsNew?'상품이 추가됐어요 ✓':'수정됐어요 ✓');
-    closeModal('inv-product-modal'); loadInvOverview();
+    closeModal('inv-product-modal');
+    // 업로드 매칭 중에 추가한 경우 → 해당 항목에 자동 연결
+    if(invProdIsNew && window._invPendingMatchKey) {
+      window._invUploadMappings = window._invUploadMappings||{};
+      window._invUploadMappings[window._invPendingMatchKey] = id;
+      window._invUploadProds = null; // 캐시 갱신
+      renderMatchList(Object.keys(window._invUploadAgg||{}));
+      updateUploadProgress();
+      window._invPendingMatchKey = null;
+      toast('상품이 추가되고 자동으로 연결됐어요 ✓');
+    } else {
+      loadInvOverview();
+    }
   } catch(e){ toast('저장 실패: '+e.message); console.error(e); }
 }
 
@@ -5830,7 +5885,7 @@ async function handleInvUpload(input) {
 
 async function renderUploadPreview(cols) {
   const maps = (await db.from('channel_product_mapping').select('*').eq('channel',invUploadChannel)).data||[];
-  // 상품명+옵션 집계
+  const prods = (await db.from('products').select('id,name,option_name').eq('is_discontinued',false)).data||[];
   const agg = {};
   for(const row of invUploadData) {
     const pname  = String(row[cols.name]||'').trim();
@@ -5842,13 +5897,15 @@ async function renderUploadPreview(cols) {
     if(!agg[key]) agg[key] = { pname, opt, qty:0, amount:0, saleDate, key };
     agg[key].qty    += qty;
     agg[key].amount += amount;
-    agg[key].saleDate = saleDate; // 마지막 날짜 사용
+    agg[key].saleDate = saleDate;
   }
   window._invUploadAgg      = agg;
   window._invUploadMappings = {};
+  window._invUploadSkipped  = new Set();
+  window._invUploadProds    = prods;
   const unmatched = [];
   for(const key of Object.keys(agg)){
-    const { pname, opt } = agg[key];
+    const { pname } = agg[key];
     const m = maps.find(x => x.channel_name === key || x.channel_name === pname);
     if(m) window._invUploadMappings[key] = m.product_id;
     else  unmatched.push(key);
@@ -5856,56 +5913,166 @@ async function renderUploadPreview(cols) {
   if(!unmatched.length){
     $('inv-up-preview').style.display = 'none';
     $('inv-up-submit').style.display  = '';
-    toast('모든 상품이 매칭됐어요. 업로드 처리를 눌러주세요.');
+    toast('모든 상품이 자동 매칭됐어요. 업로드 처리를 눌러주세요.');
+    updateUploadProgress();
     return;
   }
   $('inv-up-preview').style.display = '';
   $('inv-up-submit').style.display  = '';
-  $('inv-up-match-list').innerHTML  = unmatched.map(key => {
+  renderMatchList(Object.keys(agg));
+  updateUploadProgress();
+}
+
+function renderMatchList(keys) {
+  const agg  = window._invUploadAgg||{};
+  const skip = window._invUploadSkipped||new Set();
+  const maps = window._invUploadMappings||{};
+  $('inv-up-match-list').innerHTML = keys.map(key => {
     const { pname, opt, qty } = agg[key];
     const dispName = opt ? `${pname} / ${opt}` : pname;
     const enc = encodeURIComponent(key);
-    return `<div style="padding:10px 0;border-bottom:0.5px solid var(--surface2);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
-        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;">${dispName} <span class="inv-faint">(${qty}개)</span></div>
+    const isDone    = !!maps[key];
+    const isSkipped = skip.has(key);
+    if(isDone) {
+      const prod = (window._invUploadProds||[]).find(p=>p.id===maps[key]);
+      const prodLabel = prod ? prod.name+(prod.option_name?' / '+prod.option_name:'') : '매칭됨';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--surface2);">
+        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${dispName} <span class="inv-faint">(${qty}개)</span></div>
         <div style="color:var(--light);font-size:14px;">→</div>
-        <div style="flex:1;" class="inv-search-wrap">
-          <input type="text" class="inv-search-inp" style="width:100%;" placeholder="워크스페이스 상품 검색..."
+        <div style="flex:1;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:var(--green);font-weight:500;">✓ ${prodLabel}</span>
+          <span class="card-link" style="font-size:11px;" onclick="invUnmatch('${enc}')">취소</span>
+        </div>
+      </div>`;
+    }
+    if(isSkipped) {
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--surface2);opacity:.45;">
+        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;text-decoration:line-through;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${dispName} <span class="inv-faint">(${qty}개)</span></div>
+        <span style="font-size:11px;color:var(--light);">건너뜀</span>
+        <span class="card-link" style="font-size:11px;" onclick="invUnskip('${enc}')">복구</span>
+      </div>`;
+    }
+    return `<div style="padding:10px 0;border-bottom:0.5px solid var(--surface2);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <div style="font-size:12px;background:var(--surface2);padding:4px 10px;border-radius:var(--r);color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${dispName} <span class="inv-faint">(${qty}개)</span></div>
+        <div style="color:var(--light);font-size:14px;">→</div>
+        <div style="flex:1;position:relative;">
+          <input type="text" class="inv-search-inp" style="width:100%;" placeholder="상품 검색..."
             oninput="invSearchForMatch(this,'${enc}')">
           <div class="inv-search-drop" id="match-drop-${enc}"></div>
         </div>
+        <div class="f-btn f-btn-save" style="font-size:11px;padding:4px 10px;white-space:nowrap;flex-shrink:0;" onclick="invOpenAddProduct('${enc}')">+ 상품 추가</div>
       </div>
-      <div id="match-lbl-${enc}" style="font-size:11px;color:var(--green);padding-left:4px;display:none;"></div>
     </div>`;
   }).join('');
 }
 
+function updateUploadProgress() {
+  const agg   = window._invUploadAgg||{};
+  const maps  = window._invUploadMappings||{};
+  const skip  = window._invUploadSkipped||new Set();
+  const total = Object.keys(agg).length;
+  const done  = Object.keys(maps).length;
+  const skipped = skip.size;
+  const resolved = done + skipped;
+  const pct = total ? Math.round(resolved/total*100) : 100;
+  const bar = $('inv-up-progress-bar');
+  if(bar) bar.style.width = pct+'%';
+  const st = $('inv-up-match-status');
+  if(st) {
+    if(resolved===total) st.innerHTML = `<span style="color:var(--green);">✓ 전체 ${total}개 처리 완료</span>`;
+    else st.textContent = `매칭 ${done}/${total}개 완료 · 남은 항목 ${total-done}개`;
+  }
+}
+
+function invOpenAddProduct(enc) {
+  const key    = decodeURIComponent(enc);
+  const data   = (window._invUploadAgg||{})[key]||{};
+  const pname  = data.pname||'';
+  const opt    = data.opt||'';
+  // 매칭 key 저장 — 상품 저장 후 자동 연결용
+  window._invPendingMatchKey = key;
+  invProdIsNew=true; invProdIsDisc=false; invProdEditId=null;
+  $('inv-product-kind').textContent = '상품 추가';
+  $('inv-product-del-btn').style.display = 'none';
+  $('inv-p-name').value    = pname;
+  $('inv-p-option').value  = opt;
+  $('inv-p-category').value= '';
+  $('inv-p-sku').value     = '';
+  // 현재 업로드 채널에 채널명 자동 채우기
+  const chMap = {'자사몰':'inv-p-map-own','카카오선물하기':'inv-p-map-kakao','스마트스토어':'inv-p-map-smart'};
+  Object.values(chMap).forEach(id=>{ const el=$(id); if(el) el.value=''; });
+  const mapEl = $(chMap[invUploadChannel]);
+  if(mapEl) mapEl.value = key; // 채널 매핑명도 자동 세팅
+  $('inv-product-modal').classList.add('on');
+  setTimeout(()=>$('inv-p-name').focus(), 80);
+}
+
+function invUnmatch(enc) {
+  const key = decodeURIComponent(enc);
+  delete (window._invUploadMappings||{})[key];
+  renderMatchList(Object.keys(window._invUploadAgg||{}));
+  updateUploadProgress();
+}
+
+async function invAutoMatch() {
+  const agg   = window._invUploadAgg||{};
+  const maps  = window._invUploadMappings||{};
+  const prods = window._invUploadProds||[];
+  let matched = 0;
+  for(const [key, {pname, opt}] of Object.entries(agg)) {
+    if(maps[key]) continue;
+    const clean = pname.replace(/\[.*?\]/g,'').replace(/\(.*?\)/g,'').trim();
+    const keywords = clean.split(/[\s/·,]+/).filter(w=>w.length>=2);
+    const optKeywords = (opt||'').replace(/[^가-힣a-zA-Z0-9\s]/g,' ').trim().split(/\s+/).filter(w=>w.length>=1);
+    let best = null, bestScore = 0;
+    for(const prod of prods) {
+      const pStr = ((prod.name||'')+(prod.option_name||'')).toLowerCase();
+      let score = 0;
+      keywords.forEach(kw=>{ if(pStr.includes(kw.toLowerCase())) score+=2; });
+      optKeywords.forEach(kw=>{ if(pStr.includes(kw.toLowerCase())) score+=1; });
+      if(score > bestScore) { bestScore = score; best = prod; }
+    }
+    if(best && bestScore >= 2) { window._invUploadMappings[key] = best.id; matched++; }
+  }
+  renderMatchList(Object.keys(agg));
+  updateUploadProgress();
+  toast(matched ? `${matched}개 자동 추천 완료 — 확인 후 업로드해주세요` : '자동 매칭할 수 있는 항목이 없어요');
+}
+
 async function invSearchForMatch(input, encodedPname) {
   const q=input.value.trim(); const dropId=`match-drop-${encodedPname}`;
-  if(!q){ $(dropId)?.classList.remove('open'); return; }
-  const {data:prods}=await db.from('products').select('id,name,option_name').ilike('name',`%${q}%`);
-  if(!prods?.length){ $(dropId)?.classList.remove('open'); return; }
   const drop=$(dropId); if(!drop) return;
-  drop.innerHTML=prods.map(p=>`<div class="inv-search-opt" onclick="invSelectMatch('${p.id}','${p.name}${p.option_name?' '+p.option_name:''}','${encodedPname}')">
-    ${p.name}${p.option_name?' · '+p.option_name:''}</div>`).join('');
+  if(!q){ drop.classList.remove('open'); drop.innerHTML=''; return; }
+  const prods = window._invUploadProds || (await db.from('products').select('id,name,option_name').eq('is_discontinued',false)).data||[];
+  window._invUploadProds = prods;
+  const results=prods.filter(p=>(p.name+' '+(p.option_name||'')).toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if(!results.length){ drop.classList.remove('open'); drop.innerHTML=''; return; }
+  drop.innerHTML=results.map(p=>
+    `<div class="inv-search-item" onclick="invSelectMatch('${encodedPname}','${p.id}')">
+      ${p.name}${p.option_name?` <span class="inv-faint">/ ${p.option_name}</span>`:''}
+    </div>`).join('');
   drop.classList.add('open');
 }
 
-function invSelectMatch(productId, label, encodedPname) {
-  const pname=decodeURIComponent(encodedPname);
-  window._invUploadMappings[pname]=productId;
+function invSelectMatch(encodedPname, productId) {
+  const key = decodeURIComponent(encodedPname);
+  window._invUploadMappings = window._invUploadMappings||{};
+  window._invUploadMappings[key] = productId;
+  (window._invUploadSkipped||new Set()).delete(key);
   const drop=$(`match-drop-${encodedPname}`); if(drop) drop.classList.remove('open');
-  const lbl=$(`match-lbl-${encodedPname}`);
-  if(lbl){ lbl.textContent='→ '+label; lbl.style.display=''; }
-  // 검색창 비우기
-  document.querySelectorAll(`[data-pname="${pname}"]`).forEach(el=>el.value='');
+  renderMatchList(Object.keys(window._invUploadAgg||{}));
+  updateUploadProgress();
 }
+
 
 async function processUpload() {
   const agg      = window._invUploadAgg||{};
   const mappings = window._invUploadMappings||{};
-  const unresolved = Object.keys(agg).filter(k=>!mappings[k]);
-  if(unresolved.length){ toast(`매칭 안된 상품이 ${unresolved.length}개 있어요`); return; }
+  const skipped  = window._invUploadSkipped||new Set();
+  // 건너뛰지 않았고 매칭도 안 된 항목 체크
+  const unresolved = Object.keys(agg).filter(k=>!mappings[k]&&!skipped.has(k));
+  if(unresolved.length){ toast(`매칭 안된 상품이 ${unresolved.length}개 있어요 · 검색하거나 상품을 추가해주세요`); return; }
   try {
     const rows = [];
     for(const [key, data] of Object.entries(agg)){
