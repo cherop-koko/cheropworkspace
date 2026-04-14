@@ -3646,7 +3646,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.8.4</div>
+<div id="version">v3.8.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4434,6 +4434,7 @@ async function loadPtaskList() {
             <div class="trow-check${done?' on':''}"></div>
             <div class="trow-info" style="flex:1;min-width:0;">
               <div class="trow-title${done?' done':''}">${t.title}</div>
+              ${t.note?`<div class="trow-sub">${t.note}</div>`:''}
               <div class="trow-meta">
                 ${pname?`<span class="prow-tag" style="font-size:10px;">${pname}</span>`:''}
                 ${t.due_date?`<span class="trow-due">${t.due_date.slice(5).replace('-','/')}</span>`:''}
@@ -4774,6 +4775,7 @@ async function loadProjects() {
               <div class="proj-ptrow-check${done?' on':''}"></div>
               <div class="proj-ptrow-info">
                 <div class="proj-ptrow-title${done?' done':''}">${t.title}</div>
+                ${t.note?`<div style="font-size:11px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.note}</div>`:''}
                 <div class="proj-ptrow-meta">
                   <button class="trow-status-btn ${st.cls}" style="font-size:10px;padding:2px 8px;" onclick="event.stopPropagation();cyclePtaskStatus('${t.id}','${t.status}')">${st.lbl}</button>
                   ${t.due_date ? `<span style="font-size:11px;color:var(--light);">${t.due_date.slice(5).replace('-','/')}</span>` : ''}
