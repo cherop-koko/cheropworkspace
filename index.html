@@ -2175,14 +2175,17 @@ a { text-decoration:none; color:inherit; }
 <div class="mini-modal-overlay" id="routine-modal">
   <div class="mini-modal" onclick="event.stopPropagation()">
     <div class="mini-modal-head">
-      <div class="mini-modal-title">루틴 추가</div>
+      <div class="mini-modal-title" id="routine-modal-title">루틴 추가</div>
       <div class="mbtn" onclick="closeModal('routine-modal')">✕</div>
     </div>
     <div class="mini-modal-body">
       <input class="field-inp" id="routine-inp" placeholder="루틴 항목 이름 (예: 인스타 피드 확인)" onkeydown="if(event.key==='Enter')saveRoutine()">
-      <div style="display:flex;justify-content:flex-end;gap:8px;">
-        <button class="f-btn f-btn-cancel" onclick="closeModal('routine-modal')">취소</button>
-        <button class="f-btn f-btn-save"   onclick="saveRoutine()">추가</button>
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+        <button class="f-btn f-btn-cancel" id="routine-del-btn" onclick="deleteRoutine()" style="display:none;color:var(--red);">삭제</button>
+        <div style="display:flex;gap:8px;margin-left:auto;">
+          <button class="f-btn f-btn-cancel" onclick="closeModal('routine-modal')">취소</button>
+          <button class="f-btn f-btn-save"   id="routine-save-btn" onclick="saveRoutine()">추가</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3643,7 +3646,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.8.2</div>
+<div id="version">v3.8.3</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4269,7 +4272,14 @@ async function loadRoutines() {
     const cnt=routines.filter(r=>done.has(r.id)).length;
     $('routine-count').textContent=`${cnt}/${routines.length}`;
     $('routine-list').innerHTML=routines.length
-      ? routines.map(r=>`<div class="ritem" onclick="toggleRoutine('${r.id}')"><div class="rcheck${done.has(r.id)?' on':''}"></div><div class="rlabel${done.has(r.id)?' on':''}">${r.label}</div></div>`).join('')
+      ? routines.map(r=>`
+          <div class="ritem" style="display:flex;align-items:center;gap:0;padding-right:4px;">
+            <div style="flex:1;display:flex;align-items:center;gap:0;" onclick="toggleRoutine('${r.id}')">
+              <div class="rcheck${done.has(r.id)?' on':''}"></div>
+              <div class="rlabel${done.has(r.id)?' on':''}">${r.label}</div>
+            </div>
+            <div class="mbtn" style="width:22px;height:22px;font-size:11px;flex-shrink:0;opacity:.4;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.4'" onclick="openRoutineEditModal('${r.id}','${r.label.replace(/'/g,"\\'")}')">✏</div>
+          </div>`).join('')
       : '<div style="padding:12px 16px;font-size:12px;color:var(--faint);">루틴이 없어요</div>';
   } catch(e) { console.error('loadRoutines',e); }
 }
@@ -4287,10 +4297,26 @@ function resetRoutines() {
   loadRoutines(); toast('루틴이 초기화됐어요');
 }
 
+let routineEditId = null;
+
 function openRoutineAddModal() {
-  $('routine-inp').value='';
+  routineEditId = null;
+  $('routine-modal-title').textContent = '루틴 추가';
+  $('routine-inp').value = '';
+  $('routine-del-btn').style.display = 'none';
+  $('routine-save-btn').textContent = '추가';
   $('routine-modal').classList.add('on');
-  setTimeout(()=>$('routine-inp').focus(),80);
+  setTimeout(()=>$('routine-inp').focus(), 80);
+}
+
+function openRoutineEditModal(id, label) {
+  routineEditId = id;
+  $('routine-modal-title').textContent = '루틴 수정';
+  $('routine-inp').value = label;
+  $('routine-del-btn').style.display = '';
+  $('routine-save-btn').textContent = '저장';
+  $('routine-modal').classList.add('on');
+  setTimeout(()=>{ $('routine-inp').focus(); $('routine-inp').select(); }, 80);
 }
 
 async function saveRoutine() {
@@ -4299,14 +4325,36 @@ async function saveRoutine() {
   try {
     const s=await getAppState();
     s.routines=s.routines||{};
-    const list=s.routines[tasksWho]||defaultRoutines[tasksWho]||[];
-    list.push({id:`r${Date.now()}`,label});
+    let list=s.routines[tasksWho]||[...(defaultRoutines[tasksWho]||[])];
+    if(routineEditId) {
+      // 수정
+      list=list.map(r=>r.id===routineEditId?{...r,label}:r);
+      toast('루틴이 수정됐어요 ✓');
+    } else {
+      // 추가
+      list.push({id:`r${Date.now()}`,label});
+      toast('루틴이 추가됐어요 ✓');
+    }
     s.routines[tasksWho]=list;
     await setAppState(s);
     closeModal('routine-modal');
     loadRoutines();
-    toast('루틴이 추가됐어요 ✓');
   } catch(e) { toast('저장 실패: '+e.message); }
+}
+
+async function deleteRoutine() {
+  if(!routineEditId) return;
+  const ok = await customConfirm('루틴을 삭제할까요?'); if(!ok) return;
+  try {
+    const s=await getAppState();
+    s.routines=s.routines||{};
+    const list=s.routines[tasksWho]||[...(defaultRoutines[tasksWho]||[])];
+    s.routines[tasksWho]=list.filter(r=>r.id!==routineEditId);
+    await setAppState(s);
+    closeModal('routine-modal');
+    loadRoutines();
+    toast('루틴이 삭제됐어요');
+  } catch(e) { toast('삭제 실패: '+e.message); }
 }
 
 /* 할일 */
