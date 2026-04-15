@@ -3649,7 +3649,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.4</div>
+<div id="version">v3.9.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -3711,6 +3711,22 @@ async function setAppState(state) {
   _appStateCache = state;
   const { error } = await db.from('app_state').upsert({ id:'cherop_main', data:state, updated_at:new Date().toISOString() });
   if (error) throw error;
+}
+
+/* app_state에서 base64 imgData 제거 (Storage URL 전환 후 정리용) */
+async function cleanupImgDataFromAppState() {
+  const s = await getAppState();
+  let changed = false;
+  (s.content_posts || []).forEach(p => {
+    if (p.imgData && p.imgUrl) {
+      delete p.imgData; // Storage URL이 있으면 base64 제거
+      changed = true;
+    }
+  });
+  if (changed) {
+    await setAppState(s);
+    toast('이미지 데이터 정리 완료 ✓');
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -9563,8 +9579,9 @@ async function loadContentCal() {
 
     if(post){
       // 이미지 영역 - 3:4 비율로 꽉 채움 / 이미지 클릭 시 인스타 링크 새창
-      const imgArea = post.imgData
-        ? `<img src="${post.imgData}" style="width:100%;height:100%;object-fit:cover;display:block;${post.link?'cursor:pointer;':''}" alt=""
+      const _imgSrc = post.imgUrl || post.imgData;
+      const imgArea = _imgSrc
+        ? `<img src="${_imgSrc}" style="width:100%;height:100%;object-fit:cover;display:block;${post.link?'cursor:pointer;':''}" alt=""
             onclick="${post.link?`(function(e){e.stopPropagation();window.open('${post.link}','_blank');})(event)`:'event.stopPropagation();openContentModal(\''+ds+'\')'}">`
         : `<div style="width:100%;height:100%;background:${tc}18;display:flex;align-items:center;justify-content:center;"><div style="font-size:11px;font-weight:500;color:${tc};">${typeLabel}</div></div>`;
 
@@ -9629,7 +9646,8 @@ async function openContentModal(date, id='') {
   contentStatus = post?.status||'draft';
   contentType   = post?.type||'';
   contentTopic  = post?.topic||'';
-  contentImgData= post?.imgData||null;
+  contentImgData = post?.imgData || post?.imgUrl || null;
+  window._contentImgFile = null; // 새 파일 선택 전까지 초기화
 
   // 상태 pill
   document.querySelectorAll('#content-status-pills .inv-pill').forEach(p=>p.classList.remove('on'));
@@ -9656,6 +9674,8 @@ async function openContentModal(date, id='') {
   const imgPreview = $('content-img-preview');
   if(contentImgData){
     imgPreview.innerHTML = `<img src="${contentImgData}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+  } else if(post?.imgUrl){
+    imgPreview.innerHTML = `<img src="${post.imgUrl}" style="width:100%;height:100%;object-fit:cover;" alt="">`; //
   } else {
     imgPreview.innerHTML = `<div style="font-size:12px;color:var(--muted);">클릭하여 이미지 선택</div><div style="font-size:11px;color:var(--faint);">캘린더 썸네일로 표시돼요</div>`;
   }
@@ -9716,13 +9736,15 @@ function contentImgChange(input) {
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
+      // 미리보기용 리사이즈 (화면 표시만)
       const MAX = 800;
       const scale = Math.min(1, MAX / Math.max(img.width, img.height));
       const canvas = document.createElement('canvas');
       canvas.width  = Math.round(img.width  * scale);
       canvas.height = Math.round(img.height * scale);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      contentImgData = canvas.toDataURL('image/jpeg', 0.72);
+      contentImgData = canvas.toDataURL('image/jpeg', 0.72); // 미리보기용
+      window._contentImgFile = file; // Storage 업로드용 원본 파일 보관
       $('content-img-preview').innerHTML = `<img src="${contentImgData}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
     };
     img.src = e.target.result;
@@ -9753,39 +9775,68 @@ async function saveContent() {
   if(btn && btn.disabled) return;
   if(btn){ btn.disabled=true; btn.textContent='저장 중...'; }
   try {
-  const s = await getAppState();
-  s.content_posts = s.content_posts||[];
-  const data = {
-    date:       contentEditDate,
-    status:     contentStatus,
-    type:       contentType,
-    topic:      contentTopic,
-    imgData:    contentImgData,
-    title:      $('content-title').value.trim(),
-    caption:    $('content-caption').value.trim(),
-    memo:       $('content-memo').value.trim(),
-    uploadTime: $('content-upload-time').value,
-    bgm:        $('content-bgm').value.trim(),
-    link:       $('content-link').value.trim(),
-    stats: {
-      views:    parseInt($('content-stat-views').value)||0,
-      likes:    parseInt($('content-stat-likes').value)||0,
-      saves:    parseInt($('content-stat-saves').value)||0,
-      comments: parseInt($('content-stat-comments').value)||0,
-      shares:   parseInt($('content-stat-shares').value)||0,
-    },
-  };
-  if(contentEditId){
-    const idx = s.content_posts.findIndex(p=>p.id===contentEditId);
-    if(idx>=0) s.content_posts[idx] = { ...s.content_posts[idx], ...data };
-    else s.content_posts.push({ id:`cp-${Date.now()}`, ...data });
-  } else {
-    s.content_posts.push({ id:`cp-${Date.now()}`, ...data });
-  }
-  await setAppState(s);
-  toast('저장됐어요 ✓');
-  closeModal('content-modal');
-  loadContentCal();
+    const s = await getAppState();
+    s.content_posts = s.content_posts || [];
+
+    // 이미지 처리: 새 파일이 선택된 경우 Storage에 업로드
+    let imgUrl = null;
+    const imgFile = window._contentImgFile;
+    if (imgFile) {
+      if(btn) btn.textContent = '이미지 업로드 중...';
+      const postId  = contentEditId || `cp-${Date.now()}`;
+      const ext     = imgFile.name.split('.').pop() || 'jpg';
+      const path    = `content/${postId}.${ext}`;
+      const { error: upErr } = await db.storage
+        .from('content-images')
+        .upload(path, imgFile, { upsert: true, contentType: imgFile.type });
+      if (upErr) throw new Error('이미지 업로드 실패: ' + upErr.message);
+      const { data: urlData } = db.storage.from('content-images').getPublicUrl(path);
+      imgUrl = urlData.publicUrl;
+      window._contentImgFile = null; // 사용 후 초기화
+    }
+
+    const data = {
+      date:       contentEditDate,
+      status:     contentStatus,
+      type:       contentType,
+      topic:      contentTopic,
+      title:      $('content-title').value.trim(),
+      caption:    $('content-caption').value.trim(),
+      memo:       $('content-memo').value.trim(),
+      uploadTime: $('content-upload-time').value,
+      bgm:        $('content-bgm').value.trim(),
+      link:       $('content-link').value.trim(),
+      stats: {
+        views:    parseInt($('content-stat-views').value)  || 0,
+        likes:    parseInt($('content-stat-likes').value)  || 0,
+        saves:    parseInt($('content-stat-saves').value)  || 0,
+        comments: parseInt($('content-stat-comments').value) || 0,
+        shares:   parseInt($('content-stat-shares').value) || 0,
+      },
+    };
+    // imgUrl이 새로 업로드된 경우만 덮어쓰기, 아니면 기존 값 유지
+    if (imgUrl) data.imgUrl = imgUrl;
+
+    if (btn) btn.textContent = '저장 중...';
+    if (contentEditId) {
+      const idx = s.content_posts.findIndex(p => p.id === contentEditId);
+      if (idx >= 0) {
+        // 기존 base64 imgData 제거 (Storage URL로 전환)
+        const existing = { ...s.content_posts[idx], ...data };
+        if (imgUrl) delete existing.imgData;
+        s.content_posts[idx] = existing;
+      } else {
+        s.content_posts.push({ id: contentEditId, ...data });
+      }
+    } else {
+      const newId = `cp-${Date.now()}`;
+      s.content_posts.push({ id: newId, ...data });
+    }
+
+    await setAppState(s);
+    toast('저장됐어요 ✓');
+    closeModal('content-modal');
+    loadContentCal();
   } catch(e) {
     toast('저장 실패: ' + e.message);
     console.error(e);
