@@ -3649,7 +3649,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.5</div>
+<div id="version">v3.9.6</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -3876,6 +3876,7 @@ function loadWeather() {
 ═══════════════════════════════════════ */
 async function loadDashboard() {
   $('dash-greet').innerHTML = `안녕하세요, <strong>${user.label}</strong> 👋`;
+  await getAppState(); // 캐시 프리로드 → qlGetLinks가 정확한 데이터 반환
   loadDashQuickLinks();
   await Promise.all([loadDashTasks(), loadDashNotices(), loadDashAtt(), loadDashRevenue(), loadDashInventory()]);
   loadDashDday();
@@ -4133,6 +4134,7 @@ function tasksSetFilter(f,el) {
 }
 
 async function loadAllTasks() {
+  await getAppState(); // 캐시 프리로드 → qlGetLinks가 정확한 데이터 반환
   await Promise.all([loadRoutines(), loadTaskList(), loadPtaskList(), loadMemoList()]);
   loadTasksQuickLinks();
 }
@@ -4175,9 +4177,18 @@ async function loadTasksProdSchedule() {
 /* ════════════════════════════════
    빠른 링크 공통 유틸
 ════════════════════════════════ */
-function qlStorageKey(name) { return `quicklinks_${name}`; }
-function qlGetLinks(name)   { return JSON.parse(localStorage.getItem(qlStorageKey(name)) || '[]'); }
-function qlSetLinks(name, links) { localStorage.setItem(qlStorageKey(name), JSON.stringify(links)); }
+// 빠른링크 — app_state 기반 (기기 동기화)
+// 캐시에서 바로 읽어 동기(sync)처럼 동작
+function qlGetLinks(name) {
+  const s = _appStateCache || {};
+  return (s.quickLinks || {})[name] || [];
+}
+async function qlSetLinksAsync(name, links) {
+  const s = await getAppState();
+  s.quickLinks = s.quickLinks || {};
+  s.quickLinks[name] = links;
+  await setAppState(s);
+}
 
 function qlRenderInto(containerId, links, ownerName, isOwn) {
   const wrap = $(containerId);
@@ -4216,11 +4227,10 @@ function getFavicon(url) {
   return '🔗';
 }
 
-function qlRemove(ownerName, containerId, idx) {
+async function qlRemove(ownerName, containerId, idx) {
   const links = qlGetLinks(ownerName);
   links.splice(idx, 1);
-  qlSetLinks(ownerName, links);
-  // 두 곳 모두 새로고침
+  await qlSetLinksAsync(ownerName, links);
   qlRenderInto('dash-quick-links',  qlGetLinks(user.name), user.name, true);
   qlRenderInto('tasks-quick-links', qlGetLinks(tasksWho),  tasksWho,  tasksWho === user.name);
 }
@@ -4259,19 +4269,18 @@ function openQuickLinkModal() {
   setTimeout(() => $('ql-name').focus(), 80);
 }
 
-function saveQuickLink() {
+async function saveQuickLink() {
   const name = $('ql-name').value.trim();
   let   url  = $('ql-url').value.trim();
   if (!name) { toast('이름을 입력해주세요'); $('ql-name').focus(); return; }
   if (!url)  { toast('URL을 입력해주세요');  $('ql-url').focus();  return; }
   if (!url.startsWith('http')) url = 'https://' + url;
 
-  const ownerName = qlTarget === 'dash' ? user.name : user.name; // 항상 본인 저장
+  const ownerName = user.name; // 항상 본인 저장
   const links = qlGetLinks(ownerName);
   links.push({ name, url });
-  qlSetLinks(ownerName, links);
+  await qlSetLinksAsync(ownerName, links);
   closeModal('quicklink-modal');
-  // 두 곳 모두 새로고침
   loadDashQuickLinks();
   loadTasksQuickLinks();
   toast(`"${name}" 링크가 추가됐어요 ✓`);
