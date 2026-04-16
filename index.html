@@ -570,7 +570,15 @@ a { text-decoration:none; color:inherit; }
 .proj-ptrow-title { font-size:12px; line-height:1.4; }
 .proj-ptrow-title.done { color:var(--faint); text-decoration:line-through; }
 .proj-ptrow-meta  { display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap; }
-.proj-ptrow-av    { width:22px; height:22px; border-radius:50%; background:var(--text); color:#fff; font-size:9px; font-weight:500; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.proj-ptrow-av-col { width:56px; flex-shrink:0; display:flex; align-items:center; gap:4px; }
+.proj-ptrow-av-sm  { width:18px; height:18px; border-radius:50%; font-size:8px; font-weight:500; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.proj-ptrow-av-name{ font-size:10px; color:var(--light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.proj-ptrow-divider { width:0.5px; background:var(--border); align-self:stretch; flex-shrink:0; margin:0 2px; }
+.av-고예흰 { background:#CECBF6; color:#3C3489; }
+.av-김효민 { background:#9FE1CB; color:#085041; }
+.av-정현진 { background:#F5C4B3; color:#712B13; }
+.av-박영아 { background:#B5D4F4; color:#0C447C; }
+.av-김성애 { background:#C0DD97; color:#27500A; }
 .proj-add-btn { display:flex; align-items:center; gap:6px; padding:12px 20px; font-size:12px; color:var(--faint); cursor:pointer; border-top:0.5px solid var(--surface2); transition:.1s; }
 .proj-add-btn:hover { color:var(--text); background:var(--surface3); }
 .new-proj-btn { display:flex; align-items:center; gap:6px; padding:14px 20px; font-size:13px; color:var(--faint); cursor:pointer; background:var(--surface); border-radius:var(--rlg); border:0.5px solid var(--border); transition:.1s; margin-top:4px; }
@@ -933,6 +941,7 @@ a { text-decoration:none; color:inherit; }
             <div style="display:flex;align-items:center;gap:12px;">
               <div><div class="page-header-title">프로젝트</div></div>
               <button class="f-btn f-btn-save" style="padding:7px 16px;font-size:12px;" onclick="openProjCreateModal()">+ 새 프로젝트</button>
+              <button class="f-btn f-btn-cancel" style="padding:7px 12px;font-size:12px;" onclick="openMemberColorModal()" title="담당자 색상 설정">🎨 색상</button>
             </div>
           </div>
           <!-- 프로젝트 탭 버튼 -->
@@ -3531,6 +3540,24 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ═══ 담당자 색상 설정 모달 ═══ -->
+<div class="modal-overlay" id="member-color-modal" onclick="if(event.target===this)closeModal('member-color-modal')">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-bar">
+      <div class="modal-kind">담당자 색상 설정</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('member-color-modal')">✕</div></div>
+    </div>
+    <div style="padding:16px 20px 20px;">
+      <div style="font-size:12px;color:var(--light);margin-bottom:16px;">프로젝트 업무 담당자 아바타 색상을 변경할 수 있어요.</div>
+      <div id="member-color-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button class="f-btn f-btn-cancel" style="flex:1;" onclick="resetMemberColors()">초기화</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveMemberColors()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 공지 작성 모달 ═══ -->
 <div class="modal-overlay" id="notice-modal" onclick="if(event.target===this)closeModal('notice-modal')">
   <div class="modal" style="max-width:640px;" onclick="event.stopPropagation()">
@@ -3653,7 +3680,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.8</div>
+<div id="version">v4.0.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -3755,6 +3782,133 @@ async function migrateContentPostsToTable() {
 }
 // 콘솔에서 바로 실행 가능하도록 전역 노출
 window.migrateContentPostsToTable = migrateContentPostsToTable;
+
+/* ════════════════════════════════
+   담당자 색상 설정
+════════════════════════════════ */
+const MEMBER_COLOR_DEFAULTS = {
+  '고예흰': { bg:'#CECBF6', color:'#3C3489' },
+  '김효민': { bg:'#9FE1CB', color:'#085041' },
+  '정현진': { bg:'#F5C4B3', color:'#712B13' },
+  '박영아': { bg:'#B5D4F4', color:'#0C447C' },
+  '김성애': { bg:'#C0DD97', color:'#27500A' },
+};
+
+// bg 색상에 맞는 텍스트 색상 자동 계산 (명도 기준)
+function autoTextColor(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+  return lum > 0.55 ? '#1a1a2e' : '#ffffff';
+}
+
+// app_state에서 색상 불러오기 (없으면 기본값)
+function getMemberColors() {
+  const saved = (_appStateCache || {}).memberColors || {};
+  const result = {};
+  MEMBERS.forEach(m => {
+    result[m.name] = saved[m.name] || MEMBER_COLOR_DEFAULTS[m.name] || { bg:'#D3D1C7', color:'#444441' };
+  });
+  return result;
+}
+
+// 동적 CSS 주입: av-{이름} 클래스 업데이트
+function applyMemberColors(colors) {
+  let style = document.getElementById('member-color-style');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'member-color-style';
+    document.head.appendChild(style);
+  }
+  style.textContent = MEMBERS.map(m => {
+    const c = colors[m.name] || MEMBER_COLOR_DEFAULTS[m.name] || {};
+    return `.av-${CSS.escape(m.name)} { background:${c.bg}; color:${c.color}; }`;
+  }).join('\n');
+}
+
+// 초기 로드 시 색상 적용
+async function initMemberColors() {
+  await getAppState();
+  applyMemberColors(getMemberColors());
+}
+
+// 모달 열기
+async function openMemberColorModal() {
+  await getAppState();
+  const colors = getMemberColors();
+  const PRESETS = [
+    '#CECBF6','#9FE1CB','#F5C4B3','#B5D4F4','#C0DD97',
+    '#FAC775','#F7C1C1','#D3D1C7','#E6F1FB','#F4C0D1',
+    '#1C1E26','#534AB7','#0F6E56','#993C1D','#185FA5',
+  ];
+  $('member-color-list').innerHTML = MEMBERS.map(m => {
+    const c = colors[m.name];
+    return `<div style="display:flex;align-items:center;gap:12px;">
+      <div class="proj-ptrow-av-sm av-${m.name}" id="mc-preview-${m.id}" style="background:${c.bg};color:${c.color};width:28px;height:28px;font-size:10px;">${m.av}</div>
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:500;margin-bottom:5px;">${m.name} <span style="font-size:11px;color:var(--light);font-weight:400;">${m.role}</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;" id="mc-presets-${m.id}">
+          ${PRESETS.map(hex => `
+            <div onclick="selectMemberColor('${m.id}','${m.name}','${hex}')"
+              style="width:20px;height:20px;border-radius:50%;background:${hex};cursor:pointer;border:1.5px solid ${c.bg===hex?'var(--text)':'transparent'};transition:border-color .1s;" 
+              data-hex="${hex}"></div>`).join('')}
+          <label title="직접 선택" style="width:20px;height:20px;border-radius:50%;background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;border:0.5px solid var(--border);">
+            +<input type="color" value="${c.bg}" style="opacity:0;position:absolute;width:0;height:0;" onchange="selectMemberColor('${m.id}','${m.name}',this.value)">
+          </label>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  $('member-color-modal').classList.add('on');
+}
+
+// 색상 선택 시 미리보기 업데이트
+function selectMemberColor(memberId, memberName, hex) {
+  const textColor = autoTextColor(hex);
+  // 미리보기 업데이트
+  const preview = $(`mc-preview-${memberId}`);
+  if (preview) { preview.style.background = hex; preview.style.color = textColor; }
+  // 선택된 프리셋 테두리 표시
+  const presets = $(`mc-presets-${memberId}`);
+  if (presets) presets.querySelectorAll('[data-hex]').forEach(el => {
+    el.style.border = el.dataset.hex === hex ? '1.5px solid var(--text)' : '1.5px solid transparent';
+  });
+  // 임시 저장
+  window._pendingMemberColors = window._pendingMemberColors || {};
+  window._pendingMemberColors[memberName] = { bg: hex, color: textColor };
+}
+
+// 저장
+async function saveMemberColors() {
+  if (!window._pendingMemberColors || !Object.keys(window._pendingMemberColors).length) {
+    closeModal('member-color-modal');
+    return;
+  }
+  const s = await getAppState();
+  s.memberColors = s.memberColors || {};
+  Object.assign(s.memberColors, window._pendingMemberColors);
+  await setAppState(s);
+  applyMemberColors(getMemberColors());
+  window._pendingMemberColors = {};
+  closeModal('member-color-modal');
+  loadProjects();
+  toast('색상이 저장됐어요 ✓');
+}
+
+// 초기화
+async function resetMemberColors() {
+  const ok = await customConfirm('색상을 기본값으로 되돌릴까요?');
+  if (!ok) return;
+  const s = await getAppState();
+  delete s.memberColors;
+  await setAppState(s);
+  window._pendingMemberColors = {};
+  applyMemberColors(getMemberColors());
+  closeModal('member-color-modal');
+  loadProjects();
+  toast('기본 색상으로 초기화됐어요');
+}
 
 /* ═══════════════════════════════════════
    ROUTER (hash 기반)
@@ -3904,6 +4058,7 @@ function loadWeather() {
 async function loadDashboard() {
   $('dash-greet').innerHTML = `안녕하세요, <strong>${user.label}</strong> 👋`;
   await getAppState(); // 캐시 프리로드 → qlGetLinks가 정확한 데이터 반환
+  initMemberColors(); // 담당자 색상 적용
   loadDashQuickLinks();
   await Promise.all([loadDashTasks(), loadDashNotices(), loadDashAtt(), loadDashRevenue(), loadDashInventory()]);
   loadDashDday();
@@ -4969,7 +5124,12 @@ async function loadProjects() {
             const done = t.status === 'done';
             const m = MEMBERS.find(x => x.name === t.assignee);
             const st = { cls: stCls[t.status]||'sbadge-todo', lbl: stLbl[t.status]||'' };
+            const avClass = t.assignee ? `av-${t.assignee}` : '';
             return `<div class="proj-ptrow" data-id="${t.id}" style="cursor:grab;" onclick="openPtaskFromProj('${t.id}')">
+              <div class="proj-ptrow-av-col">
+                ${t.assignee ? `<div class="proj-ptrow-av-sm ${avClass}">${m ? m.av : t.assignee.slice(0,2)}</div><span class="proj-ptrow-av-name">${t.assignee.slice(0,3)}</span>` : `<div class="proj-ptrow-av-sm" style="background:var(--surface2);"></div><span class="proj-ptrow-av-name" style="color:var(--faint);">미배정</span>`}
+              </div>
+              <div class="proj-ptrow-divider"></div>
               <div class="proj-ptrow-check${done?' on':''}"></div>
               <div class="proj-ptrow-info">
                 <div class="proj-ptrow-title${done?' done':''}">${t.title}</div>
@@ -4979,7 +5139,6 @@ async function loadProjects() {
                   ${t.due_date ? `<span style="font-size:11px;color:var(--light);">${t.due_date.slice(5).replace('-','/')}</span>` : ''}
                 </div>
               </div>
-              ${m ? `<div class="proj-ptrow-av" title="${t.assignee}">${m.av}</div>` : ''}
             </div>`;
           }).join('')+`</div>`
         : '<div style="padding:10px 20px;font-size:12px;color:var(--faint);">등록된 업무가 없어요</div>';
