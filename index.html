@@ -509,8 +509,12 @@ a { text-decoration:none; color:inherit; }
 .trow-due { font-size:11px; color:var(--light); }
 .trow-due.over { color:var(--red); }
 .trow-star { font-size:13px; color:var(--pink); flex-shrink:0; margin-top:1px; }
-.trow.dragging { opacity:.35; }
+.trow.dragging  { opacity:.35; }
 .trow.drag-over { border-top:2px solid var(--text); }
+.ritem.dragging  { opacity:.35; }
+.ritem.drag-over { border-top:2px solid var(--text); }
+.proj-ptrow.dragging  { opacity:.35; }
+.proj-ptrow.drag-over { border-top:2px solid var(--text); }
 
 /* 프로젝트 행 */
 .prow { padding:12px 16px; border-bottom:0.5px solid var(--surface2); cursor:pointer; transition:background .1s; }
@@ -3649,7 +3653,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.7</div>
+<div id="version">v3.9.8</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4328,7 +4332,7 @@ async function loadRoutines() {
     $('routine-count').textContent=`${cnt}/${routines.length}`;
     $('routine-list').innerHTML=routines.length
       ? routines.map(r=>`
-          <div class="ritem" style="padding-right:8px;">
+          <div class="ritem" data-id="${r.id}" style="padding-right:8px;cursor:grab;">
             <div style="flex:1;display:flex;align-items:center;gap:10px;" onclick="toggleRoutine('${r.id}')">
               <div class="rcheck${done.has(r.id)?' on':''}"></div>
               <div class="rlabel${done.has(r.id)?' on':''}">${r.label}</div>
@@ -4336,6 +4340,17 @@ async function loadRoutines() {
             <div class="mbtn" style="width:22px;height:22px;font-size:11px;flex-shrink:0;opacity:.4;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.4'" onclick="openRoutineEditModal('${r.id}','${r.label.replace(/'/g,"\\'")}')">✏</div>
           </div>`).join('')
       : '<div style="padding:12px 16px;font-size:12px;color:var(--faint);">루틴이 없어요</div>';
+    // 드래그로 순서 변경
+    if (routines.length) {
+      initDragList('routine-list', '.ritem', async (ids) => {
+        const s2 = await getAppState();
+        s2.routines = s2.routines || {};
+        const cur = s2.routines[tasksWho] || [...(defaultRoutines[tasksWho]||[])];
+        const map = Object.fromEntries(cur.map(r => [r.id, r]));
+        s2.routines[tasksWho] = ids.map(id => map[id]).filter(Boolean);
+        await setAppState(s2);
+      });
+    }
   } catch(e) { console.error('loadRoutines',e); }
 }
 
@@ -4454,20 +4469,110 @@ async function cycleTaskStatus(id, current) {
   } catch(e) { toast('상태 변경 실패: '+e.message); }
 }
 
+/* ── 드래그 공통 유틸 ──────────────────────────────────────────────────
+   initDragList(containerId, itemSel, onDrop)
+   - containerId : 리스트 컨테이너 id
+   - itemSel     : 드래그 항목 CSS 선택자
+   - onDrop(ids) : 순서 변경 후 호출 (ids = data-id 배열)
+   마우스 + 터치(모바일) 모두 지원
+─────────────────────────────────────────────────────────────────── */
+function initDragList(containerId, itemSel, onDrop) {
+  const c = $(containerId); if (!c) return;
+  let dragged = null, touchClone = null, touchOffX = 0, touchOffY = 0;
+
+  const getOrderedIds = () =>
+    [...c.querySelectorAll(itemSel + '[data-id]')].map(r => r.dataset.id);
+
+  const clearOver = () =>
+    c.querySelectorAll(itemSel).forEach(r => r.classList.remove('drag-over'));
+
+  const insertAt = (target, clientY) => {
+    if (!target || target === dragged) return;
+    const rect = target.getBoundingClientRect();
+    clientY < rect.top + rect.height / 2
+      ? c.insertBefore(dragged, target)
+      : target.after(dragged);
+  };
+
+  // ── 마우스 드래그 ──
+  c.querySelectorAll(itemSel).forEach(row => {
+    row.setAttribute('draggable', 'true');
+    row.addEventListener('dragstart', e => {
+      dragged = row;
+      setTimeout(() => row.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      clearOver();
+      onDrop(getOrderedIds());
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (row === dragged) return;
+      clearOver();
+      row.classList.add('drag-over');
+      insertAt(row, e.clientY);
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+  });
+
+  // ── 터치 드래그 (모바일) ──
+  c.querySelectorAll(itemSel).forEach(row => {
+    row.addEventListener('touchstart', e => {
+      dragged = row;
+      const t = e.touches[0];
+      const rect = row.getBoundingClientRect();
+      touchOffX = t.clientX - rect.left;
+      touchOffY = t.clientY - rect.top;
+      // 반투명 클론 생성
+      touchClone = row.cloneNode(true);
+      touchClone.style.cssText = `position:fixed;opacity:.7;pointer-events:none;z-index:9999;width:${rect.width}px;left:${rect.left}px;top:${rect.top}px;`;
+      document.body.appendChild(touchClone);
+      row.classList.add('dragging');
+    }, { passive: true });
+
+    row.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      if (touchClone) {
+        touchClone.style.left = (t.clientX - touchOffX) + 'px';
+        touchClone.style.top  = (t.clientY - touchOffY) + 'px';
+      }
+      clearOver();
+      // 현재 커서 아래 항목 찾기
+      const els = [...c.querySelectorAll(itemSel)].filter(r => r !== dragged);
+      const target = els.find(r => {
+        const rect = r.getBoundingClientRect();
+        return t.clientY >= rect.top && t.clientY <= rect.bottom;
+      });
+      if (target) { target.classList.add('drag-over'); insertAt(target, t.clientY); }
+    }, { passive: false });
+
+    row.addEventListener('touchend', () => {
+      if (touchClone) { document.body.removeChild(touchClone); touchClone = null; }
+      if (dragged) dragged.classList.remove('dragging');
+      clearOver();
+      onDrop(getOrderedIds());
+      dragged = null;
+    });
+  });
+}
+
+// ── 할일 드래그 초기화 ──
 function initDrag() {
-  const c=$('task-list'); if(!c)return;
-  let dragged=null;
-  c.querySelectorAll('.trow[draggable]').forEach(row=>{
-    row.addEventListener('dragstart',e=>{ dragged=row; setTimeout(()=>row.classList.add('dragging'),0); e.dataTransfer.effectAllowed='move'; });
-    row.addEventListener('dragend',()=>{ row.classList.remove('dragging'); c.querySelectorAll('.trow').forEach(r=>r.classList.remove('drag-over')); saveOrder(); });
-    row.addEventListener('dragover',e=>{ e.preventDefault(); if(row===dragged)return; c.querySelectorAll('.trow').forEach(r=>r.classList.remove('drag-over')); row.classList.add('drag-over'); const rect=row.getBoundingClientRect(); e.clientY<rect.top+rect.height/2?c.insertBefore(dragged,row):row.after(dragged); });
-    row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
+  initDragList('task-list', '.trow', async (ids) => {
+    try {
+      await Promise.all(ids.map((id, i) =>
+        db.from('tasks').update({ sort_order: i }).eq('id', id)
+      ));
+    } catch(e) { console.error('task order save:', e); }
   });
 }
 
 async function saveOrder() {
-  const ids=[...$('task-list').querySelectorAll('.trow[data-id]')].map(r=>r.dataset.id);
-  try { await Promise.all(ids.map((id,i)=>db.from('tasks').update({sort_order:i}).eq('id',id))); } catch(e) {}
+  const ids = [...$('task-list').querySelectorAll('.trow[data-id]')].map(r => r.dataset.id);
+  try { await Promise.all(ids.map((id, i) => db.from('tasks').update({ sort_order: i }).eq('id', id))); } catch(e) {}
 }
 
 /* 프로젝트 업무 */
@@ -4485,7 +4590,7 @@ async function loadPtaskList() {
           const done=t.status==='done';
           const st=stMap[t.status]||stMap.todo;
           const pname=projs.find(p=>p.id===t.proj_id)?.title||'';
-          return `<div class="trow" onclick="openPtaskModal('${t.id}')">
+          return `<div class="trow" data-id="${t.id}" style="cursor:grab;" onclick="openPtaskModal('${t.id}')">
             <div class="trow-check${done?' on':''}"></div>
             <div class="trow-info" style="flex:1;min-width:0;">
               <div class="trow-title${done?' done':''}">${t.title}</div>
@@ -4499,6 +4604,19 @@ async function loadPtaskList() {
           </div>`;
         }).join('')
       : '<div style="padding:14px 16px;font-size:12px;color:var(--faint);">프로젝트 업무가 없어요</div>';
+    // 드래그로 순서 변경
+    if (list.length) {
+      initDragList('ptask-list', '.trow', async (ids) => {
+        const s2 = await getAppState();
+        s2.proj_tasks = s2.proj_tasks || [];
+        const map = Object.fromEntries(s2.proj_tasks.map(t => [t.id, t]));
+        // 드래그된 항목들 순서 반영 (나머지는 뒤에)
+        const dragged = ids.map(id => map[id]).filter(Boolean);
+        const rest = s2.proj_tasks.filter(t => !ids.includes(t.id));
+        s2.proj_tasks = [...dragged, ...rest];
+        await setAppState(s2);
+      });
+    }
   } catch(e) { console.error('loadPtaskList',e); }
 }
 
@@ -4820,18 +4938,38 @@ async function loadProjects() {
     // selectedProjId 있으면 해당 프로젝트만, 없으면 전체
     const showProjs = selectedProjId ? projs.filter(p => p.id === selectedProjId) : projs;
 
+    // 렌더 완료 후 각 프로젝트 업무목록 드래그 초기화
+    const _projDragInit = (projs_) => {
+      projs_.forEach(p => {
+        const cid = `proj-tasks-${p.id}`;
+        const ptasks_ = allPtasks.filter(t => t.proj_id === p.id);
+        if (ptasks_.length < 2) return;
+        initDragList(cid, '.proj-ptrow', async (ids) => {
+          const s2 = await getAppState();
+          s2.proj_tasks = s2.proj_tasks || [];
+          const map = Object.fromEntries(s2.proj_tasks.map(t => [t.id, t]));
+          const dragged_ = ids.map(id => map[id]).filter(Boolean);
+          const rest = s2.proj_tasks.filter(t => t.proj_id !== p.id);
+          const others = s2.proj_tasks.filter(t => t.proj_id === p.id && !ids.includes(t.id));
+          s2.proj_tasks = [...rest, ...dragged_, ...others];
+          await setAppState(s2);
+        });
+      });
+    };
+
     cards.innerHTML = showProjs.map(p => {
       const ptasks = allPtasks.filter(t => t.proj_id === p.id);
       const doneCount = ptasks.filter(t => t.status === 'done').length;
       // 진행률 자동 계산
       const progress = ptasks.length ? Math.round((doneCount / ptasks.length) * 100) : 0;
 
+      const projTaskContainerId = `proj-tasks-${p.id}`;
       const tasksHtml = ptasks.length
-        ? ptasks.map(t => {
+        ? `<div id="${projTaskContainerId}">`+ptasks.map(t => {
             const done = t.status === 'done';
             const m = MEMBERS.find(x => x.name === t.assignee);
             const st = { cls: stCls[t.status]||'sbadge-todo', lbl: stLbl[t.status]||'' };
-            return `<div class="proj-ptrow" onclick="openPtaskFromProj('${t.id}')">
+            return `<div class="proj-ptrow" data-id="${t.id}" style="cursor:grab;" onclick="openPtaskFromProj('${t.id}')">
               <div class="proj-ptrow-check${done?' on':''}"></div>
               <div class="proj-ptrow-info">
                 <div class="proj-ptrow-title${done?' done':''}">${t.title}</div>
@@ -4843,7 +4981,7 @@ async function loadProjects() {
               </div>
               ${m ? `<div class="proj-ptrow-av" title="${t.assignee}">${m.av}</div>` : ''}
             </div>`;
-          }).join('')
+          }).join('')+`</div>`
         : '<div style="padding:10px 20px;font-size:12px;color:var(--faint);">등록된 업무가 없어요</div>';
 
       return `<div class="proj-card" style="width:calc(50% - 7px);">
@@ -4866,6 +5004,9 @@ async function loadProjects() {
         <div class="proj-add-btn" onclick="openPtaskForProj('${p.id}')">+ 업무 추가</div>
       </div>`;
     }).join('');
+
+    // 드래그 초기화 (DOM 렌더 후)
+    setTimeout(() => _projDragInit(showProjs), 0);
 
     if (detail) detail.style.display = 'none';
 
