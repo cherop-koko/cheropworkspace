@@ -3649,7 +3649,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v3.9.6</div>
+<div id="version">v3.9.7</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -3713,21 +3713,44 @@ async function setAppState(state) {
   if (error) throw error;
 }
 
-/* app_state에서 base64 imgData 제거 (Storage URL 전환 후 정리용) */
-async function cleanupImgDataFromAppState() {
+/* app_state의 기존 content_posts → content_posts 테이블로 마이그레이션 */
+async function migrateContentPostsToTable() {
   const s = await getAppState();
-  let changed = false;
-  (s.content_posts || []).forEach(p => {
-    if (p.imgData && p.imgUrl) {
-      delete p.imgData; // Storage URL이 있으면 base64 제거
-      changed = true;
-    }
-  });
-  if (changed) {
+  const legacy = s.content_posts || [];
+  if (!legacy.length) { toast('마이그레이션할 데이터가 없어요'); return; }
+  let done = 0;
+  for (const p of legacy) {
+    const row = {
+      id:          p.id,
+      post_date:   p.date || p.post_date,
+      status:      p.status,
+      type:        p.type,
+      topic:       p.topic,
+      img_url:     p.imgUrl || p.img_url || null,
+      img_data:    p.imgData || p.img_data || null,
+      title:       p.title,
+      caption:     p.caption,
+      memo:        p.memo,
+      upload_time: p.uploadTime || p.upload_time,
+      bgm:         p.bgm,
+      link:        p.link,
+      stats:       p.stats || {},
+      updated_at:  new Date().toISOString(),
+    };
+    const { error } = await db.from('content_posts').upsert([row], { onConflict: 'id' });
+    if (!error) done++;
+  }
+  // 마이그레이션 성공 후 app_state에서 content_posts 제거
+  if (done === legacy.length) {
+    delete s.content_posts;
     await setAppState(s);
-    toast('이미지 데이터 정리 완료 ✓');
+    toast(`마이그레이션 완료 ✓ ${done}개 게시물 이전됨`);
+  } else {
+    toast(`일부 실패 (${done}/${legacy.length}개 완료)`);
   }
 }
+// 콘솔에서 바로 실행 가능하도록 전역 노출
+window.migrateContentPostsToTable = migrateContentPostsToTable;
 
 /* ═══════════════════════════════════════
    ROUTER (hash 기반)
@@ -9551,8 +9574,15 @@ function renderContentTypeLegend() {
 
 /* ── 캘린더 ── */
 async function loadContentCal() {
-  const s      = await getAppState();
-  const posts  = s.content_posts||[];
+  const { data: posts_raw } = await db.from('content_posts').select('*');
+  // DB 컬럼명 → 기존 앱 필드명 정규화
+  const posts = (posts_raw || []).map(p => ({
+    ...p,
+    date:       p.post_date,
+    imgData:    p.img_data,
+    imgUrl:     p.img_url,
+    uploadTime: p.upload_time,
+  }));
   const now    = new Date();
   const d      = new Date(now.getFullYear(), now.getMonth()+contentCalOffset, 1);
   const year   = d.getFullYear(), month = d.getMonth();
@@ -9643,13 +9673,27 @@ function contentCalMonth(dir) {
 async function openContentModal(date, id='') {
   contentEditDate = date;
   contentEditId   = id||null;
-  const s    = await getAppState();
-  const post = id ? (s.content_posts||[]).find(p=>p.id===id) : (s.content_posts||[]).find(p=>p.date===date);
+  let post = null;
+  if (id) {
+    const { data } = await db.from('content_posts').select('*').eq('id', id).maybeSingle();
+    post = data;
+  } else {
+    const { data } = await db.from('content_posts').select('*').eq('post_date', date).maybeSingle();
+    post = data;
+  }
 
   // 날짜 헤더
   const d = new Date(date);
   $('content-modal-date').textContent = `${d.getMonth()+1}월 ${d.getDate()}일`;
   if(post) contentEditId = post.id;
+
+  // DB 컬럼명 → 앱 필드명 정규화
+  if (post) {
+    post.date      = post.date      || post.post_date;
+    post.imgData   = post.imgData   || post.img_data;
+    post.imgUrl    = post.imgUrl    || post.img_url;
+    post.uploadTime= post.uploadTime|| post.upload_time;
+  }
 
   // 상태 초기화
   contentStatus = post?.status||'draft';
@@ -9784,65 +9828,58 @@ async function saveContent() {
   if(btn && btn.disabled) return;
   if(btn){ btn.disabled=true; btn.textContent='저장 중...'; }
   try {
-    const s = await getAppState();
-    s.content_posts = s.content_posts || [];
+    const postId = contentEditId || `cp-${Date.now()}`;
 
-    // 이미지 처리: 새 파일이 선택된 경우 Storage에 업로드
+    // 이미지: 새 파일 선택 시 Storage 업로드
     let imgUrl = null;
     const imgFile = window._contentImgFile;
     if (imgFile) {
       if(btn) btn.textContent = '이미지 업로드 중...';
-      const postId  = contentEditId || `cp-${Date.now()}`;
-      const ext     = imgFile.name.split('.').pop() || 'jpg';
-      const path    = `content/${postId}.${ext}`;
+      const ext  = imgFile.name.split('.').pop() || 'jpg';
+      const path = `content/${postId}.${ext}`;
       const { error: upErr } = await db.storage
         .from('content-images')
         .upload(path, imgFile, { upsert: true, contentType: imgFile.type });
       if (upErr) throw new Error('이미지 업로드 실패: ' + upErr.message);
-      const { data: urlData } = db.storage.from('content-images').getPublicUrl(path);
-      imgUrl = urlData.publicUrl;
-      window._contentImgFile = null; // 사용 후 초기화
+      imgUrl = db.storage.from('content-images').getPublicUrl(path).data.publicUrl;
+      window._contentImgFile = null;
     }
 
-    const data = {
-      date:       contentEditDate,
-      status:     contentStatus,
-      type:       contentType,
-      topic:      contentTopic,
-      title:      $('content-title').value.trim(),
-      caption:    $('content-caption').value.trim(),
-      memo:       $('content-memo').value.trim(),
-      uploadTime: $('content-upload-time').value,
-      bgm:        $('content-bgm').value.trim(),
-      link:       $('content-link').value.trim(),
+    // 기존 게시물 img_url 유지 (새 업로드 없으면 그대로)
+    if (!imgUrl && contentEditId) {
+      const { data: existing } = await db.from('content_posts').select('img_url,img_data').eq('id', contentEditId).maybeSingle();
+      imgUrl = existing?.img_url || null;
+    }
+
+    if(btn) btn.textContent = '저장 중...';
+
+    const row = {
+      id:          postId,
+      post_date:   contentEditDate,
+      status:      contentStatus,
+      type:        contentType,
+      topic:       contentTopic,
+      img_url:     imgUrl,
+      img_data:    imgUrl ? null : (contentImgData || null), // imgUrl 있으면 base64 제거
+      title:       $('content-title').value.trim(),
+      caption:     $('content-caption').value.trim(),
+      memo:        $('content-memo').value.trim(),
+      upload_time: $('content-upload-time').value,
+      bgm:         $('content-bgm').value.trim(),
+      link:        $('content-link').value.trim(),
       stats: {
-        views:    parseInt($('content-stat-views').value)  || 0,
-        likes:    parseInt($('content-stat-likes').value)  || 0,
-        saves:    parseInt($('content-stat-saves').value)  || 0,
+        views:    parseInt($('content-stat-views').value)    || 0,
+        likes:    parseInt($('content-stat-likes').value)    || 0,
+        saves:    parseInt($('content-stat-saves').value)    || 0,
         comments: parseInt($('content-stat-comments').value) || 0,
-        shares:   parseInt($('content-stat-shares').value) || 0,
+        shares:   parseInt($('content-stat-shares').value)   || 0,
       },
+      updated_at: new Date().toISOString(),
     };
-    // imgUrl이 새로 업로드된 경우만 덮어쓰기, 아니면 기존 값 유지
-    if (imgUrl) data.imgUrl = imgUrl;
 
-    if (btn) btn.textContent = '저장 중...';
-    if (contentEditId) {
-      const idx = s.content_posts.findIndex(p => p.id === contentEditId);
-      if (idx >= 0) {
-        // 기존 base64 imgData 제거 (Storage URL로 전환)
-        const existing = { ...s.content_posts[idx], ...data };
-        if (imgUrl) delete existing.imgData;
-        s.content_posts[idx] = existing;
-      } else {
-        s.content_posts.push({ id: contentEditId, ...data });
-      }
-    } else {
-      const newId = `cp-${Date.now()}`;
-      s.content_posts.push({ id: newId, ...data });
-    }
+    const { error } = await db.from('content_posts').upsert([row], { onConflict: 'id' });
+    if (error) throw error;
 
-    await setAppState(s);
     toast('저장됐어요 ✓');
     closeModal('content-modal');
     loadContentCal();
@@ -9857,9 +9894,8 @@ async function saveContent() {
 async function deleteContent() {
   if(!contentEditId) return;
   const ok = await customConfirm('이 날의 콘텐츠를 삭제할까요?'); if(!ok) return;
-  const s = await getAppState();
-  s.content_posts = (s.content_posts||[]).filter(p=>p.id!==contentEditId);
-  await setAppState(s);
+  const { error } = await db.from('content_posts').delete().eq('id', contentEditId);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
   toast('삭제됐어요');
   closeModal('content-modal');
   loadContentCal();
@@ -9913,9 +9949,9 @@ function fmtMetric(val, metric) {
 }
 
 async function loadContentStats() {
-  const s    = await getAppState();
   const from = dateStr(new Date(Date.now()-contentStatPeriod*86400000));
-  const allPub = (s.content_posts||[]).filter(p=>p.status==='published' && p.date>=from);
+  const { data: raw } = await db.from('content_posts').select('*').eq('status','published').gte('post_date', from);
+  const allPub = (raw||[]).map(p => ({ ...p, date: p.post_date, imgData: p.img_data, imgUrl: p.img_url }));
   const posts  = allPub.filter(p=>contentStatType==='all'||p.type===contentStatType);
 
   // 요약 카드
@@ -9952,8 +9988,8 @@ async function loadContentStats() {
     const saveRate = (p.stats?.views>0?(p.stats?.saves||0)/p.stats.views*100:0).toFixed(2);
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
       <div style="font-size:12px;font-weight:500;color:${i<3?'var(--amber)':'var(--light)'};width:16px;text-align:center;">${i+1}</div>
-      ${p.imgData
-        ? `<div style="width:38px;height:38px;border-radius:6px;overflow:hidden;flex-shrink:0;"><img src="${p.imgData}" style="width:100%;height:100%;object-fit:cover;"></div>`
+      ${(p.imgData||p.imgUrl)
+        ? `<div style="width:38px;height:38px;border-radius:6px;overflow:hidden;flex-shrink:0;"><img src="${p.imgData||p.imgUrl}" style="width:100%;height:100%;object-fit:cover;"></div>`
         : `<div style="width:38px;height:38px;border-radius:6px;background:${tc?.color||'var(--surface2)'}22;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;color:${tc?.color||'var(--muted)'};">${tc?.label?.slice(0,2)||'—'}</div>`}
       <div style="flex:1;min-width:0;">
         <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.title||'(제목없음)'}</div>
