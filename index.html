@@ -10022,6 +10022,13 @@ function contentSetTab(tab, el) {
 
 /* ── 타입 범례 ── */
 /* ── 인스타 피드 뷰 ── */
+const _defaultHighlights = () => [
+  { id:'h1', label:'soon',      imgEmoji:'🐾' },
+  { id:'h2', label:'event',     imgEmoji:'🛍' },
+  { id:'h3', label:'spotlight', imgEmoji:'📦' },
+  { id:'h4', label:'offline',   imgEmoji:'💌' },
+  { id:'h5', label:'global',    imgEmoji:'🌍' },
+];
 let instaSelectedId = null;
 let instaFeedOrder  = []; // post id 순서 (드래그로 변경)
 
@@ -10494,14 +10501,6 @@ async function saveInstaProfilePic() {
 const HL_EMOJIS = ['🐾','🛍','📦','💌','🌍','⭐','🎀','🌸','🐶','🐰','🧸','💝','🎁','📸','🎨','✨','🔮','🌙','🍀','🦋'];
 let _hlEditId  = null;
 let _hlImgData = null;
-
-const _defaultHighlights = () => [
-  { id:'h1', label:'soon',      imgEmoji:'🐾' },
-  { id:'h2', label:'event',     imgEmoji:'🛍' },
-  { id:'h3', label:'spotlight', imgEmoji:'📦' },
-  { id:'h4', label:'offline',   imgEmoji:'💌' },
-  { id:'h5', label:'global',    imgEmoji:'🌍' },
-];
 
 async function openInstaHighlightEdit(id) {
   const s = await getAppState();
