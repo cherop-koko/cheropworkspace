@@ -521,12 +521,6 @@ a { text-decoration:none; color:inherit; }
 .insta-feed-col-wrap::-webkit-scrollbar { display:none; }
 .insta-feed-col-wrap { -webkit-overflow-scrolling:touch; }
 .insta-feed-fade-wrap { position:relative; }
-.insta-feed-fade-wrap::after {
-  content:''; position:sticky; bottom:0; left:0; right:0;
-  display:block; height:48px; margin-top:-48px;
-  background:linear-gradient(to bottom, transparent, rgba(255,255,255,.95));
-  pointer-events:none; z-index:2;
-}
 
 /* 프로젝트 행 */
 .prow { padding:12px 16px; border-bottom:0.5px solid var(--surface2); cursor:pointer; transition:background .1s; }
@@ -2783,12 +2777,17 @@ a { text-decoration:none; color:inherit; }
 <div class="modal-overlay" id="content-modal" onclick="if(event.target===this)closeModal('content-modal')">
   <div class="modal" style="max-width:700px;width:95vw;" onclick="event.stopPropagation()">
     <div class="modal-bar">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div class="modal-kind" id="content-modal-date">콘텐츠</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="modal-kind">날짜</div>
+        <input type="date" id="content-modal-date-input" class="prop-inp" style="font-size:13px;padding:4px 8px;height:32px;width:140px;">
         <div style="display:flex;gap:5px;" id="content-status-pills">
           <div class="inv-pill" onclick="contentSetStatus('draft',this)">기획중</div>
           <div class="inv-pill" onclick="contentSetStatus('scheduled',this)">예약</div>
           <div class="inv-pill" onclick="contentSetStatus('published',this)">업로드 완료</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:4px;">
+          <span style="font-size:12px;color:var(--light);">보드</span>
+          <select id="content-board-select" class="prop-inp" style="font-size:12px;padding:4px 8px;height:32px;min-width:100px;"></select>
         </div>
       </div>
       <div class="modal-bar-right">
@@ -3882,7 +3881,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.1.0</div>
+<div id="version">v4.1.1</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5661,7 +5660,8 @@ async function runImport() {
               product_id: r.id,
               channel:    ch,
               stock:      r[key],
-              updated_at: new Date().toISOString(),
+              board_id:    selectedBoardId || null,
+      updated_at: new Date().toISOString(),
             });
           }
         }
@@ -10705,8 +10705,10 @@ async function openContentModalNew(date, refUrl) {
   // 텍스트 필드 초기화
   ['content-title','content-caption','content-memo','content-bgm','content-link'].forEach(id => { const el=$(id); if(el) el.value=''; });
   ['content-upload-time','content-stat-views','content-stat-likes','content-stat-saves','content-stat-comments','content-stat-shares'].forEach(id => { const el=$(id); if(el) el.value=''; });
-  $('content-modal-date').textContent = (()=>{ const d=new Date(date); return `${d.getMonth()+1}월 ${d.getDate()}일`; })();
-  $('content-modal-del').style.display = 'none'; // 새 게시물이므로 삭제 버튼 없음
+  const dateInputNew = $('content-modal-date-input');
+  if (dateInputNew) dateInputNew.value = date || dateStr();
+  await _renderContentBoardSelect(currentBoardId !== 'all' ? currentBoardId : null);
+  $('content-modal-del').style.display = 'none';
   updateSaveRate();
   updateContentSections();
   $('content-modal').classList.add('on');
@@ -10895,10 +10897,14 @@ async function openContentModal(date, id='') {
     post = data;
   }
 
-  // 날짜 헤더
-  const d = new Date(date);
-  $('content-modal-date').textContent = `${d.getMonth()+1}월 ${d.getDate()}일`;
   if(post) contentEditId = post.id;
+
+  // 날짜 input 세팅 (미래 날짜 포함 자유 선택)
+  const dateInput = $('content-modal-date-input');
+  if (dateInput) dateInput.value = date || dateStr();
+
+  // 보드 select 세팅
+  await _renderContentBoardSelect(post?.board_id || null);
 
   // DB 컬럼명 → 앱 필드명 정규화
   if (post) {
@@ -11036,6 +11042,15 @@ function openContentLink() {
   if(url) window.open(url, '_blank');
 }
 
+/* 콘텐츠 모달용 보드 select 렌더 */
+async function _renderContentBoardSelect(selectedBoardId) {
+  const sel = $('content-board-select'); if (!sel) return;
+  const s = await getAppState();
+  const boards = s.instaBoards || [];
+  sel.innerHTML = `<option value="">현재 피드 (보드 없음)</option>` +
+    boards.map(b => `<option value="${b.id}" ${b.id === selectedBoardId ? 'selected' : ''}>${b.name}</option>`).join('');
+}
+
 async function saveContent() {
   const btn = $('content-save-btn');
   if(btn && btn.disabled) return;
@@ -11071,9 +11086,16 @@ async function saveContent() {
 
     if(btn) btn.textContent = '저장 중...';
 
+    // 날짜: input에서 직접 읽기 (미래 날짜 포함)
+    const selectedDate = $('content-modal-date-input')?.value || contentEditDate || dateStr();
+    contentEditDate = selectedDate;
+
+    // 선택된 보드 id
+    const selectedBoardId = $('content-board-select')?.value || null;
+
     const row = {
       id:          postId,
-      post_date:   contentEditDate,
+      post_date:   selectedDate,
       status:      contentStatus,
       type:        contentType,
       topic:       contentTopic,
@@ -11097,6 +11119,17 @@ async function saveContent() {
 
     const { error } = await db.from('content_posts').upsert([row], { onConflict: 'id' });
     if (error) throw error;
+
+    // 보드 선택 시 해당 보드 feedOrder에 게시물 추가
+    if (selectedBoardId) {
+      const s2 = await getAppState();
+      s2.instaBoards = (s2.instaBoards || []).map(b => {
+        if (b.id !== selectedBoardId) return b;
+        const order = b.feedOrder || [];
+        return { ...b, feedOrder: order.includes(postId) ? order : [postId, ...order] };
+      });
+      await setAppState(s2);
+    }
 
     toast('저장됐어요 ✓');
     closeModal('content-modal');
