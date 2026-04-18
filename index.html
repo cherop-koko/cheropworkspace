@@ -596,6 +596,11 @@ a { text-decoration:none; color:inherit; }
   justify-content:center; padding:48px 24px;
 }
 .modal-overlay.on { display:flex; }
+.modal-box {
+  background:var(--surface); border-radius:var(--rlg); border:0.5px solid var(--border);
+  width:100%; max-height:calc(100vh - 80px); overflow-y:auto;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);
+}
 .modal {
   background:var(--surface); border-radius:16px; border:0.5px solid var(--border);
   width:100%; max-width:700px; max-height:calc(100vh - 96px);
@@ -1379,20 +1384,22 @@ a { text-decoration:none; color:inherit; }
           </div>
         </div>
 
-        <!-- 피드 탭 -->
+        <!-- 피드 탭 : 인스타계정 | 피드상세 | 핀터레스트 3열 -->
         <div id="content-tab-calendar">
-          <div style="display:flex;gap:20px;align-items:flex-start;">
+          <!-- 컬러 보드 탭바 -->
+          <div style="display:flex;align-items:center;gap:0;margin-bottom:16px;border-bottom:0.5px solid var(--border);overflow-x:auto;scrollbar-width:none;">
+            <div id="board-tab-list" style="display:flex;gap:0;flex-shrink:0;"></div>
+            <button onclick="openBoardAddModal()" style="flex-shrink:0;padding:8px 14px;font-size:12px;color:var(--light);background:none;border:none;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;"
+              onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--light)'">
+              + 보드 추가
+            </button>
+          </div>
+          <div style="display:flex;gap:16px;align-items:flex-start;">
 
-            <!-- 왼쪽: 인스타 피드 (모바일 비율 반영) -->
-            <div style="width:375px;flex-shrink:0;border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;background:#fff;max-height:calc(100vh - 160px);overflow-y:auto;">
-
-              <!-- 프로필 영역 -->
+            <!-- 1열: 인스타 계정 피드 -->
+            <div id="insta-feed-column" style="width:340px;flex-shrink:0;border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;background:#fff;max-height:calc(100vh - 160px);overflow-y:auto;">
               <div style="padding:16px 16px 0;" id="insta-profile-area"></div>
-
-              <!-- 하이라이트 -->
-              <div style="display:flex;gap:12px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;" id="insta-highlights"></div>
-
-              <!-- 피드/릴스 탭 바 (인스타 스타일) -->
+              <div style="display:flex;gap:12px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;" id="insta-highlights"></div>
               <div style="display:flex;border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border);">
                 <div style="flex:1;padding:10px 0;text-align:center;border-bottom:1.5px solid #1c1e26;cursor:pointer;">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="#1c1e26"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -1401,63 +1408,58 @@ a { text-decoration:none; color:inherit; }
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5"><polygon points="5,3 19,12 5,21"/></svg>
                 </div>
               </div>
-
-              <!-- 3열 피드 그리드 (4:5 비율) -->
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);" id="insta-feed-grid"></div>
             </div>
 
-            <!-- 오른쪽: 게시물 상세 / 레퍼런스 -->
-            <div style="flex:1;min-width:0;max-width:480px;display:flex;flex-direction:column;gap:12px;" id="insta-detail-panel">
+            <!-- 2열: 피드 상세보기 -->
+            <div style="width:340px;flex-shrink:0;" id="insta-detail-panel">
+              <div id="insta-post-detail">
+                <div style="border:0.5px solid var(--border);border-radius:var(--rlg);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:480px;gap:10px;background:var(--surface);">
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="4" width="28" height="28" rx="6" stroke="#ccc" stroke-width="1.5"/><circle cx="13" cy="14" r="3" stroke="#ccc" stroke-width="1.5"/><path d="M4 26l8-7 6 5 5-4 9 8" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                  <div style="font-size:13px;color:var(--faint);">피드를 선택하면 표시돼요</div>
+                </div>
+              </div>
+            </div>
 
-              <!-- 핀터레스트 레퍼런스 패널 (항상 표시) -->
-              <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;" id="pinterest-panel">
-                <!-- 헤더 -->
-                <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#e60023"><path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
-                  <span style="font-size:13px;font-weight:500;color:var(--text);">Pinterest 레퍼런스</span>
-                  <a href="https://pinterest.com" target="_blank" style="margin-left:auto;font-size:11px;color:var(--light);text-decoration:none;display:flex;align-items:center;gap:3px;padding:4px 8px;border:0.5px solid var(--border);border-radius:20px;"
-                    onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-                    핀터레스트 열기
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8L8 2M8 2H4M8 2v4"/></svg>
-                  </a>
+            <!-- 3열: 핀터레스트 레퍼런스 -->
+            <div style="flex:1;min-width:260px;max-width:340px;border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;background:var(--surface);" id="pinterest-panel">
+              <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#e60023"><path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
+                <span style="font-size:13px;font-weight:500;color:var(--text);">Pinterest</span>
+                <a href="https://pinterest.com" target="_blank"
+                  style="margin-left:auto;font-size:11px;color:var(--light);text-decoration:none;display:flex;align-items:center;gap:3px;padding:4px 8px;border:0.5px solid var(--border);border-radius:20px;"
+                  onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+                  열기 <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8L8 2M8 2H4M8 2v4"/></svg>
+                </a>
+              </div>
+              <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);">
+                <div style="font-size:11px;color:var(--light);margin-bottom:6px;">이미지 URL 붙여넣기</div>
+                <div style="display:flex;gap:6px;">
+                  <input id="ref-url-input" class="prop-inp" placeholder="https://i.pinimg.com/..." style="flex:1;font-size:12px;"
+                    onpaste="setTimeout(()=>previewRefUrl(),0)" oninput="previewRefUrl()">
+                  <button class="f-btn f-btn-cancel" style="font-size:11px;padding:0 10px;flex-shrink:0;" onclick="clearRefUrl()">✕</button>
                 </div>
-                <!-- URL 입력 -->
-                <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);">
-                  <div style="font-size:11px;color:var(--light);margin-bottom:6px;">이미지 URL 붙여넣기</div>
+                <div style="font-size:10px;color:var(--faint);margin-top:5px;">이미지 위 우클릭 → '이미지 주소 복사' 후 붙여넣기</div>
+              </div>
+              <div style="padding:12px 14px;">
+                <div style="aspect-ratio:4/5;background:var(--surface2);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;" id="ref-preview-placeholder">
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="4" y="4" width="24" height="24" rx="4" stroke="#ccc" stroke-width="1.5"/><circle cx="11" cy="12" r="2.5" stroke="#ccc" stroke-width="1.5"/><path d="M4 22l7-6 5 4 4-3 8 7" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                  <div style="font-size:12px;color:var(--faint);">이미지가 여기에 표시돼요</div>
+                </div>
+                <div id="ref-preview-img-wrap" style="display:none;">
+                  <div style="aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;margin-bottom:10px;">
+                    <img id="ref-preview-img" src="" style="width:100%;height:100%;object-fit:cover;display:none;" onerror="refImgError()">
+                  </div>
                   <div style="display:flex;gap:6px;">
-                    <input id="ref-url-input" class="prop-inp" placeholder="https://i.pinimg.com/..." style="flex:1;font-size:12px;"
-                      onpaste="setTimeout(()=>previewRefUrl(),0)"
-                      oninput="previewRefUrl()">
-                    <button class="f-btn f-btn-cancel" style="font-size:11px;padding:0 10px;flex-shrink:0;" onclick="clearRefUrl()">✕</button>
-                  </div>
-                  <div style="font-size:10px;color:var(--faint);margin-top:5px;">핀터레스트 이미지 위 우클릭 → '이미지 주소 복사' 후 붙여넣기</div>
-                </div>
-                <!-- 이미지 미리보기 영역 -->
-                <div id="ref-preview-area" style="padding:12px 14px;">
-                  <div style="aspect-ratio:4/5;background:var(--surface2);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;" id="ref-preview-placeholder">
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="4" y="4" width="24" height="24" rx="4" stroke="#ccc" stroke-width="1.5"/><circle cx="11" cy="12" r="2.5" stroke="#ccc" stroke-width="1.5"/><path d="M4 22l7-6 5 4 4-3 8 7" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                    <div style="font-size:12px;color:var(--faint);">이미지가 여기에 표시돼요</div>
-                  </div>
-                  <div id="ref-preview-img-wrap" style="display:none;">
-                    <div style="aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;margin-bottom:10px;">
-                      <img id="ref-preview-img" src="" style="width:100%;height:100%;object-fit:cover;display:none;" onerror="refImgError()">
-                    </div>
-                    <div style="display:flex;gap:6px;">
-                      <button class="f-btn f-btn-cancel" style="flex:1;font-size:12px;" onclick="clearRefUrl()">취소</button>
-                      <button class="f-btn f-btn-save" style="flex:1;font-size:12px;" onclick="useRefAsContent()">이 이미지로 새 게시물 만들기 →</button>
-                    </div>
+                    <button class="f-btn f-btn-cancel" style="flex:1;font-size:12px;" onclick="clearRefUrl()">취소</button>
+                    <button class="f-btn f-btn-save" style="flex:1;font-size:12px;" onclick="useRefAsContent()">새 게시물로 가져오기 →</button>
                   </div>
                 </div>
               </div>
-
-              <!-- 게시물 상세 (피드 클릭 시 표시) -->
-              <div id="insta-post-detail" style="display:none;"></div>
-
             </div>
 
           </div>
         </div>
-
         <!-- 실적 탭 -->
         <div id="content-tab-stats" style="display:none;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
@@ -3610,6 +3612,41 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ═══ 컬러 보드 추가/편집 모달 ═══ -->
+<div class="modal-overlay" id="board-modal" onclick="if(event.target===this)closeModal('board-modal')">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-bar">
+      <div class="modal-kind" id="board-modal-title">보드 추가</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('board-modal')">✕</div></div>
+    </div>
+    <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">보드 이름</div>
+        <input id="board-name-input" class="prop-inp" placeholder="예: 핑크 시즌, 여름 컬렉션" style="width:100%;">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:8px;">대표 컬러 선택</div>
+        <!-- 프리셋 컬러 -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;" id="board-color-presets"></div>
+        <!-- 직접 선택 -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--light);">
+            <div id="board-color-custom-preview" style="width:26px;height:26px;border-radius:50%;background:#888;border:2px solid transparent;"></div>
+            직접 선택
+            <input type="color" id="board-color-custom-input" style="opacity:0;position:absolute;width:0;height:0;" onchange="selectBoardColor(this.value,null)">
+          </label>
+          <span id="board-color-value" style="font-size:11px;color:var(--faint);"></span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="board-del-btn" class="f-btn f-btn-cancel" style="flex:1;color:var(--red);display:none;" onclick="deleteBoard()">삭제</button>
+        <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('board-modal')">취소</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveBoard()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 인스타 프로필 편집 모달 ═══ -->
 <div class="modal-overlay" id="insta-profile-modal" onclick="if(event.target===this)closeModal('insta-profile-modal')">
   <div class="modal-box" style="max-width:400px;">
@@ -3836,7 +3873,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.0.5</div>
+<div id="version">v4.0.8</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -10022,6 +10059,127 @@ function contentSetTab(tab, el) {
 
 /* ── 타입 범례 ── */
 /* ── 인스타 피드 뷰 ── */
+/* ════════════════════════════════
+   컬러 보드 시스템
+   board: { id, name, color, feedOrder: [] }
+   currentBoardId: null → '현재 피드' / id → 해당 보드
+════════════════════════════════ */
+const BOARD_COLOR_PRESETS = [
+  '#F4B8C1','#FADADD','#FAC3B0','#FAE0B0',
+  '#B8D8F4','#B8F4D8','#D4B8F4','#F4F4B8',
+  '#1C1E26','#888780','#D3D1C7','#FFFFFF',
+];
+let currentBoardId = 'all'; // 'all' | boardId
+let _boardEditId   = null;
+let _boardSelColor = '#F4B8C1';
+
+function renderBoardTabs(boards) {
+  const list = $('board-tab-list'); if (!list) return;
+  const tabs = [{ id:'all', name:'현재 피드', color: null }].concat(boards || []);
+  list.innerHTML = tabs.map(b => {
+    const isActive = currentBoardId === b.id;
+    const dotStyle = b.color
+      ? `display:inline-block;width:10px;height:10px;border-radius:50%;background:${b.color};margin-right:5px;flex-shrink:0;`
+      : '';
+    const activeStyle = isActive
+      ? `border-bottom:2px solid ${b.color || 'var(--text)'};color:var(--text);font-weight:500;`
+      : 'border-bottom:2px solid transparent;color:var(--light);';
+    return `<div onclick="switchBoard('${b.id}')"
+      style="padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;${activeStyle}transition:color .15s;"
+      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color=''">
+      ${b.color ? `<span style="${dotStyle}"></span>` : ''}
+      ${b.name}
+      ${b.id !== 'all' ? `<span onclick="event.stopPropagation();openBoardEditModal('${b.id}')" style="margin-left:4px;opacity:.35;font-size:11px;cursor:pointer;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.35'">···</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function switchBoard(boardId) {
+  currentBoardId = boardId;
+  instaSelectedId = null;
+  const postDetail = $('insta-post-detail');
+  if (postDetail) postDetail.innerHTML = `<div style="border:0.5px solid var(--border);border-radius:var(--rlg);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:480px;gap:10px;background:var(--surface);"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="4" width="28" height="28" rx="6" stroke="#ccc" stroke-width="1.5"/><circle cx="13" cy="14" r="3" stroke="#ccc" stroke-width="1.5"/><path d="M4 26l8-7 6 5 5-4 9 8" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/></svg><div style="font-size:13px;color:var(--faint);">피드를 선택하면 표시돼요</div></div>`;
+  await loadContentCal();
+}
+
+/* ── 보드 추가 모달 ── */
+function openBoardAddModal() {
+  _boardEditId   = null;
+  _boardSelColor = BOARD_COLOR_PRESETS[0];
+  $('board-modal-title').textContent = '보드 추가';
+  $('board-name-input').value = '';
+  $('board-del-btn').style.display = 'none';
+  renderBoardColorPresets(_boardSelColor);
+  $('board-color-value').textContent = _boardSelColor;
+  $('board-color-custom-preview').style.background = _boardSelColor;
+  $('board-modal').classList.add('on');
+  setTimeout(() => $('board-name-input')?.focus(), 80);
+}
+
+async function openBoardEditModal(boardId) {
+  const s      = await getAppState();
+  const boards = s.instaBoards || [];
+  const b      = boards.find(x => x.id === boardId); if (!b) return;
+  _boardEditId   = boardId;
+  _boardSelColor = b.color || BOARD_COLOR_PRESETS[0];
+  $('board-modal-title').textContent = '보드 편집';
+  $('board-name-input').value = b.name || '';
+  $('board-del-btn').style.display = '';
+  renderBoardColorPresets(_boardSelColor);
+  $('board-color-value').textContent = _boardSelColor;
+  $('board-color-custom-preview').style.background = _boardSelColor;
+  $('board-modal').classList.add('on');
+  setTimeout(() => $('board-name-input')?.focus(), 80);
+}
+
+function renderBoardColorPresets(selected) {
+  const wrap = $('board-color-presets'); if (!wrap) return;
+  wrap.innerHTML = BOARD_COLOR_PRESETS.map(c => `
+    <div onclick="selectBoardColor('${c}',this)"
+      style="width:26px;height:26px;border-radius:50%;background:${c};cursor:pointer;border:2.5px solid ${c===selected?'var(--text)':'transparent'};transition:border-color .1s;box-shadow:0 0 0 1px rgba(0,0,0,.08);"
+      data-color="${c}"></div>`).join('');
+}
+
+function selectBoardColor(hex, el) {
+  _boardSelColor = hex;
+  // 프리셋 선택 해제 후 해당 항목만 활성화
+  document.querySelectorAll('#board-color-presets div[data-color]').forEach(d => {
+    d.style.borderColor = d.dataset.color === hex ? 'var(--text)' : 'transparent';
+  });
+  $('board-color-value').textContent = hex;
+  $('board-color-custom-preview').style.background = hex;
+}
+
+async function saveBoard() {
+  const name = $('board-name-input')?.value.trim();
+  if (!name) { toast('보드 이름을 입력해주세요'); return; }
+  const s = await getAppState();
+  s.instaBoards = s.instaBoards || [];
+  if (_boardEditId) {
+    s.instaBoards = s.instaBoards.map(b => b.id === _boardEditId ? { ...b, name, color: _boardSelColor } : b);
+    toast('보드가 수정됐어요 ✓');
+  } else {
+    const newId = `board-${Date.now()}`;
+    s.instaBoards.push({ id: newId, name, color: _boardSelColor, feedOrder: [] });
+    toast(`"${name}" 보드가 추가됐어요 ✓`);
+  }
+  await setAppState(s);
+  closeModal('board-modal');
+  renderBoardTabs(s.instaBoards);
+}
+
+async function deleteBoard() {
+  if (!_boardEditId) return;
+  const ok = await customConfirm('이 보드를 삭제할까요? 보드의 피드 순서는 초기화됩니다.'); if (!ok) return;
+  const s = await getAppState();
+  s.instaBoards = (s.instaBoards || []).filter(b => b.id !== _boardEditId);
+  await setAppState(s);
+  if (currentBoardId === _boardEditId) currentBoardId = 'all';
+  closeModal('board-modal');
+  renderBoardTabs(s.instaBoards);
+  loadContentCal();
+}
+
 const _defaultHighlights = () => [
   { id:'h1', label:'soon',      imgEmoji:'🐾' },
   { id:'h2', label:'event',     imgEmoji:'🛍' },
@@ -10037,7 +10195,7 @@ function contentCalMonth(dir) {}       // 레거시 유지
 
 async function loadContentCal() {
   const { data: raw } = await db.from('content_posts').select('*').order('post_date', { ascending: false });
-  const posts = (raw || []).map(p => ({
+  const allPosts = (raw || []).map(p => ({
     ...p,
     date:       p.post_date,
     imgData:    p.img_data,
@@ -10045,18 +10203,39 @@ async function loadContentCal() {
     uploadTime: p.upload_time,
   }));
 
-  // 저장된 순서 불러오기 (없으면 날짜 역순 그대로)
-  const s = await getAppState();
-  const savedOrder = s.instaFeedOrder || [];
+  const s      = await getAppState();
+  const boards = s.instaBoards || [];
+
+  // 보드 탭 렌더 (항상)
+  renderBoardTabs(boards);
+
+  // 현재 보드에 따라 피드 결정
+  const isAll   = !currentBoardId || currentBoardId === 'all';
+  const curBoard = isAll ? null : boards.find(b => b.id === currentBoardId);
+
+  // 보드별 피드 순서 키 결정
+  const orderKey  = isAll ? 'instaFeedOrder' : `instaFeedOrder_${currentBoardId}`;
+  const savedOrder = s[orderKey] || [];
+
+  // 현재 피드: board_id 없는 게시물만 (보드 전용 게시물 제외)
+  // 보드 피드: 해당 보드 feedOrder에 있는 게시물만
+  const boardPostIds = curBoard?.feedOrder || [];
+  // 모든 보드에 속한 게시물 ID 집합
+  const allBoardPostIds = new Set(boards.flatMap(b => b.feedOrder || []));
+  const posts = isAll
+    ? allPosts.filter(p => !allBoardPostIds.has(p.id))  // 현재 피드: 보드에 없는 것만
+    : allPosts.filter(p => boardPostIds.includes(p.id)); // 보드 피드: 해당 보드 것만
+
   if (savedOrder.length) {
-    const map = Object.fromEntries(posts.map(p => [p.id, p]));
+    const map     = Object.fromEntries(posts.map(p => [p.id, p]));
     const ordered = savedOrder.map(id => map[id]).filter(Boolean);
-    const rest = posts.filter(p => !savedOrder.includes(p.id));
+    const rest    = posts.filter(p => !savedOrder.includes(p.id));
     instaFeedOrder = [...ordered.map(p => p.id), ...rest.map(p => p.id)];
   } else {
     instaFeedOrder = posts.map(p => p.id);
   }
-  window._instaPostsMap = Object.fromEntries(posts.map(p => [p.id, p]));
+  window._instaPostsMap   = Object.fromEntries(allPosts.map(p => [p.id, p]));
+  window._currentBoardColor = curBoard?.color || null;
 
   renderInstaProfile(s);
   renderInstaHighlights(s);
@@ -10075,10 +10254,9 @@ function renderInstaProfile(s) {
     <div style="display:flex;align-items:center;padding:10px 0 14px;gap:0;">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
       <div style="flex:1;text-align:center;">
-        <div style="font-size:15px;font-weight:700;color:#1c1e26;letter-spacing:-.2px;">cheropstore</div>
+        <div style="font-size:16px;font-weight:700;color:#1c1e26;letter-spacing:-.3px;">cheropstore</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:3px;margin-top:1px;">
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1L6.8 3.9H9.9L7.5 5.7L8.4 8.6L5.5 6.8L2.6 8.6L3.5 5.7L1.1 3.9H4.2Z" fill="#1c1e26"/></svg>
-          <span style="font-size:11px;color:#1c1e26;opacity:.6;">계정</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#3797EF"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
         </div>
       </div>
       <div style="display:flex;gap:6px;">
@@ -10166,6 +10344,10 @@ function renderInstaFeed() {
   const grid = $('insta-feed-grid'); if (!grid) return;
   const map  = window._instaPostsMap || {};
   let html   = '';
+  // 보드 컬러 배경 적용
+  const col = $('insta-feed-column');
+  const boardColor = window._currentBoardColor;
+  if (col) col.style.background = boardColor ? boardColor + '22' : '#fff';
 
   instaFeedOrder.forEach(id => {
     const p   = map[id]; if (!p) return;
@@ -10277,7 +10459,49 @@ function instaSelectPost(id) {
         <div style="flex:1;padding:7px;border-radius:6px;border:0.5px solid #dbdbdb;font-size:12px;color:#ed4956;cursor:pointer;text-align:center;font-weight:500;" onclick="instaDeletePost('${p.id}')">삭제</div>
         ${p.link ? `<div style="flex:1;padding:7px;border-radius:6px;background:#0095f6;font-size:12px;color:#fff;cursor:pointer;text-align:center;font-weight:500;" onclick="window.open('${p.link}','_blank')">인스타 열기</div>` : ''}
       </div>
+      ${currentBoardId === 'all' ? `
+      <div style="padding:0 12px 10px;">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px;">보드에 추가</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;" id="post-board-chips-${p.id}"></div>
+      </div>` : ''}
     </div>`;
+  // 전체 피드일 때 보드 칩 렌더
+  if (currentBoardId === 'all') {
+    setTimeout(() => renderPostBoardChips(id), 50);
+  }
+}
+
+async function renderPostBoardChips(postId) {
+  const wrap = $(`post-board-chips-${postId}`); if (!wrap) return;
+  const s = await getAppState();
+  const boards = s.instaBoards || [];
+  if (!boards.length) {
+    wrap.innerHTML = '<span style="font-size:11px;color:#ccc;">보드가 없어요 — 보드 추가 후 사용하세요</span>';
+    return;
+  }
+  wrap.innerHTML = boards.map(b => {
+    const inBoard = (b.feedOrder || []).includes(postId);
+    const bg = inBoard ? b.color : 'transparent';
+    const border = b.color;
+    const txtColor = inBoard ? '#fff' : b.color;
+    return `<div onclick="togglePostBoard('${postId}','${b.id}')"
+      style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1.5px solid ${border};background:${bg};color:${txtColor};transition:all .15s;"
+      onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
+      ${inBoard ? '✓ ' : '+ '}${b.name}
+    </div>`;
+  }).join('');
+}
+
+async function togglePostBoard(postId, boardId) {
+  const s = await getAppState();
+  s.instaBoards = (s.instaBoards || []).map(b => {
+    if (b.id !== boardId) return b;
+    const order = b.feedOrder || [];
+    const has = order.includes(postId);
+    return { ...b, feedOrder: has ? order.filter(id => id !== postId) : [postId, ...order] };
+  });
+  await setAppState(s);
+  renderPostBoardChips(postId);
 }
 
 async function instaDeletePost(id) {
@@ -10366,9 +10590,27 @@ function initInstaFeedDrag() {
 async function saveInstaFeedOrder() {
   try {
     const s = await getAppState();
-    s.instaFeedOrder = [...instaFeedOrder];
+    const key = (!currentBoardId || currentBoardId === 'all')
+      ? 'instaFeedOrder'
+      : `instaFeedOrder_${currentBoardId}`;
+    s[key] = [...instaFeedOrder];
     await setAppState(s);
   } catch(e) { console.error('feed order save:', e); }
+}
+
+/* ── 전체 피드에서 선택한 게시물을 특정 보드에 추가 ── */
+async function addPostToBoard(postId, boardId) {
+  const s = await getAppState();
+  s.instaBoards = s.instaBoards || [];
+  s.instaBoards = s.instaBoards.map(b => {
+    if (b.id !== boardId) return b;
+    const order = b.feedOrder || [];
+    if (order.includes(postId)) return b;
+    return { ...b, feedOrder: [postId, ...order] };
+  });
+  await setAppState(s);
+  toast('보드에 추가됐어요 ✓');
+  loadContentCal();
 }
 
 /* ── Pinterest 레퍼런스 패널 ── */
@@ -10417,16 +10659,45 @@ function clearRefUrl() {
 function useRefAsContent() {
   const url = ($('ref-url-input')?.value || '').trim();
   if (!url) return;
-  // 새 콘텐츠 모달 열고 이미지 URL 미리 세팅
-  openContentModal(dateStr());
-  // 모달 열린 후 이미지 적용 (DOM 렌더 후)
-  setTimeout(() => {
-    const preview = $('content-img-preview');
-    if (preview) preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
-    contentImgData = url; // URL을 imgData로 세팅 (저장 시 img_data로 저장됨)
-    window._contentImgFile = null;
-    window._contentRefUrl  = url; // 저장 시 img_url로 직접 쓰도록 표시
-  }, 100);
+  // contentEditId를 null로 강제 → 무조건 새 게시물 생성
+  contentEditId = null;
+  // 새 게시물 모달 열기 (id를 빈 문자열로 넘겨 기존 게시물 조회 방지)
+  openContentModalNew(dateStr(), url);
+}
+
+async function openContentModalNew(date, refUrl) {
+  contentEditDate = date;
+  contentEditId   = null; // 항상 새 게시물
+  contentStatus   = 'draft';
+  contentType     = '';
+  contentTopic    = '';
+  contentImgData  = refUrl || null;
+  window._contentImgFile = null;
+  window._contentRefUrl  = refUrl || null;
+
+  // 상태 pill 초기화
+  document.querySelectorAll('#content-status-pills .inv-pill').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('#content-status-pills .inv-pill')[0]?.classList.add('on');
+  document.querySelectorAll('#content-type-pills .inv-pill').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('#content-topic-pills .inv-pill').forEach(p => p.classList.remove('on'));
+  $('content-mongmo-topic-wrap').style.display = 'none';
+
+  // 이미지 미리보기
+  const imgPreview = $('content-img-preview');
+  if (imgPreview) {
+    imgPreview.innerHTML = refUrl
+      ? `<img src="${refUrl}" style="width:100%;height:100%;object-fit:cover;" alt="">`
+      : `<div style="font-size:12px;color:var(--muted);">클릭하여 이미지 선택</div><div style="font-size:11px;color:var(--faint);">캘린더 썸네일로 표시돼요</div>`;
+  }
+
+  // 텍스트 필드 초기화
+  ['content-title','content-caption','content-memo','content-bgm','content-link'].forEach(id => { const el=$(id); if(el) el.value=''; });
+  ['content-upload-time','content-stat-views','content-stat-likes','content-stat-saves','content-stat-comments','content-stat-shares'].forEach(id => { const el=$(id); if(el) el.value=''; });
+  $('content-modal-date').textContent = (()=>{ const d=new Date(date); return `${d.getMonth()+1}월 ${d.getDate()}일`; })();
+  $('content-modal-del').style.display = 'none'; // 새 게시물이므로 삭제 버튼 없음
+  updateSaveRate();
+  updateContentSections();
+  $('content-modal').classList.add('on');
 }
 
 /* ── 프로필 편집 모달 ── */
