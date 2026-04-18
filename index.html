@@ -3893,7 +3893,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.1.5</div>
+<div id="version">v4.1.6</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -11146,9 +11146,16 @@ function _renderContentBoardChipsUI(boards) {
       ${inBoard ? '✓ ' : ''}${b.name}
     </div>`;
   }).join('');
-  // 컬러보드에 배정되어 있으면 "현재 피드에도 추가" 버튼 표시
+  // 컬러보드에 배정되어 있으면 "현재 피드에도 추가" 버튼 표시 (항상 원래 버튼으로 리셋)
   const fw = $('content-feed-add-wrap');
-  if (fw) fw.style.display = _contentModalBoardIds.size > 0 ? '' : 'none';
+  if (fw) {
+    fw.innerHTML = `<button onclick="addCurrentPostToMainFeed()" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border2);background:transparent;font-size:11px;color:var(--light);cursor:pointer;font-family:var(--font);"
+      onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--text)'" onmouseout="this.style.color='var(--light)';this.style.borderColor='var(--border2)'">
+      + 현재 피드에도 추가
+    </button>
+    <div style="font-size:10px;color:var(--faint);margin-top:4px;">현재 피드에 추가해도 컬러보드에는 그대로 유지돼요</div>`;
+    fw.style.display = _contentModalBoardIds.size > 0 ? '' : 'none';
+  }
 }
 
 function _autoTextColor(hex) {
