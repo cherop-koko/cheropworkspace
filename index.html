@@ -2787,10 +2787,7 @@ a { text-decoration:none; color:inherit; }
           <div class="inv-pill" onclick="contentSetStatus('scheduled',this)">예약</div>
           <div class="inv-pill" onclick="contentSetStatus('published',this)">업로드 완료</div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-left:4px;">
-          <span style="font-size:12px;color:var(--light);">보드</span>
-          <select id="content-board-select" class="prop-inp" style="font-size:12px;padding:4px 8px;height:32px;min-width:100px;"></select>
-        </div>
+
       </div>
       <div class="modal-bar-right">
         <div class="mbtn" id="content-modal-del" onclick="deleteContent()" style="display:none;">🗑</div>
@@ -2840,6 +2837,19 @@ a { text-decoration:none; color:inherit; }
               <div class="prop-val"><textarea class="prop-inp" id="content-memo" rows="2" placeholder="기획 메모, 참고사항..." style="resize:none;line-height:1.5;"></textarea></div>
             </div>
           </div>
+          <!-- 보드 배정 영역 -->
+          <div style="margin-top:14px;padding-top:14px;border-top:0.5px solid var(--surface2);">
+            <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:8px;">보드 배정</div>
+            <div id="content-board-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+            <div id="content-feed-add-wrap" style="display:none;margin-top:4px;">
+              <button onclick="addCurrentPostToMainFeed()" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border2);background:transparent;font-size:11px;color:var(--light);cursor:pointer;font-family:var(--font);"
+                onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--text)'" onmouseout="this.style.color='var(--light)';this.style.borderColor='var(--border2)'">
+                + 현재 피드에도 추가
+              </button>
+              <div style="font-size:10px;color:var(--faint);margin-top:4px;">현재 피드에 추가해도 컬러보드에는 그대로 유지돼요</div>
+            </div>
+          </div>
+
           <div id="content-plan-section" style="display:none;margin-top:14px;padding-top:14px;border-top:0.5px solid var(--surface2);">
             <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:8px;">업로드 정보</div>
             <div class="modal-props" style="margin-bottom:0;">
@@ -3883,7 +3893,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.1.4</div>
+<div id="version">v4.1.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5662,7 +5672,7 @@ async function runImport() {
               product_id: r.id,
               channel:    ch,
               stock:      r[key],
-              board_id:    selectedBoardId || null,
+              board_id:    selectedBoardIds[0] || null,
       updated_at: new Date().toISOString(),
             });
           }
@@ -10228,14 +10238,13 @@ async function loadContentCal() {
   const orderKey  = isAll ? 'instaFeedOrder' : `instaFeedOrder_${currentBoardId}`;
   const savedOrder = s[orderKey] || [];
 
-  // 현재 피드: board_id 없는 게시물만 (보드 전용 게시물 제외)
-  // 보드 피드: 해당 보드 feedOrder에 있는 게시물만
+  // mainFeedIds: 현재 피드에 명시적으로 추가된 게시물 (보드에도 있을 수 있음)
+  const mainFeedIds = new Set(s.mainFeedIds || []);
   const boardPostIds = curBoard?.feedOrder || [];
-  // 모든 보드에 속한 게시물 ID 집합
   const allBoardPostIds = new Set(boards.flatMap(b => b.feedOrder || []));
   const posts = isAll
-    ? allPosts.filter(p => !allBoardPostIds.has(p.id))  // 현재 피드: 보드에 없는 것만
-    : allPosts.filter(p => boardPostIds.includes(p.id)); // 보드 피드: 해당 보드 것만
+    ? allPosts.filter(p => !allBoardPostIds.has(p.id) || mainFeedIds.has(p.id))
+    : allPosts.filter(p => boardPostIds.includes(p.id));
 
   if (savedOrder.length) {
     const map     = Object.fromEntries(posts.map(p => [p.id, p]));
@@ -10761,6 +10770,8 @@ async function openContentModalNew(date, refUrl) {
   const dateInputNew = $('content-modal-date-input');
   if (dateInputNew) dateInputNew.value = date || dateStr();
   await _renderContentBoardSelect(currentBoardId !== 'all' ? currentBoardId : null);
+  // 칩 초기 상태
+  _contentModalBoardIds = new Set(currentBoardId !== 'all' ? [currentBoardId] : []);
   $('content-modal-del').style.display = 'none';
   updateSaveRate();
   updateContentSections();
@@ -11106,13 +11117,72 @@ function openContentLink() {
   if(url) window.open(url, '_blank');
 }
 
-/* 콘텐츠 모달용 보드 select 렌더 */
-async function _renderContentBoardSelect(selectedBoardId) {
-  const sel = $('content-board-select'); if (!sel) return;
+/* 콘텐츠 모달 보드 칩 렌더 */
+let _contentModalBoardIds = new Set(); // 현재 배정된 보드 id들
+
+async function _renderContentBoardSelect(initialBoardId) {
   const s = await getAppState();
   const boards = s.instaBoards || [];
-  sel.innerHTML = `<option value="">현재 피드 (보드 없음)</option>` +
-    boards.map(b => `<option value="${b.id}" ${b.id === selectedBoardId ? 'selected' : ''}>${b.name}</option>`).join('');
+  // 초기 배정 보드 설정
+  _contentModalBoardIds = new Set(initialBoardId ? [initialBoardId] : []);
+  _renderContentBoardChipsUI(boards);
+}
+
+function _renderContentBoardChipsUI(boards) {
+  const wrap = $('content-board-chips'); if (!wrap) return;
+  if (!boards || !boards.length) {
+    wrap.innerHTML = '<span style="font-size:11px;color:var(--faint);">추가된 보드가 없어요</span>';
+    const fw = $('content-feed-add-wrap'); if (fw) fw.style.display = 'none';
+    return;
+  }
+  wrap.innerHTML = boards.map(b => {
+    const inBoard = _contentModalBoardIds.has(b.id);
+    const bg      = inBoard ? b.color : 'transparent';
+    const border  = b.color || 'var(--border2)';
+    const txt     = inBoard ? _autoTextColor(b.color) : (b.color || 'var(--light)');
+    return `<div onclick="toggleContentModalBoard('${b.id}','${b.color}')"
+      style="padding:5px 12px;border-radius:20px;border:1.5px solid ${border};background:${bg};color:${txt};font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;"
+      onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
+      ${inBoard ? '✓ ' : ''}${b.name}
+    </div>`;
+  }).join('');
+  // 컬러보드에 배정되어 있으면 "현재 피드에도 추가" 버튼 표시
+  const fw = $('content-feed-add-wrap');
+  if (fw) fw.style.display = _contentModalBoardIds.size > 0 ? '' : 'none';
+}
+
+function _autoTextColor(hex) {
+  if (!hex) return '#1c1e26';
+  try {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return (0.299*r + 0.587*g + 0.114*b)/255 > 0.55 ? '#1a1a2e' : '#ffffff';
+  } catch { return '#1c1e26'; }
+}
+
+async function toggleContentModalBoard(boardId, color) {
+  if (_contentModalBoardIds.has(boardId)) {
+    _contentModalBoardIds.delete(boardId);
+  } else {
+    _contentModalBoardIds.add(boardId);
+  }
+  const s = await getAppState();
+  _renderContentBoardChipsUI(s.instaBoards || []);
+}
+
+async function addCurrentPostToMainFeed() {
+  // "현재 피드에도 추가" — board_id를 null로 하지 않고 보드는 유지한 채
+  // main_feed 플래그를 별도로 세팅 (현재는 board_id 여부로 현재피드 결정)
+  // → 게시물의 board_id를 null로 만들지 않고, instaBoards에서 feedOrder만 남기고
+  //   별도 mainFeedIds Set에 추가
+  const s = await getAppState();
+  s.mainFeedIds = s.mainFeedIds || [];
+  if (contentEditId && !s.mainFeedIds.includes(contentEditId)) {
+    s.mainFeedIds.push(contentEditId);
+    await setAppState(s);
+    const fw = $('content-feed-add-wrap');
+    if (fw) fw.innerHTML = '<span style="font-size:11px;color:var(--green);">✓ 현재 피드에도 추가됐어요</span>';
+    toast('현재 피드에도 추가됐어요 ✓');
+  }
 }
 
 async function saveContent() {
@@ -11156,8 +11226,8 @@ async function saveContent() {
     const selectedDate = $('content-modal-date-input')?.value || contentEditDate || dateStr();
     contentEditDate = selectedDate;
 
-    // 선택된 보드 id
-    const selectedBoardId = $('content-board-select')?.value || null;
+    // 선택된 보드 ids (칩 시스템)
+    const selectedBoardIds = [...(_contentModalBoardIds || new Set())];
 
     const row = {
       id:          postId,
@@ -11186,13 +11256,20 @@ async function saveContent() {
     const { error } = await db.from('content_posts').upsert([row], { onConflict: 'id' });
     if (error) throw error;
 
-    // 보드 선택 시 해당 보드 feedOrder에 게시물 추가
-    if (selectedBoardId) {
+    // 보드 feedOrder 동기화:
+    // - 선택된 보드에는 추가, 선택 해제된 보드에서는 제거
+    {
       const s2 = await getAppState();
       s2.instaBoards = (s2.instaBoards || []).map(b => {
-        if (b.id !== selectedBoardId) return b;
+        const inSelected = selectedBoardIds.includes(b.id);
         const order = b.feedOrder || [];
-        return { ...b, feedOrder: order.includes(postId) ? order : [postId, ...order] };
+        if (inSelected) {
+          // 선택된 보드: 없으면 맨 앞에 추가
+          return { ...b, feedOrder: order.includes(postId) ? order : [postId, ...order] };
+        } else {
+          // 선택 안 된 보드: 해당 게시물 제거
+          return { ...b, feedOrder: order.filter(id => id !== postId) };
+        }
       });
       await setAppState(s2);
     }
