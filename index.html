@@ -1367,38 +1367,49 @@ a { text-decoration:none; color:inherit; }
       <div class="page" id="page-content">
         <div class="page-header">
           <div class="page-header-top">
-            <div><div class="page-header-title">콘텐츠</div></div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="page-header-title">콘텐츠</div>
+              <button id="content-add-btn" class="f-btn f-btn-save" style="padding:7px 14px;font-size:12px;display:none;" onclick="openContentModal(dateStr())">+ 새 게시물</button>
+            </div>
           </div>
           <div class="page-tabs" id="content-tabs">
-            <div class="page-tab on" onclick="contentSetTab('calendar',this)">콘텐츠 캘린더</div>
+            <div class="page-tab on" onclick="contentSetTab('calendar',this)">피드</div>
             <div class="page-tab"   onclick="contentSetTab('stats',this)">콘텐츠 실적</div>
             <div class="page-tab"   onclick="contentSetTab('season',this)">시즌 이슈</div>
           </div>
         </div>
 
-        <!-- 캘린더 탭 → 인스타 피드 뷰 -->
+        <!-- 피드 탭 -->
         <div id="content-tab-calendar">
-          <div style="display:flex;gap:16px;align-items:flex-start;">
+          <div style="display:flex;gap:20px;align-items:flex-start;">
 
-            <!-- 왼쪽: 인스타 피드 -->
-            <div style="width:340px;flex-shrink:0;border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;background:var(--surface);">
+            <!-- 왼쪽: 인스타 피드 (모바일 비율 반영) -->
+            <div style="width:375px;flex-shrink:0;border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;background:#fff;max-height:calc(100vh - 160px);overflow-y:auto;">
 
               <!-- 프로필 영역 -->
               <div style="padding:16px 16px 0;" id="insta-profile-area"></div>
 
               <!-- 하이라이트 -->
-              <div style="display:flex;gap:10px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none;" id="insta-highlights"></div>
+              <div style="display:flex;gap:12px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;" id="insta-highlights"></div>
 
-              <div style="height:0.5px;background:var(--border);"></div>
+              <!-- 피드/릴스 탭 바 (인스타 스타일) -->
+              <div style="display:flex;border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border);">
+                <div style="flex:1;padding:10px 0;text-align:center;border-bottom:1.5px solid #1c1e26;cursor:pointer;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#1c1e26"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                </div>
+                <div style="flex:1;padding:10px 0;text-align:center;border-bottom:1.5px solid transparent;cursor:pointer;opacity:.4;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5"><polygon points="5,3 19,12 5,21"/></svg>
+                </div>
+              </div>
 
-              <!-- 3열 피드 그리드 -->
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;padding:1.5px;" id="insta-feed-grid"></div>
+              <!-- 3열 피드 그리드 (4:5 비율) -->
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);" id="insta-feed-grid"></div>
             </div>
 
             <!-- 오른쪽: 선택된 게시물 상세 -->
-            <div style="flex:1;min-width:0;" id="insta-detail-panel">
-              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:8px;">
-                <div style="width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.35;">📷</div>
+            <div style="flex:1;min-width:0;max-width:480px;" id="insta-detail-panel">
+              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;gap:10px;">
+                <div style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.3;">📷</div>
                 <div style="font-size:13px;color:var(--faint);">피드를 선택하면 내용이 표시돼요</div>
               </div>
             </div>
@@ -3698,7 +3709,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.0.1</div>
+<div id="version">v4.0.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -9864,7 +9875,8 @@ async function initContentPage() {
   $('content-tab-calendar').style.display = '';
   $('content-tab-stats').style.display    = 'none';
   $('content-tab-season').style.display   = 'none';
-  renderContentTypeLegend();
+  const addBtn = $('content-add-btn');
+  if (addBtn) addBtn.style.display = '';
   await loadContentCal();
 }
 
@@ -9874,6 +9886,8 @@ function contentSetTab(tab, el) {
   ['calendar','stats','season'].forEach(t=>{
     $(`content-tab-${t}`).style.display = t===tab ? '' : 'none';
   });
+  const addBtn = $('content-add-btn');
+  if (addBtn) addBtn.style.display = tab==='calendar' ? '' : 'none';
   if(tab==='calendar') loadContentCal();
   if(tab==='stats')    loadContentStats();
   if(tab==='season')   loadContentSeason();
@@ -9918,60 +9932,80 @@ async function loadContentCal() {
 function renderInstaProfile(s) {
   const el = $('insta-profile-area'); if (!el) return;
   const profile = s.instaProfile || {};
-  const name    = profile.name    || 'cheropstore';
-  const bio     = profile.bio     || '체로프 몽모 🐾\n프리미엄 캐릭터 인형 브랜드\n입양 문의 ↓';
-  const imgUrl  = profile.imgUrl  || '';
+  const imgUrl  = profile.imgUrl || '';
   const posts   = instaFeedOrder.length;
+  const followers = profile.followers || '11만';
 
   el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
-      <div style="width:56px;height:56px;border-radius:50%;border:0.5px solid var(--border);flex-shrink:0;overflow:hidden;cursor:pointer;position:relative;" onclick="openInstaProfileEdit()" title="프로필 사진 변경">
-        ${imgUrl
-          ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;">`
-          : `<div style="width:100%;height:100%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:500;color:var(--muted);">체</div>`}
-        <div style="position:absolute;bottom:0;right:0;width:18px;height:18px;border-radius:50%;background:var(--surface);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;">✏</div>
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:14px;font-weight:500;color:var(--text);">${name}</div>
-        <div style="font-size:11px;color:var(--light);margin-top:1px;">@cheropstore</div>
-      </div>
-      <div style="display:flex;gap:14px;flex-shrink:0;">
-        <div style="text-align:center;">
-          <div style="font-size:13px;font-weight:500;color:var(--text);">${posts}</div>
-          <div style="font-size:10px;color:var(--light);">게시물</div>
+    <div style="display:flex;align-items:flex-start;gap:0;margin-bottom:14px;">
+      <!-- 프로필 사진 -->
+      <div style="position:relative;flex-shrink:0;margin-right:20px;cursor:pointer;" onclick="openInstaProfileEdit()" title="프로필 사진 변경">
+        <div style="width:77px;height:77px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2.5px;">
+          <div style="width:100%;height:100%;border-radius:50%;border:2.5px solid #fff;overflow:hidden;background:#f0ece8;">
+            ${imgUrl
+              ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;">`
+              : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f0ece8;"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="13" r="7" fill="#d0c8be"/><ellipse cx="18" cy="32" rx="12" ry="8" fill="#d0c8be"/></svg></div>`}
+          </div>
         </div>
-        <div style="text-align:center;">
-          <div style="font-size:13px;font-weight:500;color:var(--text);">11.2만</div>
-          <div style="font-size:10px;color:var(--light);">팔로워</div>
+        <div style="position:absolute;bottom:1px;right:1px;width:22px;height:22px;border-radius:50%;background:#0095f6;border:2px solid #fff;display:flex;align-items:center;justify-content:center;">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="white"><path d="M5.5 2.5L8 5M2 8.5L4.5 8L9 3.5C9.5 3 9.5 2 9 1.5L9 1.5C8.5 1 7.5 1 7 1.5L2.5 6L2 8.5Z" stroke="white" stroke-width="1" fill="white" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <!-- 통계 -->
+      <div style="flex:1;display:flex;gap:0;padding-top:4px;">
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:16px;font-weight:600;color:#1c1e26;">${posts}</div>
+          <div style="font-size:12px;color:#1c1e26;">게시물</div>
+        </div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:16px;font-weight:600;color:#1c1e26;">${followers}</div>
+          <div style="font-size:12px;color:#1c1e26;">팔로워</div>
+        </div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:16px;font-weight:600;color:#1c1e26;">52</div>
+          <div style="font-size:12px;color:#1c1e26;">팔로잉</div>
         </div>
       </div>
     </div>
-    <div style="font-size:12px;color:var(--text);line-height:1.55;margin-bottom:10px;white-space:pre-line;">${bio}</div>
-    <div style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:var(--r);border:0.5px solid var(--border2);font-size:12px;color:var(--text);cursor:pointer;margin-bottom:12px;" onclick="openInstaProfileEdit()">
-      <span style="font-size:11px;opacity:.5;">✏</span> 프로필 편집
+    <!-- 계정명 + 소개 -->
+    <div style="margin-bottom:4px;">
+      <div style="font-size:13px;font-weight:600;color:#1c1e26;margin-bottom:3px;">체로프 몽모 CHEROP MONGMO®</div>
+      <div style="font-size:13px;color:#1c1e26;line-height:1.5;white-space:pre-line;">CHEROP KOREA ORIGINAL PREMIUM MONGMO
+✶ POPUP &lt;더현대 판교&gt; 4.24- COMINGSOON！
+✶ WORLDWIDE SHIPPING</div>
+    </div>
+    <!-- 링크 -->
+    <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;cursor:pointer;" onclick="window.open('https://litt.ly/cherop','_blank')">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#0095f6" stroke-width="1.3"/><path d="M4 7h6M7 4v6" stroke="#0095f6" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <span style="font-size:13px;color:#0095f6;font-weight:500;">litt.ly/cherop</span>
+    </div>
+    <!-- 편집 버튼 -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:#efefef;font-size:13px;font-weight:500;color:#1c1e26;cursor:pointer;" onclick="openInstaProfileEdit()">프로필 편집</div>
+      <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:#efefef;font-size:13px;font-weight:500;color:#1c1e26;cursor:pointer;">프로필 공유</div>
+      <div style="width:36px;text-align:center;padding:6px 0;border-radius:8px;background:#efefef;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align:middle"><path d="M4 8a1 1 0 100-2 1 1 0 000 2zM8 8a1 1 0 100-2 1 1 0 000 2zM12 8a1 1 0 100-2 1 1 0 000 2z" fill="#1c1e26"/></svg>
+      </div>
     </div>`;
 }
 
 function renderInstaHighlights(s) {
   const el = $('insta-highlights'); if (!el) return;
   const highlights = (s.instaHighlights || [
-    { id:'h1', label:'몽모소개', emoji:'🐾' },
-    { id:'h2', label:'팝업스토어', emoji:'🛍' },
-    { id:'h3', label:'신상품', emoji:'📦' },
-    { id:'h4', label:'이벤트', emoji:'💌' },
+    { id:'h1', label:'soon',     imgEmoji:'🐾' },
+    { id:'h2', label:'event',    imgEmoji:'🛍' },
+    { id:'h3', label:'spotlight',imgEmoji:'📦' },
+    { id:'h4', label:'offline',  imgEmoji:'💌' },
+    { id:'h5', label:'global',   imgEmoji:'🌍' },
   ]);
   el.innerHTML = highlights.map(h => `
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer;" onclick="openInstaHighlightEdit('${h.id}')">
-      <div style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--border2);padding:2px;">
-        <div style="width:100%;height:100%;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:18px;">${h.emoji}</div>
-      </div>
-      <div style="font-size:10px;color:var(--light);white-space:nowrap;">${h.label}</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;cursor:pointer;" onclick="openInstaHighlightEdit('${h.id}')">
+      <div style="width:56px;height:56px;border-radius:50%;background:#efefef;display:flex;align-items:center;justify-content:center;font-size:22px;">${h.imgEmoji||'⭐'}</div>
+      <div style="font-size:11px;color:#1c1e26;white-space:nowrap;">${h.label}</div>
     </div>`).join('') +
-    `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer;" onclick="openInstaHighlightAdd()">
-      <div style="width:48px;height:48px;border-radius:50%;border:1.5px dashed var(--border2);padding:2px;opacity:.5;">
-        <div style="width:100%;height:100%;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted);">+</div>
-      </div>
-      <div style="font-size:10px;color:var(--faint);">추가</div>
+    `<div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;cursor:pointer;" onclick="openInstaHighlightAdd()">
+      <div style="width:56px;height:56px;border-radius:50%;border:1.5px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:24px;color:#999;">+</div>
+      <div style="font-size:11px;color:#999;">새로 만들기</div>
     </div>`;
 }
 
@@ -9981,92 +10015,111 @@ function renderInstaFeed() {
   let html   = '';
 
   instaFeedOrder.forEach(id => {
-    const p    = map[id]; if (!p) return;
-    const sel  = id === instaSelectedId;
-    const src  = p.imgUrl || p.imgData || '';
-    const stLbl = p.status==='published'?'업로드':p.status==='scheduled'?'예약':'초안';
-    const stStyle = p.status==='published'
-      ? 'background:rgba(0,0,0,.55);color:#fff'
-      : p.status==='scheduled'
-      ? 'background:rgba(250,199,117,.9);color:#633806'
-      : 'background:rgba(255,255,255,.88);color:#888';
-    const tc = p.type ? (CONTENT_TYPES[p.type]?.color || '#888') : '#ccc';
+    const p   = map[id]; if (!p) return;
+    const sel = id === instaSelectedId;
+    const src = p.imgUrl || p.imgData || '';
+    const tc  = p.type ? (CONTENT_TYPES[p.type]?.color || '#ccc') : '#e0ddd8';
+
+    // 상태 표시: 업로드됨은 표시 없음, 예약/초안은 날짜 표시
+    let badge = '';
+    if (p.status !== 'published') {
+      const dateLabel = p.date ? p.date.slice(5).replace('-','/') : '';
+      const bgColor = p.status === 'scheduled' ? 'rgba(250,199,117,.92)' : 'rgba(255,255,255,.88)';
+      const txColor = p.status === 'scheduled' ? '#633806' : '#666';
+      badge = `<div style="position:absolute;bottom:5px;left:50%;transform:translateX(-50%);padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;background:${bgColor};color:${txColor};white-space:nowrap;">${dateLabel}</div>`;
+    }
+    // 멀티이미지 표시 (릴스/캐러셀 아이콘)
+    const multiIcon = p.type === 'reels'
+      ? `<div style="position:absolute;top:6px;right:6px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="white"><polygon points="4,2 14,8 4,14"/></svg></div>`
+      : '';
 
     html += `<div class="insta-cell${sel?' insta-sel':''}" data-id="${id}"
-      style="aspect-ratio:1/1;position:relative;overflow:hidden;cursor:pointer;background:${tc}18;transition:outline .1s;"
+      style="aspect-ratio:4/5;position:relative;overflow:hidden;cursor:pointer;background:${tc}22;"
       onclick="instaSelectPost('${id}')" draggable="true">
       ${src
-        ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;pointer-events:none;">`
-        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:4px;">
-            <span style="font-size:9px;font-weight:500;color:${tc};text-align:center;line-height:1.3;opacity:.7;">${p.title||''}</span>
+        ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;pointer-events:none;" draggable="false">`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:6px;">
+            <span style="font-size:9px;font-weight:500;color:${tc};text-align:center;line-height:1.4;opacity:.8;">${p.title||''}</span>
            </div>`}
-      <div style="position:absolute;bottom:4px;right:4px;padding:2px 5px;border-radius:10px;font-size:9px;font-weight:500;${stStyle};">${stLbl}</div>
+      ${badge}${multiIcon}
     </div>`;
   });
-
-  // 새 게시물 추가 셀
-  html += `<div style="aspect-ratio:1/1;border:1.5px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:background .1s;"
-    onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"
-    onclick="openContentModal(dateStr())">
-    <div style="font-size:22px;opacity:.25;">+</div>
-    <div style="font-size:10px;color:var(--faint);">새 게시물</div>
-  </div>`;
 
   grid.innerHTML = html;
   initInstaFeedDrag();
 }
 
-/* ── 피드 선택 ── */
+/* ── 피드 선택 → 오른쪽 상세 ── */
 function instaSelectPost(id) {
   instaSelectedId = id;
   renderInstaFeed();
   const p = (window._instaPostsMap || {})[id]; if (!p) return;
   const panel = $('insta-detail-panel'); if (!panel) return;
 
-  const src     = p.imgUrl || p.imgData || '';
-  const stLbl   = p.status==='published'?'업로드됨':p.status==='scheduled'?'예약됨':'초안';
-  const stStyle = p.status==='published'
-    ? 'background:#e8e8e8;color:#1a1a1a'
-    : p.status==='scheduled'
-    ? 'background:#FAC775;color:#633806'
-    : 'background:#f0f0f0;color:#888';
-  const tc   = p.type ? (CONTENT_TYPES[p.type]?.color || 'var(--text)') : 'var(--text)';
+  const src  = p.imgUrl || p.imgData || '';
+  const tc   = p.type ? (CONTENT_TYPES[p.type]?.color || '#ccc') : '#e0ddd8';
   const st   = p.stats || {};
-  const fmtN = n => n>=10000 ? (Math.round(n/1000)/10)+'만' : n>=1000 ? (Math.round(n/100)/10)+'k' : String(n||0);
+  const fmtN = n => {
+    if (!n) return '0';
+    if (n >= 10000) return (Math.round(n/1000)/10) + '만';
+    if (n >= 1000)  return (Math.round(n/100)/10) + 'k';
+    return String(n);
+  };
+  const stLbl   = p.status==='published' ? '업로드됨' : p.status==='scheduled' ? `${(p.date||'').slice(5).replace('-','/')} 예정` : '초안';
+  const stStyle = p.status==='published'
+    ? 'background:#e8f5e9;color:#2e7d32'
+    : p.status==='scheduled'
+    ? 'background:#fff3e0;color:#e65100'
+    : 'background:#f5f5f5;color:#757575';
 
   panel.innerHTML = `
-    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;">
-      <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div style="font-size:13px;font-weight:500;color:var(--text);">${p.title||'(제목없음)'}</div>
-          <div style="font-size:11px;color:var(--light);margin-top:1px;">${p.date||''}</div>
+    <div style="border:0.5px solid #dbdbdb;border-radius:3px;overflow:hidden;background:#fff;max-width:470px;">
+      <!-- 상단 헤더 -->
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:0.5px solid #efefef;">
+        <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;background:#f0ece8;flex-shrink:0;border:0.5px solid #dbdbdb;">
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;">체</div>
         </div>
-        <span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500;${stStyle};">${stLbl}</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:#1c1e26;">cheropstore</div>
+          ${p.bgm ? `<div style="font-size:11px;color:#666;display:flex;align-items:center;gap:3px;">🎵 ${p.bgm}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500;${stStyle};">${stLbl}</span>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="5" cy="10" r="1.5" fill="#1c1e26"/><circle cx="10" cy="10" r="1.5" fill="#1c1e26"/><circle cx="15" cy="10" r="1.5" fill="#1c1e26"/></svg>
+        </div>
       </div>
-      <div style="aspect-ratio:1/1;background:${tc}18;overflow:hidden;">
-        ${src ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;">` 
-              : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:${tc};opacity:.4;">${p.title||''}</div>`}
+      <!-- 이미지 -->
+      <div style="aspect-ratio:4/5;background:${tc}22;overflow:hidden;">
+        ${src
+          ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;">`
+          : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:${tc};opacity:.5;">${p.title||''}</div>`}
       </div>
-      <div style="padding:12px 14px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-          <div style="width:26px;height:26px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:var(--muted);">체</div>
-          <span style="font-size:12px;font-weight:500;">cheropstore</span>
-          <span style="font-size:11px;color:var(--light);margin-left:auto;">${(p.date||'').slice(5).replace('-','/')}</span>
+      <!-- 액션 아이콘 -->
+      <div style="padding:10px 12px 6px;display:flex;align-items:center;gap:14px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.7"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.7"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 19-7z"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.7" style="margin-left:auto;"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+      </div>
+      <!-- 좋아요/실적 -->
+      ${p.status==='published' && (st.likes||st.views) ? `
+      <div style="padding:0 12px 6px;">
+        <div style="font-size:13px;font-weight:600;color:#1c1e26;">좋아요 ${fmtN(st.likes)}개</div>
+        <div style="display:flex;gap:14px;margin-top:3px;">
+          ${[[' 조회',st.views],[' 저장',st.saves],[' 댓글',st.comments],[' 공유',st.shares]].filter(([,v])=>v).map(([l,v])=>`<span style="font-size:12px;color:#666;">${fmtN(v)}${l}</span>`).join('')}
         </div>
-        ${p.status==='published' ? `
-        <div style="display:flex;gap:12px;margin-bottom:10px;">
-          ${[['👁',st.views],['♡',st.likes],['🔖',st.saves],['💬',st.comments]].map(([icon,val])=>
-            `<div style="display:flex;align-items:center;gap:3px;font-size:12px;color:var(--light);">
-              <span style="font-size:13px;">${icon}</span>${fmtN(val)}
-            </div>`).join('')}
-        </div>` : ''}
-        ${p.caption ? `<div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:8px;white-space:pre-line;">${p.caption}</div>` : ''}
-        ${(p.tags||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${(p.tags||[]).map(t=>`<span style="font-size:11px;color:#378ADD;cursor:pointer;">${t}</span>`).join('')}</div>` : ''}
-        <div style="display:flex;gap:6px;border-top:0.5px solid var(--border);padding-top:10px;">
-          <div style="flex:1;padding:6px;border-radius:var(--r);border:0.5px solid var(--border);font-size:11px;color:var(--text);cursor:pointer;text-align:center;" onclick="openContentModal('${p.date||''}','${p.id}')">수정</div>
-          <div style="flex:1;padding:6px;border-radius:var(--r);border:0.5px solid var(--border);font-size:11px;color:var(--red);cursor:pointer;text-align:center;" onclick="instaDeletePost('${p.id}')">삭제</div>
-          ${p.link ? `<div style="flex:1;padding:6px;border-radius:var(--r);background:var(--text);color:#fff;font-size:11px;cursor:pointer;text-align:center;" onclick="window.open('${p.link}','_blank')">인스타 열기</div>` : ''}
-        </div>
+      </div>` : ''}
+      <!-- 캡션 -->
+      <div style="padding:2px 12px 8px;">
+        ${p.caption ? `<div style="font-size:13px;color:#1c1e26;line-height:1.55;"><span style="font-weight:600;">cheropstore</span> ${p.caption.replace(/\n/g,'<br>')}</div>` : ''}
+        ${(p.tags||[]).length ? `<div style="margin-top:4px;">${(p.tags||[]).map(t=>`<span style="font-size:13px;color:#0095f6;">${t} </span>`).join('')}</div>` : ''}
+        <div style="font-size:11px;color:#999;margin-top:6px;">${p.date||''}</div>
+      </div>
+      <!-- 하단 액션 -->
+      <div style="display:flex;gap:6px;padding:10px 12px;border-top:0.5px solid #efefef;">
+        <div style="flex:1;padding:7px;border-radius:6px;border:0.5px solid #dbdbdb;font-size:12px;color:#1c1e26;cursor:pointer;text-align:center;font-weight:500;" onclick="openContentModal('${p.date||''}','${p.id}')">수정</div>
+        <div style="flex:1;padding:7px;border-radius:6px;border:0.5px solid #dbdbdb;font-size:12px;color:#ed4956;cursor:pointer;text-align:center;font-weight:500;" onclick="instaDeletePost('${p.id}')">삭제</div>
+        ${p.link ? `<div style="flex:1;padding:7px;border-radius:6px;background:#0095f6;font-size:12px;color:#fff;cursor:pointer;text-align:center;font-weight:500;" onclick="window.open('${p.link}','_blank')">인스타 열기</div>` : ''}
       </div>
     </div>`;
 }
@@ -10078,7 +10131,7 @@ async function instaDeletePost(id) {
   if (instaSelectedId === id) {
     instaSelectedId = null;
     const panel = $('insta-detail-panel');
-    if (panel) panel.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:8px;"><div style="width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.35;">📷</div><div style="font-size:13px;color:var(--faint);">피드를 선택하면 내용이 표시돼요</div></div>`;
+    if (panel) panel.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;gap:10px;"><div style="width:48px;height:48px;border-radius:50%;border:1.5px solid #dbdbdb;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.3;">📷</div><div style="font-size:13px;color:#999;">피드를 선택하면 내용이 표시돼요</div></div>`;
   }
   toast('삭제됐어요');
   loadContentCal();
@@ -10107,7 +10160,6 @@ function initInstaFeedDrag() {
   };
 
   cells().forEach(cell => {
-    // 마우스 드래그
     cell.addEventListener('dragstart', e => {
       dragId = cell.dataset.id;
       e.dataTransfer.effectAllowed = 'move';
@@ -10123,13 +10175,11 @@ function initInstaFeedDrag() {
       clearOver();
       const hoverId = cell.dataset.id;
       if (hoverId !== dragId) {
-        cell.style.outline = '2px solid var(--text)';
+        cell.style.outline = '2.5px solid #0095f6';
         swapOrder(dragId, hoverId);
         renderInstaFeed();
       }
     });
-
-    // 터치 드래그 (모바일)
     cell.addEventListener('touchstart', e => {
       dragId = cell.dataset.id;
       const t = e.touches[0];
@@ -10141,21 +10191,13 @@ function initInstaFeedDrag() {
       document.body.appendChild(touchClone);
       cell.style.opacity = '.3';
     }, { passive: true });
-
     cell.addEventListener('touchmove', e => {
       e.preventDefault();
       const t = e.touches[0];
-      if (touchClone) {
-        touchClone.style.left = (t.clientX - touchOffX) + 'px';
-        touchClone.style.top  = (t.clientY - touchOffY) + 'px';
-      }
+      if (touchClone) { touchClone.style.left=(t.clientX-touchOffX)+'px'; touchClone.style.top=(t.clientY-touchOffY)+'px'; }
       const hoverId = getTargetId(t.clientX, t.clientY);
-      if (hoverId && hoverId !== dragId) {
-        swapOrder(dragId, hoverId);
-        renderInstaFeed();
-      }
+      if (hoverId && hoverId !== dragId) { swapOrder(dragId, hoverId); renderInstaFeed(); }
     }, { passive: false });
-
     cell.addEventListener('touchend', () => {
       if (touchClone) { document.body.removeChild(touchClone); touchClone = null; }
       cells().forEach(c => { c.style.opacity = ''; c.style.outline = ''; });
@@ -10409,8 +10451,12 @@ async function saveContent() {
       const { error: upErr } = await db.storage
         .from('content-images')
         .upload(path, imgFile, { upsert: true, contentType: imgFile.type });
-      if (upErr) throw new Error('이미지 업로드 실패: ' + upErr.message);
-      imgUrl = db.storage.from('content-images').getPublicUrl(path).data.publicUrl;
+      if (upErr) {
+        // Storage 업로드 실패(RLS 등) → base64 폴백으로 저장
+        console.warn('Storage 업로드 실패, base64 폴백:', upErr.message);
+      } else {
+        imgUrl = db.storage.from('content-images').getPublicUrl(path).data.publicUrl;
+      }
       window._contentImgFile = null;
     }
 
