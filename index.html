@@ -518,6 +518,8 @@ a { text-decoration:none; color:inherit; }
 .insta-cell { transition:opacity .15s; }
 .insta-cell:hover { opacity:.82; }
 .insta-cell.insta-sel { outline:2.5px solid var(--text); outline-offset:-2.5px; z-index:1; }
+.insta-cell.drag-insert-before { box-shadow:-3px 0 0 0 #0095f6; z-index:2; }
+.insta-cell.drag-insert-after  { box-shadow: 3px 0 0 0 #0095f6; z-index:2; }
 .insta-feed-col-wrap::-webkit-scrollbar { display:none; }
 .insta-feed-col-wrap { -webkit-overflow-scrolling:touch; }
 .insta-feed-fade-wrap { position:relative; }
@@ -3881,7 +3883,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.1.2</div>
+<div id="version">v4.1.4</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -10238,8 +10240,9 @@ async function loadContentCal() {
   if (savedOrder.length) {
     const map     = Object.fromEntries(posts.map(p => [p.id, p]));
     const ordered = savedOrder.map(id => map[id]).filter(Boolean);
+    // 새 게시물은 저장된 순서에 없으므로 → 맨 앞에 추가 (인스타처럼 최신이 앞으로)
     const rest    = posts.filter(p => !savedOrder.includes(p.id));
-    instaFeedOrder = [...ordered.map(p => p.id), ...rest.map(p => p.id)];
+    instaFeedOrder = [...rest.map(p => p.id), ...ordered.map(p => p.id)];
   } else {
     instaFeedOrder = posts.map(p => p.id);
   }
@@ -10531,46 +10534,83 @@ async function instaDeletePost(id) {
 /* ── 피드 드래그 순서 변경 ── */
 function initInstaFeedDrag() {
   const grid = $('insta-feed-grid'); if (!grid) return;
-  let dragId = null, touchClone = null, touchOffX = 0, touchOffY = 0;
 
-  const cells = () => [...grid.querySelectorAll('.insta-cell[data-id]')];
-  const clearOver = () => cells().forEach(c => c.style.outline = '');
-  const getTargetId = (clientX, clientY) => {
-    const el = cells().find(c => {
+  /* ── insert 방식 드래그
+     dragover 때마다 DOM을 직접 이동 (instaFeedOrder는 dragend에만 업데이트)
+     swap이 아니라 "드래그 중인 셀을 hover 위치로 삽입"하는 방식
+  ── */
+  let dragId = null;
+  let touchClone = null, touchOffX = 0, touchOffY = 0;
+
+  const getCells   = () => [...grid.querySelectorAll('.insta-cell[data-id]')];
+  const clearOver  = () => getCells().forEach(c => c.classList.remove('drag-insert-before','drag-insert-after'));
+
+  // 현재 DOM 순서 → instaFeedOrder 동기화
+  const syncOrderFromDOM = () => {
+    instaFeedOrder = getCells().map(c => c.dataset.id);
+  };
+
+  // clientX/Y 위치에 있는 셀과 삽입 위치(before/after) 반환
+  const getInsertTarget = (clientX, clientY) => {
+    for (const c of getCells()) {
+      if (c.dataset.id === dragId) continue;
       const r = c.getBoundingClientRect();
-      return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
-    });
-    return el ? el.dataset.id : null;
-  };
-  const swapOrder = (fromId, toId) => {
-    if (!fromId || !toId || fromId === toId) return;
-    const fi = instaFeedOrder.indexOf(fromId);
-    const ti = instaFeedOrder.indexOf(toId);
-    if (fi === -1 || ti === -1) return;
-    [instaFeedOrder[fi], instaFeedOrder[ti]] = [instaFeedOrder[ti], instaFeedOrder[fi]];
+      if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+        // 셀 좌측 절반이면 before, 우측이면 after
+        const mid = r.left + r.width / 2;
+        return { el: c, before: clientX < mid };
+      }
+    }
+    return null;
   };
 
-  cells().forEach(cell => {
+  // DOM에서 dragId 셀을 target 위치로 이동
+  const insertCell = (targetEl, before) => {
+    const dragging = grid.querySelector(`.insta-cell[data-id="${dragId}"]`);
+    if (!dragging || !targetEl || dragging === targetEl) return;
+    if (before) {
+      grid.insertBefore(dragging, targetEl);
+    } else {
+      targetEl.after(dragging);
+    }
+  };
+
+  getCells().forEach(cell => {
+    // ── 마우스 드래그 ──
+    cell.setAttribute('draggable', 'true');
+
     cell.addEventListener('dragstart', e => {
       dragId = cell.dataset.id;
       e.dataTransfer.effectAllowed = 'move';
-      setTimeout(() => cell.style.opacity = '.4', 0);
+      setTimeout(() => cell.style.opacity = '.35', 0);
     });
+
     cell.addEventListener('dragend', () => {
       cell.style.opacity = '';
       clearOver();
+      syncOrderFromDOM();
       saveInstaFeedOrder();
+      dragId = null;
     });
+
     cell.addEventListener('dragover', e => {
       e.preventDefault();
+      if (!dragId || cell.dataset.id === dragId) return;
       clearOver();
-      const hoverId = cell.dataset.id;
-      if (hoverId !== dragId) {
-        cell.style.outline = '2.5px solid #0095f6';
-        swapOrder(dragId, hoverId);
-        renderInstaFeed();
+      const r   = cell.getBoundingClientRect();
+      const mid = r.left + r.width / 2;
+      if (e.clientX < mid) {
+        cell.classList.add('drag-insert-before');
+        insertCell(cell, true);
+      } else {
+        cell.classList.add('drag-insert-after');
+        insertCell(cell, false);
       }
     });
+
+    cell.addEventListener('dragleave', () => cell.classList.remove('drag-insert-before','drag-insert-after'));
+
+    // ── 터치 드래그 ──
     cell.addEventListener('touchstart', e => {
       dragId = cell.dataset.id;
       const t = e.touches[0];
@@ -10578,20 +10618,31 @@ function initInstaFeedDrag() {
       touchOffX = t.clientX - rect.left;
       touchOffY = t.clientY - rect.top;
       touchClone = cell.cloneNode(true);
-      touchClone.style.cssText = `position:fixed;opacity:.7;pointer-events:none;z-index:9999;width:${rect.width}px;height:${rect.height}px;left:${rect.left}px;top:${rect.top}px;`;
+      touchClone.style.cssText = `position:fixed;opacity:.65;pointer-events:none;z-index:9999;width:${rect.width}px;height:${rect.height}px;left:${rect.left}px;top:${rect.top}px;border-radius:4px;`;
       document.body.appendChild(touchClone);
-      cell.style.opacity = '.3';
+      cell.style.opacity = '.25';
     }, { passive: true });
+
     cell.addEventListener('touchmove', e => {
       e.preventDefault();
       const t = e.touches[0];
-      if (touchClone) { touchClone.style.left=(t.clientX-touchOffX)+'px'; touchClone.style.top=(t.clientY-touchOffY)+'px'; }
-      const hoverId = getTargetId(t.clientX, t.clientY);
-      if (hoverId && hoverId !== dragId) { swapOrder(dragId, hoverId); renderInstaFeed(); }
+      if (touchClone) {
+        touchClone.style.left = (t.clientX - touchOffX) + 'px';
+        touchClone.style.top  = (t.clientY - touchOffY) + 'px';
+      }
+      clearOver();
+      const target = getInsertTarget(t.clientX, t.clientY);
+      if (target) {
+        target.el.classList.add(target.before ? 'drag-insert-before' : 'drag-insert-after');
+        insertCell(target.el, target.before);
+      }
     }, { passive: false });
+
     cell.addEventListener('touchend', () => {
       if (touchClone) { document.body.removeChild(touchClone); touchClone = null; }
-      cells().forEach(c => { c.style.opacity = ''; c.style.outline = ''; });
+      clearOver();
+      getCells().forEach(c => c.style.opacity = '');
+      syncOrderFromDOM();
       saveInstaFeedOrder();
       dragId = null;
     });
@@ -10905,8 +10956,19 @@ async function openContentModal(date, id='') {
   const dateInput = $('content-modal-date-input');
   if (dateInput) dateInput.value = date || dateStr();
 
-  // 보드 select 세팅
-  await _renderContentBoardSelect(post?.board_id || null);
+  // 보드 select 세팅: post의 board_id 또는 feedOrder 역조회로 현재 보드 판별
+  {
+    let boardForPost = post?.board_id || null;
+    if (!boardForPost && post?.id) {
+      // board_id 컬럼이 없을 경우 feedOrder에서 역조회
+      const s0 = await getAppState();
+      const found = (s0.instaBoards || []).find(b => (b.feedOrder || []).includes(post.id));
+      boardForPost = found?.id || null;
+    }
+    // 현재 보드 피드에서 수정 버튼을 눌렀다면 현재 보드를 기본값으로
+    if (!boardForPost && currentBoardId !== 'all') boardForPost = currentBoardId;
+    await _renderContentBoardSelect(boardForPost);
+  }
 
   // DB 컬럼명 → 앱 필드명 정규화
   if (post) {
