@@ -1448,7 +1448,7 @@ a { text-decoration:none; color:inherit; }
                 </div>
                 <div id="ref-preview-img-wrap" style="display:none;">
                   <div style="aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;margin-bottom:10px;">
-                    <img id="ref-preview-img" src="" style="width:100%;height:100%;object-fit:cover;display:none;" onerror="refImgError()">
+                    <img id="ref-preview-img" style="width:100%;height:100%;object-fit:cover;" onerror="refImgError()">
                   </div>
                   <div style="display:flex;gap:6px;">
                     <button class="f-btn f-btn-cancel" style="flex:1;font-size:12px;" onclick="clearRefUrl()">취소</button>
@@ -3873,7 +3873,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.0.8</div>
+<div id="version">v4.0.9</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -10346,8 +10346,8 @@ function renderInstaFeed() {
   let html   = '';
   // 보드 컬러 배경 적용
   const col = $('insta-feed-column');
-  const boardColor = window._currentBoardColor;
-  if (col) col.style.background = boardColor ? boardColor + '22' : '#fff';
+  // 피드 컬럼 배경은 항상 흰색 유지 (보드 컬러 적용 안 함)
+  if (col) col.style.background = '#fff';
 
   instaFeedOrder.forEach(id => {
     const p   = map[id]; if (!p) return;
@@ -10624,12 +10624,15 @@ function previewRefUrl() {
     if (imgWrap)     imgWrap.style.display = 'none';
     return;
   }
-  if (img) { img.style.display = ''; img.src = url; }
+  if (img) { img.src = url; img.style.display = ''; }
   if (placeholder) placeholder.style.display = 'none';
   if (imgWrap)     imgWrap.style.display = '';
 }
 
 function refImgError() {
+  // URL 입력 중인 경우만 에러 표시 (초기 빈 src 상태는 무시)
+  const url = ($('ref-url-input')?.value || '').trim();
+  if (!url) return;
   const placeholder = $('ref-preview-placeholder');
   const imgWrap     = $('ref-preview-img-wrap');
   if (imgWrap) imgWrap.style.display = 'none';
