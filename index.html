@@ -1406,12 +1406,53 @@ a { text-decoration:none; color:inherit; }
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);" id="insta-feed-grid"></div>
             </div>
 
-            <!-- 오른쪽: 선택된 게시물 상세 -->
-            <div style="flex:1;min-width:0;max-width:480px;" id="insta-detail-panel">
-              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;gap:10px;">
-                <div style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.3;">📷</div>
-                <div style="font-size:13px;color:var(--faint);">피드를 선택하면 내용이 표시돼요</div>
+            <!-- 오른쪽: 게시물 상세 / 레퍼런스 -->
+            <div style="flex:1;min-width:0;max-width:480px;display:flex;flex-direction:column;gap:12px;" id="insta-detail-panel">
+
+              <!-- 핀터레스트 레퍼런스 패널 (항상 표시) -->
+              <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;" id="pinterest-panel">
+                <!-- 헤더 -->
+                <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#e60023"><path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
+                  <span style="font-size:13px;font-weight:500;color:var(--text);">Pinterest 레퍼런스</span>
+                  <a href="https://pinterest.com" target="_blank" style="margin-left:auto;font-size:11px;color:var(--light);text-decoration:none;display:flex;align-items:center;gap:3px;padding:4px 8px;border:0.5px solid var(--border);border-radius:20px;"
+                    onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+                    핀터레스트 열기
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8L8 2M8 2H4M8 2v4"/></svg>
+                  </a>
+                </div>
+                <!-- URL 입력 -->
+                <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);">
+                  <div style="font-size:11px;color:var(--light);margin-bottom:6px;">이미지 URL 붙여넣기</div>
+                  <div style="display:flex;gap:6px;">
+                    <input id="ref-url-input" class="prop-inp" placeholder="https://i.pinimg.com/..." style="flex:1;font-size:12px;"
+                      onpaste="setTimeout(()=>previewRefUrl(),0)"
+                      oninput="previewRefUrl()">
+                    <button class="f-btn f-btn-cancel" style="font-size:11px;padding:0 10px;flex-shrink:0;" onclick="clearRefUrl()">✕</button>
+                  </div>
+                  <div style="font-size:10px;color:var(--faint);margin-top:5px;">핀터레스트 이미지 위 우클릭 → '이미지 주소 복사' 후 붙여넣기</div>
+                </div>
+                <!-- 이미지 미리보기 영역 -->
+                <div id="ref-preview-area" style="padding:12px 14px;">
+                  <div style="aspect-ratio:4/5;background:var(--surface2);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;" id="ref-preview-placeholder">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="4" y="4" width="24" height="24" rx="4" stroke="#ccc" stroke-width="1.5"/><circle cx="11" cy="12" r="2.5" stroke="#ccc" stroke-width="1.5"/><path d="M4 22l7-6 5 4 4-3 8 7" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                    <div style="font-size:12px;color:var(--faint);">이미지가 여기에 표시돼요</div>
+                  </div>
+                  <div id="ref-preview-img-wrap" style="display:none;">
+                    <div style="aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;margin-bottom:10px;">
+                      <img id="ref-preview-img" src="" style="width:100%;height:100%;object-fit:cover;" onerror="refImgError()">
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                      <button class="f-btn f-btn-cancel" style="flex:1;font-size:12px;" onclick="clearRefUrl()">취소</button>
+                      <button class="f-btn f-btn-save" style="flex:1;font-size:12px;" onclick="useRefAsContent()">이 이미지로 새 게시물 만들기 →</button>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              <!-- 게시물 상세 (피드 클릭 시 표시) -->
+              <div id="insta-post-detail" style="display:none;"></div>
+
             </div>
 
           </div>
@@ -3569,6 +3610,92 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ═══ 인스타 프로필 편집 모달 ═══ -->
+<div class="modal-overlay" id="insta-profile-modal" onclick="if(event.target===this)closeModal('insta-profile-modal')">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-bar">
+      <div class="modal-kind">프로필 편집</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('insta-profile-modal')">✕</div></div>
+    </div>
+    <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">계정명</div>
+        <input id="insta-modal-name" class="prop-inp" placeholder="계정명" style="width:100%;">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">소개글</div>
+        <textarea id="insta-modal-bio" style="width:100%;height:80px;font-size:13px;padding:8px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);resize:none;line-height:1.55;"></textarea>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">팔로워 수 표시</div>
+        <input id="insta-modal-followers" class="prop-inp" placeholder="예: 11만" style="width:100%;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('insta-profile-modal')">취소</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveInstaProfileModal()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 인스타 프로필 사진 변경 모달 ═══ -->
+<div class="modal-overlay" id="insta-pic-modal" onclick="if(event.target===this)closeModal('insta-pic-modal')">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-bar">
+      <div class="modal-kind">프로필 사진 변경</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('insta-pic-modal')">✕</div></div>
+    </div>
+    <div style="padding:16px 20px 20px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;">
+        <div id="insta-pic-preview" style="width:90px;height:90px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2.5px;cursor:pointer;" onclick="$('insta-pic-file').click()">
+          <div id="insta-pic-inner" style="width:100%;height:100%;border-radius:50%;border:2.5px solid #fff;overflow:hidden;background:#f0ece8;display:flex;align-items:center;justify-content:center;">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="13" r="7" fill="#d0c8be"/><ellipse cx="18" cy="32" rx="12" ry="8" fill="#d0c8be"/></svg>
+          </div>
+        </div>
+        <input type="file" id="insta-pic-file" accept="image/*" style="display:none;" onchange="previewInstaProfilePic(this)">
+        <div style="font-size:12px;color:var(--light);text-align:center;">이미지를 클릭하거나 아래 버튼으로 선택하세요</div>
+        <button class="f-btn f-btn-cancel" style="width:100%;" onclick="$('insta-pic-file').click()">📷 사진 선택</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('insta-pic-modal')">취소</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveInstaProfilePic()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 하이라이트 편집 모달 ═══ -->
+<div class="modal-overlay" id="insta-highlight-modal" onclick="if(event.target===this)closeModal('insta-highlight-modal')">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-bar">
+      <div class="modal-kind" id="insta-hl-modal-title">하이라이트 편집</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('insta-highlight-modal')">✕</div></div>
+    </div>
+    <div style="padding:16px 20px 20px;">
+      <!-- 커버 이미지 미리보기 -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px;">
+        <div id="insta-hl-cover-wrap" style="width:72px;height:72px;border-radius:50%;border:2px solid var(--border);overflow:hidden;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:28px;" onclick="$('insta-hl-img-file').click()">
+          <span id="insta-hl-cover-emoji">⭐</span>
+        </div>
+        <input type="file" id="insta-hl-img-file" accept="image/*" style="display:none;" onchange="previewHlCover(this)">
+        <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 12px;" onclick="$('insta-hl-img-file').click()">커버 이미지 선택</button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">이름</div>
+        <input id="insta-hl-label" class="prop-inp" placeholder="하이라이트 이름" style="width:100%;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--light);margin-bottom:8px;">이모지 선택</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;" id="insta-hl-emoji-grid"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="f-btn f-btn-cancel" id="insta-hl-del-btn" style="flex:1;color:var(--red);" onclick="deleteInstaHighlight()">삭제</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveInstaHighlight()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 담당자 색상 설정 모달 ═══ -->
 <div class="modal-overlay" id="member-color-modal" onclick="if(event.target===this)closeModal('member-color-modal')">
   <div class="modal-box" style="max-width:360px;">
@@ -3709,7 +3836,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.0.2</div>
+<div id="version">v4.0.4</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -9932,80 +10059,99 @@ async function loadContentCal() {
 function renderInstaProfile(s) {
   const el = $('insta-profile-area'); if (!el) return;
   const profile = s.instaProfile || {};
-  const imgUrl  = profile.imgUrl || '';
-  const posts   = instaFeedOrder.length;
+  const imgUrl    = profile.imgUrl    || '';
+  const posts     = instaFeedOrder.length;
   const followers = profile.followers || '11만';
 
   el.innerHTML = `
-    <div style="display:flex;align-items:flex-start;gap:0;margin-bottom:14px;">
-      <!-- 프로필 사진 -->
-      <div style="position:relative;flex-shrink:0;margin-right:20px;cursor:pointer;" onclick="openInstaProfileEdit()" title="프로필 사진 변경">
-        <div style="width:77px;height:77px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2.5px;">
+    <!-- 상단 헤더: chevron + 계정ID + 아이콘 -->
+    <div style="display:flex;align-items:center;padding:10px 0 14px;gap:0;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+      <div style="flex:1;text-align:center;">
+        <div style="font-size:15px;font-weight:700;color:#1c1e26;letter-spacing:-.2px;">cheropstore</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:3px;margin-top:1px;">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1L6.8 3.9H9.9L7.5 5.7L8.4 8.6L5.5 6.8L2.6 8.6L3.5 5.7L1.1 3.9H4.2Z" fill="#1c1e26"/></svg>
+          <span style="font-size:11px;color:#1c1e26;opacity:.6;">계정</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.8"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </div>
+        <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </div>
+      </div>
+    </div>
+    <!-- 프로필 사진 + 통계 -->
+    <div style="display:flex;align-items:flex-start;gap:0;margin-bottom:12px;">
+      <div style="position:relative;flex-shrink:0;margin-right:22px;cursor:pointer;" onclick="openInstaProfilePicEdit()" title="프로필 사진 변경">
+        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2.5px;">
           <div style="width:100%;height:100%;border-radius:50%;border:2.5px solid #fff;overflow:hidden;background:#f0ece8;">
             ${imgUrl
               ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;">`
-              : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f0ece8;"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="13" r="7" fill="#d0c8be"/><ellipse cx="18" cy="32" rx="12" ry="8" fill="#d0c8be"/></svg></div>`}
+              : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f0ece8;"><svg width="38" height="38" viewBox="0 0 38 38" fill="none"><circle cx="19" cy="14" r="8" fill="#d0c8be"/><ellipse cx="19" cy="34" rx="13" ry="8" fill="#d0c8be"/></svg></div>`}
           </div>
         </div>
-        <div style="position:absolute;bottom:1px;right:1px;width:22px;height:22px;border-radius:50%;background:#0095f6;border:2px solid #fff;display:flex;align-items:center;justify-content:center;">
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="white"><path d="M5.5 2.5L8 5M2 8.5L4.5 8L9 3.5C9.5 3 9.5 2 9 1.5L9 1.5C8.5 1 7.5 1 7 1.5L2.5 6L2 8.5Z" stroke="white" stroke-width="1" fill="white" stroke-linejoin="round"/></svg>
+        <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-radius:50%;background:#0095f6;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="white"><path d="M2 8.5L5 7.5L10 2.5C10.5 2 10.5 1.2 10 0.7C9.5 0.2 8.7 0.2 8.2 0.7L3.2 5.7L2 8.5Z" fill="white"/><line x1="2" y1="9.5" x2="10" y2="9.5" stroke="white" stroke-width="1.2"/></svg>
         </div>
       </div>
-      <!-- 통계 -->
-      <div style="flex:1;display:flex;gap:0;padding-top:4px;">
+      <div style="flex:1;display:flex;gap:0;padding-top:6px;">
         <div style="flex:1;text-align:center;">
-          <div style="font-size:16px;font-weight:600;color:#1c1e26;">${posts}</div>
+          <div style="font-size:17px;font-weight:700;color:#1c1e26;">${posts}</div>
           <div style="font-size:12px;color:#1c1e26;">게시물</div>
         </div>
         <div style="flex:1;text-align:center;">
-          <div style="font-size:16px;font-weight:600;color:#1c1e26;">${followers}</div>
+          <div style="font-size:17px;font-weight:700;color:#1c1e26;">${followers}</div>
           <div style="font-size:12px;color:#1c1e26;">팔로워</div>
         </div>
         <div style="flex:1;text-align:center;">
-          <div style="font-size:16px;font-weight:600;color:#1c1e26;">52</div>
+          <div style="font-size:17px;font-weight:700;color:#1c1e26;">52</div>
           <div style="font-size:12px;color:#1c1e26;">팔로잉</div>
         </div>
       </div>
     </div>
     <!-- 계정명 + 소개 -->
-    <div style="margin-bottom:4px;">
-      <div style="font-size:13px;font-weight:600;color:#1c1e26;margin-bottom:3px;">체로프 몽모 CHEROP MONGMO®</div>
-      <div style="font-size:13px;color:#1c1e26;line-height:1.5;white-space:pre-line;">CHEROP KOREA ORIGINAL PREMIUM MONGMO
-✶ POPUP &lt;더현대 판교&gt; 4.24- COMINGSOON！
-✶ WORLDWIDE SHIPPING</div>
-    </div>
+    <div style="font-size:13px;font-weight:700;color:#1c1e26;margin-bottom:3px;">체로프 몽모 CHEROP MONGMO®</div>
+    <div style="font-size:13px;color:#1c1e26;line-height:1.55;margin-bottom:4px;">CHEROP KOREA ORIGINAL PREMIUM MONGMO<br>✶ POPUP &lt;더현대 판교&gt; 4.24- COMINGSOON！<br>✶ WORLDWIDE SHIPPING</div>
     <!-- 링크 -->
-    <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;cursor:pointer;" onclick="window.open('https://litt.ly/cherop','_blank')">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#0095f6" stroke-width="1.3"/><path d="M4 7h6M7 4v6" stroke="#0095f6" stroke-width="1.3" stroke-linecap="round"/></svg>
+    <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;cursor:pointer;" onclick="window.open('https://litt.ly/cherop','_blank')">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5C3.7 1.5 1.5 3.7 1.5 6.5S3.7 11.5 6.5 11.5 11.5 9.3 11.5 6.5 9.3 1.5 6.5 1.5Z" stroke="#0095f6" stroke-width="1.2"/><path d="M1.5 6.5h10M6.5 1.5C5.2 3 4.5 4.7 4.5 6.5S5.2 10 6.5 11.5M6.5 1.5C7.8 3 8.5 4.7 8.5 6.5S7.8 10 6.5 11.5" stroke="#0095f6" stroke-width="1.2"/></svg>
       <span style="font-size:13px;color:#0095f6;font-weight:500;">litt.ly/cherop</span>
+    </div>
+    <!-- cheropstore 스레드 링크 -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+      <div style="width:18px;height:18px;border-radius:50%;background:#1c1e26;display:flex;align-items:center;justify-content:center;">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="white"><path d="M5.5 1.5C3.3 1.5 1.5 3.1 1.5 5.1c0 1.2.6 2.3 1.5 3V10l1.4-1.1c.3.1.7.1 1.1.1C7.7 9 9.5 7.2 9.5 5.1S7.7 1.5 5.5 1.5Z" fill="white"/></svg>
+      </div>
+      <span style="font-size:13px;color:#1c1e26;">cheropstore</span>
     </div>
     <!-- 편집 버튼 -->
     <div style="display:flex;gap:6px;margin-bottom:14px;">
-      <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:#efefef;font-size:13px;font-weight:500;color:#1c1e26;cursor:pointer;" onclick="openInstaProfileEdit()">프로필 편집</div>
-      <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:#efefef;font-size:13px;font-weight:500;color:#1c1e26;cursor:pointer;">프로필 공유</div>
-      <div style="width:36px;text-align:center;padding:6px 0;border-radius:8px;background:#efefef;cursor:pointer;">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align:middle"><path d="M4 8a1 1 0 100-2 1 1 0 000 2zM8 8a1 1 0 100-2 1 1 0 000 2zM12 8a1 1 0 100-2 1 1 0 000 2z" fill="#1c1e26"/></svg>
+      <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:#efefef;font-size:13px;font-weight:600;color:#1c1e26;cursor:pointer;" onclick="openInstaProfileEdit()">프로필 편집</div>
+      <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:#efefef;font-size:13px;font-weight:600;color:#1c1e26;cursor:pointer;">프로필 공유</div>
+      <div style="width:38px;text-align:center;padding:6px 0;border-radius:8px;background:#efefef;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8a1 1 0 100-2 1 1 0 000 2zM8 8a1 1 0 100-2 1 1 0 000 2zM12 8a1 1 0 100-2 1 1 0 000 2z" fill="#1c1e26"/></svg>
       </div>
     </div>`;
 }
 
 function renderInstaHighlights(s) {
   const el = $('insta-highlights'); if (!el) return;
-  const highlights = (s.instaHighlights || [
-    { id:'h1', label:'soon',     imgEmoji:'🐾' },
-    { id:'h2', label:'event',    imgEmoji:'🛍' },
-    { id:'h3', label:'spotlight',imgEmoji:'📦' },
-    { id:'h4', label:'offline',  imgEmoji:'💌' },
-    { id:'h5', label:'global',   imgEmoji:'🌍' },
-  ]);
-  el.innerHTML = highlights.map(h => `
-    <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;cursor:pointer;" onclick="openInstaHighlightEdit('${h.id}')">
-      <div style="width:56px;height:56px;border-radius:50%;background:#efefef;display:flex;align-items:center;justify-content:center;font-size:22px;">${h.imgEmoji||'⭐'}</div>
-      <div style="font-size:11px;color:#1c1e26;white-space:nowrap;">${h.label}</div>
-    </div>`).join('') +
+  const highlights = (s.instaHighlights || _defaultHighlights());
+  el.innerHTML = highlights.map(h => {
+    const cover = h.imgUrl
+      ? `<img src="${h.imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : `<span style="font-size:22px;">${h.imgEmoji||'⭐'}</span>`;
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;cursor:pointer;" onclick="openInstaHighlightEdit('${h.id}')">
+      <div style="width:58px;height:58px;border-radius:50%;background:#efefef;display:flex;align-items:center;justify-content:center;overflow:hidden;">${cover}</div>
+      <div style="font-size:11px;color:#1c1e26;white-space:nowrap;max-width:64px;overflow:hidden;text-overflow:ellipsis;text-align:center;">${h.label}</div>
+    </div>`;
+  }).join('') +
     `<div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;cursor:pointer;" onclick="openInstaHighlightAdd()">
-      <div style="width:56px;height:56px;border-radius:50%;border:1.5px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:24px;color:#999;">+</div>
-      <div style="font-size:11px;color:#999;">새로 만들기</div>
+      <div style="width:58px;height:58px;border-radius:50%;border:1.5px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:26px;color:#aaa;">+</div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">새로 만들기</div>
     </div>`;
 }
 
@@ -10054,7 +10200,10 @@ function instaSelectPost(id) {
   instaSelectedId = id;
   renderInstaFeed();
   const p = (window._instaPostsMap || {})[id]; if (!p) return;
-  const panel = $('insta-detail-panel'); if (!panel) return;
+  // 게시물 상세 패널 표시
+  const postDetail = $('insta-post-detail'); if (!postDetail) return;
+  postDetail.style.display = '';
+  const panel = postDetail;
 
   const src  = p.imgUrl || p.imgData || '';
   const tc   = p.type ? (CONTENT_TYPES[p.type]?.color || '#ccc') : '#e0ddd8';
@@ -10130,8 +10279,8 @@ async function instaDeletePost(id) {
   if (error) { toast('삭제 실패: ' + error.message); return; }
   if (instaSelectedId === id) {
     instaSelectedId = null;
-    const panel = $('insta-detail-panel');
-    if (panel) panel.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;gap:10px;"><div style="width:48px;height:48px;border-radius:50%;border:1.5px solid #dbdbdb;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.3;">📷</div><div style="font-size:13px;color:#999;">피드를 선택하면 내용이 표시돼요</div></div>`;
+    const postDetail = $('insta-post-detail');
+    if (postDetail) { postDetail.style.display = 'none'; postDetail.innerHTML = ''; }
   }
   toast('삭제됐어요');
   loadContentCal();
@@ -10215,68 +10364,241 @@ async function saveInstaFeedOrder() {
   } catch(e) { console.error('feed order save:', e); }
 }
 
+/* ── Pinterest 레퍼런스 패널 ── */
+function previewRefUrl() {
+  const url = ($('ref-url-input')?.value || '').trim();
+  const placeholder = $('ref-preview-placeholder');
+  const imgWrap     = $('ref-preview-img-wrap');
+  const img         = $('ref-preview-img');
+  if (!url || !url.startsWith('http')) {
+    if (placeholder) placeholder.style.display = '';
+    if (imgWrap)     imgWrap.style.display = 'none';
+    return;
+  }
+  if (img) img.src = url;
+  if (placeholder) placeholder.style.display = 'none';
+  if (imgWrap)     imgWrap.style.display = '';
+}
+
+function refImgError() {
+  const placeholder = $('ref-preview-placeholder');
+  const imgWrap     = $('ref-preview-img-wrap');
+  if (imgWrap) imgWrap.style.display = 'none';
+  if (placeholder) {
+    placeholder.style.display = '';
+    placeholder.innerHTML = `
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="12" stroke="#e24b4a" stroke-width="1.5"/><path d="M11 11l10 10M21 11l-10 10" stroke="#e24b4a" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <div style="font-size:12px;color:var(--red);">이미지를 불러올 수 없어요</div>
+      <div style="font-size:11px;color:var(--faint);text-align:center;line-height:1.5;">핀터레스트는 직접 URL이 아닌<br>이미지 주소를 복사해야 해요</div>`;
+  }
+}
+
+function clearRefUrl() {
+  const input = $('ref-url-input');
+  if (input) input.value = '';
+  const placeholder = $('ref-preview-placeholder');
+  const imgWrap     = $('ref-preview-img-wrap');
+  if (placeholder) {
+    placeholder.style.display = '';
+    placeholder.innerHTML = `
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="4" y="4" width="24" height="24" rx="4" stroke="#ccc" stroke-width="1.5"/><circle cx="11" cy="12" r="2.5" stroke="#ccc" stroke-width="1.5"/><path d="M4 22l7-6 5 4 4-3 8 7" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      <div style="font-size:12px;color:var(--faint);">이미지가 여기에 표시돼요</div>`;
+  }
+  if (imgWrap) imgWrap.style.display = 'none';
+}
+
+function useRefAsContent() {
+  const url = ($('ref-url-input')?.value || '').trim();
+  if (!url) return;
+  // 새 콘텐츠 모달 열고 이미지 URL 미리 세팅
+  openContentModal(dateStr());
+  // 모달 열린 후 이미지 적용 (DOM 렌더 후)
+  setTimeout(() => {
+    const preview = $('content-img-preview');
+    if (preview) preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+    contentImgData = url; // URL을 imgData로 세팅 (저장 시 img_data로 저장됨)
+    window._contentImgFile = null;
+    window._contentRefUrl  = url; // 저장 시 img_url로 직접 쓰도록 표시
+  }, 100);
+}
+
+/* ── 프로필 편집 모달 ── */
 /* ── 프로필 편집 모달 ── */
 function openInstaProfileEdit() {
   const s    = _appStateCache || {};
   const prof = s.instaProfile || {};
-  const name = prof.name || 'cheropstore';
-  const bio  = prof.bio  || '체로프 몽모 🐾\n프리미엄 캐릭터 인형 브랜드\n입양 문의 ↓';
-  // 간단한 인라인 입력 방식으로 모달 구성 (기존 customPrompt 패턴 사용)
-  const panel = $('insta-profile-area'); if (!panel) return;
-  const existHtml = panel.innerHTML;
-  panel.innerHTML = `
-    <div style="padding:4px 0 12px;">
-      <div style="font-size:11px;color:var(--light);margin-bottom:4px;">계정명</div>
-      <input id="insta-edit-name" class="prop-inp" value="${name}" style="width:100%;margin-bottom:10px;">
-      <div style="font-size:11px;color:var(--light);margin-bottom:4px;">소개글</div>
-      <textarea id="insta-edit-bio" style="width:100%;height:72px;font-size:12px;padding:8px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);resize:none;line-height:1.5;">${bio}</textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <div class="f-btn f-btn-cancel" style="flex:1;text-align:center;" onclick="loadContentCal()">취소</div>
-        <div class="f-btn f-btn-save" style="flex:1;text-align:center;" onclick="saveInstaProfile()">저장</div>
-      </div>
-    </div>`;
-  setTimeout(() => $('insta-edit-name')?.focus(), 60);
+  const el_name = $('insta-modal-name');
+  const el_bio  = $('insta-modal-bio');
+  const el_fol  = $('insta-modal-followers');
+  if (el_name) el_name.value = prof.name      || 'cheropstore';
+  if (el_bio)  el_bio.value  = prof.bio       || 'CHEROP KOREA ORIGINAL PREMIUM MONGMO
+✶ POPUP <더현대 판교> 4.24- COMINGSOON！
+✶ WORLDWIDE SHIPPING';
+  if (el_fol)  el_fol.value  = prof.followers || '11만';
+  $('insta-profile-modal').classList.add('on');
+  setTimeout(() => el_name?.focus(), 80);
 }
 
-async function saveInstaProfile() {
-  const name = $('insta-edit-name')?.value.trim();
-  const bio  = $('insta-edit-bio')?.value.trim();
+async function saveInstaProfileModal() {
+  const name      = $('insta-modal-name')?.value.trim();
+  const bio       = $('insta-modal-bio')?.value.trim();
+  const followers = $('insta-modal-followers')?.value.trim();
   if (!name) { toast('계정명을 입력해주세요'); return; }
   const s = await getAppState();
-  s.instaProfile = { ...(s.instaProfile||{}), name, bio };
+  s.instaProfile = { ...(s.instaProfile||{}), name, bio, followers };
   await setAppState(s);
+  closeModal('insta-profile-modal');
   toast('프로필이 저장됐어요 ✓');
   loadContentCal();
 }
 
-/* ── 하이라이트 편집 (간단 구현) ── */
-async function openInstaHighlightEdit(id) {
+/* ── 프로필 사진 변경 모달 ── */
+let _instaPicData = null;
+
+function openInstaProfilePicEdit() {
+  _instaPicData = null;
+  const s = _appStateCache || {};
+  const imgUrl = s.instaProfile?.imgUrl || '';
+  const inner = $('insta-pic-inner');
+  if (inner) {
+    inner.innerHTML = imgUrl
+      ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;">`
+      : `<svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="13" r="7" fill="#d0c8be"/><ellipse cx="18" cy="32" rx="12" ry="8" fill="#d0c8be"/></svg>`;
+  }
+  $('insta-pic-modal').classList.add('on');
+}
+
+function previewInstaProfilePic(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _instaPicData = e.target.result;
+    const inner = $('insta-pic-inner');
+    if (inner) inner.innerHTML = `<img src="${_instaPicData}" style="width:100%;height:100%;object-fit:cover;">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveInstaProfilePic() {
+  if (!_instaPicData) { closeModal('insta-pic-modal'); return; }
   const s = await getAppState();
-  const highlights = s.instaHighlights || [
-    { id:'h1', label:'몽모소개', emoji:'🐾' },
-    { id:'h2', label:'팝업스토어', emoji:'🛍' },
-    { id:'h3', label:'신상품', emoji:'📦' },
-    { id:'h4', label:'이벤트', emoji:'💌' },
-  ];
-  const h = highlights.find(x => x.id === id); if (!h) return;
-  const label = prompt('하이라이트 이름', h.label); if (label === null) return;
-  const emoji = prompt('이모지', h.emoji); if (emoji === null) return;
-  s.instaHighlights = highlights.map(x => x.id===id ? {...x, label: label||x.label, emoji: emoji||x.emoji} : x);
+  s.instaProfile = { ...(s.instaProfile||{}), imgUrl: _instaPicData };
   await setAppState(s);
+  _instaPicData = null;
+  closeModal('insta-pic-modal');
+  toast('프로필 사진이 변경됐어요 ✓');
   loadContentCal();
 }
 
-async function openInstaHighlightAdd() {
-  const label = prompt('하이라이트 이름'); if (!label) return;
-  const emoji = prompt('이모지 (ex: 🌸)') || '⭐';
+/* ── 하이라이트 편집 모달 ── */
+const HL_EMOJIS = ['🐾','🛍','📦','💌','🌍','⭐','🎀','🌸','🐶','🐰','🧸','💝','🎁','📸','🎨','✨','🔮','🌙','🍀','🦋'];
+let _hlEditId  = null;
+let _hlImgData = null;
+
+const _defaultHighlights = () => [
+  { id:'h1', label:'soon',      imgEmoji:'🐾' },
+  { id:'h2', label:'event',     imgEmoji:'🛍' },
+  { id:'h3', label:'spotlight', imgEmoji:'📦' },
+  { id:'h4', label:'offline',   imgEmoji:'💌' },
+  { id:'h5', label:'global',    imgEmoji:'🌍' },
+];
+
+async function openInstaHighlightEdit(id) {
   const s = await getAppState();
-  s.instaHighlights = [...(s.instaHighlights || [
-    { id:'h1', label:'몽모소개', emoji:'🐾' },
-    { id:'h2', label:'팝업스토어', emoji:'🛍' },
-    { id:'h3', label:'신상품', emoji:'📦' },
-    { id:'h4', label:'이벤트', emoji:'💌' },
-  ]), { id:`h${Date.now()}`, label, emoji }];
+  const highlights = s.instaHighlights || _defaultHighlights();
+  const h = highlights.find(x => x.id === id); if (!h) return;
+  _hlEditId  = id;
+  _hlImgData = null;
+  $('insta-hl-modal-title').textContent = '하이라이트 편집';
+  $('insta-hl-label').value = h.label || '';
+  $('insta-hl-del-btn').style.display = '';
+  _renderHlEmojiGrid(h.imgEmoji || '⭐');
+  _renderHlCoverPreview(h.imgUrl || null, h.imgEmoji || '⭐');
+  $('insta-highlight-modal').classList.add('on');
+  setTimeout(() => $('insta-hl-label')?.focus(), 80);
+}
+
+async function openInstaHighlightAdd() {
+  _hlEditId  = null;
+  _hlImgData = null;
+  $('insta-hl-modal-title').textContent = '하이라이트 추가';
+  $('insta-hl-label').value = '';
+  $('insta-hl-del-btn').style.display = 'none';
+  _renderHlEmojiGrid('⭐');
+  _renderHlCoverPreview(null, '⭐');
+  $('insta-highlight-modal').classList.add('on');
+  setTimeout(() => $('insta-hl-label')?.focus(), 80);
+}
+
+function _renderHlCoverPreview(imgUrl, emoji) {
+  const wrap = $('insta-hl-cover-wrap'); if (!wrap) return;
+  if (imgUrl) {
+    wrap.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  } else {
+    wrap.innerHTML = `<span id="insta-hl-cover-emoji" style="font-size:28px;">${emoji}</span>`;
+  }
+}
+
+function _renderHlEmojiGrid(selectedEmoji) {
+  const grid = $('insta-hl-emoji-grid'); if (!grid) return;
+  grid.innerHTML = HL_EMOJIS.map(e => `
+    <div onclick="selectHlEmoji('${e}')" style="width:36px;height:36px;border-radius:8px;border:2px solid ${e===selectedEmoji?'var(--text)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;background:var(--surface2);" data-emoji="${e}">${e}</div>
+  `).join('');
+}
+
+function selectHlEmoji(emoji) {
+  document.querySelectorAll('#insta-hl-emoji-grid div[data-emoji]').forEach(el => {
+    el.style.borderColor = el.dataset.emoji === emoji ? 'var(--text)' : 'transparent';
+  });
+  _hlImgData = null; // 이모지 선택 시 이미지 초기화
+  _renderHlCoverPreview(null, emoji);
+}
+
+function previewHlCover(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _hlImgData = e.target.result;
+    _renderHlCoverPreview(_hlImgData, '');
+    // 이모지 선택 해제
+    document.querySelectorAll('#insta-hl-emoji-grid div[data-emoji]').forEach(el => el.style.borderColor = 'transparent');
+  };
+  reader.readAsDataURL(file);
+}
+
+function _getSelectedHlEmoji() {
+  const sel = document.querySelector('#insta-hl-emoji-grid div[data-emoji][style*="var(--text)"]');
+  return sel ? sel.dataset.emoji : (HL_EMOJIS[0]);
+}
+
+async function saveInstaHighlight() {
+  const label = $('insta-hl-label')?.value.trim();
+  if (!label) { toast('이름을 입력해주세요'); return; }
+  const emoji  = _getSelectedHlEmoji();
+  const imgUrl = _hlImgData || null;
+  const s = await getAppState();
+  let highlights = s.instaHighlights || _defaultHighlights();
+  if (_hlEditId) {
+    highlights = highlights.map(h => h.id===_hlEditId ? {...h, label, imgEmoji: emoji, imgUrl} : h);
+  } else {
+    highlights.push({ id:`h${Date.now()}`, label, imgEmoji: emoji, imgUrl });
+  }
+  s.instaHighlights = highlights;
   await setAppState(s);
+  closeModal('insta-highlight-modal');
+  toast(`하이라이트가 ${_hlEditId?'수정':'추가'}됐어요 ✓`);
+  loadContentCal();
+}
+
+async function deleteInstaHighlight() {
+  if (!_hlEditId) return;
+  const ok = await customConfirm('하이라이트를 삭제할까요?'); if (!ok) return;
+  const s = await getAppState();
+  const highlights = s.instaHighlights || _defaultHighlights();
+  s.instaHighlights = highlights.filter(h => h.id !== _hlEditId);
+  await setAppState(s);
+  closeModal('insta-highlight-modal');
+  toast('삭제됐어요');
   loadContentCal();
 }
 
@@ -10441,8 +10763,9 @@ async function saveContent() {
   try {
     const postId = contentEditId || `cp-${Date.now()}`;
 
-    // 이미지: 새 파일 선택 시 Storage 업로드
-    let imgUrl = null;
+    // 이미지: 새 파일 선택 시 Storage 업로드, 레퍼런스 URL인 경우 바로 사용
+    let imgUrl = window._contentRefUrl || null;
+    if (imgUrl) window._contentRefUrl = null; // 사용 후 초기화
     const imgFile = window._contentImgFile;
     if (imgFile) {
       if(btn) btn.textContent = '이미지 업로드 중...';
