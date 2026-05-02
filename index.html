@@ -3893,7 +3893,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.1.6</div>
+<div id="version">v4.1.7</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -11211,10 +11211,12 @@ async function saveContent() {
         .from('content-images')
         .upload(path, imgFile, { upsert: true, contentType: imgFile.type });
       if (upErr) {
-        // Storage 업로드 실패(RLS 등) → base64 폴백으로 저장
+        // Storage 업로드 실패 → base64(contentImgData)로 폴백 저장
         console.warn('Storage 업로드 실패, base64 폴백:', upErr.message);
+        toast('이미지 클라우드 저장 실패 → 내부 저장으로 대체됩니다 (' + upErr.message + ')');
       } else {
         imgUrl = db.storage.from('content-images').getPublicUrl(path).data.publicUrl;
+        contentImgData = null; // Storage 성공 시 base64 클리어
       }
       window._contentImgFile = null;
     }
@@ -11243,7 +11245,7 @@ async function saveContent() {
       type:        contentType,
       topic:       contentTopic,
       img_url:     imgUrl,
-      img_data:    imgUrl ? null : (contentImgData && contentImgData !== (existingImgData) ? contentImgData : existingImgData) || null,
+      img_data:    imgUrl ? null : (contentImgData || existingImgData || null),
       title:       $('content-title').value.trim(),
       caption:     $('content-caption').value.trim(),
       memo:        $('content-memo').value.trim(),
