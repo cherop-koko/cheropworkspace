@@ -1021,6 +1021,7 @@ a { text-decoration:none; color:inherit; }
                 <input type="text" id="inv-search" class="inv-search-inp" placeholder="상품명 검색..." style="width:160px;padding:5px 10px;font-size:12px;" oninput="loadInvList()">
                 <div style="display:flex;gap:5px;" id="inv-filter-pills">
                   <div class="inv-pill on" onclick="invSetFilter('all',this)">활성</div>
+                  <div class="inv-pill"    onclick="invSetFilter('planned',this)">단종 예정</div>
                   <div class="inv-pill"    onclick="invSetFilter('disc',this)">단종</div>
                 </div>
               </div>
@@ -2420,11 +2421,17 @@ a { text-decoration:none; color:inherit; }
           <div class="prop-val"><input type="text" class="prop-inp" id="inv-p-sku" placeholder="예: MNG-BAS-S"></div>
         </div>
         <div class="prop-row">
-          <div class="prop-icon">⚑</div><div class="prop-label">단종 처리</div>
+          <div class="prop-icon">⚑</div><div class="prop-label">판매 상태</div>
           <div class="prop-val">
-            <div class="toggle-wrap">
-              <div class="toggle-track" id="inv-p-disc-track" onclick="invToggleDisc()"><div class="toggle-knob"></div></div>
-              <div class="toggle-lbl" id="inv-p-disc-lbl">단종 아님</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <div class="inv-pill on" id="disc-st-active"  onclick="setDiscStatus('active')" >정상</div>
+              <div class="inv-pill"   id="disc-st-planned" onclick="setDiscStatus('planned')">단종 예정</div>
+              <div class="inv-pill"   id="disc-st-disc"    onclick="setDiscStatus('disc')"   >단종</div>
+            </div>
+            <input type="hidden" id="inv-p-disc-status" value="active">
+            <div id="inv-p-disc-date-wrap" style="margin-top:8px;display:none;">
+              <div style="font-size:11px;color:var(--light);margin-bottom:4px;">단종 예정일</div>
+              <input type="date" id="inv-p-disc-date" class="prop-inp" style="width:160px;">
             </div>
           </div>
         </div>
@@ -3962,7 +3969,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.2.1</div>
+<div id="version">v4.2.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4557,6 +4564,7 @@ async function loadDashInventory() {
     const chInvRows = (await db.from('channel_inventory').select('*')).data||[];
     let lowCount=0;
     for(const p of prods){
+      if(p.disc_status === 'planned') continue; // 단종예정은 발주필요 제외
       const velAll=CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
       const inv=invRows.find(x=>x.product_id===p.id)||{};
       const total=(inv.produced_stock||0)+(inv.available_stock||0);
@@ -6073,8 +6081,9 @@ async function loadInvList() {
   try {
     const searchQ = ($('inv-search')?.value||'').trim().toLowerCase();
     let query = db.from('products').select('*').order('sort_order',{ascending:true,nullsFirst:false}).order('name');
-    if(invCurrentFilter==='disc') query = query.eq('is_discontinued',true);
-    else                          query = query.eq('is_discontinued',false);
+    if(invCurrentFilter==='disc')     query = query.eq('is_discontinued',true);
+    else if(invCurrentFilter==='planned') query = query.eq('is_discontinued',false).eq('disc_status','planned');
+    else                                  query = query.eq('is_discontinued',false).or('disc_status.is.null,disc_status.neq.planned');
     const allProds = (await query).data||[];
     let prods = allProds;
     if(invCurrentCat !== '전체') prods = prods.filter(p=>p.category===invCurrentCat);
@@ -6105,7 +6114,9 @@ async function loadInvList() {
       const velAll=CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
       const totalProd=(inv.produced_stock||0)+(inv.available_stock||0);
       const daysAll=velAll>0?Math.ceil(totalProd/velAll):null;
+      const isPlanned = p.disc_status === 'planned';
       const badge=p.is_discontinued?`<span class="sbadge" style="background:var(--surface2);color:var(--faint);">단종</span>`
+        :isPlanned?`<span class="sbadge" style="background:#FFF3CD;color:#856404;">단종 예정${p.disc_date?' (~'+p.disc_date.slice(5).replace('-','/')+')':''}</span>`
         :daysAll!==null&&daysAll<=12?`<span class="sbadge" style="background:var(--red-bg);color:var(--red);">발주필요</span>`
         :daysAll!==null&&daysAll<=45?`<span class="sbadge" style="background:var(--amber-bg);color:var(--amber);">주의</span>`
         :`<span class="sbadge sbadge-ing">정상</span>`;
@@ -6113,7 +6124,7 @@ async function loadInvList() {
       const handle=isDraggable
         ?`<td style="cursor:grab;color:var(--faint);font-size:13px;text-align:center;user-select:none;" class="inv-drag-handle">⠿</td>`
         :`<td></td>`;
-      return `<tr data-pid="${p.id}" ${isDraggable?'draggable="true"':''} style="${p.is_discontinued?'opacity:.45;':''}${isDraggable?'cursor:grab;':''}">
+      return `<tr data-pid="${p.id}" ${isDraggable?'draggable="true"':''} style="${p.is_discontinued?'opacity:.45;':isPlanned?'opacity:.7;':''}${isDraggable?'cursor:grab;':''}">
         ${handle}
         <td><div style="font-weight:500;">${p.name}</div>${opt}</td>
         <td style="font-size:11px;min-width:90px;" onclick="event.stopPropagation()">
@@ -6239,20 +6250,63 @@ async function openShipmentModal() {
 }
 
 function addShipmentRow() {
-  const wrap = $('shipment-rows');
+  const wrap  = $('shipment-rows');
   const rowId = `sr-${Date.now()}`;
-  const opts  = _shipmentProds.map(p =>
-    `<option value="${p.id}">${p.name}${p.option_name?' / '+p.option_name:''}</option>`
-  ).join('');
-  const div = document.createElement('div');
+  const div   = document.createElement('div');
   div.id = rowId;
-  div.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  div.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:8px;background:var(--surface2);border-radius:var(--r);position:relative;';
   div.innerHTML = `
-    <select class="prop-inp" style="flex:2;font-size:12px;">${opts}</select>
-    <input type="number" class="prop-inp" placeholder="수량" min="1" style="flex:1;font-size:12px;">
-    <div onclick="this.parentElement.remove()" style="cursor:pointer;color:var(--light);font-size:16px;padding:0 4px;">✕</div>`;
+    <div style="display:flex;gap:6px;align-items:center;">
+      <div style="flex:2;position:relative;">
+        <input class="prop-inp ship-prod-search" placeholder="상품명 검색..." autocomplete="off"
+          style="width:100%;font-size:12px;" data-rowid="${rowId}"
+          oninput="shipSearchProd(this,'${rowId}')"
+          onfocus="shipSearchProd(this,'${rowId}')">
+        <div id="ship-drop-${rowId}" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--r);max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+      </div>
+      <input type="number" class="prop-inp ship-qty" placeholder="수량" min="1" style="width:68px;flex-shrink:0;font-size:12px;">
+      <div onclick="document.getElementById('${rowId}').remove()" style="cursor:pointer;color:var(--light);font-size:16px;padding:0 4px;flex-shrink:0;">✕</div>
+    </div>
+    <div class="ship-selected-prod" style="font-size:11px;color:var(--light);display:none;"></div>
+    <input type="hidden" class="ship-prod-id">`;
   wrap.appendChild(div);
 }
+
+function shipSearchProd(input, rowId) {
+  const q    = input.value.trim().toLowerCase();
+  const drop = $(`ship-drop-${rowId}`);
+  const prods = _shipmentProds;
+  const filtered = q
+    ? prods.filter(p => (p.name+(p.option_name||'')).toLowerCase().includes(q))
+    : prods;
+  if (!filtered.length) { drop.style.display = 'none'; return; }
+  drop.innerHTML = filtered.slice(0,20).map(p => `
+    <div onclick="shipSelectProd('${rowId}','${p.id}',\`${(p.name+(p.option_name?' / '+p.option_name:'')).replace(/`/g,"'")}\`)"
+      style="padding:7px 10px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--surface2);"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <span style="font-weight:500;">${p.name}</span>${p.option_name?`<span style="color:var(--light);"> / ${p.option_name}</span>`:''}
+    </div>`).join('');
+  drop.style.display = '';
+}
+
+function shipSelectProd(rowId, prodId, prodLabel) {
+  const row = $(`${rowId}`); if (!row) return;
+  row.querySelector('.ship-prod-id').value     = prodId;
+  row.querySelector('.ship-prod-search').value = prodLabel;
+  const sel = row.querySelector('.ship-selected-prod');
+  sel.textContent  = '✓ ' + prodLabel;
+  sel.style.display = '';
+  sel.style.color   = 'var(--green)';
+  $(`ship-drop-${rowId}`).style.display = 'none';
+  row.querySelector('.ship-qty')?.focus();
+}
+
+// 드롭다운 외부 클릭 시 닫기
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ship-prod-search') && !e.target.closest('[id^="ship-drop-"]')) {
+    document.querySelectorAll('[id^="ship-drop-"]').forEach(d => d.style.display = 'none');
+  }
+}, true);
 
 async function saveShipment() {
   const shipDate  = $('shipment-date').value;
@@ -6263,9 +6317,9 @@ async function saveShipment() {
   if (!shipDate) { toast('날짜를 선택해주세요'); return; }
 
   const items = rows.map(row => {
-    const sel = row.querySelector('select');
-    const inp = row.querySelector('input[type="number"]');
-    return { productId: sel?.value, qty: parseInt(inp?.value)||0 };
+    const productId = row.querySelector('.ship-prod-id')?.value;
+    const qty       = parseInt(row.querySelector('.ship-qty')?.value) || 0;
+    return { productId, qty };
   }).filter(x => x.productId && x.qty > 0);
 
   if (!items.length) { toast('출고 상품과 수량을 입력해주세요'); return; }
@@ -6582,17 +6636,25 @@ function calcVelocity(salesRows, productId, channel) {
 }
 
 /* ═══ 상품/입고/생산화 모달 함수 ═══ */
-function invToggleDisc() {
-  invProdIsDisc=!invProdIsDisc;
-  $('inv-p-disc-track').classList.toggle('on',invProdIsDisc);
-  $('inv-p-disc-lbl').textContent=invProdIsDisc?'단종 처리':'단종 아님';
+function invToggleDisc() {} // 레거시 유지
+
+function setDiscStatus(status) {
+  $('inv-p-disc-status').value = status;
+  ['active','planned','disc'].forEach(s => {
+    const el = $('disc-st-'+s);
+    if (el) el.classList.toggle('on', s === status);
+  });
+  const dateWrap = $('inv-p-disc-date-wrap');
+  if (dateWrap) dateWrap.style.display = status === 'planned' ? '' : 'none';
+  invProdIsDisc = (status === 'disc');
 }
 
 function openInvModal(type) {
   if(type==='product'){ invProdIsNew=true; invProdEditId=null; invProdIsDisc=false;
     $('inv-product-kind').textContent='상품 추가'; $('inv-product-del-btn').style.display='none';
     ['inv-p-name','inv-p-option','inv-p-sku','inv-p-map-own','inv-p-map-kakao','inv-p-map-smart'].forEach(id=>$(id)&&($(id).value=''));
-    $('inv-p-disc-track').classList.remove('on'); $('inv-p-disc-lbl').textContent='단종 아님';
+    setDiscStatus('active');
+    if($('inv-p-disc-date')) $('inv-p-disc-date').value = '';
     loadCatSelectOptions('');
     $('inv-product-modal').classList.add('on'); setTimeout(()=>$('inv-p-name').focus(),80); }
   if(type==='receipt'){ invReceiptIsNew=true; invReceiptEditId=null;
@@ -6630,8 +6692,9 @@ async function openEditProduct(id) {
     $('inv-product-kind').textContent='상품 편집'; $('inv-product-del-btn').style.display='flex';
     $('inv-p-name').value=p.name||''; $('inv-p-option').value=p.option_name||''; $('inv-p-sku').value=p.sku||'';
     await loadCatSelectOptions(p.category||'');
-    $('inv-p-disc-track').classList.toggle('on',invProdIsDisc);
-    $('inv-p-disc-lbl').textContent=invProdIsDisc?'단종 처리':'단종 아님';
+    const discStatus = p.disc_status || (p.is_discontinued ? 'disc' : 'active');
+    setDiscStatus(discStatus);
+    if($('inv-p-disc-date')) $('inv-p-disc-date').value = p.disc_date || '';
     const chMap={'자사몰':'inv-p-map-own','카카오선물하기':'inv-p-map-kakao','스마트스토어':'inv-p-map-smart'};
     Object.values(chMap).forEach(id=>$(id)&&($(id).value=''));
     maps.forEach(m=>{ const eid=chMap[m.channel]; if(eid&&$(eid)) $(eid).value=m.channel_name||''; });
@@ -6644,7 +6707,12 @@ async function saveProduct() {
   if(!name){ toast('상품명을 입력해주세요'); $('inv-p-name').focus(); return; }
   try {
     const id=invProdEditId||`prod-${Date.now()}`;
-    const row={id,name,option_name:$('inv-p-option').value.trim()||null,category:$('inv-p-category').value.trim()||null,sku:$('inv-p-sku').value.trim()||null,is_discontinued:invProdIsDisc};
+    const discStatus = $('inv-p-disc-status')?.value || 'active';
+    const discDate   = $('inv-p-disc-date')?.value || null;
+    const row={id,name,option_name:$('inv-p-option').value.trim()||null,category:$('inv-p-category').value.trim()||null,sku:$('inv-p-sku').value.trim()||null,
+      is_discontinued: discStatus === 'disc',
+      disc_status:     discStatus,
+      disc_date:       discDate};
     if(invProdIsNew) await db.from('products').insert([row]);
     else await db.from('products').update(row).eq('id',id);
     // 채널 매핑
