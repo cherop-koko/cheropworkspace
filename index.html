@@ -851,6 +851,7 @@ a { text-decoration:none; color:inherit; }
           <div class="dash-col">
             <div class="card" id="dash-rev-card">
               <div class="card-head"><div><div class="card-title">이번 달 매출</div><div class="card-sub" id="dash-rev-month"></div></div><div class="card-link" onclick="nav('revenue')">↗</div></div>
+              <div id="dash-sales-alert" style="display:none;font-size:11px;color:#C4736A;background:#FAECEB;padding:6px 10px;border-radius:var(--r);margin-bottom:8px;"></div>
               <div class="hero"><div class="hero-lbl">MONTHLY REVENUE</div><div class="hero-val" id="dash-rev-val">—</div><div class="hero-sub" id="dash-rev-sub">연간 목표 300억</div></div>
               <div style="display:flex;align-items:baseline;justify-content:space-between;">
                 <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">전월 대비</div><div style="font-size:22px;font-weight:500;" id="dash-rev-mom">—</div></div>
@@ -875,6 +876,16 @@ a { text-decoration:none; color:inherit; }
             </div>
           </div>
           <div class="dash-col">
+            <!-- 마감 임박 알림 카드 -->
+            <div class="card" id="dash-due-card" style="display:none;">
+              <div class="card-head"><div><div class="card-title">⚠ 마감 임박</div><div class="card-sub">D-3 이하</div></div><div class="card-link" onclick="nav('tasks')">↗</div></div>
+              <div id="dash-due-list"></div>
+            </div>
+            <!-- 직원별 루틴 현황 (admin only) -->
+            <div class="card" id="dash-routine-all-card" style="display:none;">
+              <div class="card-head"><div><div class="card-title">팀 루틴 현황</div><div class="card-sub">오늘</div></div></div>
+              <div id="dash-routine-all-list"></div>
+            </div>
             <div class="dday-card">
               <div class="dday-tag" id="dday-tag">📍 중요 일정</div>
               <div class="dday-title" id="dday-title">—</div>
@@ -977,6 +988,7 @@ a { text-decoration:none; color:inherit; }
             <div style="display:flex;gap:8px;">
               <button class="f-btn f-btn-cancel" style="font-size:12px;padding:7px 14px;" onclick="exportInvExcel()">📤 재고 내보내기</button>
               <button class="f-btn f-btn-cancel" style="font-size:12px;padding:7px 14px;" onclick="openInvModal('upload')">📊 판매내역 업로드</button>
+              <button class="f-btn f-btn-cancel" style="font-size:12px;padding:7px 14px;" onclick="openShipmentModal()">📦 출고 등록</button>
               <button class="f-btn f-btn-cancel" id="inv-import-btn" style="font-size:12px;padding:7px 14px;display:none;" onclick="openImportModal()">📂 재고 가져오기</button>
               <button class="f-btn f-btn-save"   style="font-size:12px;padding:7px 14px;" onclick="openInvModal('product')">+ 상품 추가</button>
             </div>
@@ -1753,6 +1765,7 @@ a { text-decoration:none; color:inherit; }
           <!-- 관리자 전용 탭바 -->
           <div class="page-tabs" id="att-page-tabs" style="display:none;">
             <div class="page-tab on" onclick="attSetTab('today',this)">오늘 현황</div>
+            <div class="page-tab"   onclick="attSetTab('monthly',this)">월간 요약</div>
             <div class="page-tab"   onclick="attSetTab('log',this)">출퇴근 로그</div>
             <div class="page-tab"   onclick="attSetTab('leave',this)">휴가 관리</div>
             <div class="page-tab"   onclick="attSetTab('annual',this)">직원별 연차</div>
@@ -1802,6 +1815,19 @@ a { text-decoration:none; color:inherit; }
         </div>
 
         <!-- 출퇴근 로그 -->
+        <div id="att-tab-monthly" class="att-tab-body" style="display:none;">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">월간 근태 요약</div><div class="card-sub" id="att-monthly-sub"></div></div></div>
+            <div style="display:grid;grid-template-columns:60px 1fr 1fr 1fr 1fr;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
+              <span style="font-size:11px;color:var(--light);">이름</span>
+              <span style="font-size:11px;color:var(--light);">출근</span>
+              <span style="font-size:11px;color:var(--light);">결근</span>
+              <span style="font-size:11px;color:var(--light);">지각</span>
+              <span style="font-size:11px;color:var(--light);">잔여연차</span>
+            </div>
+            <div id="att-monthly-summary"></div>
+          </div>
+        </div>
         <div id="att-tab-log" class="att-tab-body" style="display:none;">
           <div style="display:flex;gap:8px;margin-bottom:16px;">
             <div class="att-month-btn on" id="adm-log-this" onclick="attLogSetMonth(0,this)" style="font-size:12px;padding:5px 14px;border-radius:var(--rpill);border:0.5px solid var(--border);cursor:pointer;background:var(--text);color:#fff;">이번 달</div>
@@ -2557,6 +2583,49 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <!-- ═══ 재고: 판매내역 업로드 ═══ -->
+<!-- ═══ 출고 수기 등록 모달 ═══ -->
+<div class="modal-overlay" id="shipment-modal" onclick="if(event.target===this)closeModal('shipment-modal')">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-bar">
+      <div class="modal-kind">출고 등록</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('shipment-modal')">✕</div></div>
+    </div>
+    <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">출고 날짜</div>
+          <input type="date" id="shipment-date" class="prop-inp" style="width:100%;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">채널</div>
+          <select id="shipment-channel" class="prop-inp" style="width:100%;">
+            <option value="자사몰">자사몰</option>
+            <option value="카카오선물하기">카카오선물하기</option>
+            <option value="스마트스토어">스마트스토어</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">채널별 일별 매출 (선택)</div>
+        <input type="number" id="shipment-revenue" class="prop-inp" placeholder="0" style="width:100%;" min="0">
+        <div style="font-size:10px;color:var(--faint);margin-top:3px;">판매 분석탭 매출 데이터에 반영돼요</div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:11px;color:var(--light);">출고 상품 목록</div>
+          <button onclick="addShipmentRow()" class="f-btn f-btn-cancel" style="font-size:11px;padding:3px 10px;">+ 상품 추가</button>
+        </div>
+        <div id="shipment-rows" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('shipment-modal')">취소</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveShipment()">저장 · 재고 차감</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="inv-upload-modal" onclick="if(event.target===this)closeModal('inv-upload-modal')">
   <div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">
     <div class="modal-bar">
@@ -3893,7 +3962,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.1.7</div>
+<div id="version">v4.2.1</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4274,10 +4343,12 @@ async function loadDashboard() {
   initMemberColors(); // 담당자 색상 적용
   loadDashQuickLinks();
   await Promise.all([loadDashTasks(), loadDashNotices(), loadDashAtt(), loadDashRevenue(), loadDashInventory()]);
+  loadDashRoutineAll();
   loadDashDday();
 }
 
 async function loadDashTasks() {
+  await loadDashDueSoon(); // 마감 임박 알림
   // 김성애는 생산 일정 표시
   if(user?.id === 'sungae') {
     await loadDashProdSchedule();
@@ -4307,6 +4378,64 @@ async function loadDashTasks() {
       : '<div style="padding:12px 0;font-size:13px;color:var(--light);">할일이 없어요 🎉</div>';
     loadTodayAtt();
   } catch(e) { console.error(e); }
+}
+
+async function loadDashRoutineAll() {
+  const card = $('dash-routine-all-card'); if (!card) return;
+  if (!user?.admin) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  try {
+    const s       = await getAppState();
+    const doneKey = (name) => `rdone_${name}_${dateStr()}`;
+    $('dash-routine-all-list').innerHTML = MEMBERS.map(m => {
+      const routines = (s.routines||{})[m.name] || (defaultRoutines[m.name] || []);
+      const done     = new Set(JSON.parse(localStorage.getItem(doneKey(m.name))||'[]'));
+      const cnt      = routines.filter(r => done.has(r.id)).length;
+      const total    = routines.length;
+      const pct      = total ? Math.round(cnt/total*100) : 0;
+      const color    = pct===100 ? '#6B9E7A' : pct>=50 ? '#C4A96A' : 'var(--border2)';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--surface2);">
+        <span style="font-size:12px;color:var(--text);width:52px;">${m.name}</span>
+        <div style="flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width .3s;"></div>
+        </div>
+        <span style="font-size:11px;color:var(--light);width:32px;text-align:right;">${cnt}/${total}</span>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error('loadDashRoutineAll', e); }
+}
+
+async function loadDashDueSoon() {
+  const el = $('dash-due-list'); if (!el) return;
+  try {
+    const today = dateStr();
+    const d3    = dateStr(new Date(Date.now() + 3*86400000));
+    // 할일 + 프로젝트 업무 모두 조회
+    const [tasks, ptasks] = await Promise.all([
+      db.from('tasks').select('*').not('due_date','is',null).lte('due_date',d3).neq('status','done'),
+      db.from('proj_tasks').select('*').not('due_date','is',null).lte('due_date',d3).neq('status','done'),
+    ]);
+    const all = [...(tasks.data||[]).map(t=>({...t,_type:'task'})), ...(ptasks.data||[]).map(t=>({...t,_type:'proj'}))];
+    const mine = all.filter(t => !t.assignee || t.assignee === user.name);
+    const list  = user.admin ? all : mine;
+    list.sort((a,b) => (a.due_date||'').localeCompare(b.due_date||''));
+
+    const dueCard = $('dash-due-card');
+    if (dueCard) dueCard.style.display = list.length ? '' : 'none';
+
+    if (!list.length) { el.innerHTML = ''; return; }
+    el.innerHTML = list.slice(0,5).map(t => {
+      const diff = Math.ceil((new Date(t.due_date) - new Date(today)) / 86400000);
+      const isOver = diff < 0;
+      const color  = isOver ? '#C4736A' : diff === 0 ? '#E05D5D' : '#C4A96A';
+      const label  = isOver ? `D+${Math.abs(diff)} 초과` : diff === 0 ? 'D-day' : `D-${diff}`;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--surface2);">
+        <span style="font-size:10px;font-weight:600;color:${color};background:${color}18;padding:2px 7px;border-radius:20px;white-space:nowrap;">${label}</span>
+        <span style="font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.title}</span>
+        ${t.assignee ? `<span style="font-size:10px;color:var(--light);">${t.assignee}</span>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) { console.error('loadDashDueSoon', e); }
 }
 
 async function loadDashProdSchedule() {
@@ -4383,6 +4512,43 @@ async function loadDashAtt() {
   } catch(e) {}
 }
 
+async function loadAttMonthlySummary() {
+  const el = $('att-monthly-summary'); if (!el) return;
+  const sub = $('att-monthly-sub');
+  try {
+    const now   = new Date();
+    const year  = now.getFullYear();
+    const month = String(now.getMonth()+1).padStart(2,'0');
+    if (sub) sub.textContent = `${year}년 ${now.getMonth()+1}월`;
+    const from  = `${year}-${month}-01`;
+    const to    = `${year}-${month}-31`;
+    const [attData, leaveData] = await Promise.all([
+      db.from('attendances').select('*').gte('date',from).lte('date',to),
+      db.from('leaves').select('*').gte('start_date',from).lte('start_date',to),
+    ]);
+    const atts   = attData.data  || [];
+    const leaves = leaveData.data || [];
+
+    el.innerHTML = `<div style="display:flex;flex-direction:column;gap:0;">` +
+      MEMBERS.map(m => {
+        const mAtts   = atts.filter(a => a.member === m.name);
+        const mLeaves = leaves.filter(l => l.member === m.name);
+        const annualUsed = mLeaves.filter(l => l.type==='annual').length;
+        const halfUsed   = mLeaves.filter(l => l.type==='half_am'||l.type==='half_pm').length;
+        const annualLeft = Math.max(0, 12 - annualUsed - halfUsed*0.5);
+        const absent     = mAtts.filter(a => !a.clock_in).length;
+        const late       = mAtts.filter(a => a.clock_in && a.clock_in > '09:10:00').length;
+        return `<div style="display:grid;grid-template-columns:60px 1fr 1fr 1fr 1fr;align-items:center;gap:8px;padding:9px 0;border-bottom:0.5px solid var(--surface2);font-size:12px;">
+          <span style="font-weight:500;">${m.name}</span>
+          <span style="color:var(--light);">출근 ${mAtts.filter(a=>a.clock_in).length}일</span>
+          <span style="color:${absent>0?'#C4736A':'var(--light)'};">결근 ${absent}일</span>
+          <span style="color:${late>0?'#C4A96A':'var(--light)'};">지각 ${late}회</span>
+          <span style="color:var(--text);">잔여연차 ${annualLeft}일</span>
+        </div>`;
+      }).join('') + '</div>';
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:12px;">불러오기 실패</div>'; }
+}
+
 async function loadDashInventory() {
   try {
     const prods = (await db.from('products').select('id').eq('is_discontinued',false)).data||[];
@@ -4408,12 +4574,38 @@ async function loadDashRevenue() {
   $('dash-rev-card').style.display='';
   try {
     const n=new Date(), month=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
-    const { data } = await db.from('channel_sales_log').select('amount').gte('date',`${month}-01`).lte('date',`${month}-31`);
-    const total = (data||[]).reduce((s,r)=>s+(r.amount||0),0);
-    $('dash-rev-val').textContent  = fmtWon(total)||'—';
-    $('dash-rev-month').textContent= `${n.getMonth()+1}월 누계`;
-    $('dash-rev-goal').textContent = `목표 ${total?Math.round((total/3000000000)*100):0}%`;
-  } catch(e) { $('dash-rev-val').textContent='—'; }
+    const today = dateStr();
+    const yesterday = dateStr(new Date(Date.now()-86400000));
+    const { data } = await db.from('channel_sales_log').select('*').gte('date',`${month}-01`).lte('date',`${month}-31`);
+    const rows = data||[];
+    const total = rows.reduce((s,r)=>s+(r.amount||0),0);
+    // 전일 vs 전전일 매출 비교
+    const todayAmt = rows.filter(r=>r.date===today).reduce((s,r)=>s+(r.amount||0),0);
+    const ystdAmt  = rows.filter(r=>r.date===yesterday).reduce((s,r)=>s+(r.amount||0),0);
+    const mom = total ? Math.round((total/3000000000)*100) : 0;
+    if($('dash-rev-val'))   $('dash-rev-val').textContent   = fmtWon(total)||'—';
+    if($('dash-rev-month')) $('dash-rev-month').textContent = `${n.getMonth()+1}월 누계`;
+    if($('dash-rev-goal'))  $('dash-rev-goal').textContent  = `목표 ${mom}%`;
+    if($('dash-rev-mom'))   $('dash-rev-mom').textContent   = ystdAmt ? fmtWon(todayAmt) : '—';
+    // 판매 이상 알림: 전일 대비 50% 미만이거나 3일 이상 0원
+    const alertEl = $('dash-sales-alert');
+    if (alertEl) {
+      const isDropped = ystdAmt > 0 && todayAmt < ystdAmt * 0.5;
+      const zeroRows  = [0,1,2].every(i => {
+        const d = dateStr(new Date(Date.now()-i*86400000));
+        return rows.filter(r=>r.date===d).reduce((s,r)=>s+(r.amount||0),0) === 0;
+      });
+      if (isDropped) {
+        alertEl.style.display='';
+        alertEl.textContent=`⚠ 오늘 매출이 전일 대비 ${Math.round((1-todayAmt/ystdAmt)*100)}% 감소했어요`;
+      } else if (zeroRows) {
+        alertEl.style.display='';
+        alertEl.textContent='⚠ 최근 3일간 매출 데이터가 없어요';
+      } else {
+        alertEl.style.display='none';
+      }
+    }
+  } catch(e) { if($('dash-rev-val')) $('dash-rev-val').textContent='—'; }
 }
 
 function loadDashDday() {
@@ -5895,8 +6087,8 @@ async function loadInvList() {
       $('inv-product-table').innerHTML='<div style="padding:20px;font-size:13px;color:var(--faint);text-align:center;">상품이 없어요</div>';
       return;
     }
-    // 검색/카테고리 필터 중이면 드래그 비활성
-    const isDraggable = !searchQ && invCurrentCat === '전체';
+    // 검색 중이 아니면 드래그 허용 (카테고리 필터와 무관)
+    const isDraggable = !searchQ;
     $('inv-product-table').innerHTML=`<table class="inv-tbl"><thead><tr>
       <th style="width:20px;"></th><th>상품명 · 옵션</th><th>카테고리</th><th>총재고</th><th>생산화완료</th><th>생산화대기</th><th>가용</th><th>채널 배분</th><th>품절예상</th><th>상태</th><th></th>
     </tr></thead><tbody>${prods.map(p=>{
@@ -6029,10 +6221,134 @@ async function saveInlineCat(sel) {
   } catch(e) { toast('저장 실패: '+e.message); }
 }
 
+/* ══════════════════════════════
+   출고 수기 등록
+══════════════════════════════ */
+let _shipmentProds = [];
+
+async function openShipmentModal() {
+  $('shipment-date').value = dateStr();
+  $('shipment-channel').value = '자사몰';
+  $('shipment-revenue').value = '';
+  $('shipment-rows').innerHTML = '';
+  // 상품 목록 미리 로드
+  const { data } = await db.from('products').select('id,name,option_name').eq('is_discontinued',false).order('sort_order',{ascending:true,nullsFirst:false}).order('name');
+  _shipmentProds = data || [];
+  addShipmentRow();
+  $('shipment-modal').classList.add('on');
+}
+
+function addShipmentRow() {
+  const wrap = $('shipment-rows');
+  const rowId = `sr-${Date.now()}`;
+  const opts  = _shipmentProds.map(p =>
+    `<option value="${p.id}">${p.name}${p.option_name?' / '+p.option_name:''}</option>`
+  ).join('');
+  const div = document.createElement('div');
+  div.id = rowId;
+  div.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  div.innerHTML = `
+    <select class="prop-inp" style="flex:2;font-size:12px;">${opts}</select>
+    <input type="number" class="prop-inp" placeholder="수량" min="1" style="flex:1;font-size:12px;">
+    <div onclick="this.parentElement.remove()" style="cursor:pointer;color:var(--light);font-size:16px;padding:0 4px;">✕</div>`;
+  wrap.appendChild(div);
+}
+
+async function saveShipment() {
+  const shipDate  = $('shipment-date').value;
+  const channel   = $('shipment-channel').value;
+  const revenue   = parseInt($('shipment-revenue').value) || 0;
+  const rows      = [...$('shipment-rows').querySelectorAll('div[id^="sr-"]')];
+
+  if (!shipDate) { toast('날짜를 선택해주세요'); return; }
+
+  const items = rows.map(row => {
+    const sel = row.querySelector('select');
+    const inp = row.querySelector('input[type="number"]');
+    return { productId: sel?.value, qty: parseInt(inp?.value)||0 };
+  }).filter(x => x.productId && x.qty > 0);
+
+  if (!items.length) { toast('출고 상품과 수량을 입력해주세요'); return; }
+
+  try {
+    // 1. sales_log에 저장
+    const upsertId = `ship-${shipDate}-${channel.replace(/[^a-z0-9]/gi,'')}-${Date.now()}`;
+    for (const item of items) {
+      await db.from('sales_log').insert([{
+        id:         `ship-${shipDate}-${channel}-${item.productId}-${Date.now()}`,
+        product_id: item.productId,
+        channel,
+        quantity:   item.qty,
+        amount:     0,  // 매출은 아래 channel_sales_log에 별도 저장
+        sale_date:  shipDate,
+        created_at: new Date().toISOString(),
+      }]);
+
+      // 2. 재고 차감
+      const { data: inv } = await db.from('inventory').select('*').eq('product_id', item.productId).maybeSingle();
+      if (inv) await db.from('inventory').update({
+        total_stock: Math.max(0, (inv.total_stock||0) - item.qty),
+        updated_at:  new Date().toISOString(),
+      }).eq('product_id', item.productId);
+
+      // 3. 채널 재고 차감
+      const { data: ci } = await db.from('channel_inventory').select('*').eq('product_id', item.productId).eq('channel', channel).maybeSingle();
+      if (ci) await db.from('channel_inventory').update({
+        stock:      Math.max(0, (ci.stock||0) - item.qty),
+        updated_at: new Date().toISOString(),
+      }).eq('id', ci.id);
+    }
+
+    // 4. 채널별 매출 로그 (revenue 입력 시)
+    if (revenue > 0) {
+      await db.from('channel_sales_log').upsert([{
+        id:      `csl-ship-${shipDate}-${channel}`,
+        channel,
+        date:    shipDate,
+        amount:  revenue,
+        note:    `출고 등록 (${items.length}개 상품)`,
+      }], { onConflict: 'id' });
+    }
+
+    toast(`출고 등록 완료 ✓ (${items.length}개 상품, 재고 차감됨)`);
+    closeModal('shipment-modal');
+    loadInvOverview();
+  } catch(e) {
+    toast('저장 실패: ' + e.message);
+    console.error(e);
+  }
+}
+
 async function saveInvOrder() {
-  const rows = [...($('inv-product-table')?.querySelectorAll('tr[data-pid]')||[])];
-  const updates = rows.map((r,i) => db.from('products').update({sort_order:i}).eq('id',r.dataset.pid));
-  try { await Promise.all(updates); } catch(e) { console.error('순서 저장 실패',e); }
+  try {
+    const visibleIds = [...($('inv-product-table')?.querySelectorAll('tr[data-pid]')||[])].map(r => r.dataset.pid);
+    if (!visibleIds.length) return;
+
+    if (invCurrentCat === '전체') {
+      // 전체 탭: 보이는 순서 그대로 sort_order 부여
+      await Promise.all(visibleIds.map((id, i) => db.from('products').update({ sort_order: i }).eq('id', id)));
+    } else {
+      // 카테고리 탭: 전체 목록에서 해당 카테고리 슬롯 위치를 유지하면서 내부 순서만 교체
+      const allProds = (await db.from('products')
+        .select('id,category,sort_order')
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('name')
+      ).data || [];
+
+      // 이 카테고리가 전체 목록에서 차지하는 sort_order 값들 추출
+      const catEntries = allProds
+        .filter(p => p.category === invCurrentCat)
+        .map((p, i) => ({ id: p.id, slotOrder: p.sort_order ?? (allProds.length + i) }));
+
+      // 기존 슬롯 sort_order 값을 visibleIds 새 순서에 맞게 재배정
+      const sortedSlots = catEntries.map(e => e.slotOrder).sort((a, b) => a - b);
+      const updates = visibleIds.map((id, i) => ({
+        id,
+        sort_order: sortedSlots[i] !== undefined ? sortedSlots[i] : catEntries.length + i
+      }));
+      await Promise.all(updates.map(u => db.from('products').update({ sort_order: u.sort_order }).eq('id', u.id)));
+    }
+  } catch(e) { console.error('순서 저장 실패', e); }
 }
 
 /* ═══ 채널별 재고 탭 ═══ */
@@ -6952,13 +7268,14 @@ async function loadNoticeList() {
     $('notice-list').innerHTML = list.map(n => {
       const isNew  = n.date >= recentDate;
       const catCls = CAT_CLS[n.category] || 'nbadge-notice';
-      const isSel  = selectedNotice === n.id;
+      const isSel   = selectedNotice === n.id;
+      const unreadMe = !(n.readBy||[]).includes(user?.name);
       return `<div class="nrow${isSel?' on':''}" onclick="selectNotice('${n.id}')">
         <div class="nrow-top">
           <span class="sbadge ${catCls}" style="font-size:10px;">${n.category||'공지'}</span>
           ${isNew ? '<span class="new-dot"></span>' : ''}
         </div>
-        <div class="nrow-title">${n.title}</div>
+        <div class="nrow-title">${unreadMe ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#E05D5D;margin-right:5px;vertical-align:middle;"></span>' : ''}${n.title}</div>
         <div class="nrow-meta">${n.author||''} · ${n.date ? n.date.slice(5).replace('-','/') : ''}</div>
       </div>`;
     }).join('');
@@ -6977,15 +7294,41 @@ function selectNotice(id) { selectedNotice = id; loadNoticeList(); }
 
 function renderNoticeDetail(n) {
   const catCls = CAT_CLS[n.category] || 'nbadge-notice';
+  const readBy = n.readBy || [];
+  // 읽지 않은 멤버
+  const unread = MEMBERS.filter(m => !readBy.includes(m.name)).map(m => m.name);
+  const readChips = MEMBERS.map(m => {
+    const isRead = readBy.includes(m.name);
+    return `<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${isRead?'var(--surface2)':'#FAECEB'};color:${isRead?'var(--light)':'#C4736A'};">${isRead?'✓ ':''} ${m.name}</span>`;
+  }).join('');
+
   $('notice-detail').innerHTML = `
     <div class="nd-badge-row"><span class="sbadge ${catCls}" style="font-size:10px;">${n.category||'공지'}</span></div>
     <div class="nd-title">${n.title}</div>
     <div class="nd-meta"><span>${n.author||''}</span><div class="nd-sep"></div><span>${n.date||''}</span></div>
     <div class="nd-body">${(n.content||'').replace(/\n/g,'<br>')}</div>
+    <div style="margin-top:16px;padding-top:14px;border-top:0.5px solid var(--surface2);">
+      <div style="font-size:11px;color:var(--light);margin-bottom:8px;">읽음 현황 (${readBy.length}/${MEMBERS.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">${readChips}</div>
+      ${!readBy.includes(user?.name) ? `<button onclick="confirmNoticeRead('${n.id}')" class="f-btn f-btn-save" style="margin-top:10px;font-size:12px;padding:6px 14px;">✓ 확인했어요</button>` : ''}
+    </div>
     ${user?.admin ? `<div class="nd-divider"></div><div style="display:flex;gap:8px;">
       <div class="nd-edit-btn" onclick="openNoticeModal('${n.id}')">✏ 수정</div>
       <div class="nd-edit-btn" style="color:var(--red);" onclick="deleteNoticeById('${n.id}')">🗑 삭제</div>
     </div>` : ''}`;
+}
+
+async function confirmNoticeRead(noticeId) {
+  const s = await getAppState();
+  s.notices = (s.notices||[]).map(n => {
+    if (n.id !== noticeId) return n;
+    const readBy = n.readBy || [];
+    if (readBy.includes(user.name)) return n;
+    return { ...n, readBy: [...readBy, user.name] };
+  });
+  await setAppState(s);
+  toast('확인 완료 ✓');
+  loadNoticeList();
 }
 
 function setNoticeCat(cat, el) {
@@ -7081,7 +7424,7 @@ function attSetTab(tab, el) {
   attCurTab = tab;
   document.querySelectorAll('#att-page-tabs .page-tab').forEach(t => t.classList.remove('on'));
   if(el) el.classList.add('on');
-  ['today','log','leave','stats','annual','avghour'].forEach(t => {
+  ['today','monthly','log','leave','stats','annual','avghour'].forEach(t => {
     const d=$(`att-tab-${t}`); if(d) d.style.display=(t===tab)?'':'none';
   });
   attLoadCurrentTab();
@@ -7090,6 +7433,7 @@ function attSetTab(tab, el) {
 function attLoadCurrentTab() {
   if(!user?.admin){ loadAttEmpView(); return; }
   if(attCurTab==='today')   loadAttToday();
+  if(attCurTab==='monthly') loadAttMonthlySummary();
   if(attCurTab==='log')     loadAttLog();
   if(attCurTab==='leave')   loadAttLeave();
   if(attCurTab==='stats')   loadAttStats();
@@ -11356,6 +11700,11 @@ async function loadContentStats() {
   const { data: raw } = await db.from('content_posts').select('*').eq('status','published').gte('post_date', from);
   const allPub = (raw||[]).map(p => ({ ...p, date: p.post_date, imgData: p.img_data, imgUrl: p.img_url }));
   const posts  = allPub.filter(p=>contentStatType==='all'||p.type===contentStatType);
+  // 판매 연결 데이터 로드 (content_posts 날짜 ±3일 매출)
+  window._contentSalesData = null;
+  db.from('sales_log').select('sale_date,amount').gte('sale_date', from).then(r => {
+    window._contentSalesData = r.data || [];
+  });
 
   // 요약 카드
   const totalPosts = allPub.length;
@@ -11404,6 +11753,17 @@ async function loadContentStats() {
       <div style="text-align:right;flex-shrink:0;">
         <div style="font-size:10px;color:${parseFloat(saveRate)>=0.5?'var(--green)':'var(--light)'};">저장 ${saveRate}%</div>
         <div style="font-size:10px;color:var(--light);">${p.date?.slice(5)||''}</div>
+        ${(()=>{
+          const sd = window._contentSalesData||[];
+          const pd = new Date(p.date||'');
+          const dBefore = [dateStr(new Date(pd-2*86400000)), dateStr(new Date(pd-86400000))];
+          const dAfter  = [dateStr(pd), dateStr(new Date(pd+86400000)), dateStr(new Date(pd+2*86400000)), dateStr(new Date(pd+3*86400000))];
+          const before  = sd.filter(r=>dBefore.includes(r.sale_date)).reduce((s,r)=>s+(r.amount||0),0);
+          const after   = sd.filter(r=>dAfter.includes(r.sale_date)).reduce((s,r)=>s+(r.amount||0),0);
+          if(!before&&!after) return '';
+          const diff=after-before, color=diff>0?'var(--green)':diff<0?'var(--red)':'var(--light)';
+          return `<div style="font-size:10px;color:${color};">${diff>0?'↑':'↓'} ${fmtWon(Math.abs(diff))}</div>`;
+        })()}
       </div>
     </div>`;
   }).join('')
@@ -11672,6 +12032,10 @@ async function loadPlanAnnual() {
       ).join('')
     : '<div style="font-size:13px;color:var(--faint);padding:8px 0;">상단 버튼으로 연간 목표를 추가해보세요</div>';
 
+  // 월별 목표 vs 실적 테이블 렌더
+  const monthly = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {};
+  const salesData = (await db.from('sales_log').select('sale_date,amount').gte('sale_date',`${planYear}-01-01`).lte('sale_date',`${planYear}-12-31`)).data||[];
+
   // 달성률
   $('plan-progress-sub').textContent = `${planYear}년 ${curMonth+1}월 기준`;
   $('plan-progress-list').innerHTML = goals.filter(g=>g.showProgress).map(g=>{
@@ -11691,26 +12055,82 @@ async function loadPlanAnnual() {
   $('plan-direction-memo').textContent = dir || '클릭하여 올해의 핵심 방향을 입력하세요';
   $('plan-direction-memo').style.color = dir ? 'var(--text)' : 'var(--faint)';
 
-  // 월별 차트
-  const monthly = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {};
-  const maxVal  = Math.max(...Object.values(monthly).map(m=>(m.target||0)), 100);
+  // 월별 목표 vs 실적 차트 + 테이블
+  // 실제 매출 DB에서 월별 집계
+  const actualByMonth = {};
+  salesData.forEach(r => {
+    const m = parseInt((r.sale_date||'').slice(5,7));
+    if (m) actualByMonth[m] = (actualByMonth[m]||0) + (r.amount||0);
+  });
+
+  const maxVal = Math.max(
+    ...PLAN_MONTHS.map((_,i) => Math.max(monthly[i+1]?.target||0, actualByMonth[i+1]||0)),
+    100
+  );
+
+  // 차트
   $('plan-monthly-chart').innerHTML = PLAN_MONTHS.map((lbl,i)=>{
     const m      = monthly[i+1]||{};
     const target = m.target||0;
-    const actual = m.actual||0;
+    const actual = actualByMonth[i+1]||0;
     const isPast = i < curMonth;
     const isCur  = i === curMonth;
-    const tH     = Math.round(target/maxVal*100);
-    const aH     = Math.round(actual/maxVal*100);
+    const tH     = maxVal>0 ? Math.round(target/maxVal*100) : 0;
+    const aH     = maxVal>0 ? Math.round(actual/maxVal*100) : 0;
+    const achv   = target>0 ? Math.round(actual/target*100) : null;
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-      <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:64px;">
-        ${target>0 ? `<div style="flex:1;height:${tH}%;background:${isPast||isCur?'#6B9E7A':'#C4A96A'};border-radius:2px 2px 0 0;opacity:${isPast||isCur?0.9:0.4};${!isPast&&!isCur?'border:1px dashed #C4A96A;':''}"></div>` : ''}
-        ${actual>0 ? `<div style="flex:1;height:${aH}%;background:#1C1E26;border-radius:2px 2px 0 0;"></div>` : ''}
-        ${!target&&!actual ? `<div style="flex:1;height:4px;background:var(--surface2);border-radius:2px 2px 0 0;margin-top:auto;"></div>` : ''}
+      ${achv!==null&&isPast?`<div style="font-size:8px;color:${achv>=100?'#6B9E7A':'#C4736A'};font-weight:600;">${achv}%</div>`:'<div style="font-size:8px;"></div>'}
+      <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:56px;">
+        ${target>0 ? `<div style="flex:1;height:${tH}%;background:#C4A96A;border-radius:2px 2px 0 0;opacity:.5;"></div>` : '<div style="flex:1;"></div>'}
+        ${actual>0 ? `<div style="flex:1;height:${aH}%;background:${isCur?'#1C1E26':'#6B9E7A'};border-radius:2px 2px 0 0;"></div>` : '<div style="flex:1;"></div>'}
       </div>
-      <div style="font-size:9px;color:${isCur?'var(--text)':'var(--light)'};font-weight:${isCur?500:400};">${i+1}월</div>
+      <div style="font-size:9px;color:${isCur?'var(--text)':'var(--light)'};font-weight:${isCur?600:400};">${i+1}월</div>
     </div>`;
   }).join('');
+
+  // 월별 상세 테이블 (누적 달성률 포함)
+  let cumTarget=0, cumActual=0;
+  const tableRows = PLAN_MONTHS.map((lbl,i)=>{
+    const m      = monthly[i+1]||{};
+    const target = m.target||0;
+    const actual = actualByMonth[i+1]||0;
+    cumTarget += target; cumActual += actual;
+    const achv = target>0 ? Math.round(actual/target*100) : null;
+    const isCur = i===curMonth, isPast = i<curMonth;
+    const rowBg = isCur ? 'background:var(--surface2);' : '';
+    return `<tr style="${rowBg}">
+      <td style="padding:7px 10px;font-size:12px;font-weight:${isCur?600:400};">${i+1}월${isCur?' ←':''}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;">${target?fmtWon(target):'—'}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;color:${actual?'var(--text)':'var(--faint)'};">${actual?fmtWon(actual):'—'}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;">
+        ${achv!==null&&(isPast||isCur)?`<span style="color:${achv>=100?'#6B9E7A':'#C4736A'};font-weight:500;">${achv}%</span>`:achv!==null?`<span style="color:var(--faint);">${achv}%</span>`:'—'}
+      </td>
+      <td style="padding:7px 10px;font-size:11px;text-align:right;color:var(--light);">${cumTarget?fmtWon(cumActual)+'/'+ fmtWon(cumTarget):''}</td>
+    </tr>`;
+  }).join('');
+
+  // plan-monthly-chart 아래에 테이블 추가 (있으면)
+  const chartParent = $('plan-monthly-chart')?.parentElement;
+  if (chartParent) {
+    let tbl = chartParent.querySelector('#plan-monthly-detail-tbl');
+    if (!tbl) {
+      tbl = document.createElement('div');
+      tbl.id = 'plan-monthly-detail-tbl';
+      chartParent.appendChild(tbl);
+    }
+    tbl.innerHTML = `<div style="margin-top:12px;border-top:0.5px solid var(--surface2);overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="border-bottom:0.5px solid var(--surface2);">
+          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:left;">월</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">목표</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">실적</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">달성률</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">누적</th>
+        </tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+  }
 }
 
 /* ── 분기 계획 탭 ── */
