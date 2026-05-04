@@ -2918,6 +2918,13 @@ a { text-decoration:none; color:inherit; }
             <div style="font-size:11px;color:var(--faint);">캘린더 썸네일로 표시돼요</div>
           </div>
           <input type="file" id="content-img-file" accept="image/*" style="display:none;" onchange="contentImgChange(this)">
+          <!-- 이미지 없이 기획 카드 -->
+          <div style="display:flex;gap:6px;margin-bottom:14px;">
+            <button onclick="clearContentImg()" style="flex:1;padding:5px 0;border-radius:var(--r);border:0.5px solid var(--border);background:transparent;font-size:11px;color:var(--light);cursor:pointer;">🗑 이미지 제거</button>
+            <button onclick="toggleContentCardPreview()" style="flex:1;padding:5px 0;border-radius:var(--r);border:0.5px solid var(--border);background:transparent;font-size:11px;color:var(--light);cursor:pointer;" id="content-card-preview-btn">🎨 카드 미리보기</button>
+          </div>
+          <!-- 텍스트 카드 미리보기 (이미지 없을 때 피드에 표시될 모습) -->
+          <div id="content-card-preview" style="display:none;width:100%;aspect-ratio:4/5;border-radius:10px;overflow:hidden;margin-bottom:14px;"></div>
           <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:8px;">콘텐츠 유형</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="content-type-pills">
             <div class="inv-pill" onclick="contentSetType('visual',this)">비주얼보드</div>
@@ -4008,7 +4015,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.2.4</div>
+<div id="version">v4.2.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -10498,10 +10505,10 @@ async function saveMktCrm() {
   await setAppState(s); toast('저장됐어요 ✓'); closeModal('mkt-crm-modal'); loadMktCrm();
 }
 const CONTENT_TYPES = {
-  visual:     { label:'비주얼보드', color:'#1C1E26' },
-  magazine:   { label:'매거진',    color:'#6B9E7A' },
-  mongmozzal: { label:'몽모짤',    color:'#C4A96A' },
-  reels:      { label:'릴스',      color:'#C4736A' },
+  visual:     { label:'비주얼보드', color:'#1C1E26', bg:'#1C1E26', textColor:'#fff',     icon:'◼', desc:'Brand Visual' },
+  magazine:   { label:'매거진',     color:'#6B9E7A', bg:'#EAF3DE', textColor:'#2F5A2E',  icon:'◎', desc:'Magazine' },
+  mongmozzal: { label:'몽모짤',     color:'#C4A96A', bg:'#FDF3E0', textColor:'#7A5C1E',  icon:'✦', desc:'Mongmo Cut' },
+  reels:      { label:'릴스',       color:'#C4736A', bg:'#FAEAE4', textColor:'#7A2E1E',  icon:'▶', desc:'Reels' },
 };
 const CONTENT_TOPICS = {
   selfesteem:  '자존감',
@@ -10869,14 +10876,30 @@ function renderInstaFeed() {
       ? `<div style="position:absolute;top:6px;right:6px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="white"><polygon points="4,2 14,8 4,14"/></svg></div>`
       : '';
 
+    // 이미지 없을 때 유형별 디자인 카드
+    const typeInfo = CONTENT_TYPES[p.type] || {};
+    const cardBg   = typeInfo.bg || '#f5f5f5';
+    const cardTxt  = typeInfo.textColor || '#333';
+    const cardIcon = typeInfo.icon || '◇';
+    const cardDesc = typeInfo.desc || '';
+    const noImgCard = `
+      <div style="width:100%;height:100%;background:${cardBg};display:flex;flex-direction:column;padding:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:auto;">
+          <span style="font-size:14px;opacity:.4;color:${cardTxt};">${cardIcon}</span>
+          <span style="font-size:7px;font-weight:600;letter-spacing:.08em;color:${cardTxt};opacity:.4;text-transform:uppercase;">${cardDesc}</span>
+        </div>
+        <div style="margin-top:auto;">
+          ${p.title ? `<div style="font-size:9px;font-weight:600;color:${cardTxt};line-height:1.4;margin-bottom:3px;word-break:keep-all;">${p.title}</div>` : ''}
+          ${p.date ? `<div style="font-size:8px;color:${cardTxt};opacity:.5;">${p.date.slice(5).replace('-','/')}</div>` : ''}
+        </div>
+      </div>`;
+
     html += `<div class="insta-cell${sel?' insta-sel':''}" data-id="${id}"
-      style="aspect-ratio:4/5;position:relative;overflow:hidden;cursor:pointer;background:${tc}22;"
+      style="aspect-ratio:4/5;position:relative;overflow:hidden;cursor:pointer;background:${src ? '#f5f5f5' : cardBg};"
       onclick="instaSelectPost('${id}')" draggable="true">
       ${src
         ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;pointer-events:none;" draggable="false">`
-        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:6px;">
-            <span style="font-size:9px;font-weight:500;color:${tc};text-align:center;line-height:1.4;opacity:.8;">${p.title||''}</span>
-           </div>`}
+        : noImgCard}
       ${badge}${multiIcon}
     </div>`;
   });
@@ -11549,6 +11572,55 @@ function contentSetType(type, el) {
   document.querySelectorAll('#content-type-pills .inv-pill').forEach(p=>p.classList.remove('on'));
   el.classList.add('on');
   $('content-mongmo-topic-wrap').style.display = type==='mongmozzal' ? '' : 'none';
+  updateContentCardPreview();
+}
+
+function clearContentImg() {
+  contentImgData = null;
+  window._contentImgFile = null;
+  window._contentRefUrl  = null;
+  const preview = $('content-img-preview');
+  if (preview) preview.innerHTML = '<div style="font-size:12px;color:var(--muted);">클릭하여 이미지 선택</div><div style="font-size:11px;color:var(--faint);">캘린더 썸네일로 표시돼요</div>';
+  toast('이미지가 제거됐어요');
+  updateContentCardPreview();
+}
+
+function toggleContentCardPreview() {
+  const el  = $('content-card-preview');
+  const btn = $('content-card-preview-btn');
+  if (!el) return;
+  const isVisible = el.style.display !== 'none';
+  el.style.display = isVisible ? 'none' : '';
+  if (btn) btn.textContent = isVisible ? '🎨 카드 미리보기' : '🙈 카드 숨기기';
+  if (!isVisible) updateContentCardPreview();
+}
+
+function updateContentCardPreview() {
+  const el = $('content-card-preview');
+  if (!el || el.style.display === 'none') return;
+  const typeInfo = CONTENT_TYPES[contentType] || {};
+  const bg       = typeInfo.bg || '#f5f5f5';
+  const txtColor = typeInfo.textColor || '#333';
+  const icon     = typeInfo.icon || '◇';
+  const desc     = typeInfo.desc || '';
+  const title    = $('content-title')?.value || '';
+  const caption  = $('content-caption')?.value || '';
+  const date     = $('content-modal-date-input')?.value || '';
+  const ds       = date ? date.slice(5).replace('-','/') : '';
+
+  el.style.border = '0.5px solid var(--border)';
+  el.innerHTML = `
+    <div style="width:100%;height:100%;background:${bg};display:flex;flex-direction:column;padding:14px;font-family:var(--font);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:auto;">
+        <span style="font-size:22px;opacity:.2;color:${txtColor};">${icon}</span>
+        <span style="font-size:9px;font-weight:700;letter-spacing:.12em;color:${txtColor};opacity:.25;text-transform:uppercase;">${desc}</span>
+      </div>
+      <div style="margin-top:auto;">
+        ${caption ? `<div style="font-size:10px;color:${txtColor};opacity:.65;line-height:1.55;margin-bottom:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;">${caption}</div>` : ''}
+        ${title   ? `<div style="font-size:12px;font-weight:700;color:${txtColor};line-height:1.4;margin-bottom:4px;">${title}</div>` : '<div style="font-size:11px;color:' + txtColor + ';opacity:.3;">제목을 입력하면 여기에 표시돼요</div>'}
+        ${ds      ? `<div style="font-size:9px;color:${txtColor};opacity:.35;">${ds}</div>` : ''}
+      </div>
+    </div>`;
 }
 
 function contentSetTopic(topic, el) {
