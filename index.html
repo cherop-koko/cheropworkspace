@@ -1192,7 +1192,7 @@ a { text-decoration:none; color:inherit; }
                 </div>
               </div>
             </div>
-            <div id="sales-dow-chart" style="display:flex;align-items:flex-end;gap:6px;height:100px;margin-top:8px;"></div>
+            <div id="sales-dow-chart" style="display:flex;align-items:flex-end;gap:6px;height:140px;margin-top:12px;padding-bottom:4px;"></div>
           </div>
           <div class="card">
             <div class="card-head">
@@ -4167,7 +4167,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.4.7</div>
+<div id="version">v4.5.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5994,7 +5994,7 @@ async function parseImportFile(input) {
       { lbl:'전체 SKU',  val: total+'개',    cls:'' },
       { lbl:'활성 상품', val: active+'개',   cls:'color:var(--green);' },
       { lbl:'단종/종료', val: discCount+'개', cls:'color:var(--muted);' },
-    ].map(s => `<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;">
+    ].map(s => `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
       <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${s.lbl}</div>
       <div style="font-size:20px;font-weight:500;${s.cls}">${s.val}</div>
     </div>`).join('');
@@ -7963,16 +7963,16 @@ async function loadAttEmpSummary() {
     const {data:pendingData} = await db.from('leaves').select('id').eq('member',user.name).eq('status','pending');
     const el=$('att-summary-row'); if(!el) return;
     el.innerHTML=`
-      <div style="background:var(--surface2);border-radius:10px;padding:14px 16px;user-select:none;">
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;user-select:none;">
         <div style="font-size:11px;color:var(--light);margin-bottom:5px;">이번 달 출근</div>
         <div style="font-size:24px;font-weight:500;color:var(--green);">${workDays}일</div>
       </div>
-      <div style="background:var(--surface2);border-radius:10px;padding:14px 16px;user-select:none;">
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;user-select:none;">
         <div style="font-size:11px;color:var(--light);margin-bottom:5px;">남은 연차</div>
         <div style="font-size:24px;font-weight:500;">${ANNUAL_DAYS-usedLeave}일</div>
         <div style="font-size:10px;color:var(--light);margin-top:3px;">연 ${ANNUAL_DAYS}일 중 사용 ${usedLeave}일</div>
       </div>
-      <div style="background:var(--surface2);border-radius:10px;padding:14px 16px;user-select:none;">
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;user-select:none;">
         <div style="font-size:11px;color:var(--light);margin-bottom:5px;">신청 대기</div>
         <div style="font-size:24px;font-weight:500;color:${(pendingData||[]).length>0?'var(--amber)':'var(--text)'};">${(pendingData||[]).length}건</div>
       </div>`;
@@ -8025,9 +8025,9 @@ async function loadAttToday() {
     const {data:attToday} = await db.from('attendances').select('member').eq('date',today);
     const inCount = new Set((attToday||[]).map(r=>r.member)).size;
     const el=$('att-summary-row-admin'); if(el) el.innerHTML=`
-      <div style="background:var(--surface2);border-radius:10px;padding:14px 16px;user-select:none;"><div style="font-size:11px;color:var(--light);margin-bottom:5px;">오늘 출근</div><div style="font-size:24px;font-weight:500;color:var(--green);">${inCount}명</div><div style="font-size:10px;color:var(--light);margin-top:3px;">전체 ${MEMBERS.length}명 중</div></div>
-      <div style="background:var(--surface2);border-radius:10px;padding:14px 16px;user-select:none;"><div style="font-size:11px;color:var(--light);margin-bottom:5px;">미출근</div><div style="font-size:24px;font-weight:500;">${MEMBERS.length-inCount}명</div></div>
-      <div style="background:var(--surface2);border-radius:10px;padding:14px 16px;user-select:none;"><div style="font-size:11px;color:var(--light);margin-bottom:5px;">승인 대기</div><div style="font-size:24px;font-weight:500;color:${(pending||[]).length>0?'var(--amber)':'var(--text)'};">${(pending||[]).length}건</div></div>`;
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;user-select:none;"><div style="font-size:11px;color:var(--light);margin-bottom:5px;">오늘 출근</div><div style="font-size:24px;font-weight:500;color:var(--green);">${inCount}명</div><div style="font-size:10px;color:var(--light);margin-top:3px;">전체 ${MEMBERS.length}명 중</div></div>
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;user-select:none;"><div style="font-size:11px;color:var(--light);margin-bottom:5px;">미출근</div><div style="font-size:24px;font-weight:500;">${MEMBERS.length-inCount}명</div></div>
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;user-select:none;"><div style="font-size:11px;color:var(--light);margin-bottom:5px;">승인 대기</div><div style="font-size:24px;font-weight:500;color:${(pending||[]).length>0?'var(--amber)':'var(--text)'};">${(pending||[]).length}건</div></div>`;
     const dateEl=$('att-today-date'); if(dateEl) dateEl.textContent=today.slice(5).replace('-','/');
     const {data:rows} = await db.from('attendances').select('*').eq('date',today);
     const map={}; (rows||[]).forEach(r=>{map[r.member]=r;});
@@ -8371,7 +8371,7 @@ async function loadProdDefect() {
       {label:'처리 대기',     val:`${pending}개`,  color:'var(--red)'},
       {label:'복원 완료',     val:`${restored}개`, color:'var(--green)'},
       {label:'폐기',          val:`${disposed}개`, color:'var(--muted)'},
-    ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;">
+    ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
       <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.label}</div>
       <div style="font-size:20px;font-weight:500;${c.color?'color:'+c.color:''}">${c.val}</div>
     </div>`).join('');
@@ -8974,7 +8974,7 @@ async function loadProdCal() {
     {label:'총 수량',   val:`${totalQty.toLocaleString()}개`},
     {label:'총 작업시간', val: totalMins>0 ? `${th>0?th+'h ':''} ${tm>0?tm+'m':''}`.trim() : '—'},
     {label:'일 평균',   val: avgQty>0 ? `${avgQty}개` : '—'},
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;">
     <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.label}</div>
     <div style="font-size:16px;font-weight:500;">${c.val}</div>
   </div>`).join('');
@@ -9227,15 +9227,15 @@ async function loadSalesData() {
   };
 
   $('sales-metrics').innerHTML = [
-    { label:'총 매출',      val: fmtWon(totalAmt), sub: diff(totalAmt, prevAmt) },
-    { label:'총 판매 수량', val: totalQty ? totalQty.toLocaleString()+'개' : '—', sub: totalQty ? diff(totalQty, prevQty) : '<span style="font-size:10px;color:var(--faint);">출고 등록 시 집계</span>' },
+    { label:'총 매출',      val: fmtWon(totalAmt)||'—', sub: diff(totalAmt, prevAmt) },
+    { label:'총 판매 수량', val: totalQty ? totalQty.toLocaleString()+'개' : '—', sub: '' },
     { label:'주문 건수',    val: orderCnt ? orderCnt.toLocaleString()+'건' : '—', sub: '' },
     { label:'건당 평균',    val: orderCnt ? fmtWon(avgAmt) : '—', sub: '' },
   ].map(c => `
-    <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;">
+    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
       <div style="font-size:11px;color:var(--light);margin-bottom:6px;">${c.label}</div>
-      <div style="font-size:22px;font-weight:500;">${c.val||'—'}</div>
-      ${c.sub}
+      <div style="font-size:22px;font-weight:500;">${c.val}</div>
+      ${c.sub||''}
     </div>`).join('');
 
   // 채널별 — 채널별로 sales_log 우선, 없으면 channel_sales_log
@@ -9593,22 +9593,32 @@ async function loadSalesDow() {
   const DOW  = ['월','화','수','목','금','토','일'];
   const vals = [0,0,0,0,0,0,0];
 
+  const ONLINE_CHANNELS = ['자사몰','카카오선물하기','스마트스토어'];
+  // 요일별 날짜 수 카운트 (일평균 계산용)
+  const dowDayCnt = [0,0,0,0,0,0,0];
+  for (let d = new Date(from+'T00:00:00'); d <= new Date(); d.setDate(d.getDate()+1)) {
+    dowDayCnt[(d.getDay()+6)%7]++;
+  }
+
   if (_salesDowType === 'amount') {
-    // 금액: channel_sales_log 기반
-    const rows = (await db.from('channel_sales_log').select('date,amount').gte('date', from)).data||[];
+    // 금액: channel_sales_log — 온라인 3채널만
+    const rows = (await db.from('channel_sales_log').select('date,channel,amount').gte('date', from).in('channel', ONLINE_CHANNELS)).data||[];
     rows.forEach(r => {
       if (!r.date) return;
       const dow = (new Date(r.date+'T00:00:00').getDay() + 6) % 7;
       vals[dow] += (r.amount||0);
     });
+    // 일평균으로 변환
+    vals.forEach((v, i) => { vals[i] = dowDayCnt[i] > 0 ? Math.round(v / dowDayCnt[i]) : 0; });
   } else {
     // 수량: sales_log 기반
-    const rows = (await db.from('sales_log').select('sale_date,quantity').gte('sale_date', from)).data||[];
+    const rows = (await db.from('sales_log').select('sale_date,quantity,channel').gte('sale_date', from).in('channel', ONLINE_CHANNELS)).data||[];
     rows.forEach(r => {
       if (!r.sale_date) return;
       const dow = (new Date(r.sale_date+'T00:00:00').getDay() + 6) % 7;
       vals[dow] += (r.quantity||0);
     });
+    vals.forEach((v, i) => { vals[i] = dowDayCnt[i] > 0 ? Math.round(v / dowDayCnt[i]) : 0; });
   }
 
   const maxVal = Math.max(...vals, 1);
@@ -9620,10 +9630,11 @@ async function loadSalesDow() {
     const label = isAmt
       ? (v >= 100000000 ? `${Math.round(v/100000000*10)/10}억` : v >= 10000 ? `${Math.round(v/10000)}만` : v > 0 ? String(v) : '')
       : (v > 0 ? `${v}개` : '');
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-      <div style="font-size:10px;color:var(--light);">${label}</div>
-      <div style="width:100%;height:${Math.max(h,2)}px;background:${isWeekend?'#6B9E7A':'#1C1E26'};border-radius:3px 3px 0 0;margin-top:auto;"></div>
-      <div style="font-size:11px;color:var(--light);">${DOW[i]}</div>
+    const barH = Math.max(h, 2);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">
+      <div style="font-size:10px;color:var(--light);margin-bottom:4px;white-space:nowrap;">${label}</div>
+      <div style="width:100%;height:${barH}px;background:${isWeekend?'#6B9E7A':'#1C1E26'};border-radius:3px 3px 0 0;margin-top:auto;"></div>
+      <div style="font-size:11px;color:var(--light);margin-top:4px;">${DOW[i]}</div>
     </div>`;
   }).join('');
 }
@@ -9975,7 +9986,7 @@ async function loadOpsOrderList() {
     {label:'발주 예정', val:`${pending}건`,  col:'var(--muted)'},
     {label:'발주 완료', val:`${ordered}건`,  col:'var(--amber)'},
     {label:'입고 완료', val:`${received}건`, col:'var(--green)'},
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.label}</div>
     <div style="font-size:20px;font-weight:500;${c.col?'color:'+c.col:''}">${c.val}</div>
   </div>`).join('');
@@ -10404,7 +10415,7 @@ async function loadMktToday() {
     {label:'총 마케팅 비용', val:fmtWon(totalSpend),    sub:diff(totalSpend,prevSpend)},
     {label:'전체 ROAS',      val:`${overallRoas}%`,      sub:diff(overallRoas,prevRoas), green:overallRoas>=300},
     {label:'총 전환금액',    val:fmtWon(totalConvAmt),   sub:`전환수 ${totalConv.toLocaleString()}건`},
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
     <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.label}</div>
     <div style="font-size:22px;font-weight:500;${c.green?'color:var(--green);':''}">${c.val||'—'}</div>
     <div style="margin-top:3px;">${c.sub||''}</div>
@@ -10535,7 +10546,7 @@ async function loadMktPerf() {
       {l:'전환수',    v:`${(latest.conv||0).toLocaleString()}건`, d:diff(latest.conv,prev.conv)},
       {l:'전환 금액', v:fmtWon(latest.convAmt),            d:diff(latest.convAmt,prev.convAmt)},
       {l:'CTR',       v:`${latest.ctr||'—'}%`,            d:diff(latest.ctr,prev.ctr)},
-    ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;">
+    ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;">
       <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
       <div style="font-size:17px;font-weight:500;${c.g?'color:var(--green);':''}">${c.v||'—'}</div>
       <div>${c.d}</div>
@@ -10564,7 +10575,7 @@ async function loadMktPerf() {
       {l:'클릭수',     v:`${(latest.clicks||0).toLocaleString()}회`,      d:''},
       {l:'전환수',     v:`${(latest.navConv||0).toLocaleString()}건`,     d:diff(latest.navConv,prev.navConv)},
       {l:'전환 금액',  v:fmtWon(latest.navConvAmt),        d:diff(latest.navConvAmt,prev.navConvAmt)},
-    ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;">
+    ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;">
       <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
       <div style="font-size:17px;font-weight:500;">${c.v||'—'}</div>
       <div>${c.d}</div>
@@ -10758,7 +10769,7 @@ async function loadMktApptest() {
     {l:'진행중',      v:`${ongoing}개`, c:'#185FA5'},
     {l:'SS+S 우수',   v:`${ssS}개`,     c:'var(--green)'},
     {l:'C급 중단검토', v:`${cStop}개`,   c:'var(--red)'},
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.l}</div>
     <div style="font-size:18px;font-weight:500;${c.c?'color:'+c.c:''}">${c.v}</div>
   </div>`).join('');
@@ -10940,7 +10951,7 @@ async function loadMktCrm() {
     {l:'재구매율',       v:crm.repurchaseRate?crm.repurchaseRate+'%':'—', g:crm.repurchaseRate>=30},
     {l:'평균 구매 주기', v:crm.avgDays?crm.avgDays+'일':'—', s:crm.avgDays?`D-${Math.round(crm.avgDays*0.7)} 알림톡 권장`:''},
     {l:'쿠폰 사용률',    v:crm.couponRate?crm.couponRate+'%':'—'},
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.l}</div>
     <div style="font-size:18px;font-weight:500;${c.g?'color:var(--green);':''}">${c.v}</div>
     ${c.s?`<div style="font-size:11px;color:var(--light);margin-top:2px;">${c.s}</div>`:''}
@@ -12470,7 +12481,7 @@ async function loadContentStats() {
     {label:'평균 조회수',   val:avgViews>=10000?Math.round(avgViews/10000)+'만':avgViews.toLocaleString(), sub:''},
     {label:'평균 저장률',   val:`${avgSaveRate}%`,     sub:'', green:true},
     {label:'평균 좋아요율', val:`${avgLikeRate}%`,     sub:''},
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.label}</div>
     <div style="font-size:20px;font-weight:500;${c.green?'color:var(--green);':''}">${c.val}</div>
     ${c.sub?`<div style="font-size:11px;color:var(--light);margin-top:2px;">${c.sub}</div>`:''}
@@ -12779,7 +12790,7 @@ async function loadPlanAnnual() {
     // 팝업/팔로워 등 goals에서 추출
     const extraGoals = goals.filter(g => !g.label?.includes('매출')).slice(0,2);
     kpiEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(${1+extraGoals.length},1fr);gap:10px;">
-      <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;">
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
         <div style="font-size:11px;color:var(--light);margin-bottom:4px;">연간 매출 누계</div>
         <div style="font-size:22px;font-weight:500;">${fmtWon(yearTotal)||'—'}</div>
         ${yearGoal ? `<div style="font-size:11px;color:var(--light);margin-top:6px;">${yearGoal} 목표</div>` : ''}
@@ -12788,7 +12799,7 @@ async function loadPlanAnnual() {
         </div>` : ''}
       </div>
       ${extraGoals.map(g => `
-      <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;cursor:pointer;" onclick="openPlanItemModal('goal','${g.id}')">
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;" onclick="openPlanItemModal('goal','${g.id}')">
         <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${g.label||''}</div>
         <div style="font-size:22px;font-weight:500;">${g.target||'—'}</div>
         <div style="font-size:11px;color:var(--light);margin-top:2px;">${g.sub||''}</div>
@@ -12834,7 +12845,7 @@ async function loadPlanAnnual() {
   // 요약 카드
   $('plan-annual-cards').innerHTML = goals.length
     ? goals.map(g=>
-        `<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;cursor:pointer;" onclick="openPlanItemModal('goal','${g.id}')">
+        `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;cursor:pointer;" onclick="openPlanItemModal('goal','${g.id}')">
           <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${g.label||''}</div>
           <div style="font-size:20px;font-weight:500;">${g.target||'—'}</div>
           <div style="font-size:11px;color:var(--light);margin-top:2px;">${g.sub||''}</div>
@@ -13042,7 +13053,7 @@ async function loadPlanBudget() {
     {l:'월 총예산', v:fmtWon(totalMonthly)},
     {l:'연간 예산', v:fmtWon(totalMonthly*12)},
     {l:'올해 집행률', v:(budget.execRate||0)+'%'},
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;">
     <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
     <div style="font-size:16px;font-weight:500;">${c.v}</div>
   </div>`).join('');
@@ -13572,7 +13583,7 @@ async function loadTaxMonthly() {
     { l:'순수익',     v:fmtWon(netProfit),    s:`이익률 ${totalRevenue?Math.round(netProfit/totalRevenue*100):0}%`, color: netProfit>=0?'#3B6D11':'#A32D2D' },
     { l:'부가세 예상', v:fmtWon(vatDue),       s:'매출세 - 매입세',               color:'#854F0B' },
     { l:'원천세 납부', v:fmtWon(withholdDue),  s:`${taxMonth+1}월 10일 납부`,      color:'#A32D2D' },
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
     <div style="font-size:18px;font-weight:500;color:${c.color};">${c.v}</div>
     <div style="font-size:10px;color:var(--light);margin-top:2px;">${c.s}</div>
@@ -13733,7 +13744,7 @@ async function loadTaxAnnual() {
     { l:'연 비용',  v:fmtWon(totalCost), s:`매출 대비 ${totalRev?Math.round(totalCost/totalRev*100):0}%` },
     { l:'연 순수익',v:fmtWon(totalNet),  s:`이익률 ${totalRev?Math.round(totalNet/totalRev*100):0}%`, c: totalNet>=0?'#3B6D11':'#A32D2D' },
     { l:'월 평균 순수익',v:fmtWon(avgNet),s:'12개월 평균' },
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
     <div style="font-size:18px;font-weight:500;${c.c?'color:'+c.c:''}">${c.v}</div>
     <div style="font-size:10px;color:var(--light);margin-top:2px;">${c.s}</div>
@@ -13926,7 +13937,7 @@ async function loadTaxCosts() {
     { l:'비용 합계',      v:fmtWon(curTotal),  s:`${curFiltered.length}건` },
     { l:'세금계산서 매입', v:fmtWon(taxTotal),  s:'부가세 공제 가능', c:'#3B6D11' },
     { l:'매입세액 공제',   v:fmtWon(vatInput),  s:'÷11 계산', c:'#854F0B' },
-  ].map(c=>`<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;">
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;">
     <div style="font-size:10px;color:var(--light);margin-bottom:2px;">${c.l}</div>
     <div style="font-size:16px;font-weight:500;${c.c?'color:'+c.c:''}">${c.v}</div>
     <div style="font-size:10px;color:var(--light);margin-top:1px;">${c.s}</div>
