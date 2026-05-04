@@ -4020,7 +4020,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.3.4</div>
+<div id="version">v4.3.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -8792,12 +8792,12 @@ function salesDateRange() {
       label: `${lm+1}월`,
     };
   }
-  // 3개월
-  const d3 = new Date(y, m-2, 1);
+  // 3개월 선택 → 6개월치 표시
+  const d6 = new Date(y, m-5, 1);
   return {
-    from: dateStr(d3),
+    from: dateStr(d6),
     to:   dateStr(new Date(y, m+1, 0)),
-    label: '최근 3개월',
+    label: '최근 6개월',
   };
 }
 
@@ -8861,8 +8861,8 @@ async function loadSalesData() {
     chAmt[ch] = slMapForTotal[ch] || chMapForTotal[ch] || 0;
   });
   const maxAmt = Math.max(...Object.values(chAmt), 1);
-  const chColors = { '자사몰':'#1C1E26', '카카오선물하기':'#6B9E7A', '스마트스토어':'#C4A96A' };
-  const chLabels = { '자사몰':'자사몰', '카카오선물하기':'카카오 선물하기', '스마트스토어':'스마트스토어' };
+  const chColors = { '자사몰':'#1C1E26', '카카오선물하기':'#6B9E7A', '스마트스토어':'#C4A96A', '이모티콘':'#C4736A', '팝업':'#7B68C8', '라인프렌즈':'#C4A96A' };
+  const chLabels = { '자사몰':'자사몰', '카카오선물하기':'카카오 선물하기', '스마트스토어':'스마트스토어', '이모티콘':'이모티콘', '팝업':'팝업', '라인프렌즈':'라인프렌즈' };
   $('sales-channel-list').innerHTML = CHANNELS.map(ch => {
     const pct = Math.round(chAmt[ch] / totalAmt * 100) || 0;
     const barW = Math.round(chAmt[ch] / maxAmt * 100);
@@ -8931,13 +8931,14 @@ async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
     }
     $('sales-trend-sub').textContent = '월별';
   } else {
-    // 일별 집계
+    // 일별 집계 — channel_sales_log 기준 (더 정확)
+    // chLogRows가 현재 기간 데이터를 가지고 있음
     const start = new Date(from), end = new Date(to);
     for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
       const ds = dateStr(new Date(d));
-      const fromLog = rows.filter(r=>r.sale_date===ds).reduce((s,r)=>s+(r.amount||0),0);
       const fromCh  = chLogRows.filter(r=>r.date===ds).reduce((s,r)=>s+(r.amount||0),0);
-      const dayAmt  = fromLog || fromCh;
+      const fromLog = rows.filter(r=>r.sale_date===ds).reduce((s,r)=>s+(r.amount||0),0);
+      const dayAmt  = fromCh || fromLog; // channel_sales_log 우선
       labels.push(`${d.getDate()}일`);
       data.push(dayAmt);
     }
