@@ -2612,6 +2612,9 @@ a { text-decoration:none; color:inherit; }
             <option value="자사몰">자사몰</option>
             <option value="카카오선물하기">카카오선물하기</option>
             <option value="스마트스토어">스마트스토어</option>
+            <option value="이모티콘">이모티콘</option>
+            <option value="팝업">팝업</option>
+            <option value="라인프렌즈">라인프렌즈</option>
             <option value="기타">기타</option>
           </select>
         </div>
@@ -4012,7 +4015,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.3.0</div>
+<div id="version">v4.3.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5721,7 +5724,7 @@ async function openPtaskForProj(projId) {
 /* ════════════════════════════════
    INVENTORY PAGE
 ════════════════════════════════ */
-const CHANNELS = ['자사몰','카카오선물하기','스마트스토어'];
+const CHANNELS = ['자사몰','카카오선물하기','스마트스토어','이모티콘','팝업','라인프렌즈'];
 let invCurrentTab    = 'overview';
 let invCurrentFilter = 'all';
 let invCurrentChannel= '자사몰';
@@ -8782,17 +8785,13 @@ async function loadSalesData() {
     })(),
   ]);
 
-  // 총매출: channel_sales_log에서 채널별 합산 (엑셀 업로드 기준)
+  // 총매출: channel_sales_log 기준 (엑셀 업로드 + 직접 입력)
   const { data: chLogTotal } = await db.from('channel_sales_log').select('channel,amount,date').gte('date', from).lte('date', to);
-  const chLogAmt = (chLogTotal||[]).reduce((s, r) => s + (r.amount || 0), 0);
-  const salesLogAmt = salesRows.reduce((s, r) => s + (r.amount || 0), 0);
-  // 채널별로 sales_log 우선, 없으면 channel_sales_log
   const chMapForTotal = {};
   (chLogTotal||[]).forEach(r => { chMapForTotal[r.channel] = (chMapForTotal[r.channel]||0) + (r.amount||0); });
-  const slMapForTotal = {};
+  const slMapForTotal = {}; // sales_log는 수량/상품 추적용으로만 사용
   salesRows.forEach(r => { slMapForTotal[r.channel] = (slMapForTotal[r.channel]||0) + (r.amount||0); });
-  const totalAmt = [...new Set([...Object.keys(chMapForTotal), ...Object.keys(slMapForTotal)])]
-    .reduce((s, ch) => s + (slMapForTotal[ch] || chMapForTotal[ch] || 0), 0);
+  const totalAmt = Object.values(chMapForTotal).reduce((s, v) => s + v, 0);
   const totalQty  = salesRows.reduce((s, r) => s + (r.quantity || 0), 0);
   // 주문 건수: amount > 0 인 행 = 고유 주문번호 단위 (최종주문금액이 붙은 첫 행)
   // 건당 평균: 총매출 / 주문 건수
@@ -8883,17 +8882,19 @@ async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
   let labels = [], data = [];
 
   if (isMultiMonth) {
-    // 월별 집계 — channel_sales_log에서 월별 합산 (더 정확)
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
-      const mStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      // 해당 월 channel_sales_log 직접 조회
+    // 최근 3개월 → from~to 범위의 월들을 모두 표시
+    const start = new Date(from + 'T00:00:00');
+    const end   = new Date(to   + 'T00:00:00');
+    // from월부터 to월까지 순서대로
+    const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (cur <= end) {
+      const mStr = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
       const mRes = await db.from('channel_sales_log').select('amount').gte('date', mStr+'-01').lte('date', mStr+'-31');
       const mAmt = (mRes.data||[]).reduce((s,r)=>s+(r.amount||0),0);
       const slAmt = rows.filter(r => r.sale_date?.startsWith(mStr)).reduce((s,r)=>s+(r.amount||0),0);
-      labels.push(`${d.getMonth()+1}월`);
+      labels.push(`${cur.getMonth()+1}월`);
       data.push(slAmt || mAmt);
+      cur.setMonth(cur.getMonth() + 1);
     }
     $('sales-trend-sub').textContent = '월별';
   } else {
@@ -12255,13 +12256,9 @@ async function loadPlanAnnual() {
 
   // 월별 목표 vs 실적 테이블 렌더
   const monthly = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {};
-  // channel_sales_log 우선 (엑셀 업로드 데이터), 없으면 sales_log
-  const [chSalesRes, slSalesRes] = await Promise.all([
-    db.from('channel_sales_log').select('date,amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`),
-    db.from('sales_log').select('sale_date,amount').gte('sale_date',`${planYear}-01-01`).lte('sale_date',`${planYear}-12-31`),
-  ]);
-  const salesData = (chSalesRes.data||[]).map(r=>({sale_date:r.date, amount:r.amount}))
-    .concat((slSalesRes.data||[]).map(r=>({sale_date:r.sale_date, amount:r.amount})));
+  // channel_sales_log 기준으로만 실적 집계 (엑셀 업로드 + 직접 입력 데이터)
+  const chSalesRes = await db.from('channel_sales_log').select('date,amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
+  const salesData = (chSalesRes.data||[]).map(r=>({sale_date:r.date, amount:r.amount}));
 
   // 달성률
   $('plan-progress-sub').textContent = `${planYear}년 ${curMonth+1}월 기준`;
