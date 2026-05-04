@@ -289,7 +289,7 @@ a { text-decoration:none; color:inherit; }
 .empty-sub   { font-size:13px; color:var(--light); }
 
 /* Version */
-#version { position:fixed; bottom:14px; right:18px; font-size:10px; color:var(--faint); font-family:var(--mono); pointer-events:none; z-index:10; }
+#version { position:fixed; bottom:10px; right:14px; font-size:10px; color:var(--light); font-family:var(--mono); pointer-events:none; z-index:9999; background:var(--surface); padding:2px 6px; border-radius:4px; border:0.5px solid var(--border); }
 
 /* 재고 관리 */
 .inv-tab { }
@@ -995,6 +995,7 @@ a { text-decoration:none; color:inherit; }
           </div>
           <div class="page-tabs" id="inv-tabs">
             <div class="page-tab on" onclick="invSetTab('overview',this)">재고 현황</div>
+            <div class="page-tab"   onclick="invSetTab('shiplog',this)">출고 내역</div>
             <div class="page-tab"   onclick="invSetTab('receipt',this)">입고 일정</div>
             <div class="page-tab"   onclick="invSetTab('alert',this)" style="position:relative;">재고 알림<span id="inv-alert-badge" style="position:absolute;top:-4px;right:-14px;background:var(--red);color:#fff;font-size:10px;font-weight:500;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;"></span></div>
           </div>
@@ -1003,6 +1004,33 @@ a { text-decoration:none; color:inherit; }
         <!-- 액션 알림 배너 제거됨 -->
 
         <!-- 탭: 재고 현황 -->
+        <!-- 출고 내역 탭 -->
+        <div id="inv-tab-shiplog" class="inv-tab" style="display:none;">
+          <div class="card">
+            <div class="card-head" style="flex-wrap:wrap;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="card-title">출고 내역</div>
+                <div style="display:flex;align-items:center;gap:4px;">
+                  <div class="card-link" onclick="shipLogMonthMove(-1)" style="font-size:16px;padding:0 4px;">‹</div>
+                  <div id="ship-log-month-label" style="font-size:12px;color:var(--light);min-width:60px;text-align:center;"></div>
+                  <div class="card-link" onclick="shipLogMonthMove(1)" style="font-size:16px;padding:0 4px;">›</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <select id="ship-log-ch-filter" class="prop-inp" style="font-size:12px;padding:4px 8px;height:32px;" onchange="loadShipLog()">
+                  <option value="">전체 채널</option>
+                  <option value="자사몰">자사몰</option>
+                  <option value="카카오선물하기">카카오선물하기</option>
+                  <option value="스마트스토어">스마트스토어</option>
+                  <option value="기타">기타</option>
+                </select>
+                <div id="ship-log-total" style="font-size:12px;color:var(--light);"></div>
+              </div>
+            </div>
+            <div id="ship-log-list"></div>
+          </div>
+        </div>
+
         <div id="inv-tab-overview" class="inv-tab">
           <!-- 발주필요 요약 배너 -->
           <div id="inv-overview-banner" style="margin-bottom:14px;"></div>
@@ -1099,12 +1127,32 @@ a { text-decoration:none; color:inherit; }
             <div style="display:flex;align-items:center;gap:10px;">
               <div class="page-header-title">판매 분석</div>
               <button class="f-btn f-btn-cancel" style="font-size:12px;padding:6px 12px;" onclick="openSalesRevenueModal()">✏ 매출 직접 입력</button>
-              <button class="f-btn f-btn-cancel" style="font-size:12px;padding:6px 12px;" onclick="openSalesLogModal()">📋 입력 내역</button>
+
             </div>
-            <div style="display:flex;gap:6px;" id="sales-period-pills">
-              <div class="inv-pill on" onclick="salesSetPeriod('month',this)">이번 달</div>
-              <div class="inv-pill"    onclick="salesSetPeriod('last',this)">지난 달</div>
-              <div class="inv-pill"    onclick="salesSetPeriod('3month',this)">최근 3개월</div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <!-- 년도 이동 -->
+              <div style="display:flex;align-items:center;gap:2px;">
+                <div class="card-link" onclick="salesYearMove(-1)" style="font-size:18px;padding:0 4px;">‹</div>
+                <div id="sales-year-label" style="font-size:13px;font-weight:500;color:var(--text);min-width:42px;text-align:center;"></div>
+                <div class="card-link" onclick="salesYearMove(1)" style="font-size:18px;padding:0 4px;">›</div>
+              </div>
+              <div style="width:0.5px;height:16px;background:var(--border);margin:0 2px;"></div>
+              <!-- 월 버튼 1~12 -->
+              <div style="display:flex;gap:3px;flex-wrap:wrap;" id="sales-month-pills">
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(1,this)">1월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(2,this)">2월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(3,this)">3월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(4,this)">4월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(5,this)">5월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(6,this)">6월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(7,this)">7월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(8,this)">8월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(9,this)">9월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(10,this)">10월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(11,this)">11월</div>
+                <div class="inv-pill" style="font-size:11px;padding:4px 8px;" onclick="salesSetMonth(12,this)">12월</div>
+
+              </div>
             </div>
           </div>
         </div>
@@ -1132,9 +1180,16 @@ a { text-decoration:none; color:inherit; }
           <div class="card">
             <div class="card-head">
               <div class="card-title">요일별 판매 패턴</div>
-              <div style="display:flex;gap:5px;" id="sales-dow-pills">
-                <div class="inv-pill on" onclick="salesSetDow(30,this)">30일</div>
-                <div class="inv-pill"    onclick="salesSetDow(90,this)">90일</div>
+              <div style="display:flex;gap:5px;align-items:center;">
+                <div style="display:flex;gap:3px;" id="sales-dow-type-pills">
+                  <div class="inv-pill on" style="font-size:11px;padding:3px 8px;" onclick="salesSetDowType('amount',this)">금액</div>
+                  <div class="inv-pill"    style="font-size:11px;padding:3px 8px;" onclick="salesSetDowType('qty',this)">수량</div>
+                </div>
+                <div style="width:0.5px;height:12px;background:var(--border);"></div>
+                <div style="display:flex;gap:3px;" id="sales-dow-pills">
+                  <div class="inv-pill on" style="font-size:11px;padding:3px 8px;" onclick="salesSetDow(30,this)">30일</div>
+                  <div class="inv-pill"    style="font-size:11px;padding:3px 8px;" onclick="salesSetDow(90,this)">90일</div>
+                </div>
               </div>
             </div>
             <div id="sales-dow-chart" style="display:flex;align-items:flex-end;gap:6px;height:100px;margin-top:8px;"></div>
@@ -1142,7 +1197,10 @@ a { text-decoration:none; color:inherit; }
           <div class="card">
             <div class="card-head">
               <div class="card-title">판매 TOP 10</div>
-              <div class="card-sub">수량 기준</div>
+              <div style="display:flex;gap:3px;" id="sales-top10-mode-pills">
+                <div class="inv-pill on" style="font-size:11px;padding:3px 8px;" onclick="salesSetTop10Mode('qty',this)">수량</div>
+                <div class="inv-pill"    style="font-size:11px;padding:3px 8px;" onclick="salesSetTop10Mode('amount',this)">금액</div>
+              </div>
             </div>
             <div id="sales-top10"></div>
           </div>
@@ -1168,13 +1226,32 @@ a { text-decoration:none; color:inherit; }
           </div>
         </div>
 
-        <!-- 판매 부진 상품 -->
+        <!-- 매출 입력 내역 -->
         <div class="card">
-          <div class="card-head">
-            <div class="card-title">판매 부진 상품</div>
-            <div class="card-sub">최근 30일 판매 0건 · 재고 있는 상품</div>
+          <div class="card-head" style="flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="card-title">매출 입력 내역</div>
+              <!-- 월 이동 -->
+              <div style="display:flex;align-items:center;gap:4px;">
+                <div class="card-link" onclick="salesLogMonthMove(-1)" style="font-size:16px;padding:0 4px;">‹</div>
+                <div id="sales-log-month-label" style="font-size:12px;color:var(--light);min-width:60px;text-align:center;"></div>
+                <div class="card-link" onclick="salesLogMonthMove(1)" style="font-size:16px;padding:0 4px;">›</div>
+              </div>
+            </div>
+            <!-- 채널 탭 -->
+            <div style="display:flex;gap:4px;flex-wrap:wrap;" id="sales-log-ch-tabs">
+              <div class="inv-pill on" onclick="salesLogSetChannel('',this)">전체</div>
+              <div class="inv-pill" onclick="salesLogSetChannel('자사몰',this)">자사몰</div>
+              <div class="inv-pill" onclick="salesLogSetChannel('카카오선물하기',this)">카카오</div>
+              <div class="inv-pill" onclick="salesLogSetChannel('스마트스토어',this)">스마트</div>
+              <div class="inv-pill" onclick="salesLogSetChannel('이모티콘',this)">이모티콘</div>
+              <div class="inv-pill" onclick="salesLogSetChannel('팝업',this)">팝업</div>
+              <div class="inv-pill" onclick="salesLogSetChannel('라인프렌즈',this)">라인프렌즈</div>
+              <div class="inv-pill" onclick="salesLogSetChannel('기타',this)">기타</div>
+            </div>
+            <div id="sales-log-inline-total" style="font-size:12px;font-weight:500;color:var(--text);margin-left:auto;"></div>
           </div>
-          <div id="sales-slow"></div>
+          <div id="sales-log-inline"></div>
         </div>
       </div>
       <div class="page" id="page-production">
@@ -4090,7 +4167,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.3.8</div>
+<div id="version">v4.4.7</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -6025,11 +6102,11 @@ function invSetTab(tab, el) {
   invCurrentTab = tab;
   document.querySelectorAll('#inv-tabs .page-tab').forEach(t=>t.classList.remove('on'));
   if(el) el.classList.add('on');
-  ['overview','receipt','alert'].forEach(t=>{
+  ['overview','shiplog','receipt','alert'].forEach(t=>{
     const d=$(`inv-tab-${t}`); if(d) d.style.display=t===tab?'':'none';
   });
   if(tab==='overview') loadInvOverview();
-
+  if(tab==='shiplog')  loadShipLog();
   if(tab==='receipt')  loadReceiptSchedule();
   if(tab==='alert')    loadOrderAlerts();
 }
@@ -6373,7 +6450,11 @@ async function loadSalesLogList() {
   el.innerHTML  = '<div style="padding:40px;text-align:center;color:var(--faint);font-size:13px;">불러오는 중...</div>';
 
   let query = db.from('channel_sales_log').select('*').order('date', { ascending: false });
-  if (month)   { query = query.gte('date', month+'-01').lte('date', month+'-31'); }
+  if (month) {
+    const [y, m] = month.split('-').map(Number);
+    const lastD = new Date(y, m, 0).getDate();
+    query = query.gte('date', month+'-01').lte('date', `${month}-${String(lastD).padStart(2,'0')}`);
+  }
   if (channel) { query = query.eq('channel', channel); }
 
   const { data, error } = await query.limit(200);
@@ -6429,6 +6510,7 @@ async function saveSalesLogEdit() {
   toast('수정됐어요 ✓');
   closeModal('sales-log-edit-modal');
   loadSalesLogList();
+  loadSalesLogInline();
   loadSalesData();
 }
 
@@ -6440,6 +6522,7 @@ async function deleteSalesLog() {
   toast('삭제됐어요');
   closeModal('sales-log-edit-modal');
   loadSalesLogList();
+  loadSalesLogInline();
   loadSalesData();
 }
 
@@ -6475,6 +6558,119 @@ async function saveSalesRevenue() {
   } catch(e) {
     toast('저장 실패: ' + e.message);
   }
+}
+
+/* ── 출고 내역 탭 ── */
+let _shipLogMonth = new Date().toISOString().slice(0,7);
+
+function shipLogMonthMove(dir) {
+  const [y, m] = _shipLogMonth.split('-').map(Number);
+  const d = new Date(y, m-1+dir, 1);
+  _shipLogMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  loadShipLog();
+}
+
+async function loadShipLog() {
+  const el = $('ship-log-list'); if (!el) return;
+  const lbl = $('ship-log-month-label');
+  const [y, m] = _shipLogMonth.split('-').map(Number);
+  if (lbl) lbl.textContent = `${y}년 ${m}월`;
+
+  const lastD    = new Date(y, m, 0).getDate();
+  const fromDate = `${_shipLogMonth}-01`;
+  const toDate   = `${_shipLogMonth}-${String(lastD).padStart(2,'0')}`;
+  const ch       = $('ship-log-ch-filter')?.value || '';
+
+  el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--faint);">불러오는 중...</div>';
+
+  let query = db.from('sales_log').select('*').gte('sale_date', fromDate).lte('sale_date', toDate).gt('quantity',0).order('sale_date', {ascending:false});
+  if (ch) query = query.eq('channel', ch);
+  const { data: shipRows } = await query;
+  const rows = shipRows || [];
+
+  if (!rows.length) {
+    el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--faint);">출고 내역이 없어요</div>';
+    if ($('ship-log-total')) $('ship-log-total').textContent = '';
+    return;
+  }
+
+  // 상품명 조회
+  const pids  = [...new Set(rows.map(r => r.product_id).filter(Boolean))];
+  const { data: prods } = await db.from('products').select('id,name,option_name').in('id', pids);
+  const prodMap = Object.fromEntries((prods||[]).map(p => [p.id, p]));
+
+  const totalQty = rows.reduce((s,r) => s+(r.quantity||0), 0);
+  if ($('ship-log-total')) $('ship-log-total').textContent = `총 ${totalQty.toLocaleString()}개`;
+
+  // 날짜별 그룹
+  const byDate = {};
+  rows.forEach(r => {
+    const d = r.sale_date;
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(r);
+  });
+
+  el.innerHTML = Object.entries(byDate).map(([date, items]) => {
+    const dayQty = items.reduce((s,r) => s+(r.quantity||0), 0);
+    return `
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--surface2);">
+          <div style="font-size:12px;font-weight:500;color:var(--text);">${date}</div>
+          <div style="font-size:11px;color:var(--light);">총 ${dayQty}개</div>
+        </div>
+        ${items.map(r => {
+          const p   = prodMap[r.product_id] || {name:'(알수없음)'};
+          const lbl = p.option_name ? `${p.name} · ${p.option_name}` : p.name;
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:0.5px solid var(--surface2);">
+            <div style="flex:1;font-size:12px;color:var(--text);">${lbl}</div>
+            <div style="font-size:11px;color:var(--light);">${r.channel||''}</div>
+            <div style="font-size:12px;font-weight:500;width:40px;text-align:right;">${r.quantity}개</div>
+            <button onclick="openShipLogEdit('${r.id}','${date}','${r.channel||''}',${r.quantity},'${lbl}')"
+              class="f-btn" style="font-size:11px;padding:3px 10px;">수정</button>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }).join('');
+}
+
+function openShipLogEdit(id, date, channel, qty, prodLabel) {
+  // 간단한 수량/날짜 수정 — 기존 sales-log-edit-modal 재활용
+  $('slog-edit-id').value      = id;
+  $('slog-edit-date').value    = date;
+  $('slog-edit-channel').value = channel;
+  $('slog-edit-amount').value  = qty; // amount 필드를 수량으로 임시 사용
+  $('slog-edit-note').value    = prodLabel;
+  // 모달 타이틀 변경
+  const kind = document.querySelector('#sales-log-edit-modal .modal-kind');
+  if (kind) kind.textContent = '출고 수정';
+  // 저장 함수를 출고용으로 오버라이드
+  const saveBtn = document.querySelector('#sales-log-edit-modal button[onclick*="saveSalesLogEdit"],#sales-log-edit-modal button[onclick*="saveShipLogEdit"]');
+  if (saveBtn) saveBtn.setAttribute('onclick', `saveShipLogEdit('${id}')`);
+  const delBtn = document.querySelector('#sales-log-edit-modal button[onclick*="deleteSalesLog"],#sales-log-edit-modal button[onclick*="deleteShipLog"]');
+  if (delBtn) delBtn.setAttribute('onclick', `deleteShipLog('${id}')`);
+  $('sales-log-edit-modal').classList.add('on');
+}
+
+async function saveShipLogEdit(id) {
+  const date    = $('slog-edit-date').value;
+  const channel = $('slog-edit-channel').value;
+  const qty     = parseInt($('slog-edit-amount').value) || 0;
+  if (!date || !qty) { toast('날짜와 수량을 입력해주세요'); return; }
+  const { error } = await db.from('sales_log').update({ sale_date: date, channel, quantity: qty }).eq('id', id);
+  if (error) { toast('수정 실패: '+error.message); return; }
+  toast('수정됐어요 ✓');
+  closeModal('sales-log-edit-modal');
+  loadShipLog();
+  loadInvOverview();
+}
+
+async function deleteShipLog(id) {
+  const ok = await customConfirm('이 출고 내역을 삭제할까요? 재고는 자동으로 복구되지 않아요.'); if (!ok) return;
+  const { error } = await db.from('sales_log').delete().eq('id', id);
+  if (error) { toast('삭제 실패: '+error.message); return; }
+  toast('삭제됐어요');
+  closeModal('sales-log-edit-modal');
+  loadShipLog();
 }
 
 async function openShipmentModal() {
@@ -6602,7 +6798,8 @@ async function saveShipment() {
     toast(`출고 등록 완료 ✓ (${items.length}개 상품, 재고 차감됨)`);
     closeModal('shipment-modal');
     loadInvOverview();
-    if (prodTab === 'today') loadProdTodayList(); // 생산탭 오늘 출고 갱신
+    if (invCurrentTab === 'shiplog') loadShipLog();
+    if (prodTab === 'today') loadProdTodayList();
   } catch(e) {
     toast('저장 실패: ' + e.message);
     console.error(e);
@@ -8912,14 +9109,36 @@ async function saveProdSchedule() {
 /* ════════════════════════════════
    SALES PAGE
 ════════════════════════════════ */
-let salesPeriod = 'month';
+let salesPeriod  = 'month';
 let salesDowDays = 30;
 let salesTrendChart = null;
+let _salesYear  = new Date().getFullYear();
+let _salesMonth = new Date().getMonth() + 1; // 1~12
+let _sales6m    = false;
 
-function salesSetPeriod(p, el) {
-  salesPeriod = p;
-  document.querySelectorAll('#sales-period-pills .inv-pill').forEach(x => x.classList.remove('on'));
+function salesYearMove(dir) {
+  _salesYear += dir;
+  $('sales-year-label').textContent = _salesYear;
+  loadSalesData();
+}
+
+function salesSetMonth(m, el) {
+  _salesMonth = m;
+  _sales6m    = false;
+  document.querySelectorAll('#sales-month-pills .inv-pill').forEach(x => x.classList.remove('on'));
   el.classList.add('on');
+  loadSalesData();
+}
+
+function salesSet6Month(el) {
+  _sales6m = true;
+  document.querySelectorAll('#sales-month-pills .inv-pill').forEach(x => x.classList.remove('on'));
+  el.classList.add('on');
+  loadSalesData();
+}
+
+function salesSetPeriod(p, el) { // 레거시 호환
+  if (p === '3month') { _sales6m = true; }
   loadSalesData();
 }
 
@@ -8930,34 +9149,42 @@ function salesSetDow(days, el) {
   loadSalesDow();
 }
 
-function salesDateRange() {
+function _initSalesMonthUI() {
   const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
-  if (salesPeriod === 'month') {
+  _salesYear  = now.getFullYear();
+  _salesMonth = now.getMonth() + 1;
+  _sales6m    = false;
+  const lbl = $('sales-year-label');
+  if (lbl) lbl.textContent = _salesYear;
+  // 현재 월 pill 활성화
+  const pills = document.querySelectorAll('#sales-month-pills .inv-pill');
+  pills.forEach(p => p.classList.remove('on'));
+  if (pills[_salesMonth - 1]) pills[_salesMonth - 1].classList.add('on');
+}
+
+function salesDateRange() {
+  if (_sales6m) {
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const d6 = new Date(y, m-5, 1);
     return {
-      from: `${y}-${String(m+1).padStart(2,'0')}-01`,
+      from: dateStr(d6),
       to:   dateStr(new Date(y, m+1, 0)),
-      label: `${m+1}월`,
+      label: '최근 6개월',
     };
   }
-  if (salesPeriod === 'last') {
-    const lm = m === 0 ? 11 : m-1, ly = m === 0 ? y-1 : y;
-    return {
-      from: `${ly}-${String(lm+1).padStart(2,'0')}-01`,
-      to:   dateStr(new Date(ly, lm+1, 0)),
-      label: `${lm+1}월`,
-    };
-  }
-  // 3개월 선택 → 6개월치 표시
-  const d6 = new Date(y, m-5, 1);
+  const y  = _salesYear;
+  const m  = _salesMonth;
+  const lastD = new Date(y, m, 0).getDate();
   return {
-    from: dateStr(d6),
-    to:   dateStr(new Date(y, m+1, 0)),
-    label: '최근 6개월',
+    from:  `${y}-${String(m).padStart(2,'0')}-01`,
+    to:    `${y}-${String(m).padStart(2,'0')}-${String(lastD).padStart(2,'0')}`,
+    label: `${m}월`,
   };
 }
 
 async function initSalesPage() {
+  _initSalesMonthUI();
   await loadSalesData();
 }
 
@@ -9001,9 +9228,9 @@ async function loadSalesData() {
 
   $('sales-metrics').innerHTML = [
     { label:'총 매출',      val: fmtWon(totalAmt), sub: diff(totalAmt, prevAmt) },
-    { label:'총 판매 수량', val: totalQty.toLocaleString()+'개', sub: diff(totalQty, prevQty) },
-    { label:'주문 건수',    val: orderCnt.toLocaleString()+'건', sub: '' },
-    { label:'건당 평균',    val: fmtWon(avgAmt), sub: '' },
+    { label:'총 판매 수량', val: totalQty ? totalQty.toLocaleString()+'개' : '—', sub: totalQty ? diff(totalQty, prevQty) : '<span style="font-size:10px;color:var(--faint);">출고 등록 시 집계</span>' },
+    { label:'주문 건수',    val: orderCnt ? orderCnt.toLocaleString()+'건' : '—', sub: '' },
+    { label:'건당 평균',    val: orderCnt ? fmtWon(avgAmt) : '—', sub: '' },
   ].map(c => `
     <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;">
       <div style="font-size:11px;color:var(--light);margin-bottom:6px;">${c.label}</div>
@@ -9014,7 +9241,7 @@ async function loadSalesData() {
   // 채널별 — 채널별로 sales_log 우선, 없으면 channel_sales_log
   const chAmt = {};
   CHANNELS.forEach(ch => {
-    chAmt[ch] = slMapForTotal[ch] || chMapForTotal[ch] || 0;
+    chAmt[ch] = chMapForTotal[ch] || 0; // channel_sales_log 기준 (엑셀 업로드 + 직접 입력)
   });
   const maxAmt = Math.max(...Object.values(chAmt), 1);
   const chColors = { '자사몰':'#1C1E26', '카카오선물하기':'#6B9E7A', '스마트스토어':'#C4A96A', '이모티콘':'#C4736A', '팝업':'#7B68C8', '라인프렌즈':'#C4A96A' };
@@ -9035,33 +9262,17 @@ async function loadSalesData() {
   // 추이 차트 (일별 or 월별)
   await loadSalesTrend(salesRows, label, chLogTotal||[], chMapForTotal);
 
-  // TOP10
-  const qtyMap = {};
-  salesRows.forEach(r => {
-    qtyMap[r.product_id] = (qtyMap[r.product_id]||0) + (r.quantity||0);
-  });
-  const top10 = Object.entries(qtyMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const prods = top10.length ? (await db.from('products').select('id,name,option_name,category').in('id', top10.map(x=>x[0]))).data||[] : [];
-  $('sales-top10').innerHTML = top10.length
-    ? top10.map(([pid, qty], i) => {
-        const p = prods.find(x=>x.id===pid)||{name:'(삭제됨)'};
-        const nm = p.option_name ? `${p.name} ${p.option_name}` : p.name;
-        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--surface2);">
-          <div style="font-size:11px;color:var(--light);width:16px;text-align:center;">${i+1}</div>
-          <div style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nm}</div>
-          ${p.category?`<span style="font-size:10px;background:var(--surface2);color:var(--muted);padding:2px 7px;border-radius:20px;flex-shrink:0;">${p.category}</span>`:''}
-          <div style="font-size:12px;font-weight:500;flex-shrink:0;">${qty}개</div>
-        </div>`;
-      }).join('')
-    : '<div style="padding:14px 0;font-size:13px;color:var(--faint);">데이터가 없어요</div>';
+  // TOP10 — 선택 월 기준
+  window._salesTop10Rows = salesRows; // 현재 기간 데이터 저장
+  await loadSalesTop10();
 
   // 요일 패턴
   await loadSalesDow();
   // 주간/월간 비교
   await loadSalesWeekComp();
   await loadSalesMonthComp();
-  // 판매 부진
-  await loadSalesSlow();
+  // 매출 입력 내역 인라인
+  loadSalesLogInline();
 }
 
 async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
@@ -9233,6 +9444,68 @@ async function loadSalesMonthComp() {
   } catch(e) { console.error(e); }
 }
 
+/* ── 판매탭 하단 매출 입력 내역 인라인 ── */
+let _salesLogMonth = new Date().toISOString().slice(0,7); // 'YYYY-MM'
+let _salesLogChannel = '';
+
+function salesLogMonthMove(dir) {
+  const [y, m] = _salesLogMonth.split('-').map(Number);
+  const d = new Date(y, m-1+dir, 1);
+  _salesLogMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  loadSalesLogInline();
+}
+
+function salesLogSetChannel(ch, el) {
+  _salesLogChannel = ch;
+  document.querySelectorAll('#sales-log-ch-tabs .inv-pill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  loadSalesLogInline();
+}
+
+async function loadSalesLogInline() {
+  const el = $('sales-log-inline'); if (!el) return;
+  const lbl = $('sales-log-month-label');
+  if (lbl) {
+    const [y, m] = _salesLogMonth.split('-').map(Number);
+    lbl.textContent = `${y}년 ${m}월`;
+  }
+  el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--faint);">불러오는 중...</div>';
+
+  const [y, m] = _salesLogMonth.split('-').map(Number);
+  const lastD = new Date(y, m, 0).getDate();
+  const fromDate = `${_salesLogMonth}-01`;
+  const toDate   = `${_salesLogMonth}-${String(lastD).padStart(2,'0')}`;
+
+  let query = db.from('channel_sales_log').select('*').gte('date', fromDate).lte('date', toDate).order('date', {ascending:false});
+  if (_salesLogChannel) query = query.eq('channel', _salesLogChannel);
+
+  const { data } = await query;
+  const rows = data || [];
+
+  const total = rows.reduce((s,r) => s+(r.amount||0), 0);
+  const totalEl = $('sales-log-inline-total');
+  if (totalEl) totalEl.textContent = total ? `합계 ${fmtWon(total)}` : '';
+
+  if (!rows.length) {
+    el.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--faint);">입력된 내역이 없어요</div>';
+    return;
+  }
+
+  el.innerHTML = `<table class="inv-tbl" style="margin-top:8px;">
+    <thead><tr>
+      <th>날짜</th><th>채널</th><th style="text-align:right;">금액</th><th>메모</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(r => `<tr style="cursor:pointer;" onclick="openSalesLogEdit('${r.id}','${r.date}','${r.channel}',${r.amount},'${(r.note||'').replace(/'/g,"\'")}')">
+        <td style="color:var(--text);">${r.date}</td>
+        <td style="color:var(--light);">${r.channel}</td>
+        <td style="text-align:right;font-weight:500;">${fmtWon(r.amount)}</td>
+        <td style="color:var(--light);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.note||'—'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
 async function loadSalesSlow() {
   try {
     const from30 = dateStr(new Date(Date.now() - 30*86400000));
@@ -9268,26 +9541,87 @@ async function loadSalesSlow() {
   } catch(e){ console.error(e); }
 }
 
-async function loadSalesDow() {
-  const now = new Date();
-  const from = dateStr(new Date(now.getTime() - salesDowDays * 86400000));
-  const rows = (await db.from('sales_log').select('sale_date,quantity').gte('sale_date', from)).data||[];
+let _salesDowType = 'amount'; // 'amount' | 'qty'
+let _salesTop10Mode = 'qty';   // 'qty' | 'amount'
 
-  const DOW = ['월','화','수','목','금','토','일'];
-  const counts = [0,0,0,0,0,0,0];
-  rows.forEach(r => {
-    if (!r.sale_date) return;
-    const d = new Date(r.sale_date);
-    const dow = (d.getDay() + 6) % 7; // 0=월 ~ 6=일
-    counts[dow] += (r.quantity||0);
+function salesSetDowType(type, el) {
+  _salesDowType = type;
+  document.querySelectorAll('#sales-dow-type-pills .inv-pill').forEach(x => x.classList.remove('on'));
+  el.classList.add('on');
+  loadSalesDow();
+}
+
+function salesSetTop10Mode(mode, el) {
+  _salesTop10Mode = mode;
+  document.querySelectorAll('#sales-top10-mode-pills .inv-pill').forEach(x => x.classList.remove('on'));
+  el.classList.add('on');
+  loadSalesTop10();
+}
+
+async function loadSalesTop10() {
+  const salesRows = window._salesTop10Rows || [];
+  const isAmt = _salesTop10Mode === 'amount';
+  const map = {};
+
+  salesRows.forEach(r => {
+    if (!r.product_id) return;
+    if (isAmt) map[r.product_id] = (map[r.product_id]||0) + (r.amount||0);
+    else        map[r.product_id] = (map[r.product_id]||0) + (r.quantity||0);
   });
-  const maxVal = Math.max(...counts, 1);
 
-  $('sales-dow-chart').innerHTML = counts.map((v, i) => {
-    const h = Math.round((v / maxVal) * 88);
+  const top10 = Object.entries(map).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const prods = top10.length ? (await db.from('products').select('id,name,option_name,category').in('id', top10.map(x=>x[0]))).data||[] : [];
+
+  $('sales-top10').innerHTML = top10.length
+    ? top10.map(([pid, val], i) => {
+        const p  = prods.find(x=>x.id===pid)||{name:'(삭제됨)'};
+        const nm = p.option_name ? `${p.name} ${p.option_name}` : p.name;
+        const valTxt = isAmt ? fmtWon(val) : `${val.toLocaleString()}개`;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--surface2);">
+          <div style="font-size:11px;color:var(--light);width:16px;text-align:center;">${i+1}</div>
+          <div style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nm}</div>
+          ${p.category?`<span style="font-size:10px;background:var(--surface2);color:var(--muted);padding:2px 7px;border-radius:20px;flex-shrink:0;">${p.category}</span>`:''}
+          <div style="font-size:12px;font-weight:500;flex-shrink:0;">${valTxt}</div>
+        </div>`;
+      }).join('')
+    : '<div style="padding:14px 0;font-size:13px;color:var(--faint);">데이터가 없어요</div>';
+}
+
+async function loadSalesDow() {
+  const now  = new Date();
+  const from = dateStr(new Date(now.getTime() - salesDowDays * 86400000));
+  const DOW  = ['월','화','수','목','금','토','일'];
+  const vals = [0,0,0,0,0,0,0];
+
+  if (_salesDowType === 'amount') {
+    // 금액: channel_sales_log 기반
+    const rows = (await db.from('channel_sales_log').select('date,amount').gte('date', from)).data||[];
+    rows.forEach(r => {
+      if (!r.date) return;
+      const dow = (new Date(r.date+'T00:00:00').getDay() + 6) % 7;
+      vals[dow] += (r.amount||0);
+    });
+  } else {
+    // 수량: sales_log 기반
+    const rows = (await db.from('sales_log').select('sale_date,quantity').gte('sale_date', from)).data||[];
+    rows.forEach(r => {
+      if (!r.sale_date) return;
+      const dow = (new Date(r.sale_date+'T00:00:00').getDay() + 6) % 7;
+      vals[dow] += (r.quantity||0);
+    });
+  }
+
+  const maxVal = Math.max(...vals, 1);
+  const isAmt  = _salesDowType === 'amount';
+
+  $('sales-dow-chart').innerHTML = vals.map((v, i) => {
+    const h   = Math.round((v / maxVal) * 88);
     const isWeekend = i >= 5;
+    const label = isAmt
+      ? (v >= 100000000 ? `${Math.round(v/100000000*10)/10}억` : v >= 10000 ? `${Math.round(v/10000)}만` : v > 0 ? String(v) : '')
+      : (v > 0 ? `${v}개` : '');
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-      <div style="font-size:10px;color:var(--light);">${v||''}</div>
+      <div style="font-size:10px;color:var(--light);">${label}</div>
       <div style="width:100%;height:${Math.max(h,2)}px;background:${isWeekend?'#6B9E7A':'#1C1E26'};border-radius:3px 3px 0 0;margin-top:auto;"></div>
       <div style="font-size:11px;color:var(--light);">${DOW[i]}</div>
     </div>`;
