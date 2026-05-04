@@ -1096,7 +1096,10 @@ a { text-decoration:none; color:inherit; }
       <div class="page" id="page-sales">
         <div class="page-header">
           <div class="page-header-top">
-            <div><div class="page-header-title">판매 분석</div></div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="page-header-title">판매 분석</div>
+              <button class="f-btn f-btn-cancel" style="font-size:12px;padding:6px 12px;" onclick="openSalesRevenueModal()">✏ 매출 직접 입력</button>
+            </div>
             <div style="display:flex;gap:6px;" id="sales-period-pills">
               <div class="inv-pill on" onclick="salesSetPeriod('month',this)">이번 달</div>
               <div class="inv-pill"    onclick="salesSetPeriod('last',this)">지난 달</div>
@@ -2590,6 +2593,46 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <!-- ═══ 재고: 판매내역 업로드 ═══ -->
+<!-- ═══ 매출 직접 입력 모달 ═══ -->
+<div class="modal-overlay" id="sales-revenue-modal" onclick="if(event.target===this)closeModal('sales-revenue-modal')">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-bar">
+      <div class="modal-kind">매출 직접 입력</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('sales-revenue-modal')">✕</div></div>
+    </div>
+    <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">날짜</div>
+          <input type="date" id="srev-date" class="prop-inp" style="width:100%;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">채널</div>
+          <select id="srev-channel" class="prop-inp" style="width:100%;">
+            <option value="자사몰">자사몰</option>
+            <option value="카카오선물하기">카카오선물하기</option>
+            <option value="스마트스토어">스마트스토어</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">매출 금액</div>
+        <input type="number" id="srev-amount" class="prop-inp" placeholder="0" min="0" style="width:100%;">
+        <div style="font-size:10px;color:var(--faint);margin-top:3px;">판매 분석 탭 매출 데이터에 반영돼요</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">메모 (선택)</div>
+        <input type="text" id="srev-note" class="prop-inp" placeholder="예: 라이브방송, 팝업행사 등" style="width:100%;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('sales-revenue-modal')">취소</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveSalesRevenue()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 출고 수기 등록 모달 ═══ -->
 <div class="modal-overlay" id="shipment-modal" onclick="if(event.target===this)closeModal('shipment-modal')">
   <div class="modal-box" style="max-width:480px;">
@@ -2613,11 +2656,7 @@ a { text-decoration:none; color:inherit; }
           </select>
         </div>
       </div>
-      <div>
-        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">채널별 일별 매출 (선택)</div>
-        <input type="number" id="shipment-revenue" class="prop-inp" placeholder="0" style="width:100%;" min="0">
-        <div style="font-size:10px;color:var(--faint);margin-top:3px;">판매 분석탭 매출 데이터에 반영돼요</div>
-      </div>
+
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div style="font-size:11px;color:var(--light);">출고 상품 목록</div>
@@ -3969,7 +4008,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.2.2</div>
+<div id="version">v4.2.4</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -6237,10 +6276,43 @@ async function saveInlineCat(sel) {
 ══════════════════════════════ */
 let _shipmentProds = [];
 
+function openSalesRevenueModal() {
+  $('srev-date').value    = dateStr();
+  $('srev-channel').value = '자사몰';
+  $('srev-amount').value  = '';
+  $('srev-note').value    = '';
+  $('sales-revenue-modal').classList.add('on');
+  setTimeout(() => $('srev-amount')?.focus(), 80);
+}
+
+async function saveSalesRevenue() {
+  const date    = $('srev-date').value;
+  const channel = $('srev-channel').value;
+  const amount  = parseInt($('srev-amount').value) || 0;
+  const note    = $('srev-note').value.trim();
+
+  if (!date)   { toast('날짜를 선택해주세요'); return; }
+  if (!amount) { toast('매출 금액을 입력해주세요'); return; }
+
+  try {
+    await db.from('channel_sales_log').upsert([{
+      id:      `csl-manual-${date}-${channel}-${Date.now()}`,
+      channel,
+      date,
+      amount,
+      note:    note || '직접 입력',
+    }], { onConflict: 'id' });
+    toast('매출이 등록됐어요 ✓');
+    closeModal('sales-revenue-modal');
+    loadSalesData();
+  } catch(e) {
+    toast('저장 실패: ' + e.message);
+  }
+}
+
 async function openShipmentModal() {
   $('shipment-date').value = dateStr();
   $('shipment-channel').value = '자사몰';
-  $('shipment-revenue').value = '';
   $('shipment-rows').innerHTML = '';
   // 상품 목록 미리 로드
   const { data } = await db.from('products').select('id,name,option_name').eq('is_discontinued',false).order('sort_order',{ascending:true,nullsFirst:false}).order('name');
@@ -6273,20 +6345,26 @@ function addShipmentRow() {
 }
 
 function shipSearchProd(input, rowId) {
-  const q    = input.value.trim().toLowerCase();
-  const drop = $(`ship-drop-${rowId}`);
+  const q     = input.value.trim().toLowerCase();
+  const drop  = $('ship-drop-'+rowId);
   const prods = _shipmentProds;
   const filtered = q
     ? prods.filter(p => (p.name+(p.option_name||'')).toLowerCase().includes(q))
     : prods;
   if (!filtered.length) { drop.style.display = 'none'; return; }
-  drop.innerHTML = filtered.slice(0,20).map(p => `
-    <div onclick="shipSelectProd('${rowId}','${p.id}',\`${(p.name+(p.option_name?' / '+p.option_name:'')).replace(/`/g,"'")}\`)"
-      style="padding:7px 10px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--surface2);"
+
+  // 입력창 위치 기준으로 fixed 드롭다운 위치 계산
+  const rect = input.getBoundingClientRect();
+  drop.style.cssText = `display:block;position:fixed;left:${rect.left}px;top:${rect.bottom+2}px;width:${rect.width}px;z-index:9999;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--r);max-height:220px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,.15);`;
+
+  drop.innerHTML = filtered.slice(0,30).map(p => {
+    const label = p.name + (p.option_name ? ' / ' + p.option_name : '');
+    return `<div onclick="shipSelectProd('${rowId}','${p.id}','${label.replace(/'/g,"\'")}')"
+      style="padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--surface2);"
       onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
       <span style="font-weight:500;">${p.name}</span>${p.option_name?`<span style="color:var(--light);"> / ${p.option_name}</span>`:''}
-    </div>`).join('');
-  drop.style.display = '';
+    </div>`;
+  }).join('');
 }
 
 function shipSelectProd(rowId, prodId, prodLabel) {
@@ -6311,7 +6389,6 @@ document.addEventListener('click', e => {
 async function saveShipment() {
   const shipDate  = $('shipment-date').value;
   const channel   = $('shipment-channel').value;
-  const revenue   = parseInt($('shipment-revenue').value) || 0;
   const rows      = [...$('shipment-rows').querySelectorAll('div[id^="sr-"]')];
 
   if (!shipDate) { toast('날짜를 선택해주세요'); return; }
@@ -6353,16 +6430,7 @@ async function saveShipment() {
       }).eq('id', ci.id);
     }
 
-    // 4. 채널별 매출 로그 (revenue 입력 시)
-    if (revenue > 0) {
-      await db.from('channel_sales_log').upsert([{
-        id:      `csl-ship-${shipDate}-${channel}`,
-        channel,
-        date:    shipDate,
-        amount:  revenue,
-        note:    `출고 등록 (${items.length}개 상품)`,
-      }], { onConflict: 'id' });
-    }
+
 
     toast(`출고 등록 완료 ✓ (${items.length}개 상품, 재고 차감됨)`);
     closeModal('shipment-modal');
