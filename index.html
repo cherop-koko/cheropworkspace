@@ -4379,7 +4379,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.7.1</div>
+<div id="version">v4.7.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4432,15 +4432,47 @@ function toast(msg, dur=2400) {
 let _appStateCache = null;
 async function getAppState() {
   if(_appStateCache) return _appStateCache;
-  const { data, error } = await db.from('app_state').select('data').eq('id','cherop_main').single();
-  if (error) throw error;
-  _appStateCache = data?.data || {};
+  // 메인 state + 이미지 state 병렬 로드
+  const [main, imgs] = await Promise.all([
+    db.from('app_state').select('data').eq('id','cherop_main').single(),
+    db.from('app_state').select('data').eq('id','cherop_product_imgs').single(),
+  ]);
+  const state = main.data?.data || {};
+  // plan products에 imgs 병합
+  const imgStore = imgs.data?.data || {};
+  if (imgStore && state.plan) {
+    Object.keys(state.plan).forEach(yr => {
+      (state.plan[yr]?.products||[]).forEach(p => {
+        if (imgStore[p.id]) p.imgs = imgStore[p.id];
+      });
+    });
+  }
+  _appStateCache = state;
   return _appStateCache;
 }
 async function setAppState(state) {
-  _appStateCache = state;
-  const { error } = await db.from('app_state').upsert({ id:'cherop_main', data:state, updated_at:new Date().toISOString() });
-  if (error) throw error;
+  // imgs 분리 저장 — app_state는 가볍게
+  const imgStore = {};
+  const stateLight = JSON.parse(JSON.stringify(state));
+  if (stateLight.plan) {
+    Object.keys(stateLight.plan).forEach(yr => {
+      (stateLight.plan[yr]?.products||[]).forEach(p => {
+        if (p.imgs && (p.imgs.front || p.imgs.side || p.imgs.back)) {
+          imgStore[p.id] = p.imgs;
+          p.imgs = { _ref: p.id }; // 참조만 저장
+        }
+      });
+    });
+  }
+  _appStateCache = state; // 캐시는 imgs 포함 버전으로
+  const saves = [
+    db.from('app_state').upsert({ id:'cherop_main', data:stateLight, updated_at:new Date().toISOString() }),
+  ];
+  if (Object.keys(imgStore).length) {
+    saves.push(db.from('app_state').upsert({ id:'cherop_product_imgs', data:imgStore, updated_at:new Date().toISOString() }));
+  }
+  const results = await Promise.all(saves);
+  if (results[0].error) throw results[0].error;
 }
 
 /* app_state의 기존 content_posts → content_posts 테이블로 마이그레이션 */
@@ -4646,6 +4678,7 @@ function renderPage(page, sub='') {
   if(page==='ops')        initOpsPage();
   if(page==='content')    initContentPage();
   if(page==='marketing')  initMktPage();
+  window.currentPage = page;
   if(page==='lineup')     initLineupPage();
   if(page==='assets')     initAssetsPage();
   if(page==='plan')       initPlanPage();
@@ -14459,9 +14492,10 @@ function ppImgChange(input, side) {
 }
 
 async function openPlanProductModal(id='') {
-  // 라인업 탭에서 열 경우 planYear를 _lineupYear로 맞춤
-  const isLineup = $('page-lineup')?.style.display !== 'none';
-  if (isLineup && typeof _lineupYear !== 'undefined') planYear = _lineupYear;
+  // 현재 활성 페이지 확인 — 라인업이면 planYear를 _lineupYear로 맞춤
+  if (window.currentPage === 'lineup' && typeof _lineupYear !== 'undefined') {
+    planYear = _lineupYear;
+  }
   planProductEditId=id||null;
   ppStatus='sample'; ppSizes=['S']; ppColors=[]; ppImgs={front:null,side:null,back:null};
   $('plan-product-modal-kind').textContent=id?'제품 편집':'제품 등록';
@@ -14551,12 +14585,17 @@ async function savePlanProduct() {
 async function deletePlanProduct() {
   if(!planProductEditId) return;
   const ok=await customConfirm('제품을 삭제할까요?'); if(!ok) return;
-  const s=await getPlanData();
+  // 라인업에서 열었으면 planYear가 _lineupYear로 세팅돼 있음
+  const s=await getAppState();
+  s.plan = s.plan||{};
+  s.plan[planYear] = s.plan[planYear]||{};
   s.plan[planYear].products=(s.plan[planYear].products||[]).filter(p=>p.id!==planProductEditId);
-  await setAppState(s);toast('삭제됐어요');closeModal('plan-product-modal');
+  await setAppState(s);
+  toast('삭제됐어요');
+  closeModal('plan-product-modal');
   window._lineupCache = null;
   try { loadPlanProduct(); } catch(e) {}
-  if(typeof loadLineupProducts==='function') loadLineupProducts();
+  if(window.currentPage==='lineup' && typeof loadLineupProducts==='function') loadLineupProducts();
 }
 
 /* ════════════════════════════════
