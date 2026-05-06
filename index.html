@@ -4379,7 +4379,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.6.9</div>
+<div id="version">v4.7.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -11135,6 +11135,7 @@ async function initLineupPage() {
     </div>
     <div id="lineup-grid"></div>`;
 
+  window._lineupCache = null; // 페이지 진입 시 항상 최신 데이터
   await loadLineupProducts();
 }
 
@@ -11148,6 +11149,7 @@ function lineupSetYear(y, el) {
 
 function lineupYearMove(dir) {
   _lineupYear += dir;
+  window._lineupCache = null; // 연도 바뀌면 재조회
   if($('lineup-year-label')) $('lineup-year-label').textContent = _lineupYear;
   loadLineupProducts();
 }
@@ -11169,13 +11171,14 @@ function lineupSetCat(cat, el) {
 async function loadLineupProducts() {
   const el = $('lineup-grid'); if (!el) return;
 
-  // planYear를 _lineupYear로 임시 설정
-  const savedYear = planYear;
-  planYear = _lineupYear;
-
-  const s        = await getPlanData();
-  planYear       = savedYear; // 복원
-  const allProds = s.plan[_lineupYear]?.products || [];
+  // 캐시 — 연도가 바뀔 때만 Supabase 재조회
+  if (!window._lineupCache || window._lineupCacheYear !== _lineupYear) {
+    const s = await getAppState();
+    window._lineupCache     = s;
+    window._lineupCacheYear = _lineupYear;
+  }
+  const s        = window._lineupCache;
+  const allProds = s.plan?.[_lineupYear]?.products || [];
 
   // 카테고리 pill 동적 생성
   const cats   = [...new Set(allProds.map(p=>p.category).filter(Boolean))];
@@ -14530,6 +14533,7 @@ async function savePlanProduct() {
   toast('저장됐어요 ✓');
   closeModal('plan-product-modal');
   loadPlanProduct();
+  window._lineupCache = null; // 캐시 무효화
   if(typeof loadLineupProducts==='function') loadLineupProducts();
 }
 
