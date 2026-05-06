@@ -762,6 +762,7 @@ a { text-decoration:none; color:inherit; }
       <div class="tb-nav-item" data-page="ops">운영</div>
       <div class="tb-nav-item" data-page="content">콘텐츠</div>
       <div class="tb-nav-item" data-page="marketing">마케팅</div>
+      <div class="tb-nav-item" data-page="lineup">라인업</div>
     </nav>
     <div class="tb-right">
       <div class="tb-date" id="tb-date"></div>
@@ -1693,6 +1694,16 @@ a { text-decoration:none; color:inherit; }
           </div>
         </div>
       </div>
+      <!-- ═══ 라인업 페이지 ═══ -->
+      <div class="page" id="page-lineup">
+        <div class="page-header">
+          <div class="page-header-top">
+            <div><div class="page-header-title">라인업</div></div>
+          </div>
+        </div>
+        <div id="lineup-content"></div>
+      </div>
+
       <div class="page" id="page-marketing">
         <div class="page-header">
           <div class="page-header-top">
@@ -2005,10 +2016,10 @@ a { text-decoration:none; color:inherit; }
           </div>
           <div class="page-tabs" id="plan-tabs">
             <div class="page-tab on" onclick="planSetTab('annual',this)">연간 목표</div>
-            <div class="page-tab"   onclick="planSetTab('quarter',this)">분기 계획</div>
+
             <div class="page-tab"   onclick="planSetTab('roadmap',this)">로드맵</div>
             <div class="page-tab"   onclick="planSetTab('budget',this)">예산 계획</div>
-            <div class="page-tab"   onclick="planSetTab('product',this)">제품 디자인</div>
+            
           </div>
         </div>
 
@@ -2018,11 +2029,17 @@ a { text-decoration:none; color:inherit; }
             <button class="f-btn f-btn-save" style="font-size:12px;padding:7px 16px;" onclick="openPlanItemModal('goal')">+ 연간 목표 추가</button>
 
           </div>
-          <!-- KPI 요약 카드 (A안) -->
+          <!-- KPI 요약 카드 -->
           <div id="plan-kpi-summary" style="margin-bottom:16px;"></div>
-          <!-- 분기별 타임라인 (C안) -->
-          <div id="plan-quarter-timeline" style="margin-bottom:20px;"></div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;" id="plan-annual-cards"></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;" id="plan-annual-cards"></div>
+          <!-- 분기별 로드맵 요약 카드 -->
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-head">
+              <div><div class="card-title">분기별 계획</div><div class="card-sub">로드맵 일정 기반</div></div>
+              <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 12px;" onclick="openRoadmapAddModal()">+ 일정 추가</button>
+            </div>
+            <div id="plan-qtr-roadmap-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:4px 0;"></div>
+          </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
             <div class="card">
               <div class="card-head">
@@ -2077,7 +2094,7 @@ a { text-decoration:none; color:inherit; }
           <div class="card">
             <div class="card-head">
               <div class="card-title">연간 로드맵</div>
-              <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openPlanItemModal('roadmap')">+ 항목 추가</button>
+              <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;" onclick="openRoadmapAddModal()">+ 일정 추가</button>
             </div>
             <div id="plan-roadmap-list"></div>
           </div>
@@ -2085,21 +2102,24 @@ a { text-decoration:none; color:inherit; }
 
         <!-- 예산 계획 탭 -->
         <div id="plan-tab-budget" style="display:none;">
+          <!-- 상단 KPI 카드 -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;" id="plan-budget-kpi"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <!-- 연간 예산 목표 설정 -->
             <div class="card">
               <div class="card-head">
-                <div class="card-title">월 예산 계획</div>
+                <div class="card-title">연간 예산 목표</div>
                 <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openPlanBudgetModal()">편집</button>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;" id="plan-budget-summary"></div>
               <div id="plan-budget-list"></div>
             </div>
+            <!-- 카테고리별 실적 (세무관리 연동) -->
             <div class="card">
               <div class="card-head">
-                <div class="card-title">시즌별 특별 예산</div>
-                <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openPlanItemModal('season-budget')">+ 추가</button>
+                <div class="card-title">카테고리별 지출 실적</div>
+                <div class="card-sub">세무관리 비용 연동</div>
               </div>
-              <div id="plan-season-budget-list"></div>
+              <div id="plan-budget-actual"></div>
             </div>
           </div>
         </div>
@@ -2812,6 +2832,63 @@ a { text-decoration:none; color:inherit; }
       <div style="display:flex;gap:8px;">
         <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('sales-revenue-modal')">취소</button>
         <button class="f-btn f-btn-save" style="flex:1;" onclick="saveSalesRevenue()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 로드맵 일정 추가/수정 모달 ═══ -->
+<div class="modal-overlay" id="roadmap-add-modal" onclick="if(event.target===this)closeModal('roadmap-add-modal')">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-bar">
+      <div class="modal-kind" id="roadmap-modal-kind">일정 추가</div>
+      <div class="modal-bar-right">
+        <div class="mbtn" id="roadmap-del-btn" style="display:none;" onclick="deleteRoadmapItem()">🗑</div>
+        <div class="mbtn" onclick="closeModal('roadmap-add-modal')">✕</div>
+      </div>
+    </div>
+    <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:6px;">월 선택</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;" id="roadmap-month-chips">
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(1,this)">1월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(2,this)">2월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(3,this)">3월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(4,this)">4월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(5,this)">5월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(6,this)">6월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(7,this)">7월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(8,this)">8월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(9,this)">9월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(10,this)">10월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(11,this)">11월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(12,this)">12월</div>
+        </div>
+        <input type="hidden" id="roadmap-month" value="1">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">일정 이름</div>
+        <input type="text" id="roadmap-title" class="prop-inp" placeholder="예: 더현대 서울 팝업" style="width:100%;">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:6px;">상태</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;" id="roadmap-status-chips">
+          <div class="inv-pill on" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetStatus('planned',this)">예정</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetStatus('confirmed',this)">확정</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetStatus('ongoing',this)">진행중</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetStatus('done',this)">완료</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetStatus('idea',this)">기획중</div>
+        </div>
+        <input type="hidden" id="roadmap-status" value="planned">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:5px;">메모 (선택)</div>
+        <input type="text" id="roadmap-desc" class="prop-inp" placeholder="추가 설명" style="width:100%;">
+      </div>
+      <input type="hidden" id="roadmap-edit-id">
+      <div style="display:flex;gap:8px;">
+        <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('roadmap-add-modal')">취소</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveRoadmapItem()">저장</button>
       </div>
     </div>
   </div>
@@ -3640,6 +3717,15 @@ a { text-decoration:none; color:inherit; }
               <div class="prop-val"><input type="text" class="prop-inp" id="pp-cat" placeholder="예: 애착인형, 키링, 파우치"></div>
             </div>
             <div class="prop-row">
+              <div class="prop-icon">📅</div><div class="prop-label">출시 월</div>
+              <div class="prop-val">
+                <select class="prop-inp" id="pp-month" style="width:100px;">
+                  <option value="0">미정</option>
+                  ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}">${m}월</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="prop-row">
               <div class="prop-icon">📐</div><div class="prop-label">사이즈</div>
               <div class="prop-val" style="display:flex;gap:5px;flex-wrap:wrap;" id="pp-size-btns">
                 <div class="pp-sz-btn on" onclick="ppToggleSize('S',this)" style="padding:4px 12px;border-radius:50px;font-size:11px;border:1.5px solid var(--text);background:var(--text);color:#fff;cursor:pointer;">S</div>
@@ -4303,7 +4389,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.6.0</div>
+<div id="version">v4.6.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4536,7 +4622,7 @@ async function resetMemberColors() {
 /* ═══════════════════════════════════════
    ROUTER (hash 기반)
 ═══════════════════════════════════════ */
-const VALID_PAGES = ['dashboard','tasks','project','inventory','sales','production','ops','content','marketing','notice','assets','attendance','plan','revenue','tax'];
+const VALID_PAGES = ['dashboard','tasks','project','inventory','sales','production','ops','content','marketing','lineup','notice','assets','attendance','plan','revenue','tax'];
 
 function nav(page, sub='') {
   const hash = sub ? `#${page}/${encodeURIComponent(sub)}` : `#${page}`;
@@ -4570,6 +4656,7 @@ function renderPage(page, sub='') {
   if(page==='ops')        initOpsPage();
   if(page==='content')    initContentPage();
   if(page==='marketing')  initMktPage();
+  if(page==='lineup')     initLineupPage();
   if(page==='assets')     initAssetsPage();
   if(page==='plan')       initPlanPage();
   if(page==='tax')        initTaxPage();
@@ -11015,6 +11102,137 @@ let mktCrmType    = 'alimtalk';
 const MKT_CH_COLORS = { meta:'#1877F2', naver:'#03C75A', etc:'#888' };
 const MKT_CH_LABELS = { meta:'메타', naver:'네이버', etc:'기타' };
 
+/* ══════════════════════
+   라인업 탭 (C안)
+══════════════════════ */
+let _lineupYear  = new Date().getFullYear();
+let _lineupMonth = 0; // 0 = 전체
+let _lineupCat   = '';
+
+async function initLineupPage() {
+  const el = $('lineup-content');
+  if (!el) return;
+
+  // 연도 범위 계산 (2024~내년)
+  const curYear = new Date().getFullYear();
+  const years   = [curYear-1, curYear, curYear+1];
+  _lineupYear   = curYear;
+  _lineupMonth  = 0;
+  _lineupCat    = '';
+
+  const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+  el.innerHTML = `
+    <div class="page-header" style="margin-bottom:14px;">
+      <div class="page-header-top">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <!-- 연도 + 월 필터 -->
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div style="display:flex;gap:4px;" id="lineup-year-pills">
+              ${years.map(y=>`<div class="inv-pill${y===_lineupYear?' on':''}" style="font-size:12px;padding:4px 12px;" onclick="lineupSetYear(${y},this)">${y}</div>`).join('')}
+            </div>
+            <div style="width:0.5px;height:16px;background:var(--border);"></div>
+            <div style="display:flex;gap:3px;flex-wrap:wrap;" id="lineup-month-pills">
+              <div class="inv-pill on" style="font-size:11px;padding:3px 9px;" onclick="lineupSetMonth(0,this)">전체</div>
+              ${months.map((m,i)=>`<div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="lineupSetMonth(${i+1},this)">${m}</div>`).join('')}
+            </div>
+          </div>
+          <!-- 카테고리 필터 -->
+          <div style="display:flex;gap:4px;flex-wrap:wrap;" id="lineup-cat-pills"></div>
+        </div>
+        <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;" onclick="openPlanProductModal()">+ 제품 추가</button>
+      </div>
+    </div>
+    <div id="lineup-grid"></div>`;
+
+  await loadLineupProducts();
+}
+
+function lineupSetYear(y, el) {
+  _lineupYear = y;
+  document.querySelectorAll('#lineup-year-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  loadLineupProducts();
+}
+
+function lineupSetMonth(m, el) {
+  _lineupMonth = m;
+  document.querySelectorAll('#lineup-month-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  loadLineupProducts();
+}
+
+function lineupSetCat(cat, el) {
+  _lineupCat = cat;
+  document.querySelectorAll('#lineup-cat-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  loadLineupProducts();
+}
+
+async function loadLineupProducts() {
+  const el = $('lineup-grid'); if (!el) return;
+
+  // planYear를 _lineupYear로 임시 설정
+  const savedYear = planYear;
+  planYear = _lineupYear;
+
+  const s        = await getPlanData();
+  planYear       = savedYear; // 복원
+  const allProds = s.plan[_lineupYear]?.products || [];
+
+  // 카테고리 pill 동적 생성
+  const cats   = [...new Set(allProds.map(p=>p.category).filter(Boolean))];
+  const catEl  = $('lineup-cat-pills');
+  if (catEl) {
+    catEl.innerHTML = `<div class="inv-pill${_lineupCat===''?' on':''}" style="font-size:11px;padding:3px 9px;" onclick="lineupSetCat('',this)">전체</div>` +
+      cats.map(c=>`<div class="inv-pill${_lineupCat===c?' on':''}" style="font-size:11px;padding:3px 9px;" onclick="lineupSetCat('${c}',this)">${c}</div>`).join('');
+  }
+
+  // 필터 적용
+  let prods = allProds;
+  if (_lineupMonth) prods = prods.filter(p => {
+    const m = parseInt(p.month)||0;
+    return m === _lineupMonth || m === 0;
+  });
+  if (_lineupCat) prods = prods.filter(p => p.category === _lineupCat);
+
+  if (!prods.length) {
+    el.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--faint);">해당 조건의 제품이 없어요</div>';
+    return;
+  }
+
+  const STATUS_LBL = {active:'판매중', new:'신규', planned:'출시예정', discontinued:'단종'};
+  const STATUS_COLOR = {active:'#EAF3DE;color:#27500A', new:'#E6F1FB;color:#0C447C', planned:'#FDF3E0;color:#7A5C1E', discontinued:'var(--surface2);color:var(--muted)'};
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">` +
+    prods.map(p=>{
+      const st   = p.status||'active';
+      const sc   = STATUS_COLOR[st]||STATUS_COLOR.active;
+      const dim  = st==='discontinued' ? 'opacity:.45;' : '';
+      const monthLabel = p.month ? `${p.month}월` : '';
+      return `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;${dim}" onclick="openPlanProductModal('${p.id}')">
+        <div style="aspect-ratio:1;background:${p.color||'var(--surface2)'};display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          ${p.imgUrl?`<img src="${p.imgUrl}" style="width:100%;height:100%;object-fit:cover;">`:
+            `<span style="font-size:28px;">${p.emoji||'📦'}</span>`}
+        </div>
+        <div style="padding:8px 10px;">
+          <div style="font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name||'무제'}</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:4px;flex-wrap:wrap;">
+            ${monthLabel?`<span style="font-size:10px;color:var(--light);">${monthLabel}</span>`:''}
+            <span style="font-size:10px;padding:1px 7px;border-radius:20px;background:${sc};">${STATUS_LBL[st]||st}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('') +
+    `<div style="border:1.5px dashed var(--border);border-radius:var(--r);display:flex;align-items:center;justify-content:center;min-height:120px;cursor:pointer;" onclick="openPlanProductModal()">
+      <span style="font-size:12px;color:var(--light);">+ 추가</span>
+    </div>
+  </div>`;
+}
+
+function openLineupProductModal() { openPlanProductModal(); }
+function lineupSetView(view, el) {}
+
 async function initMktPage() {
   mktTab = 'today';
   document.querySelectorAll('#mkt-tabs .page-tab').forEach((t,i)=>t.classList.toggle('on',i===0));
@@ -13457,39 +13675,41 @@ async function loadPlanAnnual() {
     </div>`;
   }
 
-  // ── 분기 타임라인 (C안) ──
-  const qtlEl = $('plan-quarter-timeline');
-  if (qtlEl) {
-    const qtrs = p.quarters || [];
-    const QDEF = [{label:'Q1',months:'1-3월'},{label:'Q2',months:'4-6월'},{label:'Q3',months:'7-9월'},{label:'Q4',months:'10-12월'}];
-    const curQ = Math.floor(curMonth / 3);
-    qtlEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">` +
-      QDEF.map((qd, qi) => {
-        const q      = qtrs.find(x=>x.q===qi+1) || {};
-        const items  = q.items || [];
-        const isNow  = qi === curQ;
-        const isPast = qi < curQ;
-        const borderStyle = isNow ? 'border:1.5px solid #6B9E7A;' : 'border:0.5px solid var(--border);';
-        const opacity = (!isPast && !isNow) ? 'opacity:.65;' : '';
-        return `<div style="border-radius:var(--r);padding:12px 14px;background:var(--surface);${borderStyle}${opacity}">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
-            <span style="font-size:12px;font-weight:500;color:${isNow?'#3B6D11':'var(--text)'};">${qd.label}</span>
-            <span style="font-size:10px;color:var(--light);">${qd.months}</span>
-            ${isNow?'<span style="font-size:10px;color:#6B9E7A;margin-left:auto;">진행중</span>':''}
-          </div>
-          <div style="display:flex;flex-direction:column;gap:5px;min-height:40px;">
-            ${items.length
-              ? items.map(it => `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);">
-                  <span style="width:13px;height:13px;border-radius:50%;background:${it.done?'#EAF3DE':'var(--surface2)'};border:0.5px solid ${it.done?'#6B9E7A':'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:8px;color:${it.done?'#3B6D11':'var(--light)'};flex-shrink:0;">${it.done?'✓':''}</span>
-                  ${it.text}
-                </div>`).join('')
-              : `<div style="font-size:11px;color:var(--faint);">아직 계획이 없어요</div>`}
-          </div>
-          <div style="margin-top:8px;">
-            <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 14px;white-space:nowrap;margin-top:4px;" onclick="openQtrTimelineModal(${qi+1})">+ 추가</button>
-          </div>
-        </div>`;
-      }).join('') + `</div>`;
+  // 분기별 로드맵 요약 카드 (로드맵 일정 기반)
+  const qtrRmEl = $('plan-qtr-roadmap-grid');
+  if (qtrRmEl) {
+    const roadmapItems = (p.items||[]).filter(x=>x.type==='roadmap').sort((a,b)=>(a.month||0)-(b.month||0));
+    const QDEF = [
+      {q:'Q1', label:'1~3월', months:[1,2,3], color:'#6B9E7A'},
+      {q:'Q2', label:'4~6월', months:[4,5,6], color:'#C4A96A'},
+      {q:'Q3', label:'7~9월', months:[7,8,9], color:'#C4736A'},
+      {q:'Q4', label:'10~12월', months:[10,11,12], color:'#378ADD'},
+    ];
+    const curQ = Math.floor(curMonth/3);
+    qtrRmEl.innerHTML = QDEF.map((qd,qi)=>{
+      const items = roadmapItems.filter(x=>qd.months.includes(x.month));
+      const isNow  = qi===curQ;
+      const isPast = qi<curQ;
+      const border = isNow ? `border:1.5px solid ${qd.color};` : 'border:0.5px solid var(--border);';
+      return `<div style="border-radius:var(--r);padding:11px 13px;background:var(--surface);${border}${!isPast&&!isNow?'opacity:.65;':''}">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:8px;">
+          <span style="font-size:12px;font-weight:500;color:${qd.color};">${qd.q}</span>
+          <span style="font-size:10px;color:var(--light);">${qd.label}</span>
+          ${isNow?`<span style="font-size:10px;color:${qd.color};margin-left:auto;">진행중</span>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;min-height:36px;">
+          ${items.length
+            ? items.map(it=>{
+                const dot = it.status==='done'?'#6B9E7A':it.status==='ongoing'?'#C4A96A':it.status==='confirmed'?'#378ADD':'var(--border2)';
+                return `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text);" onclick="openRoadmapAddModal('${it.id}')" class="card-link" style="font-size:11px;">
+                  <span style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;"></span>
+                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${it.month}월 ${it.title}</span>
+                </div>`;
+              }).join('')
+            : `<div style="font-size:11px;color:var(--faint);">일정 없음</div>`}
+        </div>
+      </div>`;
+    }).join('');
   }
 
   // 요약 카드
@@ -13561,13 +13781,23 @@ async function loadPlanAnnual() {
     </div>`;
   }).join('');
 
-  // 월별 상세 테이블 (누적 달성률 포함)
-  let cumTarget=0, cumActual=0;
+  // 지출 데이터 — 세무관리 비용 연동
+  const costRes = await db.from('tax_costs').select('month,amount,year').eq('year', planYear);
+  const costByMonth = {};
+  (costRes.data||[]).forEach(r => {
+    const m = parseInt(r.month);
+    if(m) costByMonth[m] = (costByMonth[m]||0) + (r.amount||0);
+  });
+
+  // 월별 상세 테이블 (지출·순수익 포함)
+  let cumTarget=0, cumActual=0, cumCost=0;
   const tableRows = PLAN_MONTHS.map((lbl,i)=>{
     const m      = monthly[i+1]||{};
     const target = m.target||0;
     const actual = actualByMonth[i+1]||0;
-    cumTarget += target; cumActual += actual;
+    const cost   = costByMonth[i+1]||0;
+    const profit = actual && cost ? actual - cost : null;
+    cumTarget += target; cumActual += actual; cumCost += cost;
     const achv = target>0 ? Math.round(actual/target*100) : null;
     const isCur = i===curMonth, isPast = i<curMonth;
     const rowBg = isCur ? 'background:var(--surface2);' : '';
@@ -13575,38 +13805,53 @@ async function loadPlanAnnual() {
       <td style="padding:7px 10px;font-size:12px;font-weight:${isCur?600:400};">${i+1}월${isCur?' ←':''}</td>
       <td style="padding:7px 10px;font-size:12px;text-align:right;">${target?fmtWon(target):'—'}</td>
       <td style="padding:7px 10px;font-size:12px;text-align:right;color:${actual?'var(--text)':'var(--faint)'};">${actual?fmtWon(actual):'—'}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;color:${cost?'var(--text)':'var(--faint)'};">${cost?fmtWon(cost):'—'}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;color:${profit!==null?(profit>=0?'#3B6D11':'#C4736A'):'var(--faint)'};">${profit!==null?fmtWon(profit):'—'}</td>
       <td style="padding:7px 10px;font-size:12px;text-align:right;">
         ${achv!==null&&(isPast||isCur)?`<span style="color:${achv>=100?'#6B9E7A':'#C4736A'};font-weight:500;">${achv}%</span>`:achv!==null?`<span style="color:var(--faint);">${achv}%</span>`:'—'}
       </td>
-      <td style="padding:7px 10px;font-size:11px;text-align:right;color:var(--light);">${cumTarget?fmtWon(cumActual)+'/'+ fmtWon(cumTarget):''}</td>
     </tr>`;
   }).join('');
 
-  // plan-monthly-chart 아래에 테이블 추가 (있으면)
   const chartParent = $('plan-monthly-chart')?.parentElement;
   if (chartParent) {
     let tbl = chartParent.querySelector('#plan-monthly-detail-tbl');
-    if (!tbl) {
-      tbl = document.createElement('div');
-      tbl.id = 'plan-monthly-detail-tbl';
-      chartParent.appendChild(tbl);
-    }
+    if (!tbl) { tbl = document.createElement('div'); tbl.id = 'plan-monthly-detail-tbl'; chartParent.appendChild(tbl); }
+    const cumProfit = cumActual - cumCost;
     tbl.innerHTML = `<div style="margin-top:12px;border-top:0.5px solid var(--surface2);overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;">
         <thead><tr style="border-bottom:0.5px solid var(--surface2);">
           <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:left;">월</th>
-          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">목표</th>
-          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">실적</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">목표매출</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">실적매출</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">지출</th>
+          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">순수익</th>
           <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">달성률</th>
-          <th style="padding:6px 10px;font-size:10px;color:var(--light);font-weight:500;text-align:right;">누적</th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
+        <tfoot><tr style="border-top:0.5px solid var(--surface2);background:var(--surface2);">
+          <td style="padding:7px 10px;font-size:12px;font-weight:600;">합계</td>
+          <td style="padding:7px 10px;font-size:12px;text-align:right;font-weight:500;">${cumTarget?fmtWon(cumTarget):'—'}</td>
+          <td style="padding:7px 10px;font-size:12px;text-align:right;font-weight:500;">${fmtWon(cumActual)||'—'}</td>
+          <td style="padding:7px 10px;font-size:12px;text-align:right;font-weight:500;">${cumCost?fmtWon(cumCost):'—'}</td>
+          <td style="padding:7px 10px;font-size:12px;text-align:right;font-weight:600;color:${cumProfit>=0?'#3B6D11':'#C4736A'};">${cumActual?fmtWon(cumProfit):'—'}</td>
+          <td style="padding:7px 10px;"></td>
+        </tr></tfoot>
       </table>
     </div>`;
   }
 }
 
 /* ── 분기 계획 탭 ── */
+function openPlanItemModalQtr(qtrId) {
+  // 해당 분기로 미리 선택해서 모달 열기
+  openPlanItemModal('quarter');
+  setTimeout(() => {
+    const sel = $('pi-qtr');
+    if (sel) sel.value = qtrId;
+  }, 50);
+}
+
 async function openQtrTimelineModal(q) {
   const s = await getPlanData();
   const p = s.plan[planYear];
@@ -13643,7 +13888,7 @@ async function loadPlanQuarter() {
             <div class="card-link" onclick="openPlanItemModal('quarter','${x.id}')" style="font-size:11px;">···</div>
           </div>`).join('')
         : `<div style="font-size:12px;color:var(--faint);">아직 계획이 없어요</div>`}
-      <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 14px;white-space:nowrap;margin-top:6px;" onclick="openPlanItemModal('quarter')">+ 추가</button>
+      <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 14px;white-space:nowrap;margin-top:6px;" onclick="openPlanItemModalQtr('${q}')">+ 추가</button>
     </div>`;
   }).join('');
 
@@ -13660,32 +13905,171 @@ async function loadPlanQuarter() {
 }
 
 /* ── 로드맵 탭 ── */
+/* ── 로드맵 모달 (B안) ── */
+let _roadmapEditId = null;
+let _roadmapMonth  = 1;
+let _roadmapStatus = 'planned';
+
+function openRoadmapAddModal(editId=null) {
+  _roadmapEditId = editId;
+  $('roadmap-edit-id').value = editId||'';
+  $('roadmap-del-btn').style.display = editId ? '' : 'none';
+  $('roadmap-modal-kind').textContent = editId ? '일정 수정' : '일정 추가';
+
+  if (editId) {
+    getPlanData().then(async s => {
+      const item = (s.plan[planYear].items||[]).find(x=>x.id===editId);
+      if (!item) return;
+      _roadmapMonth  = item.month||1;
+      _roadmapStatus = item.status||'planned';
+      $('roadmap-month').value  = _roadmapMonth;
+      $('roadmap-title').value  = item.title||'';
+      $('roadmap-desc').value   = item.desc||'';
+      roadmapSetMonthUI(_roadmapMonth);
+      roadmapSetStatusUI(_roadmapStatus);
+    });
+  } else {
+    const curM = new Date().getMonth()+1;
+    _roadmapMonth  = curM;
+    _roadmapStatus = 'planned';
+    $('roadmap-month').value  = curM;
+    $('roadmap-title').value  = '';
+    $('roadmap-desc').value   = '';
+    roadmapSetMonthUI(curM);
+    roadmapSetStatusUI('planned');
+  }
+  $('roadmap-add-modal').classList.add('on');
+  setTimeout(()=>$('roadmap-title')?.focus(), 80);
+}
+
+function roadmapSetMonth(m, el) {
+  _roadmapMonth = m;
+  $('roadmap-month').value = m;
+  roadmapSetMonthUI(m);
+}
+
+function roadmapSetMonthUI(m) {
+  document.querySelectorAll('#roadmap-month-chips .inv-pill').forEach((p,i) => p.classList.toggle('on', i+1===m));
+}
+
+function roadmapSetStatus(status, el) {
+  _roadmapStatus = status;
+  $('roadmap-status').value = status;
+  roadmapSetStatusUI(status);
+}
+
+function roadmapSetStatusUI(status) {
+  const labels = ['planned','confirmed','ongoing','done','idea'];
+  document.querySelectorAll('#roadmap-status-chips .inv-pill').forEach((p,i) => p.classList.toggle('on', labels[i]===status));
+}
+
+async function saveRoadmapItem() {
+  const title  = $('roadmap-title').value.trim();
+  const month  = parseInt($('roadmap-month').value)||1;
+  const status = $('roadmap-status').value||'planned';
+  const desc   = $('roadmap-desc').value.trim();
+  if (!title) { toast('일정 이름을 입력해주세요'); return; }
+
+  const s = await getPlanData();
+  const p = s.plan[planYear];
+  p.items = p.items||[];
+  const data = { type:'roadmap', month, title, desc, status };
+  if (_roadmapEditId) {
+    const idx = p.items.findIndex(x=>x.id===_roadmapEditId);
+    if (idx>=0) p.items[idx] = {...p.items[idx], ...data};
+  } else {
+    p.items.push({id:`pi-${Date.now()}`, ...data});
+  }
+  await setAppState(s);
+  toast('저장됐어요 ✓');
+  closeModal('roadmap-add-modal');
+  loadPlanRoadmap();
+  if(planTab==='annual') loadPlanAnnual();
+}
+
+async function deleteRoadmapItem() {
+  const id = $('roadmap-edit-id').value;
+  const ok = await customConfirm('이 이 일정을 삭제할까요?'); if(!ok) return;
+  const s = await getPlanData();
+  s.plan[planYear].items = (s.plan[planYear].items||[]).filter(x=>x.id!==id);
+  await setAppState(s);
+  toast('삭제됐어요');
+  closeModal('roadmap-add-modal');
+  loadPlanRoadmap();
+}
+
 async function loadPlanRoadmap() {
   const s     = await getPlanData();
   const items = (s.plan[planYear].items||[]).filter(x=>x.type==='roadmap').sort((a,b)=>(a.month||0)-(b.month||0));
   const el    = $('plan-roadmap-list');
   if(!items.length){
-    el.innerHTML='<div style="padding:14px 0;font-size:13px;color:var(--faint);">이정표를 추가해보세요</div>'; return;
+    el.innerHTML='<div style="padding:14px 0;font-size:13px;color:var(--faint);">로드맵 일정을 추가해보세요</div>'; return;
   }
+  const curM = new Date().getMonth()+1;
   el.innerHTML = items.map(item=>{
-    const isConfirmed = item.status==='confirmed'||item.status==='done';
-    const dotBg = isConfirmed ? '#E6F1FB' : 'var(--surface2)';
-    const dotBorder = isConfirmed ? '2px solid #378ADD' : '2px solid var(--border)';
-    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--surface2);">
-      <div style="font-size:11px;color:var(--light);min-width:36px;padding-top:2px;">${item.month?item.month+'월':'—'}</div>
-      <div style="width:10px;height:10px;border-radius:50%;background:${dotBg};border:${dotBorder};flex-shrink:0;margin-top:3px;"></div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:500;">${item.title||''}</div>
-        ${item.desc?`<div style="font-size:11px;color:var(--light);margin-top:1px;">${item.desc}</div>`:''}
+    const isCur     = item.month===curM && planYear===new Date().getFullYear();
+    const isPast    = planYear<new Date().getFullYear() || (planYear===new Date().getFullYear() && item.month<curM);
+    const dotColor  = item.status==='done'?'#6B9E7A':item.status==='ongoing'?'#C4A96A':item.status==='confirmed'?'#378ADD':'var(--border2)';
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--surface2);">
+      <div style="min-width:32px;text-align:right;">
+        <span style="font-size:11px;font-weight:${isCur?600:400};color:${isCur?'var(--text)':'var(--light)'};">${item.month||'—'}월</span>
       </div>
-      ${PLAN_STATUS_BADGE[item.status]||PLAN_STATUS_BADGE.planned}
-      <div class="card-link" onclick="openPlanItemModal('roadmap','${item.id}')">···</div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding-top:3px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;"></div>
+        <div style="width:1px;flex:1;background:var(--surface2);min-height:6px;margin-top:3px;"></div>
+      </div>
+      <div style="flex:1;min-width:0;opacity:${isPast&&item.status!=='done'?'.6':'1'};">
+        <div style="font-size:13px;font-weight:500;">${item.title||''}</div>
+        ${item.desc?`<div style="font-size:11px;color:var(--light);margin-top:2px;">${item.desc}</div>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        ${PLAN_STATUS_BADGE[item.status]||PLAN_STATUS_BADGE.planned}
+        <div class="card-link" onclick="openRoadmapAddModal('${item.id}')">···</div>
+      </div>
     </div>`;
   }).join('');
 }
 
 /* ── 예산 계획 탭 ── */
 async function loadPlanBudget() {
+  // KPI 카드 — 매출/지출/순수익
+  const kpiEl = $('plan-budget-kpi');
+  if (kpiEl) {
+    const [costRes, salesRes] = await Promise.all([
+      db.from('tax_costs').select('category,amount').eq('year', planYear),
+      db.from('channel_sales_log').select('amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`),
+    ]);
+    const totalCost  = (costRes.data||[]).reduce((s,r)=>s+(r.amount||0),0);
+    const totalSales = (salesRes.data||[]).reduce((s,r)=>s+(r.amount||0),0);
+    const profit     = totalSales - totalCost;
+    kpiEl.innerHTML = [
+      {label:'연간 매출 실적', val:fmtWon(totalSales)||'—', color:'#6B9E7A'},
+      {label:'총 지출 실적',   val:totalCost?fmtWon(totalCost):'—', sub:'세무관리 비용 연동', color:'#C4736A'},
+      {label:'순수익',         val:totalSales?fmtWon(profit):'—', color:profit>=0?'#3B6D11':'#C4736A'},
+    ].map(k=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
+      <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${k.label}</div>
+      <div style="font-size:22px;font-weight:500;color:${k.color};">${k.val}</div>
+      ${k.sub?`<div style="font-size:11px;color:var(--light);margin-top:3px;">${k.sub}</div>`:''}
+    </div>`).join('');
+
+    // 카테고리별 실적
+    const actEl = $('plan-budget-actual');
+    if (actEl) {
+      const CAT_LBL = {salary:'인건비',prod:'생산·원자재',ad:'마케팅·광고비',fee:'플랫폼·수수료',logistics:'물류·배송비',fixed:'고정비·임차료',etc:'기타'};
+      const catMap = {};
+      (costRes.data||[]).forEach(r=>{ catMap[r.category]=(catMap[r.category]||0)+(r.amount||0); });
+      if (!Object.keys(catMap).length) {
+        actEl.innerHTML = '<div style="font-size:12px;color:var(--faint);padding:10px 0;">세무관리에서 비용을 등록하면 여기에 표시돼요</div>';
+      } else {
+        actEl.innerHTML = Object.entries(CAT_LBL).filter(([k])=>catMap[k]).map(([k,lbl])=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
+            <div style="flex:1;font-size:12px;">${lbl}</div>
+            <div style="font-size:12px;font-weight:500;">${fmtWon(catMap[k])}</div>
+          </div>`).join('');
+      }
+    }
+  }
+
   const s      = await getPlanData();
   const budget = s.plan[planYear].budget||{};
   const items  = (s.plan[planYear].items||[]).filter(x=>x.type==='season-budget');
@@ -13994,6 +14378,7 @@ async function openPlanProductModal(id='') {
     const p=(s.plan[planYear].products||[]).find(x=>x.id===id); if(!p) return;
     $('pp-name').value=p.name||'';
     $('pp-cat').value=p.cat||'';
+    if($('pp-month')) $('pp-month').value=p.month||0;
     $('pp-tags').value=(p.tags||'');
     $('pp-memo').value=p.memo||'';
     $('pp-launch').value=p.launch||'';
@@ -14042,6 +14427,7 @@ async function savePlanProduct() {
   s.plan[planYear].products=s.plan[planYear].products||[];
   const data={name,cat:$('pp-cat')?.value.trim(),sizes,colors:ppColors,
     tags:$('pp-tags')?.value.trim(),launch:$('pp-launch')?.value,
+    month:parseInt($('pp-month')?.value)||0,
     memo:$('pp-memo')?.value.trim(),status:ppStatus,imgs:{...ppImgs}};
   if(planProductEditId){
     const idx=s.plan[planYear].products.findIndex(p=>p.id===planProductEditId);
@@ -14053,6 +14439,7 @@ async function savePlanProduct() {
   toast('저장됐어요 ✓');
   closeModal('plan-product-modal');
   loadPlanProduct();
+  if(typeof loadLineupProducts==='function') loadLineupProducts();
 }
 
 async function deletePlanProduct() {
@@ -14773,7 +15160,7 @@ async function openPlanItemModal(type='goal', id='') {
           <div class="prop-val"><select class="prop-inp" id="pi-month">
             ${PLAN_MONTHS.map((m,i)=>`<option value="${i+1}" ${item.month==i+1?'selected':''}>${m}</option>`).join('')}
           </select></div></div>
-        <div class="prop-row"><div class="prop-icon">✏</div><div class="prop-label">이정표</div>
+        <div class="prop-row"><div class="prop-icon">✏</div><div class="prop-label">일정 이름</div>
           <div class="prop-val"><input type="text" class="prop-inp" id="pi-title" value="${item.title||''}" placeholder="예: 더현대 서울 팝업"></div></div>
         <div class="prop-row"><div class="prop-icon">💬</div><div class="prop-label">상세</div>
           <div class="prop-val"><input type="text" class="prop-inp" id="pi-desc" value="${item.desc||''}" placeholder="추가 설명 (선택)"></div></div>
@@ -14805,8 +15192,14 @@ async function savePlanItem() {
       sub: $('pi-sub')?.value.trim(), progress: parseInt($('pi-progress')?.value)||0,
       showProgress: $('pi-show-progress')?.checked||false, color: $('pi-color')?.value||planItemColor,
     };
-    if(planItemEditId){ const idx=p.goals.findIndex(x=>x.id===planItemEditId); if(idx>=0) p.goals[idx]={...p.goals[idx],...data}; }
-    else p.goals.push({id:`pg-${Date.now()}`,...data});
+    if(planItemEditId){
+      const idx=p.goals.findIndex(x=>x.id===planItemEditId);
+      if(idx>=0) p.goals[idx]={...p.goals[idx],...data};
+    } else {
+      if(!data.label || !p.goals.find(x=>x.label===data.label)) {
+        p.goals.push({id:`pg-${Date.now()}`,...data});
+      } else { toast('같은 이름의 목표가 이미 있어요'); return; }
+    }
   } else {
     p.items = p.items||[];
     let data = { type: planItemType };
