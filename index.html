@@ -1509,6 +1509,7 @@ a { text-decoration:none; color:inherit; }
           </div>
           <div class="page-tabs" id="content-tabs">
             <div class="page-tab on" onclick="contentSetTab('calendar',this)">피드</div>
+            <div class="page-tab"   onclick="contentSetTab('plan',this)">기획보드</div>
             <div class="page-tab"   onclick="contentSetTab('stats',this)">콘텐츠 실적</div>
             <div class="page-tab"   onclick="contentSetTab('season',this)">시즌 이슈</div>
           </div>
@@ -1570,6 +1571,22 @@ a { text-decoration:none; color:inherit; }
           </div>
         </div>
         <!-- 실적 탭 -->
+        <!-- 기획보드 탭 -->
+        <div id="content-tab-plan" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <!-- 유형 필터 -->
+            <div style="display:flex;gap:5px;flex-wrap:wrap;" id="plan-board-type-pills">
+              <div class="inv-pill on" style="font-size:11px;padding:3px 9px;" onclick="planBoardSetType('',this)">전체</div>
+              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#1C1E2615;border-color:#1C1E2640;" onclick="planBoardSetType('visual',this)">◼ 비주얼보드</div>
+              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#FDF3E0;border-color:#C4A96A40;" onclick="planBoardSetType('mongmozzal',this)">✦ 몽모짤</div>
+              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#FAEAE4;border-color:#C4736A40;" onclick="planBoardSetType('reels',this)">▶ 릴스</div>
+              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#EAF3DE;border-color:#6B9E7A40;" onclick="planBoardSetType('magazine',this)">◎ 매거진</div>
+            </div>
+            <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;" onclick="openPlanBoardModal()">+ 기획 추가</button>
+          </div>
+          <div id="plan-board-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;"></div>
+        </div>
+
         <div id="content-tab-stats" style="display:none;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
             <div style="display:flex;gap:5px;" id="content-stats-period">
@@ -4379,7 +4396,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.7.5</div>
+<div id="version">v4.7.7</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -12016,18 +12033,17 @@ async function renderContentCalWeek() {
     const isWk    = i >= 5;
     const posts   = allPosts.filter(p => (p.post_date||p.date) === ds);
 
-    const postsHtml = posts.slice(0,3).map(p => {
-      const src  = p.imgData || p.imgUrl || '';
-      const tc   = TYPES[p.type] || TYPES.visual;
-      return `<div onclick="instaSelectPost('${p.id}')" style="margin-bottom:4px;border-radius:6px;overflow:hidden;cursor:pointer;aspect-ratio:4/5;background:${tc.bg};position:relative;"
-        onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-        ${src
-          ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;" draggable="false">`
-          : `<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:5px;">
-              <span style="font-size:8px;font-weight:600;color:${tc.tc};opacity:.4;">${tc.icon}</span>
-              <span style="font-size:8px;color:${tc.tc};opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;">${p.title||''}</span>
-            </div>`}
-        ${posts.length > 3 && p === posts[2] ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><span style="color:#fff;font-size:12px;font-weight:600;">+${posts.length-3}</span></div>` : ''}
+    const postsHtml = posts.slice(0,3).map((p, pi) => {
+      const tc     = TYPES[p.type] || TYPES.visual;
+      const stLbl  = p.status==='published'?'업로드됨':p.status==='scheduled'?'예약':p.status==='draft'?'초안':'기획중';
+      const stC    = p.status==='published'?'#2e7d32':p.status==='scheduled'?'#e65100':'#888';
+      const isLast = pi===2 && posts.length>3;
+      return `<div onclick="calSelectPost('${p.id}')" style="margin-bottom:4px;border-radius:6px;cursor:pointer;background:${tc.bg}18;border:0.5px solid ${tc.bg}40;padding:6px 7px;position:relative;"
+        onmouseover="this.style.background='${tc.bg}28'" onmouseout="this.style.background='${tc.bg}18'">
+        <div style="font-size:9px;font-weight:600;color:${tc.tc==='#fff'?tc.bg:tc.tc};letter-spacing:.05em;opacity:.8;">${tc.icon} ${(p.type||'').toUpperCase()}</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.title||p.topic||'(제목 없음)'}</div>
+        <div style="font-size:10px;color:${stC};margin-top:2px;">${stLbl}</div>
+        ${isLast?`<div style="position:absolute;inset:0;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;border-radius:6px;"><span style="font-size:11px;font-weight:600;color:var(--text);">+${posts.length-3}</span></div>`:''}
       </div>`;
     }).join('');
 
@@ -12043,6 +12059,179 @@ async function renderContentCalWeek() {
   }).join('');
 }
 
+/* ══ 기획보드 ══ */
+let _planBoardType = '';
+const PLAN_BOARD_TYPES = {
+  visual:     { label:'비주얼보드', icon:'◼', bg:'#1C1E26', tc:'#fff',    light:'#1C1E2618' },
+  mongmozzal: { label:'몽모짤',     icon:'✦', bg:'#FDF3E0', tc:'#7A5C1E', light:'#FDF3E018' },
+  reels:      { label:'릴스',       icon:'▶', bg:'#FAEAE4', tc:'#7A2E1E', light:'#FAEAE418' },
+  magazine:   { label:'매거진',     icon:'◎', bg:'#EAF3DE', tc:'#2F5A2E', light:'#EAF3DE18' },
+};
+
+function planBoardSetType(type, el) {
+  _planBoardType = type;
+  document.querySelectorAll('#plan-board-type-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  loadPlanBoard();
+}
+
+async function loadPlanBoard() {
+  const el = $('plan-board-grid'); if (!el) return;
+  const s = await getAppState();
+  const all = s.plan_boards || [];
+  const filtered = _planBoardType ? all.filter(p=>p.type===_planBoardType) : all;
+
+  const addCard = `<div onclick="openPlanBoardModal()" style="border:1.5px dashed var(--border);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;cursor:pointer;gap:6px;"
+    onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='var(--border)'">
+    <span style="font-size:22px;color:var(--light);">+</span>
+    <span style="font-size:12px;color:var(--light);">기획 추가</span>
+  </div>`;
+
+  if (!filtered.length) {
+    el.innerHTML = addCard;
+    return;
+  }
+
+  el.innerHTML = filtered.map(p => {
+    const t = PLAN_BOARD_TYPES[p.type] || PLAN_BOARD_TYPES.visual;
+    return `<div onclick="openPlanBoardModal('${p.id}')" style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;"
+      onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);background:${t.light};">
+        <div style="font-size:10px;font-weight:600;color:${t.tc==='#fff'?t.bg:t.tc};letter-spacing:.05em;">${t.icon} ${t.label.toUpperCase()}</div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-top:4px;">${p.title||'(제목 없음)'}</div>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
+        ${p.product?`<div style="font-size:11px;color:var(--light);">📦 ${p.product}</div>`:''}
+        ${p.target?`<div style="font-size:11px;color:var(--light);">🎯 ${p.target}</div>`:''}
+        ${p.memo?`<div style="font-size:11px;color:var(--text);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${p.memo}</div>`:''}
+        ${p.refLink?`<a href="${p.refLink}" target="_blank" style="font-size:11px;color:#378ADD;text-decoration:none;" onclick="event.stopPropagation()">↗ 레퍼런스 링크</a>`:''}
+      </div>
+    </div>`;
+  }).join('') + addCard;
+}
+
+async function openPlanBoardModal(id='') {
+  // 간단 인라인 모달
+  const s   = await getAppState();
+  const item = id ? (s.plan_boards||[]).find(x=>x.id===id) : null;
+  const T = PLAN_BOARD_TYPES;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay on';
+  overlay.id = 'plan-board-modal-overlay';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:440px;">
+      <div class="modal-bar">
+        <div class="modal-kind">${id?'기획 수정':'기획 추가'}</div>
+        <div class="modal-bar-right">
+          ${id?`<div class="mbtn" onclick="deletePlanBoard('${id}')" style="color:var(--red);">🗑</div>`:''}
+          <div class="mbtn" onclick="$('plan-board-modal-overlay').remove()">✕</div>
+        </div>
+      </div>
+      <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <div style="font-size:11px;color:var(--light);margin-bottom:6px;">유형</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;" id="pb-type-pills">
+            ${Object.entries(T).map(([k,v])=>`<div class="inv-pill${(item?.type||'visual')===k?' on':''}" style="font-size:11px;padding:3px 9px;background:${(item?.type||'visual')===k?v.bg:'transparent'};color:${(item?.type||'visual')===k?(v.tc==='#fff'?'#fff':v.tc):'var(--light)'};" onclick="pbSetType('${k}',this)">${v.icon} ${v.label}</div>`).join('')}
+          </div>
+          <input type="hidden" id="pb-type" value="${item?.type||'visual'}">
+        </div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:5px;">제목</div>
+          <input type="text" id="pb-title" class="prop-inp" value="${item?.title||''}" placeholder="콘텐츠 제목" style="width:100%;"></div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:5px;">제품</div>
+          <input type="text" id="pb-product" class="prop-inp" value="${item?.product||''}" placeholder="예: 포니 몽모 S, 몽달이" style="width:100%;"></div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:5px;">타겟</div>
+          <input type="text" id="pb-target" class="prop-inp" value="${item?.target||''}" placeholder="예: 2030 여성, 육아맘" style="width:100%;"></div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:5px;">레퍼런스 링크 (릴스 등)</div>
+          <input type="url" id="pb-ref" class="prop-inp" value="${item?.refLink||''}" placeholder="https://..." style="width:100%;"></div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:5px;">메모</div>
+          <textarea id="pb-memo" class="prop-inp" rows="3" style="width:100%;resize:none;">${item?.memo||''}</textarea></div>
+        <div style="display:flex;gap:8px;">
+          <button class="f-btn f-btn-cancel" style="flex:1;" onclick="$('plan-board-modal-overlay').remove()">취소</button>
+          <button class="f-btn f-btn-save" style="flex:1;" onclick="savePlanBoard('${id}')">저장</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function pbSetType(type, el) {
+  $('pb-type').value = type;
+  const T = PLAN_BOARD_TYPES;
+  document.querySelectorAll('#pb-type-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  Object.entries(T).forEach(([k,v])=>{
+    const btn = document.querySelector(`#pb-type-pills .inv-pill[onclick*="'${k}'"]`);
+    if (btn) {
+      btn.style.background = k===type ? v.bg : 'transparent';
+      btn.style.color = k===type ? (v.tc==='#fff'?'#fff':v.tc) : 'var(--light)';
+    }
+  });
+}
+
+async function savePlanBoard(id) {
+  const data = {
+    type:    $('pb-type').value,
+    title:   $('pb-title').value.trim(),
+    product: $('pb-product').value.trim(),
+    target:  $('pb-target').value.trim(),
+    refLink: $('pb-ref').value.trim(),
+    memo:    $('pb-memo').value.trim(),
+  };
+  if (!data.title) { toast('제목을 입력해주세요'); return; }
+  const s = await getAppState();
+  s.plan_boards = s.plan_boards||[];
+  if (id) {
+    const idx = s.plan_boards.findIndex(x=>x.id===id);
+    if (idx>=0) s.plan_boards[idx] = {...s.plan_boards[idx], ...data};
+  } else {
+    s.plan_boards.push({id:`pb-${Date.now()}`, ...data});
+  }
+  await setAppState(s);
+  toast('저장됐어요 ✓');
+  $('plan-board-modal-overlay')?.remove();
+  loadPlanBoard();
+}
+
+async function deletePlanBoard(id) {
+  const ok = await customConfirm('이 기획을 삭제할까요?'); if (!ok) return;
+  const s = await getAppState();
+  s.plan_boards = (s.plan_boards||[]).filter(x=>x.id!==id);
+  await setAppState(s);
+  toast('삭제됐어요');
+  $('plan-board-modal-overlay')?.remove();
+  loadPlanBoard();
+}
+
+function calSelectPost(id) {
+  // 1. 피드 그리드에서 해당 카드 하이라이트
+  instaSelectPost(id);
+
+  // 2. 피드 그리드에서 해당 셀 찾아서 스크롤
+  setTimeout(() => {
+    const feedGrid = $('insta-feed-grid');
+    if (!feedGrid) return;
+    const cell = feedGrid.querySelector(`[data-post-id="${id}"]`);
+    if (cell) {
+      cell.scrollIntoView({ behavior:'smooth', block:'center' });
+      // 강조 테두리 효과
+      cell.style.outline = '2px solid var(--text)';
+      cell.style.outlineOffset = '-2px';
+      setTimeout(() => { cell.style.outline = ''; cell.style.outlineOffset = ''; }, 1500);
+    }
+
+    // 3. 인스타 피드 컬럼 스크롤
+    const feedCol = $('insta-feed-column');
+    if (feedCol && cell) {
+      const colRect  = feedCol.getBoundingClientRect();
+      const cellRect = cell.getBoundingClientRect();
+      feedCol.scrollTop += (cellRect.top - colRect.top) - feedCol.clientHeight/2 + cell.clientHeight/2;
+    }
+  }, 80);
+}
+
 function contentCalAddPost(dateStr_) {
   // 해당 날짜로 새 게시물 모달 열기
   openContentModal();
@@ -12055,6 +12244,7 @@ function contentCalAddPost(dateStr_) {
 async function initContentPage() {
   document.querySelectorAll('#content-tabs .page-tab').forEach((t,i)=>t.classList.toggle('on',i===0));
   $('content-tab-calendar').style.display = '';
+  $('content-tab-plan').style.display     = 'none';
   $('content-tab-stats').style.display    = 'none';
   $('content-tab-season').style.display   = 'none';
   _contentCalWeekOffset = 0;
@@ -12066,12 +12256,14 @@ async function initContentPage() {
 function contentSetTab(tab, el) {
   document.querySelectorAll('#content-tabs .page-tab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  ['calendar','stats','season'].forEach(t=>{
-    $(`content-tab-${t}`).style.display = t===tab ? '' : 'none';
+  ['calendar','plan','stats','season'].forEach(t=>{
+    const d = $(`content-tab-${t}`);
+    if (d) d.style.display = t===tab ? '' : 'none';
   });
   const addBtn = $('content-add-btn');
   if (addBtn) addBtn.style.display = tab==='calendar' ? '' : 'none';
   if(tab==='calendar') loadContentCal();
+  if(tab==='plan') loadPlanBoard();
   if(tab==='stats')    loadContentStats();
   if(tab==='season')   loadContentSeason();
 }
@@ -12417,7 +12609,7 @@ function renderInstaFeed() {
 
     html += `<div class="insta-cell${sel?' insta-sel':''}" data-id="${id}"
       style="aspect-ratio:4/5;position:relative;overflow:hidden;cursor:pointer;background:${src ? '#f5f5f5' : cardBg};"
-      onclick="instaSelectPost('${id}')" draggable="true">
+      onclick="instaSelectPost('${id}')" data-post-id="${id}" draggable="true">
       ${src
         ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;pointer-events:none;" draggable="false">`
         : noImgCard}
