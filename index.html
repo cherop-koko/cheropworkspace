@@ -4379,7 +4379,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.7.4</div>
+<div id="version">v4.7.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -11114,7 +11114,7 @@ async function initLineupPage() {
   }
 
   _lineupYear  = curYear;
-  _lineupMonth = new Date().getMonth() + 1;
+  _lineupMonth = 0; // 기본값 전체
   _lineupCat   = '';
 
   const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -11132,7 +11132,8 @@ async function initLineupPage() {
             </div>
             <div style="width:0.5px;height:16px;background:var(--border);margin:0 2px;"></div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;" id="lineup-month-pills">
-              ${months.map((m,i)=>`<div class="inv-pill${(i+1)===_lineupMonth?' on':''}" style="font-size:11px;padding:4px 10px;" onclick="lineupSetMonth(${i+1},this)">${m}</div>`).join('')}
+              <div class="inv-pill on" style="font-size:11px;padding:4px 10px;" onclick="lineupSetMonth(0,this)">전체</div>
+              ${months.map((m,i)=>`<div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="lineupSetMonth(${i+1},this)">${m}</div>`).join('')}
             </div>
           </div>
           <!-- 카테고리 필터 -->
@@ -12429,6 +12430,47 @@ function renderInstaFeed() {
 }
 
 /* ── 피드 선택 → 오른쪽 상세 ── */
+function togglePostMenu(id) {
+  const menu = $(`post-menu-${id}`); if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  // 다른 메뉴 닫기
+  document.querySelectorAll('[id^="post-menu-"]').forEach(m => m.style.display = 'none');
+  menu.style.display = isOpen ? 'none' : '';
+  if (!isOpen) {
+    setTimeout(() => document.addEventListener('click', function closeMenu(e) {
+      if (!menu.contains(e.target)) { menu.style.display = 'none'; document.removeEventListener('click', closeMenu); }
+    }), 0);
+  }
+}
+
+function editPostFromDetail(id) {
+  document.querySelectorAll('[id^="post-menu-"]').forEach(m => m.style.display = 'none');
+  openContentEditModal(id);
+}
+
+async function deletePostFromDetail(id) {
+  document.querySelectorAll('[id^="post-menu-"]').forEach(m => m.style.display = 'none');
+  const ok = await customConfirm('이 게시물을 삭제할까요?'); if (!ok) return;
+  const { error } = await db.from('content_posts').delete().eq('id', id);
+  if (error) { toast('삭제 실패: ' + error.message); return; }
+  // app_state 피드에서도 제거
+  const s = await getAppState();
+  s.instaFeedOrder = (s.instaFeedOrder||[]).filter(x => x !== id);
+  (s.instaBoards||[]).forEach(b => { b.feedOrder = (b.feedOrder||[]).filter(x => x !== id); });
+  await setAppState(s);
+  toast('삭제됐어요 ✓');
+  const detail = $('insta-post-detail');
+  if (detail) detail.innerHTML = '<div style="border:0.5px solid var(--border);border-radius:var(--rlg);display:flex;align-items:center;justify-content:center;min-height:480px;background:var(--surface);font-size:13px;color:var(--faint);">피드를 선택하면 표시돼요</div>';
+  await renderInstaBoard(currentBoardId);
+}
+
+function openContentEditModal(id) {
+  const p = (window._instaPostsMap||{})[id]; if (!p) return;
+  contentEditId = id;
+  // 기존 수정 모달 열기
+  openContentModal(p);
+}
+
 function instaSelectPost(id) {
   instaSelectedId = id;
   renderInstaFeed();
@@ -12469,7 +12511,15 @@ function instaSelectPost(id) {
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500;${stStyle};">${stLbl}</span>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="5" cy="10" r="1.5" fill="#1c1e26"/><circle cx="10" cy="10" r="1.5" fill="#1c1e26"/><circle cx="15" cy="10" r="1.5" fill="#1c1e26"/></svg>
+          <div style="position:relative;display:inline-block;">
+            <div onclick="togglePostMenu('${p.id}')" style="cursor:pointer;padding:4px;border-radius:50%;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="5" cy="10" r="1.5" fill="#1c1e26"/><circle cx="10" cy="10" r="1.5" fill="#1c1e26"/><circle cx="15" cy="10" r="1.5" fill="#1c1e26"/></svg>
+            </div>
+            <div id="post-menu-${p.id}" style="display:none;position:absolute;right:0;top:28px;background:#fff;border:0.5px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:100;min-width:120px;overflow:hidden;">
+              <div onclick="editPostFromDetail('${p.id}')" style="padding:10px 14px;font-size:12px;cursor:pointer;border-bottom:0.5px solid #f0f0f0;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">✏ 수정</div>
+              <div onclick="deletePostFromDetail('${p.id}')" style="padding:10px 14px;font-size:12px;cursor:pointer;color:#C4736A;" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background=''">🗑 삭제</div>
+            </div>
+          </div>
         </div>
       </div>
       <!-- 이미지 -->
