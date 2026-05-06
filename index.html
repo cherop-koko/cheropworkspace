@@ -4379,7 +4379,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.7.0</div>
+<div id="version">v4.7.1</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -11103,12 +11103,18 @@ async function initLineupPage() {
   const el = $('lineup-content');
   if (!el) return;
 
-  // 연도 범위 계산 (2024~내년)
   const curYear = new Date().getFullYear();
-  const years   = [curYear-1, curYear, curYear+1];
-  _lineupYear   = curYear;
-  _lineupMonth  = 0;
-  _lineupCat    = '';
+
+  // 이미 렌더됐으면 데이터만 갱신
+  if ($('lineup-grid')) {
+    window._lineupCache = null;
+    await loadLineupProducts();
+    return;
+  }
+
+  _lineupYear  = curYear;
+  _lineupMonth = new Date().getMonth() + 1;
+  _lineupCat   = '';
 
   const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
@@ -11125,7 +11131,7 @@ async function initLineupPage() {
             </div>
             <div style="width:0.5px;height:16px;background:var(--border);margin:0 2px;"></div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;" id="lineup-month-pills">
-              ${months.map((m,i)=>`<div class="inv-pill${i+1===_lineupMonth?' on':''}" style="font-size:11px;padding:4px 10px;" onclick="lineupSetMonth(${i+1},this)">${m}</div>`).join('')}
+              ${months.map((m,i)=>`<div class="inv-pill${(i+1)===_lineupMonth?' on':''}" style="font-size:11px;padding:4px 10px;" onclick="lineupSetMonth(${i+1},this)">${m}</div>`).join('')}
             </div>
           </div>
           <!-- 카테고리 필터 -->
@@ -14453,6 +14459,9 @@ function ppImgChange(input, side) {
 }
 
 async function openPlanProductModal(id='') {
+  // 라인업 탭에서 열 경우 planYear를 _lineupYear로 맞춤
+  const isLineup = $('page-lineup')?.style.display !== 'none';
+  if (isLineup && typeof _lineupYear !== 'undefined') planYear = _lineupYear;
   planProductEditId=id||null;
   ppStatus='sample'; ppSizes=['S']; ppColors=[]; ppImgs={front:null,side:null,back:null};
   $('plan-product-modal-kind').textContent=id?'제품 편집':'제품 등록';
@@ -14532,8 +14541,10 @@ async function savePlanProduct() {
   await setAppState(s);
   toast('저장됐어요 ✓');
   closeModal('plan-product-modal');
-  loadPlanProduct();
-  window._lineupCache = null; // 캐시 무효화
+  window._lineupCache = null;
+  if($('plan-product-grid') || $('plan-tab-product')?.style.display !== 'none') {
+    try { loadPlanProduct(); } catch(e) {}
+  }
   if(typeof loadLineupProducts==='function') loadLineupProducts();
 }
 
@@ -14542,7 +14553,10 @@ async function deletePlanProduct() {
   const ok=await customConfirm('제품을 삭제할까요?'); if(!ok) return;
   const s=await getPlanData();
   s.plan[planYear].products=(s.plan[planYear].products||[]).filter(p=>p.id!==planProductEditId);
-  await setAppState(s);toast('삭제됐어요');closeModal('plan-product-modal');loadPlanProduct();
+  await setAppState(s);toast('삭제됐어요');closeModal('plan-product-modal');
+  window._lineupCache = null;
+  try { loadPlanProduct(); } catch(e) {}
+  if(typeof loadLineupProducts==='function') loadLineupProducts();
 }
 
 /* ════════════════════════════════
