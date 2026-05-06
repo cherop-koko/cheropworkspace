@@ -4379,7 +4379,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.7.2</div>
+<div id="version">v4.7.4</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4432,47 +4432,15 @@ function toast(msg, dur=2400) {
 let _appStateCache = null;
 async function getAppState() {
   if(_appStateCache) return _appStateCache;
-  // 메인 state + 이미지 state 병렬 로드
-  const [main, imgs] = await Promise.all([
-    db.from('app_state').select('data').eq('id','cherop_main').single(),
-    db.from('app_state').select('data').eq('id','cherop_product_imgs').single(),
-  ]);
-  const state = main.data?.data || {};
-  // plan products에 imgs 병합
-  const imgStore = imgs.data?.data || {};
-  if (imgStore && state.plan) {
-    Object.keys(state.plan).forEach(yr => {
-      (state.plan[yr]?.products||[]).forEach(p => {
-        if (imgStore[p.id]) p.imgs = imgStore[p.id];
-      });
-    });
-  }
-  _appStateCache = state;
+  const { data, error } = await db.from('app_state').select('data').eq('id','cherop_main').single();
+  if (error) throw error;
+  _appStateCache = data?.data || {};
   return _appStateCache;
 }
 async function setAppState(state) {
-  // imgs 분리 저장 — app_state는 가볍게
-  const imgStore = {};
-  const stateLight = JSON.parse(JSON.stringify(state));
-  if (stateLight.plan) {
-    Object.keys(stateLight.plan).forEach(yr => {
-      (stateLight.plan[yr]?.products||[]).forEach(p => {
-        if (p.imgs && (p.imgs.front || p.imgs.side || p.imgs.back)) {
-          imgStore[p.id] = p.imgs;
-          p.imgs = { _ref: p.id }; // 참조만 저장
-        }
-      });
-    });
-  }
-  _appStateCache = state; // 캐시는 imgs 포함 버전으로
-  const saves = [
-    db.from('app_state').upsert({ id:'cherop_main', data:stateLight, updated_at:new Date().toISOString() }),
-  ];
-  if (Object.keys(imgStore).length) {
-    saves.push(db.from('app_state').upsert({ id:'cherop_product_imgs', data:imgStore, updated_at:new Date().toISOString() }));
-  }
-  const results = await Promise.all(saves);
-  if (results[0].error) throw results[0].error;
+  _appStateCache = state;
+  const { error } = await db.from('app_state').upsert({ id:'cherop_main', data:state, updated_at:new Date().toISOString() });
+  if (error) throw error;
 }
 
 /* app_state의 기존 content_posts → content_posts 테이블로 마이그레이션 */
@@ -14480,15 +14448,28 @@ function ppAddCustomColor(inp) {
   if(!exists) ppColors.push({hex, name});
 }
 
-function ppImgChange(input, side) {
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    ppImgs[side]=e.target.result;
-    const el=$(`pp-img-${side}`);
-    if(el) el.innerHTML=`<img src="${ppImgs[side]}" style="width:100%;height:100%;object-fit:cover;border-radius:${side==='front'?10:8}px;" alt="">`;
-  };
-  reader.readAsDataURL(file);
+async function ppImgChange(input, side) {
+  const file = input.files[0]; if (!file) return;
+  const el = $(`pp-img-${side}`);
+  if (el) el.innerHTML = `<div style="font-size:11px;color:var(--light);padding:10px;">업로드 중...</div>`;
+
+  // 파일 확장자
+  const ext  = file.name.split('.').pop().toLowerCase() || 'jpg';
+  const path = `products/${Date.now()}_${side}.${ext}`;
+
+  const { data, error } = await db.storage.from('product-images').upload(path, file, { upsert: true });
+  if (error) {
+    toast('이미지 업로드 실패: ' + error.message);
+    if (el) el.innerHTML = `<div style="font-size:11px;color:var(--red);">업로드 실패</div>`;
+    return;
+  }
+
+  // Public URL 가져오기
+  const { data: urlData } = db.storage.from('product-images').getPublicUrl(path);
+  const url = urlData.publicUrl;
+
+  ppImgs[side] = url;
+  if (el) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:${side==='front'?10:8}px;" alt="">`;
 }
 
 async function openPlanProductModal(id='') {
