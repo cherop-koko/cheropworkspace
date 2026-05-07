@@ -1525,25 +1525,10 @@ a { text-decoration:none; color:inherit; }
               + 보드 추가
             </button>
           </div>
-          <div style="display:flex;gap:16px;align-items:flex-start;">
+          <div style="display:flex;gap:14px;align-items:flex-start;">
 
-            <!-- 1열: 주간 캘린더 -->
-            <div style="flex:1;min-width:0;" id="content-calendar-col">
-              <!-- 캘린더 헤더 -->
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <div class="card-link" onclick="contentCalWeekMove(-1)" style="font-size:18px;padding:0 4px;">‹</div>
-                  <div id="content-cal-week-label" style="font-size:13px;font-weight:500;color:var(--text);min-width:120px;"></div>
-                  <div class="card-link" onclick="contentCalWeekMove(1)" style="font-size:18px;padding:0 4px;">›</div>
-                </div>
-                <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="contentCalGoToday()">오늘</button>
-              </div>
-              <!-- 주간 그리드 -->
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;" id="content-cal-week-grid"></div>
-            </div>
-
-            <!-- 2열: 인스타 피드 프리뷰 -->
-            <div id="insta-feed-column" style="width:340px;flex-shrink:0;border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;background:#fff;max-height:calc(100vh - 160px);overflow-y:auto;scrollbar-width:none;" class="insta-feed-col-wrap">
+            <!-- 1열: 인스타 피드 프리뷰 -->
+            <div id="insta-feed-column" style="width:300px;flex-shrink:0;border:0.5px solid var(--border);border-radius:var(--rlg);overflow:hidden;background:#fff;max-height:calc(100vh - 160px);overflow-y:auto;scrollbar-width:none;" class="insta-feed-col-wrap">
               <div style="padding:16px 16px 0;" id="insta-profile-area"></div>
               <div style="display:flex;gap:12px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;" id="insta-highlights"></div>
               <div style="display:flex;border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border);">
@@ -1557,16 +1542,29 @@ a { text-decoration:none; color:inherit; }
               <div class="insta-feed-fade-wrap"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);" id="insta-feed-grid"></div></div>
             </div>
 
-            <!-- 상세 패널 (숨김 — 캘린더에서 클릭 시 표시) -->
-            <div style="width:0;flex-shrink:0;overflow:hidden;transition:width .2s;" id="insta-detail-panel">
+            <!-- 2열: 피드 상세 패널 (항상 표시) -->
+            <div style="width:300px;flex-shrink:0;" id="insta-detail-panel">
               <div id="insta-post-detail">
-                <div style="border:0.5px solid var(--border);border-radius:var(--rlg);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:480px;gap:10px;background:var(--surface);">
+                <div style="border:0.5px solid var(--border);border-radius:var(--rlg);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;gap:8px;background:var(--surface);">
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="4" width="28" height="28" rx="6" stroke="#ccc" stroke-width="1.5"/><circle cx="13" cy="14" r="3" stroke="#ccc" stroke-width="1.5"/><path d="M4 26l8-7 6 5 5-4 9 8" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/></svg>
                   <div style="font-size:13px;color:var(--faint);">피드를 선택하면 표시돼요</div>
                 </div>
               </div>
             </div>
 
-
+            <!-- 3열: 주간 캘린더 (flex로 너비에 따라 줄바꿈) -->
+            <div style="flex:1;min-width:0;" id="content-calendar-col">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <div class="card-link" onclick="contentCalWeekMove(-1)" style="font-size:18px;padding:0 4px;">‹</div>
+                  <div id="content-cal-week-label" style="font-size:13px;font-weight:500;color:var(--text);min-width:120px;"></div>
+                  <div class="card-link" onclick="contentCalWeekMove(1)" style="font-size:18px;padding:0 4px;">›</div>
+                </div>
+                <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="contentCalGoToday()">오늘</button>
+              </div>
+              <!-- 주간 그리드 — 칸 최소너비 설정으로 자동 줄바꿈 -->
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;" id="content-cal-week-grid"></div>
+            </div>
 
           </div>
         </div>
@@ -4396,7 +4394,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.7.7</div>
+<div id="version">v4.7.9</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -12020,9 +12018,14 @@ async function renderContentCalWeek() {
   const m1 = days[0], m2 = days[6];
   if (lbl) lbl.textContent = `${m1.getMonth()+1}월 ${m1.getDate()}일 — ${m2.getMonth()+1}월 ${m2.getDate()}일`;
 
-  // 게시물 데이터 로드
-  const s = await getAppState();
-  const allPosts = window._instaAllPosts || [];
+  // 게시물 데이터 — _instaPostsMap 우선, 없으면 DB
+  let allPosts = Object.values(window._instaPostsMap || {});
+  if (!allPosts.length) {
+    const { data } = await db.from('content_posts').select('*').order('post_date', {ascending:false});
+    allPosts = data || [];
+    // postsMap 업데이트
+    window._instaPostsMap = Object.fromEntries(allPosts.map(p=>[p.id, p]));
+  }
   const today = dateStr();
   const DOW = ['월','화','수','목','금','토','일'];
   const TYPES = { visual:{bg:'#1C1E26',tc:'#fff',icon:'◼'}, magazine:{bg:'#EAF3DE',tc:'#2F5A2E',icon:'◎'}, mongmozzal:{bg:'#FDF3E0',tc:'#7A5C1E',icon:'✦'}, reels:{bg:'#FAEAE4',tc:'#7A2E1E',icon:'▶'} };
@@ -12667,7 +12670,7 @@ function instaSelectPost(id) {
   instaSelectedId = id;
   renderInstaFeed();
   const p = (window._instaPostsMap || {})[id]; if (!p) return;
-  // 게시물 상세 패널 표시
+  // 상세 패널 (항상 표시 — width 고정)
   const postDetail = $('insta-post-detail'); if (!postDetail) return;
   postDetail.style.display = '';
   const panel = postDetail;
