@@ -914,9 +914,8 @@ a { text-decoration:none; color:inherit; }
             <div class="member-pills" id="tasks-member-pills"></div>
           </div>
           <div class="page-tabs">
-            <div class="page-tab on"  onclick="tasksSetFilter('all',this)">전체</div>
-            <div class="page-tab"     onclick="tasksSetFilter('active',this)">진행 중</div>
-            <div class="page-tab"     onclick="tasksSetFilter('done',this)">완료</div>
+            <div class="page-tab on" onclick="tasksSetFilter('active',this)">진행 중</div>
+            <div class="page-tab"    onclick="tasksSetFilter('done',this)">완료</div>
           </div>
         </div>
 
@@ -1509,7 +1508,6 @@ a { text-decoration:none; color:inherit; }
           </div>
           <div class="page-tabs" id="content-tabs">
             <div class="page-tab on" onclick="contentSetTab('calendar',this)">피드</div>
-            <div class="page-tab"   onclick="contentSetTab('plan',this)">기획보드</div>
             <div class="page-tab"   onclick="contentSetTab('stats',this)">콘텐츠 실적</div>
             <div class="page-tab"   onclick="contentSetTab('season',this)">시즌 이슈</div>
           </div>
@@ -1519,7 +1517,7 @@ a { text-decoration:none; color:inherit; }
         <div id="content-tab-calendar">
           <!-- 컬러 보드 탭바 -->
           <div style="display:flex;align-items:center;gap:0;margin-bottom:16px;border-bottom:0.5px solid var(--border);overflow-x:auto;scrollbar-width:none;">
-            <div id="board-tab-list" style="display:flex;gap:0;flex-shrink:0;"></div>
+            <div id="board-tab-list" style="display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;align-items:center;padding:4px 0;"></div>
             <button onclick="openBoardAddModal()" style="flex-shrink:0;padding:8px 14px;font-size:12px;color:var(--light);background:none;border:none;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;"
               onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--light)'">
               + 보드 추가
@@ -1949,6 +1947,7 @@ a { text-decoration:none; color:inherit; }
           </div>
         </div>
         <div id="att-tab-log" class="att-tab-body" style="display:none;">
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;" id="att-log-member-pills"></div>
           <div style="display:flex;gap:8px;margin-bottom:16px;">
             <div class="att-month-btn on" id="adm-log-this" onclick="attLogSetMonth(0,this)" style="font-size:12px;padding:5px 14px;border-radius:var(--rpill);border:0.5px solid var(--border);cursor:pointer;background:var(--text);color:#fff;">이번 달</div>
             <div class="att-month-btn"    id="adm-log-last" onclick="attLogSetMonth(-1,this)" style="font-size:12px;padding:5px 14px;border-radius:var(--rpill);border:0.5px solid var(--border);cursor:pointer;color:var(--muted);">지난 달</div>
@@ -1964,6 +1963,10 @@ a { text-decoration:none; color:inherit; }
 
         <!-- 휴가 관리 -->
         <div id="att-tab-leave" class="att-tab-body" style="display:none;">
+          <div id="att-leave-admin-tools" style="display:none;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;" onclick="openLeaveAddModal()">+ 연차 직접 등록</button>
+            <button class="f-btn f-btn-cancel" style="font-size:12px;padding:6px 14px;" onclick="openAnnualDaysModal()">직원별 연차 설정</button>
+          </div>
 
           <div class="card">
             <div class="card-head"><div class="card-title">전체 휴가 내역</div></div>
@@ -2100,6 +2103,21 @@ a { text-decoration:none; color:inherit; }
         <!-- 예산 계획 탭 -->
         <div id="plan-tab-budget" style="display:none;">
           <!-- 상단 KPI 카드 -->
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;" id="plan-budget-month-pills">
+            <div class="inv-pill on" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(0,this)">연간</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(1,this)">1월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(2,this)">2월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(3,this)">3월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(4,this)">4월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(5,this)">5월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(6,this)">6월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(7,this)">7월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(8,this)">8월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(9,this)">9월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(10,this)">10월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(11,this)">11월</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="budgetSetMonth(12,this)">12월</div>
+          </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;" id="plan-budget-kpi"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <!-- 연간 예산 목표 설정 -->
@@ -2678,6 +2696,43 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ═══ 출결 수정 모달 (대표만) ═══ -->
+<div class="modal-overlay" id="att-edit-modal" onclick="if(event.target===this)closeModal('att-edit-modal')">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-bar">
+      <div>
+        <div class="modal-kind">출결 수정</div>
+        <div id="att-edit-name" style="font-size:11px;color:var(--light);margin-top:2px;"></div>
+      </div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('att-edit-modal')">✕</div></div>
+    </div>
+    <div style="padding:14px 20px 20px;display:flex;flex-direction:column;gap:10px;">
+      <input type="hidden" id="att-edit-id">
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;"><div style="font-size:11px;color:var(--light);margin-bottom:4px;">날짜</div>
+          <input type="date" id="att-edit-date" class="prop-inp" style="width:100%;"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;"><div style="font-size:11px;color:var(--light);margin-bottom:4px;">출근</div>
+          <input type="time" id="att-edit-in" class="prop-inp" style="width:100%;"></div>
+        <div style="flex:1;"><div style="font-size:11px;color:var(--light);margin-bottom:4px;">퇴근</div>
+          <input type="time" id="att-edit-out" class="prop-inp" style="width:100%;"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;"><div style="font-size:11px;color:var(--light);margin-bottom:4px;">점심 시작</div>
+          <input type="time" id="att-edit-ls" class="prop-inp" style="width:100%;"></div>
+        <div style="flex:1;"><div style="font-size:11px;color:var(--light);margin-bottom:4px;">점심 종료</div>
+          <input type="time" id="att-edit-le" class="prop-inp" style="width:100%;"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="f-btn f-btn-cancel" style="color:var(--red);" onclick="deleteAttRecord()">삭제</button>
+        <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('att-edit-modal')">취소</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveAttEdit()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 채널 배분 모달 ═══ -->
 <div class="modal-overlay" id="ch-alloc-modal" onclick="if(event.target===this)closeModal('ch-alloc-modal')">
   <div class="modal-box" style="max-width:420px;">
@@ -2875,18 +2930,18 @@ a { text-decoration:none; color:inherit; }
       <div>
         <div style="font-size:11px;color:var(--light);margin-bottom:6px;">월 선택</div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;" id="roadmap-month-chips">
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(1,this)">1월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(2,this)">2월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(3,this)">3월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(4,this)">4월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(5,this)">5월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(6,this)">6월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(7,this)">7월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(8,this)">8월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(9,this)">9월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(10,this)">10월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(11,this)">11월</div>
-          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(12,this)">12월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(1,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">1월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(2,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">2월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(3,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">3월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(4,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">4월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(5,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">5월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(6,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">6월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(7,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">7월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(8,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">8월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(9,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">9월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(10,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">10월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(11,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">11월</div>
+          <div class="inv-pill" style="font-size:11px;padding:3px 9px;" onclick="roadmapSetMonth(12,this)" style="font-size:12px;padding:5px 16px;min-width:56px;text-align:center;">12월</div>
         </div>
         <input type="hidden" id="roadmap-month" value="1">
       </div>
@@ -4424,7 +4479,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.8.2</div>
+<div id="version">v4.8.9</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4451,7 +4506,7 @@ let user       = null;
 let attState   = {};
 let attRowId   = null;
 let tasksWho   = null;
-let tasksFilter = 'all';
+let tasksFilter = 'active';
 let projFilter  = 'all';
 
 // 모달 상태
@@ -6382,9 +6437,31 @@ function invSetFilter(f, el) {
 
 function invSetCat(cat, el) {
   invCurrentCat = cat;
-  document.querySelectorAll('#inv-cat-pills .inv-pill').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
-  loadInvList();
+  loadInvCatPills();
+  loadInvOverview();
+}
+
+function initInvCatDrag() {
+  const pills = $('inv-cat-pills'); if (!pills) return;
+  let dragEl = null;
+  pills.querySelectorAll('[data-draggable]').forEach(el => {
+    el.draggable = true;
+    el.addEventListener('dragstart', e => { dragEl = el; setTimeout(()=>el.style.opacity='.4',0); });
+    el.addEventListener('dragend',   e => { el.style.opacity=''; dragEl=null; });
+    el.addEventListener('dragover',  e => {
+      e.preventDefault();
+      if (!dragEl || el===dragEl || !el.dataset.draggable) return;
+      const mid = el.getBoundingClientRect().left + el.offsetWidth/2;
+      pills.insertBefore(dragEl, e.clientX < mid ? el : el.nextSibling);
+    });
+    el.addEventListener('drop', async e => {
+      e.preventDefault();
+      const newOrder = [...pills.querySelectorAll('[data-draggable]')].map(p=>p.dataset.catName).filter(Boolean);
+      const s = await getAppState();
+      s.inv_categories = newOrder;
+      await setAppState(s);
+    });
+  });
 }
 
 function invSetChCat(cat, el) {
@@ -6438,9 +6515,25 @@ async function loadInvCatPills() {
     const s = await getAppState();
     const cats = s.inv_categories || [];
     const all = ['전체', ...cats];
-    $('inv-cat-pills').innerHTML = all.map((c,i)=>
-      `<div class="inv-pill${invCurrentCat===c?' on':''}" onclick="invSetCat('${c}',this)">${c}</div>`
-    ).join('');
+    // 카테고리 색상 맵 (inv_categories 순서 기반 고정 색상)
+    const CAT_COLORS = ['#C4736A','#6B9E7A','#C4A96A','#378ADD','#8B6BA8','#4A9999','#C4736A'];
+    $('inv-cat-pills').innerHTML = all.map((c,i)=>{
+      const col = c==='전체' ? '#1C1E26' : (CAT_COLORS[(i-1)%CAT_COLORS.length]||'#888');
+      const isOn = invCurrentCat===c;
+      const getLuma = hex => { try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return(r*299+g*587+b*114)/1000;}catch(e){return 128;} };
+      const textCol = getLuma(col)>128?'#1C1E26':'#fff';
+      const style = isOn
+        ? `background:${col};color:${textCol};border:1.5px solid ${col};`
+        : `background:#fff;color:var(--text);border:1.5px solid ${col};`;
+      return `<div data-cat-color="${col}" data-cat-on="${isOn}" data-cat-name="${c}" ${c!=='전체'?'data-draggable="1"':''}
+        style="padding:5px 14px;font-size:12px;font-weight:500;border-radius:20px;cursor:${c!=='전체'?'grab':'pointer'};${style}transition:all .15s;"
+        onclick="invSetCat('${c}',this)"
+        onmouseenter="if(this.dataset.catOn!=='true'){this.style.background=this.dataset.catColor+'33';}"
+        onmouseleave="if(this.dataset.catOn!=='true'){this.style.background='#fff';}">
+        ${c}
+      </div>`;
+    }).join('');
+  setTimeout(initInvCatDrag, 50);
   } catch(e){ console.error('loadInvCatPills error:', e); }
 }
 
@@ -7317,6 +7410,8 @@ async function loadReceiptSchedule() {
           :`<span class="sbadge sbadge-todo">예정</span>`;
       const completeBtn=showComplete&&r.status!=='completed'
         ?`<button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="completeReceipt('${r.id}')">입고완료</button>`:'';
+      const editBtn = `<button class="f-btn" style="font-size:11px;padding:4px 10px;" onclick="openReceiptEdit('${r.id}')">수정</button>`;
+      const delBtn  = `<button class="f-btn" style="font-size:11px;padding:4px 10px;color:var(--red);" onclick="deleteReceipt('${r.id}')">삭제</button>`;
       return `<tr>
         <td class="inv-num">${(r.receipt_date||r.scheduled_date||'').slice(5).replace('-','/')}</td>
         <td style="font-weight:500;">${label}</td>
@@ -7324,7 +7419,7 @@ async function loadReceiptSchedule() {
         <td class="inv-faint">${r.assigned_to||'—'}</td>
         <td class="inv-faint" style="font-size:11px;">${r.note||''}</td>
         <td>${stBadge}</td>
-        <td>${completeBtn}</td>
+        <td style="display:flex;gap:4px;">${completeBtn}${editBtn}${delBtn}</td>
       </tr>`;
     };
 
@@ -7336,6 +7431,32 @@ async function loadReceiptSchedule() {
       ?`<table class="inv-tbl"><thead><tr><th>완료일</th><th>상품</th><th>수량</th><th>담당</th><th>메모</th><th>상태</th><th></th></tr></thead><tbody>${done.map(r=>renderRow(r,false)).join('')}</tbody></table>`
       :'<div style="padding:14px 16px;font-size:13px;color:var(--faint);">입고 이력이 없어요</div>';
   } catch(e){ console.error(e); }
+}
+
+function openReceiptEdit(id) {
+  db.from('stock_receipts').select('*').eq('id',id).single().then(({data:r})=>{
+    if(!r) return;
+    // 기존 입고 등록 모달 활용
+    $('inv-r-product-id').value    = r.product_id||'';
+    $('inv-r-qty').value           = r.quantity||'';
+    $('inv-r-date').value          = r.scheduled_date||'';
+    $('inv-r-assignee').value      = r.assigned_to||'';
+    $('inv-r-note').value          = r.note||'';
+    // 수정 모드 표시
+    window._receiptEditId = id;
+    $('inv-receipt-modal').classList.add('on');
+  });
+}
+
+async function deleteReceipt(id) {
+  const ok = await customConfirm('이 입고 일정을 삭제할까요?'); if(!ok) return;
+  await db.from('stock_receipts').delete().eq('id', id);
+  // 운영캘린더에서도 연동 이벤트 삭제
+  const s = await getAppState();
+  s.ops_events = (s.ops_events||[]).filter(e=>e.receipt_id!==id);
+  await setAppState(s);
+  toast('삭제됐어요');
+  loadReceiptSchedule();
 }
 
 async function completeReceipt(id) {
@@ -8276,7 +8397,11 @@ async function deleteNoticeById(id) {
 /* ════════════════════════════════
    ATTENDANCE PAGE
 ════════════════════════════════ */
-const ANNUAL_DAYS = 12;
+const ANNUAL_DAYS = 12; // fallback (직원별 설정은 annual_days에서)
+async function getMemberAnnualDays(memberName) {
+  const s = await getAppState();
+  return (s.annual_days||{})[memberName] || ANNUAL_DAYS;
+}
 let attViewMonth = 0, attLogMonth = 0, attEmpLogMonthVal = 0, attCurTab = 'today';
 let leaveType = 'annual', leaveConfirmResolve = ()=>{};
 
@@ -8466,18 +8591,180 @@ function leaveConfirm(msg, sub, isApprove) {
   });
 }
 
+function openAttEdit(id, member, date, clockIn, clockOut, ls, le) {
+  if (!user?.admin) return;
+  $('att-edit-id').value   = id;
+  $('att-edit-name').textContent = member;
+  $('att-edit-date').value = date;
+  $('att-edit-in').value   = clockIn;
+  $('att-edit-out').value  = clockOut;
+  $('att-edit-ls').value   = ls;
+  $('att-edit-le').value   = le;
+  $('att-edit-modal').classList.add('on');
+}
+
+async function saveAttEdit() {
+  const id  = $('att-edit-id').value;
+  const upd = {
+    date:        $('att-edit-date').value,
+    clock_in:    $('att-edit-in').value  || null,
+    clock_out:   $('att-edit-out').value || null,
+    lunch_start: $('att-edit-ls').value  || null,
+    lunch_end:   $('att-edit-le').value  || null,
+  };
+  const { error } = await db.from('attendances').update(upd).eq('id', id);
+  if (error) { toast('수정 실패: '+error.message); return; }
+  toast('수정됐어요 ✓');
+  closeModal('att-edit-modal');
+  loadAttLog();
+}
+
+async function deleteAttRecord() {
+  const id = $('att-edit-id').value;
+  const ok = await customConfirm('이 출결 기록을 삭제할까요?'); if(!ok) return;
+  await db.from('attendances').delete().eq('id', id);
+  toast('삭제됐어요');
+  closeModal('att-edit-modal');
+  loadAttLog();
+}
+
+function openLeaveAddModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay on';
+  overlay.id = 'leave-add-modal';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:380px;">
+      <div class="modal-bar">
+        <div class="modal-kind">연차 직접 등록</div>
+        <div class="modal-bar-right"><div class="mbtn" onclick="$('leave-add-modal').remove()">✕</div></div>
+      </div>
+      <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px;">
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">직원</div>
+          <select id="la-member" class="prop-inp" style="width:100%;">
+            ${MEMBERS.map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
+          </select></div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">종류</div>
+          <select id="la-type" class="prop-inp" style="width:100%;">
+            <option value="annual">연차</option>
+            <option value="half_am">반차(오전)</option>
+            <option value="half_pm">반차(오후)</option>
+          </select></div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;"><div style="font-size:11px;color:var(--light);margin-bottom:4px;">시작일</div>
+            <input type="date" id="la-start" class="prop-inp" style="width:100%;"></div>
+          <div style="flex:1;"><div style="font-size:11px;color:var(--light);margin-bottom:4px;">종료일</div>
+            <input type="date" id="la-end" class="prop-inp" style="width:100%;"></div>
+        </div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">사유</div>
+          <input type="text" id="la-reason" class="prop-inp" placeholder="사유" style="width:100%;"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="f-btn f-btn-cancel" style="flex:1;" onclick="$('leave-add-modal').remove()">취소</button>
+          <button class="f-btn f-btn-save" style="flex:1;" onclick="saveLeaveAdmin()">등록</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const today = dateStr();
+  $('la-start').value = today; $('la-end').value = today;
+}
+
+async function saveLeaveAdmin() {
+  const member = $('la-member').value;
+  const type   = $('la-type').value;
+  const start  = $('la-start').value;
+  const end    = $('la-end').value;
+  const reason = $('la-reason').value.trim();
+  if (!start) { toast('날짜를 선택해주세요'); return; }
+  await db.from('leaves').insert({ member, type, start_date:start, end_date:end||start, reason, status:'approved' });
+  toast('등록됐어요 ✓');
+  document.getElementById('leave-add-modal')?.remove();
+  loadAttLeave();
+}
+
+async function openAnnualDaysModal() {
+  const s = await getAppState();
+  const days = s.annual_days || {};
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay on';
+  overlay.id = 'annual-days-modal';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:360px;">
+      <div class="modal-bar">
+        <div class="modal-kind">직원별 연차 설정</div>
+        <div class="modal-bar-right"><div class="mbtn" onclick="$('annual-days-modal').remove()">✕</div></div>
+      </div>
+      <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px;">
+        ${MEMBERS.map(m=>`
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:70px;font-size:13px;font-weight:500;">${m.name}</div>
+            <input type="number" id="ad-${m.name}" class="prop-inp" value="${days[m.name]||12}" min="0" style="width:70px;text-align:center;">
+            <span style="font-size:12px;color:var(--light);">일</span>
+          </div>`).join('')}
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="f-btn f-btn-cancel" style="flex:1;" onclick="$('annual-days-modal').remove()">취소</button>
+          <button class="f-btn f-btn-save" style="flex:1;" onclick="saveAnnualDays()">저장</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function saveAnnualDays() {
+  const s = await getAppState();
+  s.annual_days = s.annual_days||{};
+  MEMBERS.forEach(m => {
+    const v = parseInt(document.getElementById(`ad-${m.name}`)?.value);
+    if (!isNaN(v)) s.annual_days[m.name] = v;
+  });
+  await setAppState(s);
+  toast('저장됐어요 ✓');
+  document.getElementById('annual-days-modal')?.remove();
+  loadAttStats();
+}
+
+async function updateLeaveStatus(id, status) {
+  await db.from('leaves').update({status}).eq('id', id);
+  toast(status==='approved'?'승인됐어요':'거절됐어요');
+  loadAttLeave();
+}
+
+async function deleteLeaveAdmin(id) {
+  const ok = await customConfirm('이 휴가 신청을 삭제할까요?'); if(!ok) return;
+  await db.from('leaves').delete().eq('id', id);
+  toast('삭제됐어요');
+  loadAttLeave();
+}
+
+let _attLogMember = ''; // '' = 전체
+
 async function loadAttLog() {
+  // 직원 필터 버튼 렌더
+  const pillEl = $('att-log-member-pills');
+  if (pillEl && !pillEl.innerHTML) {
+    pillEl.innerHTML = `<div class="inv-pill on" style="font-size:11px;padding:4px 10px;" onclick="attLogSetMember('',this)">전체</div>` +
+      MEMBERS.map(m=>`<div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="attLogSetMember('${m.name}',this)">${m.name}</div>`).join('');
+  }
   const {first,last,y,m}=attMonthRange(attLogMonth);
   const el1=$('att-log-title'), el2=$('att-log-sub'); if(el1) el1.textContent='전체 출퇴근 로그'; if(el2) el2.textContent=`${y}년 ${m+1}월`;
   try {
     const {data}=await db.from('attendances').select('*').gte('date',first).lte('date',last).order('date',{ascending:false});
-    const rows=data||[], el=$('att-log-table'); if(!el) return;
+    const rows=(data||[]).filter(r=>!_attLogMember||r.member===_attLogMember), el=$('att-log-table'); if(!el) return;
     if(!rows.length){ el.innerHTML='<div style="padding:14px 20px;font-size:13px;color:var(--faint);">기록이 없어요</div>'; return; }
-    el.innerHTML=`<table class="att-tbl"><thead><tr><th>이름</th><th>날짜</th><th>출근</th><th>점심</th><th>퇴근</th><th>근무시간</th></tr></thead><tbody>${rows.map(r=>{
+    el.innerHTML=`<table class="att-tbl"><thead><tr><th>이름</th><th>날짜</th><th>출근</th><th>점심</th><th>퇴근</th><th>근무시간</th>${user?.admin?'<th></th>':''}</tr></thead><tbody>${rows.map(r=>{
       const wh=calcWorkHours(r), lunch=r.lunch_start&&r.lunch_end?`${r.lunch_start}–${r.lunch_end}`:'—';
-      return `<tr><td style="font-weight:500;">${r.member}</td><td class="att-log-time">${r.date.slice(5).replace('-','/')}</td><td class="att-log-time${r.clock_in?'':' none'}">${r.clock_in||'—'}</td><td class="att-log-time${r.lunch_start?'':' none'}" style="font-size:11px;">${lunch}</td><td class="att-log-time${r.clock_out?'':' none'}">${r.clock_out||'근무 중'}</td><td class="${wh?'att-work-h':'att-log-time none'}">${wh||'—'}</td></tr>`;
+      const editBtn = user?.admin ? `<td><button onclick="openAttEdit('${r.id}','${r.member}','${r.date}','${r.clock_in||''}','${r.clock_out||''}','${r.lunch_start||''}','${r.lunch_end||''}')" class="f-btn" style="font-size:11px;padding:3px 8px;">수정</button></td>` : '<td></td>';
+      return `<tr><td style="font-weight:500;">${r.member}</td><td class="att-log-time">${r.date.slice(5).replace('-','/')}</td><td class="att-log-time${r.clock_in?'':' none'}">${r.clock_in||'—'}</td><td class="att-log-time${r.lunch_start?'':' none'}" style="font-size:11px;">${lunch}</td><td class="att-log-time${r.clock_out?'':' none'}">${r.clock_out||'근무 중'}</td><td class="${wh?'att-work-h':'att-log-time none'}">${wh||'—'}</td>${editBtn}</tr>`;
     }).join('')}</tbody></table>`;
   } catch(e) { console.error(e); }
+}
+
+function attLogSetMember(member, el) {
+  _attLogMember = member;
+  document.querySelectorAll('#att-log-member-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  loadAttLog();
 }
 
 function attLogSetMonth(offset, el) {
@@ -8487,6 +8774,8 @@ function attLogSetMonth(offset, el) {
 }
 
 async function loadAttLeave() {
+  const adminTools = $('att-leave-admin-tools');
+  if (adminTools) adminTools.style.display = user?.admin ? 'flex' : 'none';
   try {
     const {data}=await db.from('leaves').select('*').order('created_at',{ascending:false});
     const list=data||[];
@@ -8498,7 +8787,12 @@ async function loadAttLeave() {
     if(!list.length){ el.innerHTML='<div style="padding:14px 20px;font-size:13px;color:var(--faint);">신청 내역이 없어요</div>'; return; }
     el.innerHTML=`<table class="att-tbl"><thead><tr><th>신청자</th><th>종류</th><th>날짜</th><th>사유</th><th>상태</th></tr></thead><tbody>${list.map(l=>{
       const ds=l.start_date===l.end_date?l.start_date.slice(5).replace('-','/'):l.start_date.slice(5).replace('-','/')+'–'+l.end_date.slice(5).replace('-','/');
-      return `<tr><td style="font-weight:500;">${l.member}</td><td><span class="sbadge" style="font-size:10px;${typeBg[l.type]||''}">${typeLabel[l.type]||l.type}</span></td><td class="att-log-time">${ds}</td><td style="font-size:12px;color:var(--muted);">${l.reason||'—'}</td><td><span class="sbadge" style="font-size:10px;${stBg[l.status]||''}">${stLabel[l.status]||l.status}</span></td></tr>`;
+      const leaveAdmin = user?.admin ? `<td style="display:flex;gap:4px;">
+        ${l.status==='pending'?`<button onclick="updateLeaveStatus('${l.id}','approved')" class="f-btn" style="font-size:10px;padding:2px 8px;color:#3B7A52;">승인</button>
+        <button onclick="updateLeaveStatus('${l.id}','rejected')" class="f-btn" style="font-size:10px;padding:2px 8px;color:#C4736A;">거절</button>`:''}
+        <button onclick="deleteLeaveAdmin('${l.id}')" class="f-btn" style="font-size:10px;padding:2px 8px;color:var(--red);">삭제</button>
+      </td>` : '';
+      return `<tr><td style="font-weight:500;">${l.member}</td><td><span class="sbadge" style="font-size:10px;${typeBg[l.type]||''}">${typeLabel[l.type]||l.type}</span></td><td class="att-log-time">${ds}</td><td style="font-size:12px;color:var(--muted);">${l.reason||'—'}</td><td><span class="sbadge" style="font-size:10px;${stBg[l.status]||''}">${stLabel[l.status]||l.status}</span></td>${leaveAdmin}</tr>`;
     }).join('')}</tbody></table>`;
   } catch(e) { console.error(e); }
 }
@@ -10525,11 +10819,27 @@ async function loadOpsCatPills() {
   const cats = s.ops_cats || [];
   const el   = $('ops-cat-pills');
   if(!el) return;
-  el.innerHTML = cats.map(c => {
-    const isOn = opsActiveCats === null || opsActiveCats.includes(c.id);
-    return `<div class="inv-pill${isOn?' on':''}" style="${isOn?`background:${c.color}22;border-color:${c.color};color:${c.color};`:''}"
-      onclick="opsToggleCat('${c.id}',this)">
-      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};margin-right:4px;vertical-align:middle;"></span>${c.name}
+  const allOn = opsActiveCats === null;
+  const allPill = `<div data-cat-color="#1C1E26" data-cat-on="${allOn}"
+    style="padding:5px 14px;font-size:12px;font-weight:500;border-radius:20px;cursor:pointer;${allOn?'background:#1C1E26;color:#fff;border:1.5px solid #1C1E26;':'background:#fff;color:var(--text);border:1.5px solid #1C1E26;'}transition:all .15s;"
+    onclick="opsSelectAll(this)"
+    onmouseenter="if(this.dataset.catOn!=='true'){this.style.background='#1C1E2622';}"
+    onmouseleave="if(this.dataset.catOn!=='true'){this.style.background='#fff';}">
+    전체
+  </div>`;
+  el.innerHTML = allPill + cats.map(c => {
+    const isOn = opsActiveCats !== null && opsActiveCats.includes(c.id);
+    const getLuma = hex => { try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return(r*299+g*587+b*114)/1000;}catch(e){return 128;} };
+    const textCol = getLuma(c.color)>128?'#1C1E26':'#fff';
+    const style = isOn
+      ? `background:${c.color};color:${textCol};border:1.5px solid ${c.color};`
+      : `background:#fff;color:var(--text);border:1.5px solid ${c.color};`;
+    return `<div data-cat-color="${c.color}" data-cat-on="${isOn}"
+      style="padding:5px 14px;font-size:12px;font-weight:500;border-radius:20px;cursor:pointer;${style}transition:all .15s;"
+      onclick="opsToggleCat('${c.id}',this)"
+      onmouseenter="if(this.dataset.catOn!=='true'){this.style.background=this.dataset.catColor+'33';}"
+      onmouseleave="if(this.dataset.catOn!=='true'){this.style.background='#fff';}">
+      ${c.name}
     </div>`;
   }).join('');
   // 분류 select 업데이트
@@ -10538,23 +10848,19 @@ async function loadOpsCatPills() {
     cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
 }
 
+function opsSelectAll(el) {
+  opsActiveCats = null;
+  loadOpsCatPills(); loadOpsCal();
+}
+
 function opsToggleCat(id, el) {
-  const s = getAppState_sync ? null : null; // sync 없으므로 로컬 처리
-  if(opsActiveCats === null) {
-    // 전체 → 해당 하나만 끄기
-    getAppState().then(s => {
-      const cats = s.ops_cats||[];
-      opsActiveCats = cats.map(c=>c.id).filter(cid=>cid!==id);
-      loadOpsCatPills(); loadOpsCal();
-    });
-  } else if(opsActiveCats.includes(id)) {
-    opsActiveCats = opsActiveCats.filter(cid=>cid!==id);
-    if(opsActiveCats.length===0) opsActiveCats=null; // 전체 해제시 전체로
-    loadOpsCatPills(); loadOpsCal();
+  // 클릭한 분류만 표시 (이미 선택된 경우 전체로)
+  if(opsActiveCats !== null && opsActiveCats.length===1 && opsActiveCats[0]===id) {
+    opsActiveCats = null; // 전체로
   } else {
-    opsActiveCats.push(id);
-    loadOpsCatPills(); loadOpsCal();
+    opsActiveCats = [id]; // 해당 분류만
   }
+  loadOpsCatPills(); loadOpsCal();
 }
 
 function openOpsCatModal() {
@@ -10639,16 +10945,16 @@ async function loadOpsCal() {
     const isWk= dow>=5;
     const dayEvts = mEvents.filter(e => e.startDate<=ds && (e.endDate||e.startDate)>=ds);
     const hasProd = dayEvts.length>0;
-    html+=`<div onclick="opsSelectDay('${ds}')" style="min-height:52px;border-radius:6px;padding:4px 5px;cursor:pointer;
+    html+=`<div onclick="opsSelectDay('${ds}')" style="min-height:64px;border-radius:6px;padding:5px 6px;cursor:pointer;
       border:${isToday?'1.5px solid var(--text)':'0.5px solid transparent'};
-      background:${hasProd?'var(--surface2)':'transparent'};"
-      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${hasProd?'var(--surface2)':'transparent'}'">
-      <div style="font-size:10px;color:${isWk?'var(--red)':isToday?'var(--text)':'var(--light)'};font-weight:${isToday?'500':'400'};">${day}</div>
+      background:transparent;"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
+      <div style="font-size:12px;color:${isWk?'var(--red)':isToday?'var(--text)':'var(--light)'};font-weight:${isToday?'600':'400'};">${day}</div>
       ${dayEvts.slice(0,2).map(e=>{
         const cat = cats.find(c=>c.id===e.cat);
         const bg  = cat ? cat.color+'22' : 'var(--surface2)';
         const col = cat ? cat.color      : 'var(--muted)';
-        return `<div style="font-size:9px;margin-top:2px;padding:1px 4px;border-radius:3px;background:${bg};color:${col};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.title}</div>`;
+        return `<div style="font-size:11px;margin-top:2px;padding:2px 5px;border-radius:3px;background:${bg};color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.title}</div>`;
       }).join('')}
       ${dayEvts.length>2?`<div style="font-size:9px;color:var(--light);padding:1px 4px;">+${dayEvts.length-2}</div>`:''}
     </div>`;
@@ -12345,7 +12651,6 @@ function contentCalAddPost(dateStr_) {
 async function initContentPage() {
   document.querySelectorAll('#content-tabs .page-tab').forEach((t,i)=>t.classList.toggle('on',i===0));
   $('content-tab-calendar').style.display = '';
-  $('content-tab-plan').style.display     = 'none';
   $('content-tab-stats').style.display    = 'none';
   $('content-tab-season').style.display   = 'none';
   _contentCalWeekOffset = 0;
@@ -12357,14 +12662,13 @@ async function initContentPage() {
 function contentSetTab(tab, el) {
   document.querySelectorAll('#content-tabs .page-tab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  ['calendar','plan','stats','season'].forEach(t=>{
+  ['calendar','stats','season'].forEach(t=>{
     const d = $(`content-tab-${t}`);
     if (d) d.style.display = t===tab ? '' : 'none';
   });
   const addBtn = $('content-add-btn');
   if (addBtn) addBtn.style.display = tab==='calendar' ? '' : 'none';
   if(tab==='calendar') loadContentCal();
-  if(tab==='plan') loadPlanBoard();
   if(tab==='stats')    loadContentStats();
   if(tab==='season')   loadContentSeason();
 }
@@ -12390,18 +12694,19 @@ function renderBoardTabs(boards) {
   const tabs = [{ id:'all', name:'현재 피드', color: null }].concat(boards || []);
   list.innerHTML = tabs.map(b => {
     const isActive = currentBoardId === b.id;
-    const dotStyle = b.color
-      ? `display:inline-block;width:10px;height:10px;border-radius:50%;background:${b.color};margin-right:5px;flex-shrink:0;`
-      : '';
-    const activeStyle = isActive
-      ? `border-bottom:2px solid ${b.color || 'var(--text)'};color:var(--text);font-weight:500;`
-      : 'border-bottom:2px solid transparent;color:var(--light);';
+    const col = b.color || '#1C1E26';
+    const getLuma = hex => { try { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),bl=parseInt(hex.slice(5,7),16); return (r*299+g*587+bl*114)/1000; } catch(e){return 128;} };
+    const textCol = b.color ? (getLuma(b.color)>128?'#1C1E26':'#fff') : '#fff';
+    const baseStyle = isActive
+      ? `background:${col};color:${textCol};border:1.5px solid ${col};`
+      : `background:#fff;color:var(--text);border:1.5px solid ${col};`;
     return `<div onclick="switchBoard('${b.id}')"
-      style="padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;${activeStyle}transition:color .15s;"
-      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color=''">
-      ${b.color ? `<span style="${dotStyle}"></span>` : ''}
+      data-board-color="${col}" data-active="${isActive}"
+      style="padding:5px 16px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;border-radius:20px;${baseStyle}transition:all .15s;"
+      onmouseenter="if(this.dataset.active!=='true'){this.style.background=this.dataset.boardColor+'33';}"
+      onmouseleave="if(this.dataset.active!=='true'){this.style.background='#fff';}">
       ${b.name}
-      ${b.id !== 'all' ? `<span onclick="event.stopPropagation();openBoardEditModal('${b.id}')" style="margin-left:4px;opacity:.35;font-size:11px;cursor:pointer;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.35'">···</span>` : ''}
+      ${b.id !== 'all' ? `<span onclick="event.stopPropagation();openBoardEditModal('${b.id}')" style="margin-left:4px;opacity:.4;font-size:10px;cursor:pointer;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.4'">···</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -12416,18 +12721,16 @@ async function switchBoard(boardId) {
   const ideaCol   = $('idea-board-col');
 
   if (boardId === 'all') {
-    // 현재 피드 — 캘린더+피드+상세 보이기
-    if (calCol)    calCol.style.display    = '';
-    if (feedCol)   feedCol.style.display   = '';
-    if (detailCol) detailCol.style.display = '';
-    if (ideaCol)   ideaCol.style.display   = 'none';
+    // 현재 피드 — 캘린더 보이고 아이디어 숨기기
+    if (calCol)  calCol.style.display  = '';
+    if (ideaCol) ideaCol.style.display = 'none';
     await loadContentCal();
+    renderContentCalWeek();
   } else {
-    // 보드 — 아이디어 보드 표시
-    if (calCol)    calCol.style.display    = 'none';
-    if (feedCol)   feedCol.style.display   = 'none';
-    if (detailCol) detailCol.style.display = 'none';
-    if (ideaCol)   ideaCol.style.display   = '';
+    // 보드 — 해당 보드 피드 + 오른쪽에 아이디어 보드
+    if (calCol)  calCol.style.display  = 'none';
+    if (ideaCol) ideaCol.style.display = '';
+    await loadContentCal();
     loadIdeaBoard(boardId);
   }
 }
@@ -12456,29 +12759,30 @@ async function loadIdeaBoard(boardId) {
           const items = ideas[t.key] || [];
           return `
             <div style="border-bottom:0.5px solid var(--border);">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:${t.bg};">
-                <span style="font-size:11px;font-weight:600;color:${t.hc};">${t.label}</span>
-                <button onclick="addIdeaItem('${boardId}','${t.key}')" style="font-size:10px;padding:2px 8px;border-radius:4px;border:0.5px solid ${t.hc}40;background:transparent;color:${t.hc};cursor:pointer;">+ 추가</button>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:${t.bg};">
+                <span style="font-size:13px;font-weight:600;color:${t.hc};">${t.label}</span>
+                <button onclick="addIdeaItem('${boardId}','${t.key}')" style="font-size:12px;padding:4px 12px;border-radius:6px;border:0.5px solid ${t.hc}60;background:transparent;color:${t.hc};cursor:pointer;">+ 추가</button>
               </div>
               ${items.map((item,i) => `
-                <div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border);cursor:pointer;" onclick="selectIdeaItem('${boardId}','${t.key}',${i})">
-                  <div style="flex:1;padding:9px 12px;">
-                    <div style="font-size:12px;font-weight:500;color:var(--text);">${item.title||'(제목 없음)'}</div>
-                    ${item.product||item.target?`<div style="font-size:11px;color:var(--light);margin-top:2px;">${[item.product,item.target].filter(Boolean).join(' · ')}</div>`:''}
+                <div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border);cursor:pointer;" onclick="selectIdeaItem('${boardId}','${t.key}',${i})"
+                  onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+                  <div style="flex:1;padding:11px 14px;">
+                    <div style="font-size:13px;font-weight:500;color:var(--text);">${item.title||'(제목 없음)'}</div>
+                    ${item.product||item.target?`<div style="font-size:12px;color:var(--light);margin-top:3px;">${[item.product,item.target].filter(Boolean).join(' · ')}</div>`:''}
                   </div>
-                  <div style="width:140px;border-left:0.5px solid var(--border);padding:9px 12px;background:var(--surface2);">
-                    <div style="font-size:10px;color:var(--light);margin-bottom:2px;">메모</div>
-                    <div style="font-size:11px;color:var(--text);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${item.memo||'—'}</div>
+                  <div style="width:160px;border-left:0.5px solid var(--border);padding:11px 14px;background:var(--surface2);">
+                    <div style="font-size:10px;color:var(--light);margin-bottom:3px;">메모</div>
+                    <div style="font-size:12px;color:var(--text);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${item.memo||'—'}</div>
                   </div>
                 </div>`).join('')}
-              ${!items.length?`<div style="padding:10px 12px;font-size:11px;color:var(--faint);">아직 없어요</div>`:''}
+              ${!items.length?`<div style="padding:12px 14px;font-size:12px;color:var(--faint);">아직 없어요</div>`:''}
             </div>`;
         }).join('')}
       </div>
 
       <!-- 오른쪽: 선택된 항목 상세 메모 패널 -->
       <div id="idea-detail-panel" style="border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface);">
-        <div style="padding:40px 20px;text-align:center;font-size:12px;color:var(--faint);">항목을 선택하면 상세 내용이 표시돼요</div>
+        <div style="padding:40px 20px;text-align:center;font-size:13px;color:var(--faint);">항목을 선택하면<br>상세 내용이 표시돼요</div>
       </div>
     </div>`;
 }
@@ -12496,12 +12800,12 @@ function selectIdeaItem(boardId, typeKey, idx) {
           <button onclick="deleteIdeaItem('${boardId}','${typeKey}',${idx})" class="f-btn f-btn-cancel" style="font-size:11px;padding:3px 10px;color:var(--red);">삭제</button>
         </div>
       </div>
-      <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-        ${item.product?`<div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">제품</div><div style="font-size:12px;">${item.product}</div></div>`:''}
-        ${item.target?`<div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">타겟</div><div style="font-size:12px;">${item.target}</div></div>`:''}
-        ${item.refLink?`<div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">레퍼런스</div><a href="${item.refLink}" target="_blank" style="font-size:12px;color:#378ADD;text-decoration:none;">↗ 링크 열기</a></div>`:''}
-        <div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">메모</div>
-          <div style="font-size:12px;line-height:1.6;color:var(--text);white-space:pre-wrap;">${item.memo||'—'}</div></div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+        ${item.product?`<div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">제품</div><div style="font-size:13px;">${item.product}</div></div>`:''}
+        ${item.target?`<div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">타겟</div><div style="font-size:13px;">${item.target}</div></div>`:''}
+        ${item.refLink?`<div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">레퍼런스</div><a href="${item.refLink}" target="_blank" style="font-size:13px;color:#378ADD;text-decoration:none;">↗ 링크 열기</a></div>`:''}
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">메모</div>
+          <div style="font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;">${item.memo||'—'}</div></div>
       </div>`;
   });
 }
@@ -12870,11 +13174,11 @@ function renderInstaFeed() {
     const cardIcon = typeInfo.icon || '◇';
     const cardDesc = typeInfo.desc || '';
     const noImgCard = `
-      <div style="width:100%;height:100%;background:${cardBg};display:flex;flex-direction:column;justify-content:space-between;padding:8px;">
-        <div style="font-size:7px;font-weight:600;letter-spacing:.03em;color:${cardTxt};">${typeInfo.label||''}</div>
+      <div style="width:100%;height:100%;background:${cardBg};display:flex;flex-direction:column;justify-content:space-between;padding:10px;">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.02em;color:${cardTxt};">${typeInfo.label||''}</div>
         <div>
-          ${p.title ? `<div style="font-size:9px;font-weight:500;color:${cardTxt};line-height:1.3;margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${p.title}</div>` : ''}
-          ${p.date ? `<div style="font-size:7px;color:${cardTxt};opacity:.5;">${p.date.slice(5).replace('-','/')}</div>` : ''}
+          ${p.title ? `<div style="font-size:12px;font-weight:500;color:${cardTxt};line-height:1.4;margin-bottom:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;">${p.title}</div>` : ''}
+          ${p.date ? `<div style="font-size:10px;color:${cardTxt};opacity:.5;">${p.date.slice(5).replace('-','/')}</div>` : ''}
         </div>
       </div>`;
 
@@ -14260,6 +14564,43 @@ async function getPlanData() {
 }
 
 /* ── 연간 목표 탭 ── */
+function openMonthTargetModal(month, currentTarget) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay on';
+  overlay.id = 'month-target-modal';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:320px;">
+      <div class="modal-bar">
+        <div class="modal-kind">${month}월 목표매출 설정</div>
+        <div class="modal-bar-right"><div class="mbtn" onclick="$('month-target-modal').remove()">✕</div></div>
+      </div>
+      <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">목표 금액 (원)</div>
+          <input type="number" id="mth-target-inp" class="prop-inp" value="${currentTarget||''}" placeholder="예: 5000000" style="width:100%;font-size:16px;">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="f-btn f-btn-cancel" style="flex:1;" onclick="$('month-target-modal').remove()">취소</button>
+          <button class="f-btn f-btn-save" style="flex:1;" onclick="saveMonthTarget(${month})">저장</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(()=>{ const i=$('mth-target-inp'); if(i){i.focus();i.select();} }, 80);
+}
+
+async function saveMonthTarget(month) {
+  const val = parseInt($('mth-target-inp')?.value)||0;
+  const s = await getPlanData();
+  s.plan[planYear].monthly = s.plan[planYear].monthly||{};
+  s.plan[planYear].monthly[month] = {...(s.plan[planYear].monthly[month]||{}), target:val};
+  await setAppState(s);
+  toast(`${month}월 목표 저장됐어요 ✓`);
+  document.getElementById('month-target-modal')?.remove();
+  loadPlanAnnual();
+}
+
 async function loadPlanAnnual() {
   const s    = await getPlanData();
   const p    = s.plan[planYear];
@@ -14322,7 +14663,7 @@ async function loadPlanAnnual() {
                 const dot = it.status==='done'?'#6B9E7A':it.status==='ongoing'?'#C4A96A':it.status==='confirmed'?'#378ADD':'var(--border2)';
                 return `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text);" onclick="openRoadmapAddModal('${it.id}')" class="card-link" style="font-size:11px;">
                   <span style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;"></span>
-                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${it.month}월 ${it.title}</span>
+                  <span style="overflow:hidden;word-break:keep-all;line-height:1.4;">${it.month}월 ${it.title}</span>
                 </div>`;
               }).join('')
             : `<div style="font-size:11px;color:var(--faint);">일정 없음</div>`}
@@ -14400,10 +14741,10 @@ async function loadPlanAnnual() {
     </div>`;
   }).join('');
 
-  // 지출 데이터 — 세무관리 비용 연동
-  const costRes = await db.from('tax_costs').select('month,amount,year').eq('year', planYear);
+  // 지출 데이터 — app_state tax_costs (세무관리 연동)
+  const appStateForCost = await getAppState();
   const costByMonth = {};
-  (costRes.data||[]).forEach(r => {
+  (appStateForCost.tax_costs||[]).filter(c=>c.year===planYear).forEach(r => {
     const m = parseInt(r.month);
     if(m) costByMonth[m] = (costByMonth[m]||0) + (r.amount||0);
   });
@@ -14415,14 +14756,16 @@ async function loadPlanAnnual() {
     const target = m.target||0;
     const actual = actualByMonth[i+1]||0;
     const cost   = costByMonth[i+1]||0;
-    const profit = actual && cost ? actual - cost : null;
+    const profit = (actual || cost) ? actual - cost : null;
     cumTarget += target; cumActual += actual; cumCost += cost;
     const achv = target>0 ? Math.round(actual/target*100) : null;
     const isCur = i===curMonth, isPast = i<curMonth;
     const rowBg = isCur ? 'background:var(--surface2);' : '';
     return `<tr style="${rowBg}">
       <td style="padding:7px 10px;font-size:12px;font-weight:${isCur?600:400};">${i+1}월${isCur?' ←':''}</td>
-      <td style="padding:7px 10px;font-size:12px;text-align:right;">${target?fmtWon(target):'—'}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;cursor:pointer;" onclick="openMonthTargetModal(${i+1},${target})" title="클릭해서 목표 설정">
+        ${target?fmtWon(target):'<span style="color:var(--faint);">— 설정하기</span>'}
+      </td>
       <td style="padding:7px 10px;font-size:12px;text-align:right;color:${actual?'var(--text)':'var(--faint)'};">${actual?fmtWon(actual):'—'}</td>
       <td style="padding:7px 10px;font-size:12px;text-align:right;color:${cost?'var(--text)':'var(--faint)'};">${cost?fmtWon(cost):'—'}</td>
       <td style="padding:7px 10px;font-size:12px;text-align:right;color:${profit!==null?(profit>=0?'#3B6D11':'#C4736A'):'var(--faint)'};">${profit!==null?fmtWon(profit):'—'}</td>
@@ -14650,20 +14993,35 @@ async function loadPlanRoadmap() {
 }
 
 /* ── 예산 계획 탭 ── */
+let _budgetMonth = 0; // 0=연간
+
+function budgetSetMonth(m, el) {
+  _budgetMonth = m;
+  document.querySelectorAll('#plan-budget-month-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  loadPlanBudget();
+}
+
 async function loadPlanBudget() {
   // KPI 카드 — 매출/지출/순수익
   const kpiEl = $('plan-budget-kpi');
   if (kpiEl) {
-    const [costRes, salesRes] = await Promise.all([
-      db.from('tax_costs').select('category,amount').eq('year', planYear),
+    const [stateData, salesRes] = await Promise.all([
+      getAppState(),
       db.from('channel_sales_log').select('amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`),
     ]);
-    const totalCost  = (costRes.data||[]).reduce((s,r)=>s+(r.amount||0),0);
-    const totalSales = (salesRes.data||[]).reduce((s,r)=>s+(r.amount||0),0);
+    const costData = (stateData.tax_costs||[]).filter(c =>
+      c.year===planYear && (_budgetMonth===0 || c.month===_budgetMonth)
+    );
+    const totalCost  = costData.reduce((s,r)=>s+(r.amount||0),0);
+    const salesRows  = salesRes.data||[];
+    const totalSales = _budgetMonth===0
+      ? salesRows.reduce((s,r)=>s+(r.amount||0),0)
+      : salesRows.filter(r=>{ const m=parseInt((r.date||'').slice(5,7)); return m===_budgetMonth; }).reduce((s,r)=>s+(r.amount||0),0);
     const profit     = totalSales - totalCost;
     kpiEl.innerHTML = [
-      {label:'연간 매출 실적', val:fmtWon(totalSales)||'—', color:'#6B9E7A'},
-      {label:'총 지출 실적',   val:totalCost?fmtWon(totalCost):'—', sub:'세무관리 비용 연동', color:'#C4736A'},
+      {label:_budgetMonth?`${_budgetMonth}월 매출 실적`:'연간 매출 실적', val:fmtWon(totalSales)||'—', color:'#6B9E7A'},
+      {label:_budgetMonth?`${_budgetMonth}월 지출 실적`:'총 지출 실적', val:totalCost?fmtWon(totalCost):'—', sub:'세무관리 비용 연동', color:'#C4736A'},
       {label:'순수익',         val:totalSales?fmtWon(profit):'—', color:profit>=0?'#3B6D11':'#C4736A'},
     ].map(k=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
       <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${k.label}</div>
@@ -14676,7 +15034,7 @@ async function loadPlanBudget() {
     if (actEl) {
       const CAT_LBL = {salary:'인건비',prod:'생산·원자재',ad:'마케팅·광고비',fee:'플랫폼·수수료',logistics:'물류·배송비',fixed:'고정비·임차료',etc:'기타'};
       const catMap = {};
-      (costRes.data||[]).forEach(r=>{ catMap[r.category]=(catMap[r.category]||0)+(r.amount||0); });
+      costData.forEach(r=>{ catMap[r.cat||r.category]=(catMap[r.cat||r.category]||0)+(r.amount||0); });
       if (!Object.keys(catMap).length) {
         actEl.innerHTML = '<div style="font-size:12px;color:var(--faint);padding:10px 0;">세무관리에서 비용을 등록하면 여기에 표시돼요</div>';
       } else {
@@ -15997,6 +16355,8 @@ document.querySelectorAll('.sidebar .si[data-page]').forEach(el=>{
 document.querySelectorAll('.tb-nav-item[data-page]').forEach(el=>{
   el.addEventListener('click',()=>nav(el.dataset.page));
 });
+
+
 
 /* ═══════════════════════════════════════
    BOOT
