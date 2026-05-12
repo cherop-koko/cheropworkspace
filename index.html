@@ -1552,6 +1552,9 @@ a { text-decoration:none; color:inherit; }
               </div>
             </div>
 
+            <!-- 아이디어 보드 (보드 탭 클릭 시 표시) -->
+            <div id="idea-board-col" style="display:none;flex:1;min-width:0;"></div>
+
             <!-- 3열: 주간 캘린더 (flex로 너비에 따라 줄바꿈) -->
             <div style="flex:1;min-width:0;" id="content-calendar-col">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -1578,7 +1581,7 @@ a { text-decoration:none; color:inherit; }
               <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#1C1E2615;border-color:#1C1E2640;" onclick="planBoardSetType('visual',this)">◼ 비주얼보드</div>
               <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#FDF3E0;border-color:#C4A96A40;" onclick="planBoardSetType('mongmozzal',this)">✦ 몽모짤</div>
               <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#FAEAE4;border-color:#C4736A40;" onclick="planBoardSetType('reels',this)">▶ 릴스</div>
-              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#EAF3DE;border-color:#6B9E7A40;" onclick="planBoardSetType('magazine',this)">◎ 매거진</div>
+              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#EAF3DE;border-color:#6B9E7A40;" onclick="planBoardSetType('etc',this)">◎ 매거진</div>
             </div>
             <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;" onclick="openPlanBoardModal()">+ 기획 추가</button>
           </div>
@@ -1595,7 +1598,7 @@ a { text-decoration:none; color:inherit; }
             <div style="display:flex;gap:5px;margin-left:8px;" id="content-stats-type">
               <div class="inv-pill on" onclick="contentStatsSetType('all',this)">전체</div>
               <div class="inv-pill"   onclick="contentStatsSetType('visual',this)">비주얼보드</div>
-              <div class="inv-pill"   onclick="contentStatsSetType('magazine',this)">매거진</div>
+              <div class="inv-pill"   onclick="contentStatsSetType('etc',this)">기타</div>
               <div class="inv-pill"   onclick="contentStatsSetType('mongmozzal',this)">몽모짤</div>
               <div class="inv-pill"   onclick="contentStatsSetType('reels',this)">릴스</div>
             </div>
@@ -2675,6 +2678,33 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ═══ 채널 배분 모달 ═══ -->
+<div class="modal-overlay" id="ch-alloc-modal" onclick="if(event.target===this)closeModal('ch-alloc-modal')">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-bar">
+      <div>
+        <div class="modal-kind">채널 배분</div>
+        <div id="ch-alloc-prod-name" style="font-size:11px;color:var(--light);margin-top:2px;"></div>
+      </div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('ch-alloc-modal')">✕</div></div>
+    </div>
+    <div style="padding:14px 20px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 14px;">
+        <div style="font-size:11px;color:var(--light);margin-bottom:4px;">가용 재고</div>
+        <div id="ch-alloc-avail" style="font-size:22px;font-weight:500;">—</div>
+      </div>
+      <div id="ch-alloc-channels" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div style="font-size:11px;color:var(--light);" id="ch-alloc-remain-wrap">
+        남은 가용재고: <span id="ch-alloc-remain" style="font-weight:500;color:var(--text);">—</span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('ch-alloc-modal')">취소</button>
+        <button class="f-btn f-btn-save" style="flex:1;" onclick="saveChAlloc()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 재고: 채널 배분 ═══ -->
 <div class="modal-overlay" id="inv-alloc-modal" onclick="if(event.target===this)closeModal('inv-alloc-modal')">
   <div class="modal" style="max-width:520px;" onclick="event.stopPropagation()">
@@ -3287,7 +3317,7 @@ a { text-decoration:none; color:inherit; }
           <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:8px;">콘텐츠 유형</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="content-type-pills">
             <div class="inv-pill" onclick="contentSetType('visual',this)">비주얼보드</div>
-            <div class="inv-pill" onclick="contentSetType('magazine',this)">매거진</div>
+            <div class="inv-pill" onclick="contentSetType('etc',this)">기타</div>
             <div class="inv-pill" onclick="contentSetType('mongmozzal',this)">몽모짤</div>
             <div class="inv-pill" onclick="contentSetType('reels',this)">릴스</div>
           </div>
@@ -4394,7 +4424,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.7.9</div>
+<div id="version">v4.8.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -6126,9 +6156,9 @@ async function initInventory() {
   ['overview','receipt','alert'].forEach(t => {
     const el=$(`inv-tab-${t}`); if(el) el.style.display = t==='overview' ? '' : 'none';
   });
-  // 관리자만 초기 import 버튼 표시
+  // 재고 가져오기 — 전체 직원 표시
   const importBtn=$('inv-import-btn');
-  if(importBtn) importBtn.style.display = user?.admin ? '' : 'none';
+  if(importBtn) importBtn.style.display = '';
   // 입고등록 담당자 셀렉트 채우기
   const sel=$('inv-r-assignee');
   if(sel) sel.innerHTML = MEMBERS.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
@@ -6564,7 +6594,9 @@ async function loadInvList() {
         <td class="inv-num inv-green">${inv.produced_stock||0}</td>
         <td class="inv-num inv-amber">${inv.pending_production||0}</td>
         <td class="inv-num">${inv.available_stock||0}</td>
-        <td>${chChips||'<span class="inv-faint" style="font-size:11px;">미배분</span>'}</td>
+        <td onclick="openChAllocModal('${p.id}')" style="cursor:pointer;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+          ${chChips||'<span class="inv-faint" style="font-size:11px;">미배분 →</span>'}
+        </td>
         <td class="${daysAll&&daysAll<=12?'inv-red':daysAll&&daysAll<=45?'inv-amber':''} inv-num">${daysAll?`D+${daysAll}`:'—'}</td>
         <td>${badge}</td>
         <td><div class="card-link" onclick="openEditProduct('${p.id}')" title="수정">···</div></td>
@@ -6902,6 +6934,71 @@ async function deleteShipLog(id) {
   toast('삭제됐어요');
   closeModal('sales-log-edit-modal');
   loadShipLog();
+}
+
+/* ── 채널 배분 모달 ── */
+let _chAllocProdId = null;
+
+async function openChAllocModal(productId) {
+  _chAllocProdId = productId;
+  const { data: prods } = await db.from('products').select('id,name,option_name').eq('id', productId);
+  const p   = prods?.[0];
+  const lbl = p ? (p.option_name ? `${p.name} · ${p.option_name}` : p.name) : '';
+  if($('ch-alloc-prod-name')) $('ch-alloc-prod-name').textContent = lbl;
+
+  // 가용재고
+  const { data: inv } = await db.from('inventory').select('*').eq('product_id', productId).maybeSingle();
+  const avail = inv?.available_stock || 0;
+  if($('ch-alloc-avail')) $('ch-alloc-avail').textContent = `${avail}개`;
+
+  // 현재 채널별 배분 수량
+  const { data: chInvs } = await db.from('channel_inventory').select('*').eq('product_id', productId);
+  const chMap = Object.fromEntries((chInvs||[]).map(c=>[c.channel, c.stock||0]));
+
+  const ALLOC_CHANNELS = ['자사몰','카카오선물하기','스마트스토어'];
+  const el = $('ch-alloc-channels'); if (!el) return;
+  el.innerHTML = ALLOC_CHANNELS.map(ch => `
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:80px;font-size:12px;color:var(--text);">${ch==='카카오선물하기'?'카카오':ch==='스마트스토어'?'스마트':ch}</div>
+      <input type="number" id="ch-alloc-${ch}" class="prop-inp" min="0"
+        value="${chMap[ch]||0}" style="width:90px;text-align:center;"
+        oninput="updateChAllocRemain(${avail})">
+      <div style="font-size:11px;color:var(--light);">개</div>
+    </div>`).join('');
+
+  updateChAllocRemain(avail);
+  $('ch-alloc-modal').classList.add('on');
+}
+
+function updateChAllocRemain(avail) {
+  const ALLOC_CHANNELS = ['자사몰','카카오선물하기','스마트스토어'];
+  const used = ALLOC_CHANNELS.reduce((s,ch) => {
+    return s + (parseInt(document.getElementById(`ch-alloc-${ch}`)?.value)||0);
+  }, 0);
+  const remain = avail - used;
+  const el = $('ch-alloc-remain'); if (el) el.textContent = `${remain}개`;
+  if (el) el.style.color = remain < 0 ? 'var(--red)' : remain === 0 ? 'var(--text)' : 'var(--green)';
+}
+
+async function saveChAlloc() {
+  const ALLOC_CHANNELS = ['자사몰','카카오선물하기','스마트스토어'];
+  const { data: inv } = await db.from('inventory').select('available_stock').eq('product_id', _chAllocProdId).maybeSingle();
+  const avail = inv?.available_stock || 0;
+  const total = ALLOC_CHANNELS.reduce((s,ch) => s+(parseInt(document.getElementById(`ch-alloc-${ch}`)?.value)||0), 0);
+  if (total > avail) { toast(`가용재고(${avail}개)보다 많이 배분할 수 없어요`); return; }
+
+  for (const ch of ALLOC_CHANNELS) {
+    const qty = parseInt(document.getElementById(`ch-alloc-${ch}`)?.value)||0;
+    const { data: existing } = await db.from('channel_inventory').select('id').eq('product_id', _chAllocProdId).eq('channel', ch).maybeSingle();
+    if (existing) {
+      await db.from('channel_inventory').update({ stock: qty }).eq('id', existing.id);
+    } else if (qty > 0) {
+      await db.from('channel_inventory').insert({ product_id: _chAllocProdId, channel: ch, stock: qty });
+    }
+  }
+  toast('채널 배분 저장됐어요 ✓');
+  closeModal('ch-alloc-modal');
+  loadInvOverview();
 }
 
 async function openShipmentModal() {
@@ -11946,10 +12043,11 @@ async function saveMktCrm() {
   await setAppState(s); toast('저장됐어요 ✓'); closeModal('mkt-crm-modal'); loadMktCrm();
 }
 const CONTENT_TYPES = {
-  visual:     { label:'비주얼보드', color:'#1C1E26', bg:'#1C1E26', textColor:'#fff',     icon:'◼', desc:'Brand Visual' },
-  magazine:   { label:'매거진',     color:'#6B9E7A', bg:'#EAF3DE', textColor:'#2F5A2E',  icon:'◎', desc:'Magazine' },
-  mongmozzal: { label:'몽모짤',     color:'#C4A96A', bg:'#FDF3E0', textColor:'#7A5C1E',  icon:'✦', desc:'Mongmo Cut' },
-  reels:      { label:'릴스',       color:'#C4736A', bg:'#FAEAE4', textColor:'#7A2E1E',  icon:'▶', desc:'Reels' },
+  visual:     { label:'비주얼보드', color:'#8A7A6A', bg:'#F5F0E8', textColor:'#4A3D30', icon:'◼', desc:'Brand Visual' },
+  mongmozzal: { label:'몽모짤',     color:'#8A4A5A', bg:'#F5E8EC', textColor:'#5A2D3A', icon:'✦', desc:'Mongmo Cut' },
+  reels:      { label:'릴스',       color:'#406A80', bg:'#E0EBF0', textColor:'#244A60', icon:'▶', desc:'Reels' },
+  magazine:   { label:'기타',       color:'#8A7A6A', bg:'#F5F0E8', textColor:'#4A3D30', icon:'◇', desc:'Etc' },
+  etc:        { label:'기타',       color:'#8A7A6A', bg:'#F5F0E8', textColor:'#4A3D30', icon:'◇', desc:'Etc' },
 };
 const CONTENT_TOPICS = {
   selfesteem:  '자존감',
@@ -12068,7 +12166,7 @@ const PLAN_BOARD_TYPES = {
   visual:     { label:'비주얼보드', icon:'◼', bg:'#1C1E26', tc:'#fff',    light:'#1C1E2618' },
   mongmozzal: { label:'몽모짤',     icon:'✦', bg:'#FDF3E0', tc:'#7A5C1E', light:'#FDF3E018' },
   reels:      { label:'릴스',       icon:'▶', bg:'#FAEAE4', tc:'#7A2E1E', light:'#FAEAE418' },
-  magazine:   { label:'매거진',     icon:'◎', bg:'#EAF3DE', tc:'#2F5A2E', light:'#EAF3DE18' },
+  magazine:   { label:'기타',     icon:'◎', bg:'#EAF3DE', tc:'#2F5A2E', light:'#EAF3DE18' },
 };
 
 function planBoardSetType(type, el) {
@@ -12311,9 +12409,179 @@ function renderBoardTabs(boards) {
 async function switchBoard(boardId) {
   currentBoardId = boardId;
   instaSelectedId = null;
-  const postDetail = $('insta-post-detail');
-  if (postDetail) postDetail.innerHTML = `<div style="border:0.5px solid var(--border);border-radius:var(--rlg);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:480px;gap:10px;background:var(--surface);"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="4" width="28" height="28" rx="6" stroke="#ccc" stroke-width="1.5"/><circle cx="13" cy="14" r="3" stroke="#ccc" stroke-width="1.5"/><path d="M4 26l8-7 6 5 5-4 9 8" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/></svg><div style="font-size:13px;color:var(--faint);">피드를 선택하면 표시돼요</div></div>`;
-  await loadContentCal();
+
+  const calCol    = $('content-calendar-col');
+  const feedCol   = $('insta-feed-column');
+  const detailCol = $('insta-detail-panel');
+  const ideaCol   = $('idea-board-col');
+
+  if (boardId === 'all') {
+    // 현재 피드 — 캘린더+피드+상세 보이기
+    if (calCol)    calCol.style.display    = '';
+    if (feedCol)   feedCol.style.display   = '';
+    if (detailCol) detailCol.style.display = '';
+    if (ideaCol)   ideaCol.style.display   = 'none';
+    await loadContentCal();
+  } else {
+    // 보드 — 아이디어 보드 표시
+    if (calCol)    calCol.style.display    = 'none';
+    if (feedCol)   feedCol.style.display   = 'none';
+    if (detailCol) detailCol.style.display = 'none';
+    if (ideaCol)   ideaCol.style.display   = '';
+    loadIdeaBoard(boardId);
+  }
+}
+
+async function loadIdeaBoard(boardId) {
+  const el = $('idea-board-col'); if (!el) return;
+  const s  = await getAppState();
+  const board = (s.instaBoards||[]).find(b=>b.id===boardId);
+  if (!board) return;
+  const ideas = s.idea_boards?.[boardId] || {};
+  const TYPES = [
+    { key:'visual',     label:'비주얼보드', bg:'#F5F0E8', tc:'#4A3D30', hc:'#8A7A6A' },
+    { key:'mongmozzal', label:'몽모짤',     bg:'#F5E8EC', tc:'#5A2D3A', hc:'#8A4A5A' },
+    { key:'reels',      label:'릴스',       bg:'#E0EBF0', tc:'#244A60', hc:'#406A80' },
+    { key:'etc',        label:'기타',       bg:'#F5F0E8', tc:'#4A3D30', hc:'#8A7A6A' },
+  ];
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:500;">${board.name}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:14px;align-items:start;">
+      <!-- 왼쪽: 유형별 섹션 리스트 -->
+      <div style="border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface);">
+        ${TYPES.map(t => {
+          const items = ideas[t.key] || [];
+          return `
+            <div style="border-bottom:0.5px solid var(--border);">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:${t.bg};">
+                <span style="font-size:11px;font-weight:600;color:${t.hc};">${t.label}</span>
+                <button onclick="addIdeaItem('${boardId}','${t.key}')" style="font-size:10px;padding:2px 8px;border-radius:4px;border:0.5px solid ${t.hc}40;background:transparent;color:${t.hc};cursor:pointer;">+ 추가</button>
+              </div>
+              ${items.map((item,i) => `
+                <div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border);cursor:pointer;" onclick="selectIdeaItem('${boardId}','${t.key}',${i})">
+                  <div style="flex:1;padding:9px 12px;">
+                    <div style="font-size:12px;font-weight:500;color:var(--text);">${item.title||'(제목 없음)'}</div>
+                    ${item.product||item.target?`<div style="font-size:11px;color:var(--light);margin-top:2px;">${[item.product,item.target].filter(Boolean).join(' · ')}</div>`:''}
+                  </div>
+                  <div style="width:140px;border-left:0.5px solid var(--border);padding:9px 12px;background:var(--surface2);">
+                    <div style="font-size:10px;color:var(--light);margin-bottom:2px;">메모</div>
+                    <div style="font-size:11px;color:var(--text);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${item.memo||'—'}</div>
+                  </div>
+                </div>`).join('')}
+              ${!items.length?`<div style="padding:10px 12px;font-size:11px;color:var(--faint);">아직 없어요</div>`:''}
+            </div>`;
+        }).join('')}
+      </div>
+
+      <!-- 오른쪽: 선택된 항목 상세 메모 패널 -->
+      <div id="idea-detail-panel" style="border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface);">
+        <div style="padding:40px 20px;text-align:center;font-size:12px;color:var(--faint);">항목을 선택하면 상세 내용이 표시돼요</div>
+      </div>
+    </div>`;
+}
+
+function selectIdeaItem(boardId, typeKey, idx) {
+  getAppState().then(s => {
+    const item = s.idea_boards?.[boardId]?.[typeKey]?.[idx];
+    if (!item) return;
+    const el = $('idea-detail-panel'); if (!el) return;
+    el.innerHTML = `
+      <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:13px;font-weight:500;">${item.title||'(제목 없음)'}</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="editIdeaItem('${boardId}','${typeKey}',${idx})" class="f-btn f-btn-cancel" style="font-size:11px;padding:3px 10px;">수정</button>
+          <button onclick="deleteIdeaItem('${boardId}','${typeKey}',${idx})" class="f-btn f-btn-cancel" style="font-size:11px;padding:3px 10px;color:var(--red);">삭제</button>
+        </div>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+        ${item.product?`<div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">제품</div><div style="font-size:12px;">${item.product}</div></div>`:''}
+        ${item.target?`<div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">타겟</div><div style="font-size:12px;">${item.target}</div></div>`:''}
+        ${item.refLink?`<div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">레퍼런스</div><a href="${item.refLink}" target="_blank" style="font-size:12px;color:#378ADD;text-decoration:none;">↗ 링크 열기</a></div>`:''}
+        <div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">메모</div>
+          <div style="font-size:12px;line-height:1.6;color:var(--text);white-space:pre-wrap;">${item.memo||'—'}</div></div>
+      </div>`;
+  });
+}
+
+async function addIdeaItem(boardId, typeKey) {
+  window._ideaEdit = { boardId, typeKey, idx: -1 };
+  openIdeaItemModal({});
+}
+
+function editIdeaItem(boardId, typeKey, idx) {
+  getAppState().then(s => {
+    const item = s.idea_boards?.[boardId]?.[typeKey]?.[idx] || {};
+    window._ideaEdit = { boardId, typeKey, idx };
+    openIdeaItemModal(item);
+  });
+}
+
+function openIdeaItemModal(item) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay on';
+  overlay.id = 'idea-item-modal';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:400px;">
+      <div class="modal-bar">
+        <div class="modal-kind">${window._ideaEdit?.idx >= 0 ? '아이디어 수정' : '아이디어 추가'}</div>
+        <div class="modal-bar-right"><div class="mbtn" onclick="$('idea-item-modal').remove()">✕</div></div>
+      </div>
+      <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px;">
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">제목</div>
+          <input type="text" id="ii-title" class="prop-inp" value="${item.title||''}" placeholder="아이디어 제목" style="width:100%;"></div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">제품</div>
+          <input type="text" id="ii-product" class="prop-inp" value="${item.product||''}" placeholder="예: 포니몽모S" style="width:100%;"></div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">타겟</div>
+          <input type="text" id="ii-target" class="prop-inp" value="${item.target||''}" placeholder="예: 2030 여성" style="width:100%;"></div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">레퍼런스 링크</div>
+          <input type="url" id="ii-ref" class="prop-inp" value="${item.refLink||''}" placeholder="https://..." style="width:100%;"></div>
+        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">메모</div>
+          <textarea id="ii-memo" class="prop-inp" rows="3" style="width:100%;resize:none;">${item.memo||''}</textarea></div>
+        <div style="display:flex;gap:8px;">
+          <button class="f-btn f-btn-cancel" style="flex:1;" onclick="$('idea-item-modal').remove()">취소</button>
+          <button class="f-btn f-btn-save" style="flex:1;" onclick="saveIdeaItem()">저장</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function saveIdeaItem() {
+  const { boardId, typeKey, idx } = window._ideaEdit || {};
+  if (!boardId || !typeKey) return;
+  const data = {
+    title:   document.getElementById('ii-title')?.value.trim() || '',
+    product: document.getElementById('ii-product')?.value.trim() || '',
+    target:  document.getElementById('ii-target')?.value.trim() || '',
+    refLink: document.getElementById('ii-ref')?.value.trim() || '',
+    memo:    document.getElementById('ii-memo')?.value.trim() || '',
+  };
+  if (!data.title) { toast('제목을 입력해주세요'); return; }
+  const s = await getAppState();
+  s.idea_boards = s.idea_boards || {};
+  s.idea_boards[boardId] = s.idea_boards[boardId] || {};
+  s.idea_boards[boardId][typeKey] = s.idea_boards[boardId][typeKey] || [];
+  if (idx >= 0) s.idea_boards[boardId][typeKey][idx] = data;
+  else s.idea_boards[boardId][typeKey].push(data);
+  await setAppState(s);
+  toast('저장됐어요 ✓');
+  document.getElementById('idea-item-modal')?.remove();
+  loadIdeaBoard(boardId);
+}
+
+async function deleteIdeaItem(boardId, typeKey, idx) {
+  const ok = await customConfirm('이 아이디어를 삭제할까요?'); if (!ok) return;
+  const s = await getAppState();
+  s.idea_boards[boardId][typeKey].splice(idx, 1);
+  await setAppState(s);
+  toast('삭제됐어요');
+  loadIdeaBoard(boardId);
+  const el = $('idea-detail-panel');
+  if (el) el.innerHTML = '<div style="padding:40px 20px;text-align:center;font-size:12px;color:var(--faint);">항목을 선택하면 상세 내용이 표시돼요</div>';
 }
 
 /* ── 보드 추가 모달 ── */
@@ -12443,7 +12711,10 @@ async function loadContentCal() {
     const map     = Object.fromEntries(posts.map(p => [p.id, p]));
     const ordered = savedOrder.map(id => map[id]).filter(Boolean);
     // 새 게시물은 저장된 순서에 없으므로 → 맨 앞에 추가 (인스타처럼 최신이 앞으로)
-    const rest    = posts.filter(p => !savedOrder.includes(p.id));
+    // 저장 순서에 없는 새 게시물은 날짜 내림차순으로 앞에
+    const rest = posts
+      .filter(p => !savedOrder.includes(p.id))
+      .sort((a,b) => (b.post_date||'').localeCompare(a.post_date||''));
     instaFeedOrder = [...rest.map(p => p.id), ...ordered.map(p => p.id)];
   } else {
     instaFeedOrder = posts.map(p => p.id);
@@ -12599,14 +12870,11 @@ function renderInstaFeed() {
     const cardIcon = typeInfo.icon || '◇';
     const cardDesc = typeInfo.desc || '';
     const noImgCard = `
-      <div style="width:100%;height:100%;background:${cardBg};display:flex;flex-direction:column;padding:8px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:auto;">
-          <span style="font-size:14px;opacity:.4;color:${cardTxt};">${cardIcon}</span>
-          <span style="font-size:7px;font-weight:600;letter-spacing:.08em;color:${cardTxt};opacity:.4;text-transform:uppercase;">${cardDesc}</span>
-        </div>
-        <div style="margin-top:auto;">
-          ${p.title ? `<div style="font-size:9px;font-weight:600;color:${cardTxt};line-height:1.4;margin-bottom:3px;word-break:keep-all;">${p.title}</div>` : ''}
-          ${p.date ? `<div style="font-size:8px;color:${cardTxt};opacity:.5;">${p.date.slice(5).replace('-','/')}</div>` : ''}
+      <div style="width:100%;height:100%;background:${cardBg};display:flex;flex-direction:column;justify-content:space-between;padding:8px;">
+        <div style="font-size:7px;font-weight:600;letter-spacing:.03em;color:${cardTxt};">${typeInfo.label||''}</div>
+        <div>
+          ${p.title ? `<div style="font-size:9px;font-weight:500;color:${cardTxt};line-height:1.3;margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${p.title}</div>` : ''}
+          ${p.date ? `<div style="font-size:7px;color:${cardTxt};opacity:.5;">${p.date.slice(5).replace('-','/')}</div>` : ''}
         </div>
       </div>`;
 
@@ -13597,6 +13865,11 @@ async function saveContent() {
           return { ...b, feedOrder: order.filter(id => id !== postId) };
         }
       });
+      // instaFeedOrder에 새 게시물 추가 (없으면 맨 앞에)
+      if (!s2.instaFeedOrder) s2.instaFeedOrder = [];
+      if (!s2.instaFeedOrder.includes(postId)) {
+        s2.instaFeedOrder = [postId, ...s2.instaFeedOrder];
+      }
       await setAppState(s2);
     }
 
