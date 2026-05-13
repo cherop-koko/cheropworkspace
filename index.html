@@ -2038,7 +2038,7 @@ a { text-decoration:none; color:inherit; }
               <div><div class="card-title">분기별 계획</div><div class="card-sub">로드맵 일정 기반</div></div>
               <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 12px;" onclick="openRoadmapAddModal()">+ 일정 추가</button>
             </div>
-            <div id="plan-qtr-roadmap-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:4px 0;"></div>
+            <div id="plan-qtr-roadmap-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:4px 0;"></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
             <div class="card">
@@ -4479,7 +4479,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.8.9</div>
+<div id="version">v4.9.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4530,17 +4530,42 @@ function toast(msg, dur=2400) {
 }
 
 let _appStateCache = null;
+let _appStateSaving = false;
+
 async function getAppState() {
-  if(_appStateCache) return _appStateCache;
+  if (_appStateCache) return _appStateCache;
   const { data, error } = await db.from('app_state').select('data').eq('id','cherop_main').single();
   if (error) throw error;
   _appStateCache = data?.data || {};
   return _appStateCache;
 }
+
 async function setAppState(state) {
+  // 저장 전 항상 최신 DB 데이터와 deep merge — race condition 방지
+  // 단, 현재 state가 최신이어야 하므로 캐시 갱신 후 저장
   _appStateCache = state;
-  const { error } = await db.from('app_state').upsert({ id:'cherop_main', data:state, updated_at:new Date().toISOString() });
+  const { error } = await db.from('app_state').upsert({
+    id: 'cherop_main',
+    data: state,
+    updated_at: new Date().toISOString()
+  });
   if (error) throw error;
+}
+
+// 안전한 부분 업데이트 — DB 최신값 가져와서 merge 후 저장
+async function patchAppState(patchFn) {
+  // 항상 DB에서 최신 데이터 가져오기 (캐시 무시)
+  const { data } = await db.from('app_state').select('data').eq('id','cherop_main').single();
+  const fresh = data?.data || {};
+  const patched = patchFn(fresh);
+  _appStateCache = patched;
+  const { error } = await db.from('app_state').upsert({
+    id: 'cherop_main',
+    data: patched,
+    updated_at: new Date().toISOString()
+  });
+  if (error) throw error;
+  return patched;
 }
 
 /* app_state의 기존 content_posts → content_posts 테이블로 마이그레이션 */
@@ -12740,7 +12765,8 @@ async function loadIdeaBoard(boardId) {
   const s  = await getAppState();
   const board = (s.instaBoards||[]).find(b=>b.id===boardId);
   if (!board) return;
-  const ideas = s.idea_boards?.[boardId] || {};
+  const ideas    = s.idea_boards?.[boardId] || {};
+  const boardMemo = (s.idea_board_memos||{})[boardId] || '';
   const TYPES = [
     { key:'visual',     label:'비주얼보드', bg:'#F5F0E8', tc:'#4A3D30', hc:'#8A7A6A' },
     { key:'mongmozzal', label:'몽모짤',     bg:'#F5E8EC', tc:'#5A2D3A', hc:'#8A4A5A' },
@@ -12753,7 +12779,8 @@ async function loadIdeaBoard(boardId) {
       <div style="font-size:13px;font-weight:500;">${board.name}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 280px;gap:14px;align-items:start;">
-      <!-- 왼쪽: 유형별 섹션 리스트 -->
+
+      <!-- 왼쪽: 유형별 섹션 리스트 (제목+태그만) -->
       <div style="border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface);">
         ${TYPES.map(t => {
           const items = ideas[t.key] || [];
@@ -12764,34 +12791,81 @@ async function loadIdeaBoard(boardId) {
                 <button onclick="addIdeaItem('${boardId}','${t.key}')" style="font-size:12px;padding:4px 12px;border-radius:6px;border:0.5px solid ${t.hc}60;background:transparent;color:${t.hc};cursor:pointer;">+ 추가</button>
               </div>
               ${items.map((item,i) => `
-                <div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border);cursor:pointer;" onclick="selectIdeaItem('${boardId}','${t.key}',${i})"
+                <div style="display:flex;align-items:center;padding:10px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;gap:8px;"
+                  onclick="selectIdeaItem('${boardId}','${t.key}',${i})"
                   onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-                  <div style="flex:1;padding:11px 14px;">
+                  <div style="flex:1;min-width:0;">
                     <div style="font-size:13px;font-weight:500;color:var(--text);">${item.title||'(제목 없음)'}</div>
-                    ${item.product||item.target?`<div style="font-size:12px;color:var(--light);margin-top:3px;">${[item.product,item.target].filter(Boolean).join(' · ')}</div>`:''}
+                    ${item.product||item.target?`<div style="font-size:11px;color:var(--light);margin-top:2px;">${[item.product,item.target].filter(Boolean).join(' · ')}</div>`:''}
                   </div>
-                  <div style="width:160px;border-left:0.5px solid var(--border);padding:11px 14px;background:var(--surface2);">
-                    <div style="font-size:10px;color:var(--light);margin-bottom:3px;">메모</div>
-                    <div style="font-size:12px;color:var(--text);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${item.memo||'—'}</div>
-                  </div>
+                  ${item.refLink?`<a href="${item.refLink}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:#378ADD;text-decoration:none;flex-shrink:0;">↗</a>`:''}
+                  <span style="font-size:16px;color:var(--light);flex-shrink:0;">›</span>
                 </div>`).join('')}
               ${!items.length?`<div style="padding:12px 14px;font-size:12px;color:var(--faint);">아직 없어요</div>`:''}
             </div>`;
         }).join('')}
       </div>
 
-      <!-- 오른쪽: 선택된 항목 상세 메모 패널 -->
-      <div id="idea-detail-panel" style="border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface);">
-        <div style="padding:40px 20px;text-align:center;font-size:13px;color:var(--faint);">항목을 선택하면<br>상세 내용이 표시돼요</div>
+      <!-- 오른쪽: 탭 패널 (항목상세 ↔ 보드메모) -->
+      <div id="idea-right-panel" style="border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface);position:sticky;top:0;">
+        <!-- 탭 헤더 -->
+        <div style="display:flex;border-bottom:0.5px solid var(--border);">
+          <div id="idea-tab-detail" onclick="ideaSwitchTab('detail','${boardId}')"
+            style="flex:1;padding:10px 12px;font-size:12px;font-weight:500;text-align:center;cursor:pointer;border-bottom:2px solid var(--text);color:var(--text);">항목 상세</div>
+          <div id="idea-tab-memo" onclick="ideaSwitchTab('memo','${boardId}')"
+            style="flex:1;padding:10px 12px;font-size:12px;text-align:center;cursor:pointer;border-bottom:2px solid transparent;color:var(--light);">보드 메모</div>
+        </div>
+        <!-- 항목 상세 탭 -->
+        <div id="idea-panel-detail">
+          <div style="padding:40px 16px;text-align:center;font-size:13px;color:var(--faint);">목록에서 항목을 선택하면<br>여기에 표시돼요</div>
+        </div>
+        <!-- 보드 메모 탭 -->
+        <div id="idea-panel-memo" style="display:none;">
+          <div style="padding:12px 14px;">
+            <div style="font-size:10px;color:var(--light);margin-bottom:6px;">보드 메모</div>
+            <textarea id="idea-board-memo-input" rows="12"
+              style="width:100%;border:none;background:transparent;resize:none;font-size:13px;color:var(--text);line-height:1.7;outline:none;font-family:var(--font);"
+              placeholder="자유롭게 메모하세요..."
+              oninput="saveIdeaBoardMemo('${boardId}',this.value)">${boardMemo}</textarea>
+          </div>
+        </div>
       </div>
+
     </div>`;
 }
 
+let _ideaTab = 'detail';
+function ideaSwitchTab(tab, boardId) {
+  _ideaTab = tab;
+  $('idea-panel-detail').style.display = tab==='detail' ? '' : 'none';
+  $('idea-panel-memo').style.display   = tab==='memo'   ? '' : 'none';
+  $('idea-tab-detail').style.borderBottomColor = tab==='detail' ? 'var(--text)' : 'transparent';
+  $('idea-tab-detail').style.color = tab==='detail' ? 'var(--text)' : 'var(--light)';
+  $('idea-tab-memo').style.borderBottomColor = tab==='memo' ? 'var(--text)' : 'transparent';
+  $('idea-tab-memo').style.color = tab==='memo' ? 'var(--text)' : 'var(--light)';
+  $('idea-tab-detail').style.fontWeight = tab==='detail' ? '500' : '400';
+  $('idea-tab-memo').style.fontWeight   = tab==='memo'   ? '500' : '400';
+}
+
+let _boardMemoTimer = null;
+async function saveIdeaBoardMemo(boardId, val) {
+  clearTimeout(_boardMemoTimer);
+  _boardMemoTimer = setTimeout(async () => {
+    await patchAppState(s => {
+      s.idea_board_memos = s.idea_board_memos || {};
+      s.idea_board_memos[boardId] = val;
+      return s;
+    });
+  }, 800);
+}
+
 function selectIdeaItem(boardId, typeKey, idx) {
+  // 항목 상세 탭으로 자동 전환
+  if (typeof ideaSwitchTab === 'function') ideaSwitchTab('detail', boardId);
   getAppState().then(s => {
     const item = s.idea_boards?.[boardId]?.[typeKey]?.[idx];
     if (!item) return;
-    const el = $('idea-detail-panel'); if (!el) return;
+    const el = $('idea-panel-detail'); if (!el) return;
     el.innerHTML = `
       <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:13px;font-weight:500;">${item.title||'(제목 없음)'}</div>
@@ -12800,11 +12874,11 @@ function selectIdeaItem(boardId, typeKey, idx) {
           <button onclick="deleteIdeaItem('${boardId}','${typeKey}',${idx})" class="f-btn f-btn-cancel" style="font-size:11px;padding:3px 10px;color:var(--red);">삭제</button>
         </div>
       </div>
-      <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-        ${item.product?`<div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">제품</div><div style="font-size:13px;">${item.product}</div></div>`:''}
-        ${item.target?`<div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">타겟</div><div style="font-size:13px;">${item.target}</div></div>`:''}
-        ${item.refLink?`<div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">레퍼런스</div><a href="${item.refLink}" target="_blank" style="font-size:13px;color:#378ADD;text-decoration:none;">↗ 링크 열기</a></div>`:''}
-        <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">메모</div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+        ${item.product?`<div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">제품</div><div style="font-size:13px;">${item.product}</div></div>`:''}
+        ${item.target?`<div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">타겟</div><div style="font-size:13px;">${item.target}</div></div>`:''}
+        ${item.refLink?`<div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">레퍼런스</div><a href="${item.refLink}" target="_blank" style="font-size:13px;color:#378ADD;text-decoration:none;">↗ 링크 열기</a></div>`:''}
+        <div><div style="font-size:10px;color:var(--light);margin-bottom:3px;">메모</div>
           <div style="font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;">${item.memo||'—'}</div></div>
       </div>`;
   });
@@ -12879,9 +12953,13 @@ async function saveIdeaItem() {
 
 async function deleteIdeaItem(boardId, typeKey, idx) {
   const ok = await customConfirm('이 아이디어를 삭제할까요?'); if (!ok) return;
-  const s = await getAppState();
-  s.idea_boards[boardId][typeKey].splice(idx, 1);
-  await setAppState(s);
+  await patchAppState(s => {
+    s.idea_boards = s.idea_boards || {};
+    s.idea_boards[boardId] = s.idea_boards[boardId] || {};
+    s.idea_boards[boardId][typeKey] = s.idea_boards[boardId][typeKey] || [];
+    s.idea_boards[boardId][typeKey].splice(idx, 1);
+    return s;
+  });
   toast('삭제됐어요');
   loadIdeaBoard(boardId);
   const el = $('idea-detail-panel');
@@ -12939,17 +13017,17 @@ function selectBoardColor(hex, el) {
 async function saveBoard() {
   const name = $('board-name-input')?.value.trim();
   if (!name) { toast('보드 이름을 입력해주세요'); return; }
-  const s = await getAppState();
-  s.instaBoards = s.instaBoards || [];
-  if (_boardEditId) {
-    s.instaBoards = s.instaBoards.map(b => b.id === _boardEditId ? { ...b, name, color: _boardSelColor } : b);
-    toast('보드가 수정됐어요 ✓');
-  } else {
-    const newId = `board-${Date.now()}`;
-    s.instaBoards.push({ id: newId, name, color: _boardSelColor, feedOrder: [] });
-    toast(`"${name}" 보드가 추가됐어요 ✓`);
-  }
-  await setAppState(s);
+  const editId = _boardEditId;
+  const s = await patchAppState(s => {
+    s.instaBoards = s.instaBoards || [];
+    if (editId) {
+      s.instaBoards = s.instaBoards.map(b => b.id === editId ? { ...b, name, color: _boardSelColor } : b);
+    } else {
+      s.instaBoards.push({ id: `board-${Date.now()}`, name, color: _boardSelColor, feedOrder: [] });
+    }
+    return s;
+  });
+  toast(editId ? '보드가 수정됐어요 ✓' : `"${name}" 보드가 추가됐어요 ✓`);
   closeModal('board-modal');
   renderBoardTabs(s.instaBoards);
 }
@@ -14661,9 +14739,9 @@ async function loadPlanAnnual() {
           ${items.length
             ? items.map(it=>{
                 const dot = it.status==='done'?'#6B9E7A':it.status==='ongoing'?'#C4A96A':it.status==='confirmed'?'#378ADD':'var(--border2)';
-                return `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text);" onclick="openRoadmapAddModal('${it.id}')" class="card-link" style="font-size:11px;">
+                return `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text);overflow:hidden;" onclick="openRoadmapAddModal('${it.id}')" class="card-link">
                   <span style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;"></span>
-                  <span style="overflow:hidden;word-break:keep-all;line-height:1.4;">${it.month}월 ${it.title}</span>
+                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${it.month}월 ${it.title}</span>
                 </div>`;
               }).join('')
             : `<div style="font-size:11px;color:var(--faint);">일정 없음</div>`}
