@@ -4479,7 +4479,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.9.2</div>
+<div id="version">v4.9.4</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -14729,21 +14729,22 @@ async function loadPlanAnnual() {
       const isNow  = qi===curQ;
       const isPast = qi<curQ;
       const border = isNow ? `border:1.5px solid ${qd.color};` : 'border:0.5px solid var(--border);';
+      // 월 뱃지 배경색
+      const badgeBg  = qd.color+'22';
+      const badgeTc  = qd.color;
       return `<div style="border-radius:var(--r);padding:11px 13px;background:var(--surface);${border}${!isPast&&!isNow?'opacity:.65;':''}">
         <div style="display:flex;align-items:center;gap:5px;margin-bottom:8px;">
-          <span style="font-size:12px;font-weight:500;color:${qd.color};">${qd.q}</span>
+          <span style="font-size:12px;font-weight:600;color:${qd.color};">${qd.q}</span>
           <span style="font-size:10px;color:var(--light);">${qd.label}</span>
           ${isNow?`<span style="font-size:10px;color:${qd.color};margin-left:auto;">진행중</span>`:''}
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px;min-height:36px;">
+        <div style="display:flex;flex-direction:column;gap:5px;min-height:36px;">
           ${items.length
-            ? items.map(it=>{
-                const dot = it.status==='done'?'#6B9E7A':it.status==='ongoing'?'#C4A96A':it.status==='confirmed'?'#378ADD':'var(--border2)';
-                return `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text);overflow:hidden;" onclick="openRoadmapAddModal('${it.id}')" class="card-link">
-                  <span style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;"></span>
-                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">${it.month}월 ${it.title}</span>
-                </div>`;
-              }).join('')
+            ? items.map(it=>`
+                <div style="display:flex;gap:6px;align-items:flex-start;">
+                  <span style="font-size:9px;padding:1px 6px;border-radius:4px;background:${badgeBg};color:${badgeTc};flex-shrink:0;margin-top:2px;white-space:nowrap;">${it.month}월</span>
+                  <span style="font-size:12px;color:var(--text);line-height:1.4;word-break:keep-all;">${it.title}</span>
+                </div>`).join('')
             : `<div style="font-size:11px;color:var(--faint);">일정 없음</div>`}
         </div>
       </div>`;
@@ -15046,12 +15047,29 @@ async function loadPlanRoadmap() {
     el.innerHTML='<div style="padding:14px 0;font-size:13px;color:var(--faint);">로드맵 일정을 추가해보세요</div>'; return;
   }
   const curM = new Date().getMonth()+1;
-  el.innerHTML = items.map(item=>{
+  // 같은 월 내 순서 변경을 위해 index 유지
+  el.innerHTML = items.map((item, idx)=>{
     const isCur     = item.month===curM && planYear===new Date().getFullYear();
     const isPast    = planYear<new Date().getFullYear() || (planYear===new Date().getFullYear() && item.month<curM);
     const dotColor  = item.status==='done'?'#6B9E7A':item.status==='ongoing'?'#C4A96A':item.status==='confirmed'?'#378ADD':'var(--border2)';
-    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--surface2);">
-      <div style="min-width:32px;text-align:right;">
+    // 같은 월 내에서만 드래그 허용
+    const sameMonthItems = items.filter(x=>x.month===item.month);
+    const canDrag = sameMonthItems.length > 1;
+    return `<div data-roadmap-id="${item.id}" data-roadmap-month="${item.month||0}"
+      draggable="${canDrag}"
+      style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--surface2);position:relative;"
+      onmouseenter="this.querySelector('.rm-drag-handle').style.opacity='1'"
+      onmouseleave="this.querySelector('.rm-drag-handle').style.opacity='0'"
+      ondragstart="rmDragStart(event,this)"
+      ondragover="rmDragOver(event,this)"
+      ondragleave="rmDragLeave(event,this)"
+      ondrop="rmDrop(event,this)"
+      ondragend="rmDragEnd(event)">
+      <!-- 드래그 핸들 (호버 시 표시) -->
+      <div class="rm-drag-handle" style="opacity:0;transition:opacity .15s;cursor:${canDrag?'grab':'default'};color:var(--light);font-size:14px;flex-shrink:0;padding-top:2px;user-select:none;width:14px;">
+        ${canDrag?'⠿':''}
+      </div>
+      <div style="min-width:28px;text-align:right;padding-top:1px;">
         <span style="font-size:11px;font-weight:${isCur?600:400};color:${isCur?'var(--text)':'var(--light)'};">${item.month||'—'}월</span>
       </div>
       <div style="display:flex;flex-direction:column;align-items:center;padding-top:3px;">
@@ -15068,6 +15086,74 @@ async function loadPlanRoadmap() {
       </div>
     </div>`;
   }).join('');
+
+  // 드래그 초기화
+  initRoadmapDrag();
+}
+
+/* ── 로드맵 드래그 순서 변경 ── */
+let _rmDragEl  = null;
+let _rmDragId  = null;
+let _rmDragMonth = null;
+
+function initRoadmapDrag() {
+  // CSS 드래그 인디케이터
+  if (!document.getElementById('rm-drag-style')) {
+    const st = document.createElement('style');
+    st.id = 'rm-drag-style';
+    st.textContent = '.rm-drag-over { border-top: 2px solid var(--text) !important; }';
+    document.head.appendChild(st);
+  }
+}
+
+function rmDragStart(e, el) {
+  _rmDragEl    = el;
+  _rmDragId    = el.dataset.roadmapId;
+  _rmDragMonth = parseInt(el.dataset.roadmapMonth);
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => { el.style.opacity = '.4'; }, 0);
+}
+
+function rmDragOver(e, el) {
+  e.preventDefault();
+  // 같은 월만 허용
+  if (parseInt(el.dataset.roadmapMonth) !== _rmDragMonth) return;
+  if (el === _rmDragEl) return;
+  el.classList.add('rm-drag-over');
+}
+
+function rmDragLeave(e, el) {
+  el.classList.remove('rm-drag-over');
+}
+
+function rmDragEnd(e) {
+  if (_rmDragEl) _rmDragEl.style.opacity = '';
+  document.querySelectorAll('.rm-drag-over').forEach(el => el.classList.remove('rm-drag-over'));
+  _rmDragEl = null;
+}
+
+async function rmDrop(e, targetEl) {
+  e.preventDefault();
+  targetEl.classList.remove('rm-drag-over');
+  if (!_rmDragEl || targetEl === _rmDragEl) return;
+  if (parseInt(targetEl.dataset.roadmapMonth) !== _rmDragMonth) return;
+
+  const s = await getPlanData();
+  const items = s.plan[planYear].items || [];
+
+  // 현재 순서에서 dragId와 targetId 위치 교환
+  const dragIdx   = items.findIndex(x => x.id === _rmDragId);
+  const targetIdx = items.findIndex(x => x.id === targetEl.dataset.roadmapId);
+  if (dragIdx < 0 || targetIdx < 0) return;
+
+  // targetIdx 앞에 dragEl 삽입
+  const dragged = items.splice(dragIdx, 1)[0];
+  const newIdx  = items.findIndex(x => x.id === targetEl.dataset.roadmapId);
+  items.splice(newIdx, 0, dragged);
+
+  s.plan[planYear].items = items;
+  await setAppState(s);
+  loadPlanRoadmap();
 }
 
 /* ── 예산 계획 탭 ── */
