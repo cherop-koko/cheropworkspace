@@ -4479,7 +4479,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v4.9.7</div>
+<div id="version">v4.9.9</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4493,7 +4493,6 @@ const MEMBERS = [
   { id:'ceo',     name:'고예흰', label:'대표님',   av:'고예', role:'대표',   pin:'0000', admin:true  },
   { id:'hyomin',  name:'김효민', label:'김효민님', av:'김효', role:'운영',   pin:'0000', admin:true  },
   { id:'hyunjin', name:'정현진', label:'정현진님', av:'정현', role:'물류',   pin:'0000', admin:false },
-  { id:'youngah', name:'박영아', label:'박영아님', av:'박영', role:'마케팅', pin:'0000', admin:false },
   { id:'sungae',  name:'김성애', label:'김성애님', av:'김성', role:'QC',     pin:'0000', admin:false },
 ];
 
@@ -4562,17 +4561,25 @@ async function setAppState(state) {
 }
 
 function deepMerge(base, override) {
-  // override가 우선. base의 키 중 override에 없는 것만 보존
+  // override 우선. base의 키 중 override에 없는 건 보존.
   if (typeof base !== 'object' || base === null) return override;
   if (typeof override !== 'object' || override === null) return override;
-  if (Array.isArray(override)) return override; // 배열은 override 그대로
+  if (Array.isArray(override)) {
+    // 배열: override가 비어있으면 base 보존 (데이터 소실 방지)
+    if (override.length === 0 && Array.isArray(base) && base.length > 0) return base;
+    return override;
+  }
   const result = { ...base };
   for (const key of Object.keys(override)) {
-    if (override[key] !== null && typeof override[key] === 'object' && !Array.isArray(override[key])
-        && typeof base[key] === 'object' && base[key] !== null && !Array.isArray(base[key])) {
-      result[key] = deepMerge(base[key], override[key]);
+    const ov = override[key];
+    const bv = base[key];
+    if (ov !== null && typeof ov === 'object' && !Array.isArray(ov)
+        && bv !== null && typeof bv === 'object' && !Array.isArray(bv)) {
+      result[key] = deepMerge(bv, ov);
+    } else if (Array.isArray(ov) && ov.length === 0 && Array.isArray(bv) && bv.length > 0) {
+      result[key] = bv; // 빈 배열로 덮어쓰기 방지
     } else {
-      result[key] = override[key];
+      result[key] = ov;
     }
   }
   return result;
@@ -6343,9 +6350,10 @@ async function parseImportFile(input) {
         const name   = String(row[idx.name] || '').trim();
         const size   = row[idx.size] ? String(row[idx.size]).trim() : null;
         // id: 상품명+사이즈 조합으로 고유 slug
-        const slug   = (name + (size || '')).replace(/\s+/g, '_').replace(/[^a-zA-Z0-9가-힣_]/g, '');
+        const slug   = (name + (size || '')).replace(/\s+/g, '_').replace(/[^a-zA-Z0-9가-힣_]/g, '').slice(0, 80);
+        const prodId = `prod_${slug || Date.now()}`;
         return {
-          id:           `prod_${slug}`,
+          id:           prodId,
           name,
           option_name:  size && size !== 'None' ? size : null,
           category:     row[idx.category] ? String(row[idx.category]).trim() : null,
@@ -6415,8 +6423,8 @@ async function runImport() {
         is_discontinued: r.is_discontinued,
         created_at:      new Date().toISOString(),
       }));
-      const { error: pe } = await db.from('products').upsert(productRows, { onConflict: 'id' });
-      if (pe) { console.error('products upsert error:', pe); fail += batch.length; continue; }
+      const { error: pe } = await db.from('products').upsert(productRows, { onConflict: 'id', ignoreDuplicates: false });
+      if (pe) { console.error('products upsert error:', pe); toast('상품 등록 실패: ' + pe.message); fail += batch.length; continue; }
 
       // 2. inventory upsert
       const invRows = batch.map(r => ({
@@ -6428,7 +6436,7 @@ async function runImport() {
         available_stock:    r.avail,
         updated_at:         new Date().toISOString(),
       }));
-      const { error: ie } = await db.from('inventory').upsert(invRows, { onConflict: 'id' });
+      const { error: ie } = await db.from('inventory').upsert(invRows, { onConflict: 'id', ignoreDuplicates: false });
       if (ie) console.error('inventory upsert error:', ie);
 
       // 3. channel_inventory upsert
@@ -6579,9 +6587,8 @@ async function loadInvCatPills() {
     const cats = s.inv_categories || [];
     const all = ['전체', ...cats];
     // 카테고리 색상 맵 (inv_categories 순서 기반 고정 색상)
-    const CAT_COLORS = ['#C4736A','#6B9E7A','#C4A96A','#378ADD','#8B6BA8','#4A9999','#C4736A'];
     $('inv-cat-pills').innerHTML = all.map((c,i)=>{
-      const col = c==='전체' ? '#1C1E26' : (CAT_COLORS[(i-1)%CAT_COLORS.length]||'#888');
+      const col = '#1C1E26'; // 전체 블랙 통일
       const isOn = invCurrentCat===c;
       const getLuma = hex => { try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return(r*299+g*587+b*114)/1000;}catch(e){return 128;} };
       const textCol = getLuma(col)>128?'#1C1E26':'#fff';
