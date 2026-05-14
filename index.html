@@ -4494,7 +4494,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.0.8</div>
+<div id="version">v5.0.9</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -11087,8 +11087,9 @@ function opsSetTab(tab, el) {
 async function ensureIncomingCat() {
   await patchAppState(s => {
     s.ops_cats = s.ops_cats||[];
-    if (!s.ops_cats.find(c=>c.name==='입고')) {
-      s.ops_cats.push({ id:`cat-incoming`, name:'입고', color:'#378ADD' });
+    // id 또는 name으로 중복 체크
+    if (!s.ops_cats.find(c=>c.id==='cat-incoming'||c.name==='입고')) {
+      s.ops_cats.push({ id:'cat-incoming', name:'입고', color:'#378ADD' });
     }
     return s;
   });
