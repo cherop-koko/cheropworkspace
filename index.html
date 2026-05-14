@@ -1163,6 +1163,18 @@ a { text-decoration:none; color:inherit; }
         <!-- 요약 카드 -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;" id="sales-metrics"></div>
 
+        <!-- 전략 신호 -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-head"><div class="card-title">이번 달 전략 신호</div><div class="card-sub" id="sales-signal-sub"></div></div>
+          <div id="sales-signal-body"></div>
+        </div>
+
+        <!-- 상품 포지셔닝 4분면 -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-head"><div class="card-title">상품 포지셔닝</div><div class="card-sub">판매량 × 전월 대비 성장률</div></div>
+          <div id="sales-matrix" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;"></div>
+        </div>
+
         <!-- 추이 + 채널 -->
         <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;">
           <div class="card">
@@ -1196,6 +1208,7 @@ a { text-decoration:none; color:inherit; }
               </div>
             </div>
             <div id="sales-dow-chart" style="display:flex;align-items:flex-end;gap:6px;height:140px;margin-top:12px;padding-bottom:4px;"></div>
+            <div id="sales-dow-tip" style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6;background:var(--surface2);border-radius:var(--r);padding:8px 11px;"></div>
           </div>
           <div class="card">
             <div class="card-head">
@@ -1206,26 +1219,6 @@ a { text-decoration:none; color:inherit; }
               </div>
             </div>
             <div id="sales-top10"></div>
-          </div>
-        </div>
-
-        <!-- 주간/월간 비교 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-          <div class="card" id="sales-week-card">
-            <div class="card-head">
-              <div class="card-title">주간 비교</div>
-              <div class="card-sub" id="sales-week-sub"></div>
-              <div id="sales-week-diff" style="font-size:12px;font-weight:500;"></div>
-            </div>
-            <div id="sales-week-body"></div>
-          </div>
-          <div class="card" id="sales-mcomp-card">
-            <div class="card-head">
-              <div class="card-title">월간 비교</div>
-              <div class="card-sub" id="sales-mcomp-sub"></div>
-              <div id="sales-mcomp-diff" style="font-size:12px;font-weight:500;"></div>
-            </div>
-            <div id="sales-mcomp-body"></div>
           </div>
         </div>
 
@@ -2785,12 +2778,12 @@ a { text-decoration:none; color:inherit; }
     </div>
     <div style="padding:14px 20px 20px;display:flex;flex-direction:column;gap:14px;">
       <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 14px;">
-        <div style="font-size:11px;color:var(--light);margin-bottom:4px;">가용 재고</div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:4px;">생산화완료 재고 (배분 가능)</div>
         <div id="ch-alloc-avail" style="font-size:22px;font-weight:500;">—</div>
       </div>
       <div id="ch-alloc-channels" style="display:flex;flex-direction:column;gap:8px;"></div>
       <div style="font-size:11px;color:var(--light);" id="ch-alloc-remain-wrap">
-        남은 가용재고: <span id="ch-alloc-remain" style="font-weight:500;color:var(--text);">—</span>
+        미배분 잔여: <span id="ch-alloc-remain" style="font-weight:500;color:var(--text);">—</span>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('ch-alloc-modal')">취소</button>
@@ -3728,7 +3721,7 @@ a { text-decoration:none; color:inherit; }
               <option value="smart">스마트스토어</option>
               <option value="hyundai">더현대</option>
               <option value="popup">팝업·행사</option>
-              <option value="refund">반품·조정</option>
+              <option value="emoticon">카카오톡이모티콘</option>
               <option value="etc">기타</option>
             </select>
           </div>
@@ -4586,7 +4579,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.2.0</div>
+<div id="version">v5.3.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -7284,6 +7277,7 @@ async function deleteShipLog(id) {
 
 /* ── 채널 배분 모달 ── */
 let _chAllocProdId = null;
+let _chAllocProduced = 0;
 
 async function openChAllocModal(productId) {
   _chAllocProdId = productId;
@@ -7292,14 +7286,16 @@ async function openChAllocModal(productId) {
   const lbl = p ? (p.option_name ? `${p.name} · ${p.option_name}` : p.name) : '';
   if($('ch-alloc-prod-name')) $('ch-alloc-prod-name').textContent = lbl;
 
-  // 가용재고
+  // 배분 가능 총량 = 생산화 완료 재고 전량 (produced_stock)
   const { data: inv } = await db.from('inventory').select('*').eq('product_id', productId).maybeSingle();
-  const avail = inv?.available_stock || 0;
-  if($('ch-alloc-avail')) $('ch-alloc-avail').textContent = `${avail}개`;
+  const produced = inv?.produced_stock || 0;
+  _chAllocProduced = produced;
 
   // 현재 채널별 배분 수량
   const { data: chInvs } = await db.from('channel_inventory').select('*').eq('product_id', productId);
   const chMap = Object.fromEntries((chInvs||[]).map(c=>[c.channel, c.stock||0]));
+
+  if($('ch-alloc-avail')) $('ch-alloc-avail').textContent = `${produced}개`;
 
   const ALLOC_CHANNELS = ['자사몰','카카오선물하기','스마트스토어','더현대'];
   const el = $('ch-alloc-channels'); if (!el) return;
@@ -7308,11 +7304,11 @@ async function openChAllocModal(productId) {
       <div style="width:80px;font-size:12px;color:var(--text);">${ch==='카카오선물하기'?'카카오':ch==='스마트스토어'?'스마트':ch}</div>
       <input type="number" id="ch-alloc-${ch}" class="prop-inp" min="0"
         value="${chMap[ch]||0}" style="width:90px;text-align:center;"
-        oninput="updateChAllocRemain(${avail})">
+        oninput="updateChAllocRemain(${produced})">
       <div style="font-size:11px;color:var(--light);">개</div>
     </div>`).join('');
 
-  updateChAllocRemain(avail);
+  updateChAllocRemain(produced);
   $('ch-alloc-modal').classList.add('on');
 }
 
@@ -7328,23 +7324,34 @@ function updateChAllocRemain(avail) {
 
 async function saveChAlloc() {
   const ALLOC_CHANNELS = ['자사몰','카카오선물하기','스마트스토어','더현대'];
-  const { data: inv } = await db.from('inventory').select('available_stock').eq('product_id', _chAllocProdId).maybeSingle();
-  const avail = inv?.available_stock || 0;
+  const produced = _chAllocProduced || 0;
   const total = ALLOC_CHANNELS.reduce((s,ch) => s+(parseInt(document.getElementById(`ch-alloc-${ch}`)?.value)||0), 0);
-  if (total > avail) { toast(`가용재고(${avail}개)보다 많이 배분할 수 없어요`); return; }
+  if (total > produced) { toast(`생산화완료 재고(${produced}개)보다 많이 배분할 수 없어요`); return; }
 
-  for (const ch of ALLOC_CHANNELS) {
-    const qty = parseInt(document.getElementById(`ch-alloc-${ch}`)?.value)||0;
-    const { data: existing } = await db.from('channel_inventory').select('id').eq('product_id', _chAllocProdId).eq('channel', ch).maybeSingle();
-    if (existing) {
-      await db.from('channel_inventory').update({ stock: qty }).eq('id', existing.id);
-    } else if (qty > 0) {
-      await db.from('channel_inventory').insert({ product_id: _chAllocProdId, channel: ch, stock: qty });
-    }
+  try {
+    // 각 채널을 id 명시해서 upsert (id 누락 시 조회 불가 버그 방지)
+    const rows = ALLOC_CHANNELS.map(ch => ({
+      id:         `chinv_${_chAllocProdId}_${ch}`,
+      product_id: _chAllocProdId,
+      channel:    ch,
+      stock:      parseInt(document.getElementById(`ch-alloc-${ch}`)?.value) || 0,
+    }));
+    const { error: upErr } = await db.from('channel_inventory').upsert(rows, { onConflict: 'id' });
+    if (upErr) throw upErr;
+
+    // 가용재고 재계산: 가용 = 생산화완료 − 채널배분 합계
+    const { error: invErr } = await db.from('inventory')
+      .update({ available_stock: Math.max(0, produced - total), updated_at: new Date().toISOString() })
+      .eq('product_id', _chAllocProdId);
+    if (invErr) throw invErr;
+
+    toast('채널 배분 저장됐어요 ✓');
+    closeModal('ch-alloc-modal');
+    await loadInvList();   // 채널 칩 즉시 갱신
+  } catch(e) {
+    toast('저장 실패: ' + e.message);
+    console.error('saveChAlloc:', e);
   }
-  toast('채널 배분 저장됐어요 ✓');
-  closeModal('ch-alloc-modal');
-  loadInvOverview();
 }
 
 async function openShipmentModal() {
@@ -10829,21 +10836,19 @@ async function loadSalesData() {
     })(),
   ]);
 
-  // 총매출: channel_sales_log 기준 (엑셀 업로드 + 직접 입력)
+  // 총매출: channel_sales_log 기준 (일별매출 등록분)
   const { data: chLogTotal } = await db.from('channel_sales_log').select('channel,amount,date').gte('date', from).lte('date', to);
   const chMapForTotal = {};
   (chLogTotal||[]).forEach(r => { chMapForTotal[r.channel] = (chMapForTotal[r.channel]||0) + (r.amount||0); });
-  const slMapForTotal = {}; // sales_log는 수량/상품 추적용으로만 사용
-  salesRows.forEach(r => { slMapForTotal[r.channel] = (slMapForTotal[r.channel]||0) + (r.amount||0); });
   const totalAmt = Object.values(chMapForTotal).reduce((s, v) => s + v, 0);
-  const totalQty  = salesRows.reduce((s, r) => s + (r.quantity || 0), 0);
-  // 주문 건수: amount > 0 인 행 = 고유 주문번호 단위 (최종주문금액이 붙은 첫 행)
-  // 건당 평균: 총매출 / 주문 건수
-  const paidRows  = salesRows.filter(r => (r.amount || 0) > 0);
-  const orderCnt  = paidRows.length;
-  const avgAmt    = orderCnt ? Math.round(totalAmt / orderCnt) : 0;
+  const totalQty = salesRows.reduce((s, r) => s + (r.quantity || 0), 0);
+  // 평균 단가 = 총매출 ÷ 총 판매수량
+  const avgUnit  = totalQty ? Math.round(totalAmt / totalQty) : 0;
+  // 취급 상품 수 = 이번 기간 출고된 고유 상품 수
+  const skuCnt   = new Set(salesRows.filter(r=>r.product_id && (r.quantity||0)>0).map(r=>r.product_id)).size;
 
-  const prevAmt   = prevRows.reduce((s,r) => s+(r.amount||0), 0);
+  const prevAmtRows = await db.from('channel_sales_log').select('amount').gte('date', dateStr(new Date(new Date(from).getFullYear(), new Date(from).getMonth()-1, 1))).lte('date', dateStr(new Date(new Date(from).getFullYear(), new Date(from).getMonth(), 0)));
+  const prevAmt   = (prevAmtRows.data||[]).reduce((s,r)=>s+(r.amount||0),0);
   const prevQty   = prevRows.reduce((s,r) => s+(r.quantity||0), 0);
 
   const diff = (cur, prev) => {
@@ -10855,10 +10860,10 @@ async function loadSalesData() {
   };
 
   $('sales-metrics').innerHTML = [
-    { label:'총 매출',      val: fmtWon(totalAmt)||'—', sub: diff(totalAmt, prevAmt) },
-    { label:'총 판매 수량', val: totalQty ? totalQty.toLocaleString()+'개' : '—', sub: '' },
-    { label:'주문 건수',    val: orderCnt ? orderCnt.toLocaleString()+'건' : '—', sub: '' },
-    { label:'건당 평균',    val: orderCnt ? fmtWon(avgAmt) : '—', sub: '' },
+    { label:'총 매출 · 일별등록 기준', val: fmtWon(totalAmt)||'—', sub: diff(totalAmt, prevAmt) },
+    { label:'총 판매 수량', val: totalQty ? totalQty.toLocaleString()+'개' : '—', sub: diff(totalQty, prevQty) },
+    { label:'평균 단가', val: avgUnit ? fmtWon(avgUnit) : '—', sub: '<span style="color:var(--light);font-size:11px;margin-top:4px;display:block;">매출 ÷ 수량</span>' },
+    { label:'취급 상품 수', val: skuCnt ? skuCnt+'종' : '—', sub: '' },
   ].map(c => `
     <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
       <div style="font-size:11px;color:var(--light);margin-bottom:6px;">${c.label}</div>
@@ -10866,14 +10871,12 @@ async function loadSalesData() {
       ${c.sub||''}
     </div>`).join('');
 
-  // 채널별 — 채널별로 sales_log 우선, 없으면 channel_sales_log
+  // 채널별 — channel_sales_log(일별매출 등록분) 기준
   const chAmt = {};
-  CHANNELS.forEach(ch => {
-    chAmt[ch] = chMapForTotal[ch] || 0; // channel_sales_log 기준 (엑셀 업로드 + 직접 입력)
-  });
+  CHANNELS.forEach(ch => { chAmt[ch] = chMapForTotal[ch] || 0; });
   const maxAmt = Math.max(...Object.values(chAmt), 1);
-  const chColors = { '자사몰':'#1C1E26', '카카오선물하기':'#6B9E7A', '스마트스토어':'#C4A96A', '이모티콘':'#C4736A', '팝업':'#7B68C8', '라인프렌즈':'#C4A96A' };
-  const chLabels = { '자사몰':'자사몰', '카카오선물하기':'카카오 선물하기', '스마트스토어':'스마트스토어', '이모티콘':'이모티콘', '팝업':'팝업', '라인프렌즈':'라인프렌즈' };
+  const chColors = { '자사몰':'#1C1E26', '카카오선물하기':'#6B9E7A', '스마트스토어':'#C4A96A', '더현대':'#BA7517', '이모티콘':'#C4736A', '팝업':'#7B68C8', '라인프렌즈':'#C4A96A' };
+  const chLabels = { '자사몰':'자사몰', '카카오선물하기':'카카오 선물하기', '스마트스토어':'스마트스토어', '더현대':'더현대', '이모티콘':'이모티콘', '팝업':'팝업', '라인프렌즈':'라인프렌즈' };
   $('sales-channel-list').innerHTML = CHANNELS.map(ch => {
     const pct = Math.round(chAmt[ch] / totalAmt * 100) || 0;
     const barW = Math.round(chAmt[ch] / maxAmt * 100);
@@ -10887,20 +10890,138 @@ async function loadSalesData() {
     </div>`;
   }).join('');
 
-  // 추이 차트 (일별 or 월별)
+  // 전략 신호 + 4분면 매트릭스 (출고 수량 기반)
+  await loadSalesSignalAndMatrix(salesRows, prevRows, label);
+
+  // 추이 차트
   await loadSalesTrend(salesRows, label, chLogTotal||[], chMapForTotal);
 
-  // TOP10 — 선택 월 기준
-  window._salesTop10Rows = salesRows; // 현재 기간 데이터 저장
+  // TOP10
+  window._salesTop10Rows = salesRows;
   await loadSalesTop10();
 
   // 요일 패턴
   await loadSalesDow();
-  // 주간/월간 비교
-  await loadSalesWeekComp();
-  await loadSalesMonthComp();
+
   // 매출 입력 내역 인라인
   loadSalesLogInline();
+}
+
+// ── 전략 신호 + 상품 포지셔닝 4분면 ──
+async function loadSalesSignalAndMatrix(salesRows, prevRows, label) {
+  // 상품별 이번달/전월 수량 집계
+  const curQty = {}, prevQty = {};
+  salesRows.forEach(r => { if(r.product_id) curQty[r.product_id] = (curQty[r.product_id]||0) + (r.quantity||0); });
+  prevRows.forEach(r  => { if(r.product_id) prevQty[r.product_id] = (prevQty[r.product_id]||0) + (r.quantity||0); });
+
+  const allPids = [...new Set([...Object.keys(curQty), ...Object.keys(prevQty)])];
+  if (!allPids.length) {
+    $('sales-signal-body').innerHTML = '<div style="padding:14px 0;font-size:13px;color:var(--faint);">이 기간의 출고 데이터가 없어요</div>';
+    $('sales-matrix').innerHTML = '<div style="grid-column:1/-1;padding:14px 0;font-size:13px;color:var(--faint);">출고 데이터가 쌓이면 상품 포지셔닝이 표시돼요</div>';
+    if ($('sales-signal-sub')) $('sales-signal-sub').textContent = '';
+    return;
+  }
+
+  const { data: prods } = await db.from('products').select('id,name,option_name').in('id', allPids);
+  const prodMap = Object.fromEntries((prods||[]).map(p => [p.id, p]));
+  const nameOf  = pid => { const p = prodMap[pid]; return p ? (p.option_name ? `${p.name} ${p.option_name}` : p.name) : '(삭제됨)'; };
+
+  // 성장률 계산
+  const items = allPids.map(pid => {
+    const cur = curQty[pid] || 0, prev = prevQty[pid] || 0;
+    let growth = null;
+    if (prev > 0) growth = Math.round((cur - prev) / prev * 100);
+    else if (cur > 0) growth = 999; // 신규 등장
+    return { pid, name: nameOf(pid), cur, prev, growth };
+  }).filter(it => it.cur > 0 || it.prev > 0);
+
+  // 판매량 중앙값 기준으로 "많이/적게" 구분
+  const sortedQty = items.map(it => it.cur).filter(q => q > 0).sort((a,b) => a-b);
+  const medianQty = sortedQty.length ? sortedQty[Math.floor(sortedQty.length/2)] : 0;
+
+  // 4분면 분류
+  const q = { core:[], defend:[], grow:[], review:[] };
+  items.forEach(it => {
+    const highVol = it.cur >= medianQty && it.cur > 0;
+    const growing = it.growth !== null && it.growth >= 0;
+    if (highVol && growing)       q.core.push(it);
+    else if (highVol && !growing) q.defend.push(it);
+    else if (!highVol && growing) q.grow.push(it);
+    else                          q.review.push(it);
+  });
+  // 각 분면 정렬 (수량 많은 순)
+  Object.values(q).forEach(arr => arr.sort((a,b) => b.cur - a.cur));
+
+  const quadCard = (title, color, items, action) => {
+    const names = items.slice(0,5).map(it => it.name).join(' · ') || '—';
+    const more  = items.length > 5 ? ` 외 ${items.length-5}종` : '';
+    return `<div style="border:0.5px solid var(--border);border-radius:var(--r);padding:11px 13px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+        <span style="font-size:12px;font-weight:500;color:${color};">${title}</span>
+        <span style="font-size:11px;color:var(--faint);margin-left:auto;">${items.length}종</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;">${names}${more}</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:5px;">→ ${action}</div>
+    </div>`;
+  };
+  $('sales-matrix').innerHTML =
+    quadCard('주력 — 많이 팔림 + 성장', '#3B6D11', q.core,   '재고·노출 집중') +
+    quadCard('방어 — 많이 팔림 + 하락', '#854F0B', q.defend, '하락 원인 점검') +
+    quadCard('키울 후보 — 적게 팔림 + 성장', '#185FA5', q.grow, '마케팅 테스트') +
+    quadCard('정리 검토 — 적게 팔림 + 하락', '#666', q.review, '단종·소진 검토');
+
+  // 전략 신호 카드 생성
+  const signals = [];
+  // 1) 가장 성장한 상품 (성장률 999=신규 제외, 실제 성장 우선)
+  const realGrow = items.filter(it => it.growth !== null && it.growth !== 999 && it.growth > 0 && it.cur >= medianQty)
+    .sort((a,b) => b.growth - a.growth);
+  if (realGrow.length) {
+    const t = realGrow[0];
+    signals.push({ icon:'trending-up', color:'#3B6D11', tag:'밀어볼 상품',
+      text:`${t.name} — 전월 대비 +${t.growth}% (${t.prev}→${t.cur}개). 노출·재고 확대 검토.` });
+  } else {
+    // 신규 등장 중 수량 많은 것
+    const newItems = items.filter(it => it.growth === 999).sort((a,b)=>b.cur-a.cur);
+    if (newItems.length) {
+      const t = newItems[0];
+      signals.push({ icon:'sparkles', color:'#3B6D11', tag:'새로 들어온 상품',
+        text:`${t.name} — 이번 달 ${t.cur}개로 신규 진입. 흐름 지켜볼 만함.` });
+    }
+  }
+  // 2) 가장 꺾인 상품
+  const realDrop = items.filter(it => it.growth !== null && it.growth !== 999 && it.growth < 0 && it.prev >= medianQty)
+    .sort((a,b) => a.growth - b.growth);
+  if (realDrop.length) {
+    const t = realDrop[0];
+    signals.push({ icon:'trending-down', color:'#A32D2D', tag:'꺾이고 있는 상품',
+      text:`${t.name} — 전월 대비 ${t.growth}% (${t.prev}→${t.cur}개). 원인 점검 필요.` });
+  }
+  // 3) 정리 검토 대상 수
+  if (q.review.length >= 3) {
+    signals.push({ icon:'archive', color:'#666', tag:'정리 검토 대상',
+      text:`적게 팔리고 하락 중인 상품이 ${q.review.length}종. 단종·소진 여부 검토 시점.` });
+  }
+  // 4) 주력 상품 집중도
+  if (q.core.length) {
+    const coreQty = q.core.reduce((s,it)=>s+it.cur,0);
+    const allQty  = items.reduce((s,it)=>s+it.cur,0);
+    const pct = allQty ? Math.round(coreQty/allQty*100) : 0;
+    signals.push({ icon:'target', color:'#185FA5', tag:'주력 집중도',
+      text:`주력 ${q.core.length}종이 전체 판매량의 ${pct}%. ${pct>=60?'편중도가 높으니 후속 상품 발굴도 필요.':'분산이 양호한 편.'}` });
+  }
+
+  if ($('sales-signal-sub')) $('sales-signal-sub').textContent = `${label} 기준 · 전월 대비`;
+  $('sales-signal-body').innerHTML = signals.length
+    ? signals.map(s => `
+      <div style="display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:0.5px solid var(--surface2);">
+        <div style="font-size:15px;color:${s.color};line-height:1.4;flex-shrink:0;">●</div>
+        <div style="flex:1;">
+          <span style="font-size:12px;font-weight:500;color:${s.color};">${s.tag}</span>
+          <div style="font-size:12px;color:var(--text);line-height:1.6;margin-top:1px;">${s.text}</div>
+        </div>
+      </div>`).join('')
+    : '<div style="padding:14px 0;font-size:13px;color:var(--faint);">전월 데이터가 충분히 쌓이면 신호가 표시돼요</div>';
 }
 
 async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
@@ -10982,94 +11103,6 @@ async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
       }
     }
   });
-}
-
-async function loadSalesWeekComp() {
-  try {
-    const now = new Date();
-    const today = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=월
-    // 이번주 월요일 ~ 어제
-    const thisMonday = new Date(now); thisMonday.setDate(now.getDate() - today); thisMonday.setHours(0,0,0,0);
-    const yesterday  = new Date(now); yesterday.setDate(now.getDate() - 1);
-    // 지난주 동기간
-    const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
-    const lastSameDay= new Date(yesterday);  lastSameDay.setDate(yesterday.getDate() - 7);
-
-    const fmt = d => dateStr(d);
-    const [thisRows, lastRows] = await Promise.all([
-      db.from('sales_log').select('quantity').gte('sale_date', fmt(thisMonday)).lte('sale_date', fmt(yesterday)).then(r=>r.data||[]),
-      db.from('sales_log').select('quantity').gte('sale_date', fmt(lastMonday)).lte('sale_date', fmt(lastSameDay)).then(r=>r.data||[]),
-    ]);
-    const thisQty = thisRows.reduce((s,r)=>s+(r.quantity||0),0);
-    const lastQty = lastRows.reduce((s,r)=>s+(r.quantity||0),0);
-    const pct = lastQty ? Math.round((thisQty - lastQty) / lastQty * 100) : null;
-    const maxQty = Math.max(thisQty, lastQty, 1);
-
-    const mLabel = ['월','화','수','목','금','토','일'];
-    const thisLabel = `${mLabel[0]}~${mLabel[today] || mLabel[today]}`;
-
-    $('sales-week-sub').textContent = `${thisLabel} vs 지난주 동기간`;
-    $('sales-week-diff').innerHTML = pct === null ? '' :
-      pct >= 0
-        ? `<span style="color:#3B6D11;">▲${pct}%</span>`
-        : `<span style="color:#A32D2D;">▼${Math.abs(pct)}%</span>`;
-
-    const barRow = (label, qty, color, bold) => `
-      <div style="margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-          <div style="font-size:12px;color:var(--${bold?'text':'light'});">${label}</div>
-          <div style="font-size:${bold?'18':'13'}px;font-weight:${bold?'500':'400'};color:var(--${bold?'text':'muted'});">${qty.toLocaleString()} 개</div>
-        </div>
-        <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
-          <div style="width:${Math.round(qty/maxQty*100)}%;height:100%;background:${color};border-radius:3px;transition:width .4s;"></div>
-        </div>
-      </div>`;
-    $('sales-week-body').innerHTML =
-      barRow(`이번 주 (${thisLabel})`, thisQty, '#1C1E26', true) +
-      barRow('지난 주 (동기간)', lastQty, '#D0D3DF', false);
-  } catch(e) { console.error(e); }
-}
-
-async function loadSalesMonthComp() {
-  try {
-    const now = new Date();
-    const day = now.getDate();
-    const y = now.getFullYear(), m = now.getMonth();
-    const thisFrom = `${y}-${String(m+1).padStart(2,'0')}-01`;
-    const thisTo   = dateStr(new Date(y, m, day));
-    const ly = m === 0 ? y-1 : y, lm = m === 0 ? 11 : m-1;
-    const lastFrom = `${ly}-${String(lm+1).padStart(2,'0')}-01`;
-    const lastTo   = `${ly}-${String(lm+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-
-    const [thisRows, lastRows] = await Promise.all([
-      db.from('sales_log').select('quantity').gte('sale_date', thisFrom).lte('sale_date', thisTo).then(r=>r.data||[]),
-      db.from('sales_log').select('quantity').gte('sale_date', lastFrom).lte('sale_date', lastTo).then(r=>r.data||[]),
-    ]);
-    const thisQty = thisRows.reduce((s,r)=>s+(r.quantity||0),0);
-    const lastQty = lastRows.reduce((s,r)=>s+(r.quantity||0),0);
-    const pct = lastQty ? Math.round((thisQty - lastQty) / lastQty * 100) : null;
-    const maxQty = Math.max(thisQty, lastQty, 1);
-
-    $('sales-mcomp-sub').textContent = `이번달 1~${day}일 vs 지난달 동일 기간`;
-    $('sales-mcomp-diff').innerHTML = pct === null ? '' :
-      pct >= 0
-        ? `<span style="color:#3B6D11;">▲${pct}%</span>`
-        : `<span style="color:#A32D2D;">▼${Math.abs(pct)}%</span>`;
-
-    const barRow = (label, qty, color, bold) => `
-      <div style="margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-          <div style="font-size:12px;color:var(--${bold?'text':'light'});">${label}</div>
-          <div style="font-size:${bold?'18':'13'}px;font-weight:${bold?'500':'400'};color:var(--${bold?'text':'muted'});">${qty.toLocaleString()} 개</div>
-        </div>
-        <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
-          <div style="width:${Math.round(qty/maxQty*100)}%;height:100%;background:${color};border-radius:3px;transition:width .4s;"></div>
-        </div>
-      </div>`;
-    $('sales-mcomp-body').innerHTML =
-      barRow(`이번 달 (1~${day}일)`, thisQty, '#1C1E26', true) +
-      barRow('지난 달 (동기간)', lastQty, '#D0D3DF', false);
-  } catch(e) { console.error(e); }
 }
 
 /* ── 판매탭 하단 매출 입력 내역 인라인 ── */
@@ -11265,6 +11298,33 @@ async function loadSalesDow() {
       <div style="font-size:11px;color:var(--light);margin-top:4px;">${DOW[i]}</div>
     </div>`;
   }).join('');
+
+  // ── 행동 제안 ──
+  const tipEl = $('sales-dow-tip');
+  if (tipEl) {
+    const totalVal = vals.reduce((s,v)=>s+v,0);
+    if (totalVal === 0) {
+      tipEl.innerHTML = '데이터가 쌓이면 요일별 행동 제안이 표시돼요';
+    } else {
+      const weekdayAvg = (vals[0]+vals[1]+vals[2]+vals[3]+vals[4]) / 5;
+      const weekendAvg = (vals[5]+vals[6]) / 2;
+      const maxIdx = vals.indexOf(Math.max(...vals));
+      const minIdx = vals.indexOf(Math.min(...vals.filter(v=>v>0).length ? vals : [0]));
+      const unit = isAmt ? '매출' : '판매량';
+      let tip = '';
+      if (weekendAvg > weekdayAvg * 1.25) {
+        const ratio = Math.round(weekendAvg / weekdayAvg * 10) / 10;
+        tip = `주말 ${unit}이 평일의 ${ratio}배. 신상품 출시·프로모션은 금요일 오후에 걸어 주말 피크를 노리는 게 유리해요.`;
+      } else if (weekdayAvg > weekendAvg * 1.25) {
+        const ratio = Math.round(weekdayAvg / weekendAvg * 10) / 10;
+        tip = `평일 ${unit}이 주말의 ${ratio}배. 주중 구매층이 핵심 — 광고·콘텐츠 노출을 평일 오전~점심에 집중해보세요.`;
+      } else {
+        tip = `요일별 ${unit} 편차가 크지 않아요(${DOW[maxIdx]}요일 최고). 특정 요일에 의존하지 않는 안정적인 패턴이에요.`;
+      }
+      tip += ` 가장 약한 요일은 ${DOW[minIdx]}요일 — 이 날 타임특가나 쿠폰을 테스트하면 평탄화에 도움이 돼요.`;
+      tipEl.innerHTML = `<i class="ti ti-bulb" style="font-size:13px;color:#185FA5;"></i> ${tip}`;
+    }
+  }
 }
 
 /* ════════════════════════════════
@@ -16195,11 +16255,11 @@ const TAX_CAT_COLOR = {
 };
 const TAX_REV_LABEL = {
   own:'자사몰', kakao:'카카오선물하기', smart:'스마트스토어',
-  hyundai:'더현대', popup:'팝업·행사', refund:'반품·조정', etc:'기타'
+  hyundai:'더현대', popup:'팝업·행사', emoticon:'카카오톡이모티콘', etc:'기타'
 };
 const TAX_REV_COLOR = {
   own:'#378ADD', kakao:'#D4537E', smart:'#639922',
-  hyundai:'#BA7517', popup:'#C4A96A', refund:'#E24B4A', etc:'#bbb'
+  hyundai:'#BA7517', popup:'#C4A96A', emoticon:'#E24B4A', etc:'#bbb'
 };
 const SALARY_MAP = { 고예흰:0, 김효민:2800000, 정현진:2400000, 박영아:2400000, 김성애:2200000 };
 const TAX_SCHEDULE = [
@@ -16308,7 +16368,7 @@ async function getTaxRevenue(year, month=null, qtr=null) {
     else if (qtr) periodRev = revenues.filter(r => Math.ceil(Number(r.month)/3) === qtr);
 
     // 구분(cat)을 channel로 매핑해서 반환
-    const REV_CH = { own:'자사몰', kakao:'카카오선물하기', smart:'스마트스토어', hyundai:'더현대', popup:'팝업·행사', refund:'반품·조정', etc:'기타' };
+    const REV_CH = { own:'자사몰', kakao:'카카오선물하기', smart:'스마트스토어', hyundai:'더현대', popup:'팝업·행사', emoticon:'카카오톡이모티콘', etc:'기타' };
     const byCh = {};
     periodRev.forEach(r => {
       const ch = REV_CH[r.cat] || r.cat || '기타';
@@ -16830,7 +16890,7 @@ async function loadTaxRev() {
   </div>`).join('');
 
   // 사이드바 (구분별)
-  const catOrder = ['all','own','kakao','smart','hyundai','popup','refund','etc'];
+  const catOrder = ['all','own','kakao','smart','hyundai','popup','emoticon','etc'];
   const catTotal = (cat)=> cat==='all' ? totalAll : (byCat[cat]||0);
   $('tax-rev-sidebar').innerHTML = catOrder.map(cat=>{
     const isOn  = cat===taxRevFilterCat;
