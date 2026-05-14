@@ -6323,6 +6323,8 @@ async function initInventory() {
   // 날짜 기본값
   const today = dateStr();
   if($('inv-r-date')) $('inv-r-date').value = today;
+  // 운영캘린더 '입고' 분류 보장 (입고일정 연동에 필요)
+  try { await ensureIncomingCat(); } catch(e) { console.warn('ensureIncomingCat:', e); }
   await loadInvOverview();
 }
 
@@ -7536,6 +7538,43 @@ async function loadReceiptSchedule() {
     $('inv-receipt-done').innerHTML=done.length
       ?`<table class="inv-tbl"><thead><tr><th>완료일</th><th>상품</th><th>수량</th><th>담당</th><th>메모</th><th>상태</th><th></th></tr></thead><tbody>${done.map(r=>renderRow(r,false)).join('')}</tbody></table>`
       :'<div style="padding:14px 16px;font-size:13px;color:var(--faint);">입고 이력이 없어요</div>';
+
+    // ── 기존 입고일정 ↔ 운영캘린더 자동 동기화 ──
+    // 캘린더 이벤트가 없는 입고건은 추가하고, 분류 없는 입고 이벤트는 cat-incoming으로 정규화
+    try {
+      await ensureIncomingCat();
+      await patchAppState(s => {
+        s.ops_events = s.ops_events || [];
+        let changed = false;
+        for (const r of receipts) {
+          const evtId   = `recv-${r.id}`;
+          const calDate = r.scheduled_date || r.receipt_date || r.order_date || r.factory_date;
+          if (!calDate) continue;
+          const p     = pMap[r.product_id] || {};
+          const label = p.option_name ? `${p.name} · ${p.option_name}` : (p.name || (r.item_type==='supply'?'소모품':'상품'));
+          const idx   = s.ops_events.findIndex(e => e.id===evtId || e.receipt_id===r.id);
+          if (idx < 0) {
+            s.ops_events.push({
+              id:evtId, receipt_id:r.id,
+              title:`입고: ${label} ${r.quantity}개`,
+              startDate:calDate, endDate:calDate,
+              cat:'cat-incoming', type:'receipt',
+            });
+            changed = true;
+          } else if (s.ops_events[idx].cat !== 'cat-incoming' || s.ops_events[idx].type !== 'receipt') {
+            s.ops_events[idx].cat  = 'cat-incoming';
+            s.ops_events[idx].type = 'receipt';
+            changed = true;
+          }
+        }
+        // 입고건이 사라졌는데 캘린더에 남은 유령 입고 이벤트 정리
+        const validIds = new Set(receipts.map(r=>r.id));
+        const before = s.ops_events.length;
+        s.ops_events = s.ops_events.filter(e => e.type!=='receipt' || validIds.has(e.receipt_id));
+        if (s.ops_events.length !== before) changed = true;
+        return s;
+      });
+    } catch(e){ console.warn('입고일정 캘린더 동기화 실패:', e); }
   } catch(e){ console.error(e); }
 }
 
@@ -7586,28 +7625,47 @@ function invReceiptSelectItem(id, label) {
   $('inv-r-drop').innerHTML = '';
 }
 
-function openReceiptEdit(id) {
-  db.from('stock_receipts').select('*').eq('id',id).single().then(({data:r})=>{
-    if(!r) return;
-    // 기존 입고 등록 모달 활용
-    $('inv-r-product-id').value    = r.product_id||'';
-    $('inv-r-qty').value           = r.quantity||'';
-    $('inv-r-date').value          = r.scheduled_date||'';
-    $('inv-r-assignee').value      = r.assigned_to||'';
-    $('inv-r-note').value          = r.note||'';
-    // 수정 모드 표시
-    window._receiptEditId = id;
-    $('inv-receipt-modal').classList.add('on');
-  });
+async function openReceiptEdit(id) {
+  const { data:r } = await db.from('stock_receipts').select('*').eq('id',id).single();
+  if(!r) return;
+  const itemType = r.item_type || 'product';
+  invReceiptSetType(itemType);
+  // 품목 라벨 복원
+  let label = '상품';
+  if (itemType === 'product' && r.product_id) {
+    const { data:p } = await db.from('products').select('name,option_name').eq('id',r.product_id).maybeSingle();
+    if(p) label = p.name + (p.option_name?' · '+p.option_name:'');
+    $('inv-r-product-id').value = r.product_id;
+  } else if (itemType === 'supply' && r.supply_id) {
+    const s = await getAppState();
+    const sup = (s.consumables||[]).find(c=>c.id===r.supply_id);
+    if(sup) label = sup.name;
+    $('inv-r-product-id').value = 'supply_'+r.supply_id;
+  }
+  $('inv-r-search').value          = label;
+  $('inv-r-product-lbl').textContent = '✓ '+label;
+  $('inv-r-product-lbl').style.display = '';
+  $('inv-r-qty').value             = r.quantity||'';
+  $('inv-r-date').value            = r.scheduled_date||'';
+  if($('inv-r-order-date'))   $('inv-r-order-date').value   = r.order_date||'';
+  if($('inv-r-factory-date')) $('inv-r-factory-date').value = r.factory_date||'';
+  $('inv-r-assignee').value        = r.assigned_to||'';
+  $('inv-r-note').value            = r.note||'';
+  $('inv-r-drop').innerHTML        = '';
+  // 수정 모드 표시
+  window._receiptEditId = id;
+  $('inv-receipt-kind').textContent = '입고 일정 수정';
+  $('inv-receipt-modal').classList.add('on');
 }
 
 async function deleteReceipt(id) {
   const ok = await customConfirm('이 입고 일정을 삭제할까요?'); if(!ok) return;
   await db.from('stock_receipts').delete().eq('id', id);
-  // 운영캘린더에서도 연동 이벤트 삭제
-  const s = await getAppState();
-  s.ops_events = (s.ops_events||[]).filter(e=>e.receipt_id!==id);
-  await setAppState(s);
+  // 운영캘린더에서도 연동 이벤트 삭제 (patchAppState로 안전하게)
+  await patchAppState(s => {
+    s.ops_events = (s.ops_events||[]).filter(e=>e.receipt_id!==id && e.id!==`recv-${id}`);
+    return s;
+  });
   toast('삭제됐어요');
   loadReceiptSchedule();
 }
@@ -7750,7 +7808,7 @@ function openInvModal(type) {
     if($('inv-p-disc-date')) $('inv-p-disc-date').value = '';
     loadCatSelectOptions('');
     $('inv-product-modal').classList.add('on'); setTimeout(()=>$('inv-p-name').focus(),80); }
-  if(type==='receipt'){ invReceiptIsNew=true; invReceiptEditId=null;
+  if(type==='receipt'){ invReceiptIsNew=true; invReceiptEditId=null; window._receiptEditId=null;
     $('inv-receipt-kind').textContent='입고 등록';
     ['inv-r-search','inv-r-qty','inv-r-note','inv-r-order-date','inv-r-factory-date'].forEach(id=>$(id)&&($(id).value=''));
     invReceiptSetType('product');
@@ -7897,8 +7955,15 @@ async function saveReceipt() {
   if(!productId){ toast('품목을 선택해주세요'); return; }
   if(!qty||qty<1){ toast('수량을 입력해주세요'); return; }
   try {
-    const receiptId = `receipt-${Date.now()}`;
-    await db.from('stock_receipts').insert([{
+    // 운영캘린더 '입고' 분류 보장
+    await ensureIncomingCat();
+
+    const editId    = window._receiptEditId || null;
+    const receiptId = editId || `receipt-${Date.now()}`;
+    const itemLabel = ($('inv-r-product-lbl').textContent || '').replace('✓ ','') || '상품';
+    const calDate   = schedDate || orderDate || factDate;
+
+    const receiptRow = {
       id:             receiptId,
       product_id:     itemType==='product' ? productId : null,
       supply_id:      itemType==='supply'  ? productId.replace('supply_','') : null,
@@ -7910,31 +7975,37 @@ async function saveReceipt() {
       status:         'scheduled',
       assigned_to:    $('inv-r-assignee').value||null,
       note:           $('inv-r-note').value.trim()||null,
-    }]);
+    };
 
-    // 운영캘린더 '입고' 분류 자동 등록
-    const itemLabel = $('inv-r-product-lbl').textContent.replace('✓ ','') || '상품';
-    const calDate   = schedDate || orderDate || factDate;
-    if (calDate) {
-      await patchAppState(s => {
-        s.ops_events = s.ops_events || [];
-        // 입고 분류 찾기 (없으면 생성 안 함 — 기존 분류 사용)
-        const incomingCat = (s.ops_cats||[]).find(c => c.name==='입고')?.id || null;
-        s.ops_events.push({
-          id:        `recv-${receiptId}`,
-          receipt_id: receiptId,
-          title:     `입고: ${itemLabel} ${qty}개`,
-          startDate: calDate,
-          endDate:   calDate,
-          cat:       incomingCat,
-          type:      'receipt',
-        });
-        return s;
-      });
+    if (editId) {
+      // 수정 모드 — 기존 행 update (status는 건드리지 않음)
+      const { status, ...updateFields } = receiptRow;
+      await db.from('stock_receipts').update(updateFields).eq('id', editId);
+    } else {
+      await db.from('stock_receipts').insert([receiptRow]);
     }
 
-    // 소모품 입고 시 생산>소모품 재고 업데이트
-    if (itemType === 'supply') {
+    // 운영캘린더 '입고' 이벤트 — 수정이면 갱신, 신규면 추가
+    await patchAppState(s => {
+      s.ops_events = s.ops_events || [];
+      const evtId  = `recv-${receiptId}`;
+      const evtData = {
+        id:         evtId,
+        receipt_id: receiptId,
+        title:      `입고: ${itemLabel} ${qty}개`,
+        startDate:  calDate || dateStr(),
+        endDate:    calDate || dateStr(),
+        cat:        'cat-incoming',
+        type:       'receipt',
+      };
+      const idx = s.ops_events.findIndex(e => e.id===evtId || e.receipt_id===receiptId);
+      if (idx >= 0) s.ops_events[idx] = { ...s.ops_events[idx], ...evtData };
+      else if (calDate) s.ops_events.push(evtData);
+      return s;
+    });
+
+    // 소모품 입고 시 생산>소모품 재고 업데이트 (신규 등록일 때만)
+    if (itemType === 'supply' && !editId) {
       const supplyId = productId.replace('supply_','');
       await patchAppState(s => {
         const sup = (s.consumables||[]).find(c=>c.id===supplyId);
@@ -7943,7 +8014,8 @@ async function saveReceipt() {
       });
     }
 
-    toast('입고 일정이 등록됐어요 ✓');
+    window._receiptEditId = null;
+    toast(editId ? '입고 일정이 수정됐어요 ✓' : '입고 일정이 등록됐어요 ✓');
     closeModal('inv-receipt-modal'); loadReceiptSchedule();
   } catch(e){ toast('저장 실패: '+e.message); }
 }
@@ -15096,24 +15168,7 @@ async function loadPlanAnnual() {
   const chSalesRes = await db.from('channel_sales_log').select('date,amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
   const salesData = (chSalesRes.data||[]).map(r=>({sale_date:r.date, amount:r.amount}));
 
-  // 달성률
-  $('plan-progress-sub').textContent = `${planYear}년 ${curMonth+1}월 기준`;
-  $('plan-progress-list').innerHTML = goals.filter(g=>g.showProgress).map(g=>{
-    const pct = g.progress||0;
-    return `<div style="margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
-        <span>${g.label||''}</span><span style="font-weight:500;">${pct}%</span>
-      </div>
-      <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
-        <div style="width:${pct}%;height:100%;background:${g.color||'var(--text)'};border-radius:3px;"></div>
-      </div>
-    </div>`;
-  }).join('') || '<div style="font-size:13px;color:var(--faint);padding:8px 0;">목표를 추가하고 달성률을 설정해보세요</div>';
-
-  // 핵심 방향 메모
-  const dir = p.memos?.direction||'';
-  $('plan-direction-memo').textContent = dir || '클릭하여 올해의 핵심 방향을 입력하세요';
-  $('plan-direction-memo').style.color = dir ? 'var(--text)' : 'var(--faint)';
+  // (A안 리뉴얼로 plan-progress-*, plan-direction-memo DOM 제거됨 — 관련 렌더 코드 삭제)
 
   // 월별 목표 vs 실적 차트 + 테이블
   // 실제 매출 DB에서 월별 집계
