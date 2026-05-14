@@ -4494,7 +4494,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.0.9</div>
+<div id="version">v5.1.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4556,23 +4556,30 @@ async function getAppState() {
 }
 
 async function setAppState(state) {
-  // DB 최신값과 merge — state에 없는 키는 DB값 보존 (데이터 유실 방지)
+  // DB 최신값과 merge — DB에 있는 키는 무조건 보존, state로 덮어씀
+  // 단, state의 배열이 비어있고 DB 배열에 데이터가 있으면 DB값 우선
   try {
     const { data: cur } = await db.from('app_state').select('data').eq('id','cherop_main').single();
     if (cur?.data) {
-      const merged = { ...cur.data };
-      // state의 각 키로 덮어쓰되, 배열인 경우 비어있으면 DB값 보존
+      const merged = { ...cur.data }; // DB값을 base로
       for (const key of Object.keys(state)) {
-        const sv = state[key], dv = cur.data[key];
+        const sv = state[key];
+        const dv = cur.data[key];
+        // 빈 배열이면 DB값 보존
         if (Array.isArray(sv) && sv.length === 0 && Array.isArray(dv) && dv.length > 0) {
-          merged[key] = dv; // 빈 배열로 덮어쓰기 방지
-        } else {
+          merged[key] = dv;
+        }
+        // null/undefined면 DB값 보존
+        else if (sv === null || sv === undefined) {
+          // merged[key] 이미 DB값
+        }
+        else {
           merged[key] = sv;
         }
       }
       state = merged;
     }
-  } catch(e) {}
+  } catch(e) { console.warn('setAppState merge error:', e); }
   _appStateCache = state;
   const { error } = await db.from('app_state').upsert({
     id: 'cherop_main',
