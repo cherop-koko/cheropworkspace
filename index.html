@@ -4494,7 +4494,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.0.5</div>
+<div id="version">v5.0.8</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4556,6 +4556,23 @@ async function getAppState() {
 }
 
 async function setAppState(state) {
+  // DB 최신값과 merge — state에 없는 키는 DB값 보존 (데이터 유실 방지)
+  try {
+    const { data: cur } = await db.from('app_state').select('data').eq('id','cherop_main').single();
+    if (cur?.data) {
+      const merged = { ...cur.data };
+      // state의 각 키로 덮어쓰되, 배열인 경우 비어있으면 DB값 보존
+      for (const key of Object.keys(state)) {
+        const sv = state[key], dv = cur.data[key];
+        if (Array.isArray(sv) && sv.length === 0 && Array.isArray(dv) && dv.length > 0) {
+          merged[key] = dv; // 빈 배열로 덮어쓰기 방지
+        } else {
+          merged[key] = sv;
+        }
+      }
+      state = merged;
+    }
+  } catch(e) {}
   _appStateCache = state;
   const { error } = await db.from('app_state').upsert({
     id: 'cherop_main',
@@ -6346,8 +6363,10 @@ async function parseImportFile(input) {
     };
 
     // 필수 컬럼 체크
+    console.log('파싱된 헤더:', headers.join(', '));
+    console.log('컬럼 인덱스:', JSON.stringify(idx));
     if (idx.name < 0 || idx.total < 0) {
-      toast('필수 컬럼(상품명, 원재고)이 없어요. 파일을 확인해주세요.');
+      toast(`필수 컬럼 누락! 헤더: ${headers.slice(0,10).join(', ')} — 상품명/원재고 컬럼이 있어야 해요`);
       return;
     }
 
@@ -6431,19 +6450,24 @@ async function runImport() {
         is_discontinued: r.is_discontinued,
       }));
       const { error: pe } = await db.from('products').upsert(productRows);
-      if (pe) { console.error('products upsert error:', pe); toast('상품 등록 실패: ' + pe.message); fail += batch.length; continue; }
+      if (pe) {
+        console.error('products upsert error:', JSON.stringify(pe));
+        toast(`상품 등록 실패: ${pe.message || pe.code || JSON.stringify(pe)}`);
+        fail += batch.length;
+        continue;
+      }
 
       // 2. inventory upsert
       const invRows = batch.map(r => ({
         id:                 `inv_${r.id}`,
         product_id:         r.id,
-        total_stock:        r.total_stock,
-        produced_stock:     r.produced,
-        pending_production: r.pending,
-        available_stock:    r.avail,
+        total_stock:        r.total_stock    || 0,
+        produced_stock:     r.produced       || 0,
+        pending_production: r.pending        || 0,
+        available_stock:    r.avail          || 0,
       }));
       const { error: ie } = await db.from('inventory').upsert(invRows);
-      if (ie) console.error('inventory upsert error:', ie);
+      if (ie) { console.error('inventory upsert error:', JSON.stringify(ie)); toast('재고 등록 실패: ' + ie.message); }
 
       // 3. channel_inventory upsert
       const chRows = [];
@@ -7866,10 +7890,11 @@ async function saveReceipt() {
   if(!productId){ toast('품목을 선택해주세요'); return; }
   if(!qty||qty<1){ toast('수량을 입력해주세요'); return; }
   try {
+    const receiptId = `receipt-${Date.now()}`;
     await db.from('stock_receipts').insert([{
-      id: `receipt-${Date.now()}`,
+      id:             receiptId,
       product_id:     itemType==='product' ? productId : null,
-      supply_id:      itemType==='supply'  ? productId : null,
+      supply_id:      itemType==='supply'  ? productId.replace('supply_','') : null,
       item_type:      itemType,
       quantity:       qty,
       order_date:     orderDate,
@@ -7879,6 +7904,38 @@ async function saveReceipt() {
       assigned_to:    $('inv-r-assignee').value||null,
       note:           $('inv-r-note').value.trim()||null,
     }]);
+
+    // 운영캘린더 '입고' 분류 자동 등록
+    const itemLabel = $('inv-r-product-lbl').textContent.replace('✓ ','') || '상품';
+    const calDate   = schedDate || orderDate || factDate;
+    if (calDate) {
+      await patchAppState(s => {
+        s.ops_events = s.ops_events || [];
+        // 입고 분류 찾기 (없으면 생성 안 함 — 기존 분류 사용)
+        const incomingCat = (s.ops_cats||[]).find(c => c.name==='입고')?.id || null;
+        s.ops_events.push({
+          id:        `recv-${receiptId}`,
+          receipt_id: receiptId,
+          title:     `입고: ${itemLabel} ${qty}개`,
+          startDate: calDate,
+          endDate:   calDate,
+          cat:       incomingCat,
+          type:      'receipt',
+        });
+        return s;
+      });
+    }
+
+    // 소모품 입고 시 생산>소모품 재고 업데이트
+    if (itemType === 'supply') {
+      const supplyId = productId.replace('supply_','');
+      await patchAppState(s => {
+        const sup = (s.consumables||[]).find(c=>c.id===supplyId);
+        if (sup) sup.stock = (sup.stock||0) + qty;
+        return s;
+      });
+    }
+
     toast('입고 일정이 등록됐어요 ✓');
     closeModal('inv-receipt-modal'); loadReceiptSchedule();
   } catch(e){ toast('저장 실패: '+e.message); }
@@ -11027,6 +11084,16 @@ function opsSetTab(tab, el) {
 }
 
 /* ── 분류(카테고리) ── */
+async function ensureIncomingCat() {
+  await patchAppState(s => {
+    s.ops_cats = s.ops_cats||[];
+    if (!s.ops_cats.find(c=>c.name==='입고')) {
+      s.ops_cats.push({ id:`cat-incoming`, name:'입고', color:'#378ADD' });
+    }
+    return s;
+  });
+}
+
 async function loadOpsCatPills() {
   const s    = await getAppState();
   const cats = s.ops_cats || [];
@@ -15968,7 +16035,7 @@ function taxChangeMonth(d) {
 async function getTaxCosts(year, month=null, qtr=null) {
   const s = await getAppState();
   let costs = s.tax_costs||[];
-  costs = costs.filter(c=>c.year===year);
+  costs = costs.filter(c=>Number(c.year)===Number(year));
   if(month) costs = costs.filter(c=>c.month===month);
   if(qtr)   costs = costs.filter(c=>Math.ceil(c.month/3)===qtr);
   return costs;
@@ -16358,7 +16425,7 @@ let taxCostsFilterMonth = 'all'; // 'all' or 'YYYY-MM'
 
 async function loadTaxCosts() {
   const s = await getAppState();
-  const allCosts = (s.tax_costs||[]).filter(c=>c.year===taxYear);
+  const allCosts = (s.tax_costs||[]).filter(c=>Number(c.year)===Number(taxYear));
 
   // 월 선택 셀렉트 채우기
   const months = [...new Set(allCosts.map(c=>`${c.year}-${String(c.month).padStart(2,'0')}`))].sort().reverse();
@@ -16486,8 +16553,6 @@ async function saveTaxCost() {
   const [y,m,d] = dateVal.split('-').map(Number);
   const amount  = parseInt($('tc-amount').value)||0;
   if(!amount){ toast('금액을 입력해주세요'); return; }
-  const s = await getAppState();
-  s.tax_costs = s.tax_costs||[];
   const data = {
     year:y, month:m, day:d,
     cat: $('tc-cat').value,
@@ -16495,13 +16560,17 @@ async function saveTaxCost() {
     amount,
     hasTax: $('tc-tax-yes').checked,
   };
-  if(taxCostEditId){
-    const idx = s.tax_costs.findIndex(x=>x.id===taxCostEditId);
-    if(idx>=0) s.tax_costs[idx]={...s.tax_costs[idx],...data};
-  } else {
-    s.tax_costs.push({id:`tc-${Date.now()}`,...data});
-  }
-  await setAppState(s);
+  const editId = taxCostEditId;
+  await patchAppState(s => {
+    s.tax_costs = s.tax_costs||[];
+    if(editId){
+      const idx = s.tax_costs.findIndex(x=>x.id===editId);
+      if(idx>=0) s.tax_costs[idx]={...s.tax_costs[idx],...data};
+    } else {
+      s.tax_costs.push({id:`tc-${Date.now()}`,...data});
+    }
+    return s;
+  });
   toast('저장됐어요 ✓');
   closeModal('tax-cost-modal');
   if(taxTab==='monthly')  loadTaxMonthly();
@@ -16514,9 +16583,11 @@ async function saveTaxCost() {
 async function deleteTaxCost() {
   if(!taxCostEditId) return;
   const ok = await customConfirm('비용을 삭제할까요?'); if(!ok) return;
-  const s = await getAppState();
-  s.tax_costs = (s.tax_costs||[]).filter(x=>x.id!==taxCostEditId);
-  await setAppState(s);
+  const delId = taxCostEditId;
+  await patchAppState(s => {
+    s.tax_costs = (s.tax_costs||[]).filter(x=>x.id!==delId);
+    return s;
+  });
   toast('삭제됐어요'); closeModal('tax-cost-modal');
   if(taxTab==='monthly')  loadTaxMonthly();
   if(taxTab==='annual')   loadTaxAnnual();
@@ -16777,6 +16848,20 @@ document.querySelectorAll('.tb-nav-item[data-page]').forEach(el=>{
 /* ═══════════════════════════════════════
    BOOT
 ═══════════════════════════════════════ */
+/* ── 5분마다 자동 백업 ── */
+setInterval(async () => {
+  try {
+    const { data } = await db.from('app_state').select('data').eq('id','cherop_main').single();
+    if (data?.data) {
+      await db.from('app_state').upsert({
+        id: 'cherop_backup',
+        data: data.data,
+        updated_at: new Date().toISOString()
+      });
+    }
+  } catch(e) {}
+}, 5 * 60 * 1000);
+
 boot();
 </script>
 </body>
