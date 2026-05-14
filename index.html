@@ -2299,9 +2299,28 @@ a { text-decoration:none; color:inherit; }
               <div>
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;" id="tax-rev-summary"></div>
                 <div class="card" style="padding:0;overflow:hidden;">
-                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--surface2);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
                     <div style="font-size:13px;font-weight:500;" id="tax-rev-table-title">매출 내역</div>
-                    <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openTaxRevModal()">+ 매출 추가</button>
+                    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+                      <input type="text" id="tax-rev-search" class="inv-search-inp" placeholder="내용·비고 검색..." style="width:160px;padding:5px 10px;font-size:12px;" oninput="taxRevSetSearch(this.value)">
+                      <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openTaxRevModal()">+ 매출 추가</button>
+                    </div>
+                  </div>
+                  <div id="tax-rev-bulkbar" style="display:none;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);border-bottom:0.5px solid var(--border);">
+                    <span id="tax-rev-bulk-count" style="font-size:12px;font-weight:500;"></span>
+                    <select id="tax-rev-bulk-cat" class="prop-inp" style="font-size:11px;padding:4px 8px;width:auto;">
+                      <option value="">구분 변경...</option>
+                      <option value="own">자사몰</option>
+                      <option value="kakao">카카오선물하기</option>
+                      <option value="smart">스마트스토어</option>
+                      <option value="hyundai">더현대</option>
+                      <option value="popup">팝업·행사</option>
+                      <option value="emoticon">카카오톡이모티콘</option>
+                      <option value="etc">기타</option>
+                    </select>
+                    <button class="f-btn" style="font-size:11px;padding:4px 11px;" onclick="taxRevBulkCat()">적용</button>
+                    <button class="f-btn" style="font-size:11px;padding:4px 11px;color:var(--red);border-color:var(--red);" onclick="taxRevBulkDelete()">선택 삭제</button>
+                    <button class="f-btn" style="font-size:11px;padding:4px 11px;margin-left:auto;" onclick="taxRevClearSel()">선택 해제</button>
                   </div>
                   <div id="tax-rev-table-wrap"></div>
                 </div>
@@ -2325,9 +2344,28 @@ a { text-decoration:none; color:inherit; }
               <div>
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;" id="tax-costs-summary"></div>
                 <div class="card" style="padding:0;overflow:hidden;">
-                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--surface2);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
                     <div style="font-size:13px;font-weight:500;" id="tax-costs-table-title">비용 내역</div>
-                    <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openTaxCostModal()">+ 비용 추가</button>
+                    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+                      <input type="text" id="tax-costs-search" class="inv-search-inp" placeholder="내용·비고 검색..." style="width:160px;padding:5px 10px;font-size:12px;" oninput="taxCostsSetSearch(this.value)">
+                      <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openTaxCostModal()">+ 비용 추가</button>
+                    </div>
+                  </div>
+                  <div id="tax-costs-bulkbar" style="display:none;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);border-bottom:0.5px solid var(--border);">
+                    <span id="tax-costs-bulk-count" style="font-size:12px;font-weight:500;"></span>
+                    <select id="tax-costs-bulk-cat" class="prop-inp" style="font-size:11px;padding:4px 8px;width:auto;">
+                      <option value="">카테고리 변경...</option>
+                      <option value="ad">마케팅·광고비</option>
+                      <option value="prod">생산·원자재</option>
+                      <option value="salary">인건비</option>
+                      <option value="fee">플랫폼·수수료</option>
+                      <option value="logistics">물류·배송비</option>
+                      <option value="fixed">고정비·임차료</option>
+                      <option value="etc">기타</option>
+                    </select>
+                    <button class="f-btn" style="font-size:11px;padding:4px 11px;" onclick="taxCostsBulkCat()">적용</button>
+                    <button class="f-btn" style="font-size:11px;padding:4px 11px;color:var(--red);border-color:var(--red);" onclick="taxCostsBulkDelete()">선택 삭제</button>
+                    <button class="f-btn" style="font-size:11px;padding:4px 11px;margin-left:auto;" onclick="taxCostsClearSel()">선택 해제</button>
                   </div>
                   <div id="tax-costs-table-wrap"></div>
                 </div>
@@ -4618,7 +4656,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.3.4</div>
+<div id="version">v5.3.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -16475,6 +16513,8 @@ let taxLedgerTab = 'revenue';            // 'revenue' | 'cost'
 let taxRevEditId = null;
 let taxRevFilterCat = 'all';
 let taxRevFilterMonth = 'all';
+let taxRevSearch = '';
+let taxRevSelected = new Set();
 
 /* ── 초기화 ── */
 async function initTaxPage() {
@@ -16903,6 +16943,8 @@ async function loadTaxWithhold() {
 /* ── 비용 관리 탭 ── */
 let taxCostsFilterCat = 'all';
 let taxCostsFilterMonth = 'all'; // 'all' or 'YYYY-MM'
+let taxCostsSearch = '';
+let taxCostsSelected = new Set();
 
 async function loadTaxCosts() {
   const s = await getAppState();
@@ -16926,6 +16968,11 @@ async function loadTaxCosts() {
     filtered = filtered.filter(c=>c.year===fy && c.month===fm);
   }
   if(taxCostsFilterCat !== 'all') filtered = filtered.filter(c=>c.cat===taxCostsFilterCat);
+  if(taxCostsSearch.trim()) {
+    const q = taxCostsSearch.trim().toLowerCase();
+    filtered = filtered.filter(c =>
+      (c.desc||'').toLowerCase().includes(q) || (c.note||'').toLowerCase().includes(q));
+  }
 
   // 카테고리별 합계 계산 (전체에서)
   const baseList = taxCostsFilterMonth==='all' ? allCosts
@@ -16977,8 +17024,14 @@ async function loadTaxCosts() {
     return db2.localeCompare(da);
   });
 
+  // 유효하지 않은 선택 제거
+  const visibleIds = new Set(sorted.map(c=>c.id));
+  taxCostsSelected.forEach(id => { if(!visibleIds.has(id)) taxCostsSelected.delete(id); });
+  const allChecked = sorted.length>0 && sorted.every(c=>taxCostsSelected.has(c.id));
+
   $('tax-costs-table-wrap').innerHTML = `<table class="inv-tbl" style="width:100%;table-layout:auto;">
     <thead><tr>
+      <th style="width:34px;text-align:center;"><input type="checkbox" id="tax-costs-check-all" ${allChecked?'checked':''} onchange="taxCostsToggleAll(this.checked)" style="cursor:pointer;"></th>
       <th style="white-space:nowrap;">날짜</th>
       <th>내용</th>
       <th style="white-space:nowrap;">카테고리</th>
@@ -16987,7 +17040,8 @@ async function loadTaxCosts() {
       <th style="white-space:nowrap;">비고</th>
       <th style="width:32px;"></th>
     </tr></thead>
-    <tbody>${sorted.map(c=>`<tr>
+    <tbody>${sorted.map(c=>`<tr${taxCostsSelected.has(c.id)?' style="background:var(--surface2);"':''}>
+      <td style="width:34px;text-align:center;"><input type="checkbox" ${taxCostsSelected.has(c.id)?'checked':''} onchange="taxCostsToggleOne('${c.id}',this.checked)" style="cursor:pointer;"></td>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${c.year}.${String(c.month).padStart(2,'0')}.${String(c.day||1).padStart(2,'0')}</td>
       <td style="font-size:12px;font-weight:500;max-width:320px;word-break:break-word;line-height:1.5;">${oneLine(c.desc)||TAX_CAT_LABEL[c.cat]||c.cat}</td>
       <td style="white-space:nowrap;"><span style="display:inline-block;font-size:11px;padding:2px 9px;border-radius:50px;white-space:nowrap;background:${TAX_CAT_COLOR[c.cat]||'#888'}22;color:${TAX_CAT_COLOR[c.cat]||'#888'};">${TAX_CAT_LABEL[c.cat]||c.cat}</span></td>
@@ -16997,6 +17051,8 @@ async function loadTaxCosts() {
       <td style="text-align:center;width:32px;"><div class="card-link" onclick="openTaxCostModal('${c.id}')" style="display:inline-block;">···</div></td>
     </tr>`).join('')}</tbody>
   </table>`;
+
+  taxCostsUpdateBulkbar();
 }
 
 function taxCostsSetCat(cat) {
@@ -17055,6 +17111,11 @@ async function loadTaxRev() {
     filtered = filtered.filter(r => r.year===fy && r.month===fm);
   }
   if (taxRevFilterCat !== 'all') filtered = filtered.filter(r => r.cat===taxRevFilterCat);
+  if (taxRevSearch.trim()) {
+    const q = taxRevSearch.trim().toLowerCase();
+    filtered = filtered.filter(r =>
+      (r.desc||'').toLowerCase().includes(q) || (r.note||'').toLowerCase().includes(q));
+  }
 
   // 구분별 합계 (기간 기준)
   const baseList = taxRevFilterMonth==='all' ? allRev
@@ -17107,8 +17168,14 @@ async function loadTaxRev() {
     return db2.localeCompare(da);
   });
 
+  // 유효하지 않은 선택 제거 (필터 변경 등)
+  const visibleIds = new Set(sorted.map(r=>r.id));
+  taxRevSelected.forEach(id => { if(!visibleIds.has(id)) taxRevSelected.delete(id); });
+  const allChecked = sorted.length>0 && sorted.every(r=>taxRevSelected.has(r.id));
+
   $('tax-rev-table-wrap').innerHTML = `<table class="inv-tbl" style="width:100%;table-layout:auto;">
     <thead><tr>
+      <th style="width:34px;text-align:center;"><input type="checkbox" id="tax-rev-check-all" ${allChecked?'checked':''} onchange="taxRevToggleAll(this.checked)" style="cursor:pointer;"></th>
       <th style="white-space:nowrap;">입금일</th>
       <th>내용</th>
       <th style="white-space:nowrap;">구분</th>
@@ -17117,7 +17184,8 @@ async function loadTaxRev() {
       <th style="white-space:nowrap;">비고</th>
       <th style="width:32px;"></th>
     </tr></thead>
-    <tbody>${sorted.map(r=>`<tr>
+    <tbody>${sorted.map(r=>`<tr${taxRevSelected.has(r.id)?' style="background:var(--surface2);"':''}>
+      <td style="width:34px;text-align:center;"><input type="checkbox" ${taxRevSelected.has(r.id)?'checked':''} onchange="taxRevToggleOne('${r.id}',this.checked)" style="cursor:pointer;"></td>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${r.year}.${String(r.month).padStart(2,'0')}.${String(r.day||1).padStart(2,'0')}</td>
       <td style="font-size:12px;font-weight:500;max-width:320px;word-break:break-word;line-height:1.5;">${oneLine(r.desc)||TAX_REV_LABEL[r.cat]||r.cat}</td>
       <td style="white-space:nowrap;"><span style="display:inline-block;font-size:11px;padding:2px 9px;border-radius:50px;white-space:nowrap;background:${TAX_REV_COLOR[r.cat]||'#888'}22;color:${TAX_REV_COLOR[r.cat]||'#888'};">${TAX_REV_LABEL[r.cat]||r.cat}</span></td>
@@ -17127,6 +17195,8 @@ async function loadTaxRev() {
       <td style="text-align:center;width:32px;"><div class="card-link" onclick="openTaxRevModal('${r.id}')" style="display:inline-block;">···</div></td>
     </tr>`).join('')}</tbody>
   </table>`;
+
+  taxRevUpdateBulkbar();
 }
 
 function taxRevSetCat(cat) {
@@ -17235,6 +17305,140 @@ async function saveLedgerNote(input) {
     input.value = prev;
     toast('저장 실패: ' + e.message);
   }
+}
+
+// ── 매출장 검색 / 일괄 작업 ──
+function taxRevSetSearch(v) {
+  taxRevSearch = v;
+  loadTaxRev();
+}
+function taxRevToggleOne(id, checked) {
+  if (checked) taxRevSelected.add(id); else taxRevSelected.delete(id);
+  loadTaxRev();
+}
+function taxRevToggleAll(checked) {
+  document.querySelectorAll('#tax-rev-table-wrap tbody input[type="checkbox"]').forEach(cb => {
+    const onclick = cb.getAttribute('onchange') || '';
+    const m = onclick.match(/taxRevToggleOne\('([^']+)'/);
+    if (m) { if (checked) taxRevSelected.add(m[1]); else taxRevSelected.delete(m[1]); }
+  });
+  loadTaxRev();
+}
+function taxRevClearSel() {
+  taxRevSelected.clear();
+  loadTaxRev();
+}
+function taxRevUpdateBulkbar() {
+  const bar = $('tax-rev-bulkbar');
+  if (!bar) return;
+  if (taxRevSelected.size > 0) {
+    bar.style.display = 'flex';
+    $('tax-rev-bulk-count').textContent = `${taxRevSelected.size}건 선택됨`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+async function taxRevBulkCat() {
+  const cat = $('tax-rev-bulk-cat').value;
+  if (!cat) { toast('변경할 구분을 선택해주세요'); return; }
+  if (taxRevSelected.size === 0) { toast('선택된 항목이 없어요'); return; }
+  const ids = new Set(taxRevSelected);
+  const label = TAX_REV_LABEL[cat] || cat;
+  const ok = await customConfirm(`선택한 ${ids.size}건의 구분을 "${label}"(으)로 변경할까요?`);
+  if (!ok) return;
+  await patchAppState(s => {
+    s.tax_revenues = (s.tax_revenues||[]).map(r => ids.has(r.id) ? { ...r, cat } : r);
+    return s;
+  });
+  taxRevSelected.clear();
+  $('tax-rev-bulk-cat').value = '';
+  toast(`${ids.size}건 구분 변경됐어요 ✓`);
+  loadTaxRev();
+  if (taxTab==='monthly')  loadTaxMonthly();
+  if (taxTab==='annual')   loadTaxAnnual();
+}
+async function taxRevBulkDelete() {
+  if (taxRevSelected.size === 0) { toast('선택된 항목이 없어요'); return; }
+  const ids = new Set(taxRevSelected);
+  const ok = await customConfirm(`선택한 ${ids.size}건을 삭제할까요? 되돌릴 수 없어요.`);
+  if (!ok) return;
+  await patchAppState(s => {
+    s.tax_revenues = (s.tax_revenues||[]).filter(r => !ids.has(r.id));
+    return s;
+  });
+  taxRevSelected.clear();
+  toast(`${ids.size}건 삭제됐어요`);
+  loadTaxRev();
+  if (taxTab==='monthly')  loadTaxMonthly();
+  if (taxTab==='annual')   loadTaxAnnual();
+}
+
+// ── 매입장 검색 / 일괄 작업 ──
+function taxCostsSetSearch(v) {
+  taxCostsSearch = v;
+  loadTaxCosts();
+}
+function taxCostsToggleOne(id, checked) {
+  if (checked) taxCostsSelected.add(id); else taxCostsSelected.delete(id);
+  loadTaxCosts();
+}
+function taxCostsToggleAll(checked) {
+  document.querySelectorAll('#tax-costs-table-wrap tbody input[type="checkbox"]').forEach(cb => {
+    const onclick = cb.getAttribute('onchange') || '';
+    const m = onclick.match(/taxCostsToggleOne\('([^']+)'/);
+    if (m) { if (checked) taxCostsSelected.add(m[1]); else taxCostsSelected.delete(m[1]); }
+  });
+  loadTaxCosts();
+}
+function taxCostsClearSel() {
+  taxCostsSelected.clear();
+  loadTaxCosts();
+}
+function taxCostsUpdateBulkbar() {
+  const bar = $('tax-costs-bulkbar');
+  if (!bar) return;
+  if (taxCostsSelected.size > 0) {
+    bar.style.display = 'flex';
+    $('tax-costs-bulk-count').textContent = `${taxCostsSelected.size}건 선택됨`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+async function taxCostsBulkCat() {
+  const cat = $('tax-costs-bulk-cat').value;
+  if (!cat) { toast('변경할 카테고리를 선택해주세요'); return; }
+  if (taxCostsSelected.size === 0) { toast('선택된 항목이 없어요'); return; }
+  const ids = new Set(taxCostsSelected);
+  const label = TAX_CAT_LABEL[cat] || cat;
+  const ok = await customConfirm(`선택한 ${ids.size}건의 카테고리를 "${label}"(으)로 변경할까요?`);
+  if (!ok) return;
+  await patchAppState(s => {
+    s.tax_costs = (s.tax_costs||[]).map(c => ids.has(c.id) ? { ...c, cat } : c);
+    return s;
+  });
+  taxCostsSelected.clear();
+  $('tax-costs-bulk-cat').value = '';
+  toast(`${ids.size}건 카테고리 변경됐어요 ✓`);
+  loadTaxCosts();
+  if (taxTab==='monthly')  loadTaxMonthly();
+  if (taxTab==='annual')   loadTaxAnnual();
+  if (taxTab==='vat')      loadTaxVat();
+}
+async function taxCostsBulkDelete() {
+  if (taxCostsSelected.size === 0) { toast('선택된 항목이 없어요'); return; }
+  const ids = new Set(taxCostsSelected);
+  const ok = await customConfirm(`선택한 ${ids.size}건을 삭제할까요? 되돌릴 수 없어요.`);
+  if (!ok) return;
+  await patchAppState(s => {
+    s.tax_costs = (s.tax_costs||[]).filter(c => !ids.has(c.id));
+    return s;
+  });
+  taxCostsSelected.clear();
+  toast(`${ids.size}건 삭제됐어요`);
+  loadTaxCosts();
+  if (taxTab==='monthly')  loadTaxMonthly();
+  if (taxTab==='annual')   loadTaxAnnual();
+  if (taxTab==='vat')      loadTaxVat();
 }
 
 async function openTaxCostModal(id='') {
