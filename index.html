@@ -1613,7 +1613,7 @@ a { text-decoration:none; color:inherit; }
                 </div>
                 <div style="display:flex;gap:4px;" id="content-stats-metric">
                   <div class="inv-pill on" style="font-size:10px;padding:3px 9px;" onclick="contentStatsSetMetric('views',this)">조회수</div>
-                  <div class="inv-pill"   style="font-size:10px;padding:3px 9px;" onclick="contentStatsSetMetric('saves',this)">저장률</div>
+                  <div class="inv-pill"   style="font-size:10px;padding:3px 9px;" onclick="contentStatsSetMetric('saves',this)">공유율</div>
                   <div class="inv-pill"   style="font-size:10px;padding:3px 9px;" onclick="contentStatsSetMetric('likes',this)">좋아요율</div>
                   <div class="inv-pill"   style="font-size:10px;padding:3px 9px;" onclick="contentStatsSetMetric('comments',this)">댓글률</div>
                 </div>
@@ -1644,7 +1644,7 @@ a { text-decoration:none; color:inherit; }
                   <div class="card-title">유형별 평균</div>
                   <div style="display:flex;gap:4px;" id="content-type-metric">
                     <div class="inv-pill on" style="font-size:10px;padding:3px 9px;" onclick="contentTypeSetMetric('views',this)">조회수</div>
-                    <div class="inv-pill"   style="font-size:10px;padding:3px 9px;" onclick="contentTypeSetMetric('saves',this)">저장률</div>
+                    <div class="inv-pill"   style="font-size:10px;padding:3px 9px;" onclick="contentTypeSetMetric('saves',this)">공유율</div>
                     <div class="inv-pill"   style="font-size:10px;padding:3px 9px;" onclick="contentTypeSetMetric('likes',this)">좋아요율</div>
                   </div>
                 </div>
@@ -1907,8 +1907,9 @@ a { text-decoration:none; color:inherit; }
             <div class="card-head">
               <div class="card-title">출퇴근 기록</div>
               <div style="display:flex;gap:6px;">
-                <div class="att-month-btn on" id="emp-log-this" onclick="attEmpLogMonth(0,this)" style="font-size:12px;padding:4px 12px;border-radius:var(--rpill);border:0.5px solid var(--border);cursor:pointer;background:var(--text);color:#fff;">이번 달</div>
-                <div class="att-month-btn"    id="emp-log-last" onclick="attEmpLogMonth(-1,this)" style="font-size:12px;padding:4px 12px;border-radius:var(--rpill);border:0.5px solid var(--border);cursor:pointer;color:var(--muted);">지난 달</div>
+                <button onclick="attEmpLogMoveMonth(-1)" style="width:26px;height:26px;border-radius:50%;border:0.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;">‹</button>
+                <span id="att-emp-log-month-label" style="font-size:12px;font-weight:500;min-width:60px;text-align:center;"></span>
+                <button onclick="attEmpLogMoveMonth(1)" style="width:26px;height:26px;border-radius:50%;border:0.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;">›</button>
               </div>
             </div>
             <div id="att-emp-log-table"></div>
@@ -1948,9 +1949,10 @@ a { text-decoration:none; color:inherit; }
         </div>
         <div id="att-tab-log" class="att-tab-body" style="display:none;">
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;" id="att-log-member-pills"></div>
-          <div style="display:flex;gap:8px;margin-bottom:16px;">
-            <div class="att-month-btn on" id="adm-log-this" onclick="attLogSetMonth(0,this)" style="font-size:12px;padding:5px 14px;border-radius:var(--rpill);border:0.5px solid var(--border);cursor:pointer;background:var(--text);color:#fff;">이번 달</div>
-            <div class="att-month-btn"    id="adm-log-last" onclick="attLogSetMonth(-1,this)" style="font-size:12px;padding:5px 14px;border-radius:var(--rpill);border:0.5px solid var(--border);cursor:pointer;color:var(--muted);">지난 달</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <button onclick="attLogMoveMonth(-1)" style="width:28px;height:28px;border-radius:50%;border:0.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">‹</button>
+            <span id="att-log-month-label" style="font-size:13px;font-weight:500;min-width:70px;text-align:center;"></span>
+            <button onclick="attLogMoveMonth(1)" style="width:28px;height:28px;border-radius:50%;border:0.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">›</button>
           </div>
           <div class="card">
             <div class="card-head">
@@ -2040,22 +2042,7 @@ a { text-decoration:none; color:inherit; }
             </div>
             <div id="plan-qtr-roadmap-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:4px 0;"></div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-            <div class="card">
-              <div class="card-head">
-                <div class="card-title">목표 달성률</div>
-                <div class="card-sub" id="plan-progress-sub"></div>
-              </div>
-              <div id="plan-progress-list"></div>
-            </div>
-            <div class="card">
-              <div class="card-head">
-                <div class="card-title">올해의 핵심 방향</div>
-                <div class="card-link" onclick="openPlanMemoModal('direction')" style="font-size:12px;">편집</div>
-              </div>
-              <div id="plan-direction-memo" style="font-size:13px;color:var(--muted);line-height:1.8;white-space:pre-wrap;min-height:60px;">클릭하여 편집하세요</div>
-            </div>
-          </div>
+          <!-- 목표달성률/핵심방향 제거됨 (A안) -->
           <div class="card">
             <div class="card-head">
               <div class="card-title">월별 매출 목표 vs 실적</div>
@@ -3399,10 +3386,10 @@ a { text-decoration:none; color:inherit; }
           </div>
           <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:8px;">콘텐츠 유형</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="content-type-pills">
-            <div class="inv-pill" onclick="contentSetType('visual',this)">비주얼보드</div>
-            <div class="inv-pill" onclick="contentSetType('etc',this)">기타</div>
-            <div class="inv-pill" onclick="contentSetType('mongmozzal',this)">몽모짤</div>
-            <div class="inv-pill" onclick="contentSetType('reels',this)">릴스</div>
+            <div class="inv-pill" data-type="visual"     onclick="contentSetType('visual',this)">비주얼보드</div>
+            <div class="inv-pill" data-type="etc"        onclick="contentSetType('etc',this)">기타</div>
+            <div class="inv-pill" data-type="mongmozzal" onclick="contentSetType('mongmozzal',this)">몽모짤</div>
+            <div class="inv-pill" data-type="reels"      onclick="contentSetType('reels',this)">릴스</div>
           </div>
           <div id="content-mongmo-topic-wrap" style="display:none;">
             <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:8px;">몽모짤 주제</div>
@@ -3486,7 +3473,7 @@ a { text-decoration:none; color:inherit; }
                 <input type="number" id="content-stat-shares"   style="width:100%;border:none;background:transparent;font-size:15px;font-weight:500;font-family:var(--font);color:var(--text);" placeholder="—">
               </div>
               <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;border:0.5px solid var(--border);">
-                <div style="font-size:10px;color:var(--light);margin-bottom:3px;">저장률</div>
+                <div style="font-size:10px;color:var(--light);margin-bottom:3px;">공유율</div>
                 <div style="font-size:15px;font-weight:500;color:var(--green);" id="content-save-rate">—</div>
               </div>
             </div>
@@ -4507,7 +4494,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.0.3</div>
+<div id="version">v5.0.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4569,17 +4556,6 @@ async function getAppState() {
 }
 
 async function setAppState(state) {
-  // 항상 DB 최신값과 deep merge 후 저장 — race condition 완전 방지
-  try {
-    const { data: cur } = await db.from('app_state').select('data').eq('id','cherop_main').single();
-    if (cur?.data) {
-      // 백업 저장
-      await db.from('app_state').upsert({ id:'cherop_backup', data:cur.data, updated_at:new Date().toISOString() });
-      // DB 최신값과 deep merge (state가 더 최신이므로 state 우선)
-      state = deepMerge(cur.data, state);
-    }
-  } catch(e) {}
-
   _appStateCache = state;
   const { error } = await db.from('app_state').upsert({
     id: 'cherop_main',
@@ -6103,8 +6079,12 @@ async function loadProjects() {
         `<div class="page-tab${selectedProjId===p.id?' on':''}" onclick="selectProject('${p.id}',event)" style="margin-right:14px;white-space:nowrap;">${p.title}</div>`
       ).join('');
 
-    // 필터
-    let projs = allProjs;
+    // 필터 + 정렬 (완료 맨 뒤, 나머지는 등록 역순)
+    let projs = [...allProjs].sort((a,b) => {
+      if (a.status==='done' && b.status!=='done') return 1;
+      if (a.status!=='done' && b.status==='done') return -1;
+      return 0; // 등록 순서 유지
+    });
     if (projFilter === 'ing')  projs = projs.filter(p => p.status === 'ing');
     if (projFilter === 'done') projs = projs.filter(p => p.status === 'done');
 
@@ -6450,7 +6430,7 @@ async function runImport() {
         sku:             null,
         is_discontinued: r.is_discontinued,
       }));
-      const { error: pe } = await db.from('products').upsert(productRows, { onConflict: 'id', ignoreDuplicates: false });
+      const { error: pe } = await db.from('products').upsert(productRows);
       if (pe) { console.error('products upsert error:', pe); toast('상품 등록 실패: ' + pe.message); fail += batch.length; continue; }
 
       // 2. inventory upsert
@@ -6462,7 +6442,7 @@ async function runImport() {
         pending_production: r.pending,
         available_stock:    r.avail,
       }));
-      const { error: ie } = await db.from('inventory').upsert(invRows, { onConflict: 'id', ignoreDuplicates: false });
+      const { error: ie } = await db.from('inventory').upsert(invRows);
       if (ie) console.error('inventory upsert error:', ie);
 
       // 3. channel_inventory upsert
@@ -6486,7 +6466,7 @@ async function runImport() {
         }
       }
       if (chRows.length) {
-        const { error: ce } = await db.from('channel_inventory').upsert(chRows, { onConflict: 'id' });
+        const { error: ce } = await db.from('channel_inventory').upsert(chRows);
         if (ce) console.error('channel_inventory upsert error:', ce);
       }
 
@@ -8558,6 +8538,7 @@ let leaveType = 'annual', leaveConfirmResolve = ()=>{};
 
 function attPageInit() {
   attViewMonth = 0; attLogMonth = 0; attEmpLogMonthVal = 0;
+  setTimeout(() => { updateAttLogMonthLabel(); updateAttEmpLogMonthLabel(); }, 100);
   attUpdateMonthLabel();
   const allTabIds = ['today','log','leave','stats','annual','avghour'];
   if (user?.admin) {
@@ -8656,6 +8637,20 @@ async function loadAttEmpLeave() {
       return `<tr><td><span class="sbadge" style="font-size:10px;${typeBg[l.type]||''}">${typeLabel[l.type]||l.type}</span></td><td class="att-log-time">${ds}</td><td style="font-size:12px;color:var(--muted);">${l.reason||'—'}</td><td><span class="sbadge" style="font-size:10px;${stBg[l.status]||''}">${stLabel[l.status]||l.status}</span></td></tr>`;
     }).join('')}</tbody></table>`;
   } catch(e) { console.error(e); }
+}
+
+function attEmpLogMoveMonth(dir) {
+  attEmpLogMonthVal += dir;
+  updateAttEmpLogMonthLabel();
+  loadEmpLog();
+}
+
+function updateAttEmpLogMonthLabel() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + attEmpLogMonthVal);
+  const label = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
+  const el = $('att-emp-log-month-label');
+  if (el) el.textContent = label;
 }
 
 function attEmpLogMonth(offset, el) {
@@ -8916,6 +8911,20 @@ function attLogSetMember(member, el) {
   document.querySelectorAll('#att-log-member-pills .inv-pill').forEach(p=>p.classList.remove('on'));
   el.classList.add('on');
   loadAttLog();
+}
+
+function attLogMoveMonth(dir) {
+  attLogMonth += dir;
+  updateAttLogMonthLabel();
+  loadAttLog();
+}
+
+function updateAttLogMonthLabel() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + attLogMonth);
+  const label = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
+  const el = $('att-log-month-label');
+  if (el) el.textContent = label;
 }
 
 function attLogSetMonth(offset, el) {
@@ -14159,12 +14168,11 @@ async function openContentModal(date, id='') {
   const stIdx = stMap[contentStatus]??0;
   document.querySelectorAll('#content-status-pills .inv-pill')[stIdx]?.classList.add('on');
 
-  // 유형 pill
-  document.querySelectorAll('#content-type-pills .inv-pill').forEach(p=>p.classList.remove('on'));
-  if(contentType){
-    const typeIdx = Object.keys(CONTENT_TYPES).indexOf(contentType);
-    document.querySelectorAll('#content-type-pills .inv-pill')[typeIdx]?.classList.add('on');
-  }
+  // 유형 pill — data-type으로 정확 매칭
+  document.querySelectorAll('#content-type-pills .inv-pill').forEach(p=>{
+    p.classList.remove('on');
+    if(contentType && p.dataset.type === contentType) p.classList.add('on');
+  });
   $('content-mongmo-topic-wrap').style.display = contentType==='mongmozzal' ? '' : 'none';
 
   // 주제 pill
@@ -14587,7 +14595,7 @@ async function loadContentStats() {
   $('content-stats-summary').innerHTML=[
     {label:'총 게시물',     val:`${totalPosts}개`,     sub:`주 평균 ${weekAvg}개`},
     {label:'평균 조회수',   val:avgViews>=10000?Math.round(avgViews/10000)+'만':avgViews.toLocaleString(), sub:''},
-    {label:'평균 저장률',   val:`${avgSaveRate}%`,     sub:'', green:true},
+    {label:'평균 공유율',   val:`${avgSaveRate}%`,     sub:'', green:true},
     {label:'평균 좋아요율', val:`${avgLikeRate}%`,     sub:''},
   ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.label}</div>
@@ -14599,7 +14607,7 @@ async function loadContentStats() {
   $('content-stats-sub').textContent = `최근 ${contentStatPeriod}일 · ${posts.length}개`;
   const sorted = [...posts].sort((a,b)=>getStatVal(b,contentStatMetric)-getStatVal(a,contentStatMetric)).slice(0,10);
   const maxV   = getStatVal(sorted[0]||{},contentStatMetric)||1;
-  const metricLabels = {views:'조회수',saves:'저장률',likes:'좋아요율',comments:'댓글률'};
+  const metricLabels = {views:'조회수',saves:'공유율',likes:'좋아요율',comments:'댓글률'};
   $('content-stats-list').innerHTML = sorted.length ? sorted.map((p,i)=>{
     const tc  = CONTENT_TYPES[p.type];
     const val = getStatVal(p, contentStatMetric);
@@ -14928,27 +14936,33 @@ async function loadPlanAnnual() {
   // ── KPI 요약 카드 (A안) ──
   const kpiEl = $('plan-kpi-summary');
   if (kpiEl) {
-    // channel_sales_log에서 올해 월별 합계 조회
     const { data: kpiSales } = await db.from('channel_sales_log').select('amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
     const yearTotal = (kpiSales||[]).reduce((s,r)=>s+(r.amount||0),0);
-    const yearGoal  = goals.find(g => g.label?.includes('매출'))?.target;
-    // 팝업/팔로워 등 goals에서 추출
-    const extraGoals = goals.filter(g => !g.label?.includes('매출')).slice(0,2);
-    kpiEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(${1+extraGoals.length},1fr);gap:10px;">
+    const yearGoalObj = goals.find(g=>g.label?.includes('매출'));
+    const yearGoalRaw = yearGoalObj?.target||'';
+    // 목표 숫자 파싱 (억 단위)
+    const yearGoalNum = yearGoalRaw.includes('억')
+      ? parseFloat(yearGoalRaw)*100000000
+      : (parseInt(yearGoalRaw.replace(/[^0-9]/g,''))||0);
+    const pct = yearGoalNum ? Math.min(100, Math.round(yearTotal/yearGoalNum*100)) : 0;
+
+    kpiEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
       <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
-        <div style="font-size:11px;color:var(--light);margin-bottom:4px;">연간 매출 누계</div>
-        <div style="font-size:22px;font-weight:500;">${fmtWon(yearTotal)||'—'}</div>
-        ${yearGoal ? `<div style="font-size:11px;color:var(--light);margin-top:6px;">${yearGoal} 목표</div>` : ''}
-        ${yearGoal ? `<div style="height:5px;background:var(--border);border-radius:3px;margin-top:6px;overflow:hidden;">
-          <div style="height:100%;background:#6B9E7A;border-radius:3px;width:${Math.min(100,Math.round(yearTotal/(parseInt(yearGoal.replace(/[^0-9]/g,''))*100000000||1)*100))}%;"></div>
-        </div>` : ''}
+        <div style="font-size:11px;color:var(--light);margin-bottom:4px;">연간 목표</div>
+        <div style="font-size:22px;font-weight:500;">${yearGoalRaw||'—'}</div>
       </div>
-      ${extraGoals.map(g => `
-      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;" onclick="openPlanItemModal('goal','${g.id}')">
-        <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${g.label||''}</div>
-        <div style="font-size:22px;font-weight:500;">${g.target||'—'}</div>
-        <div style="font-size:11px;color:var(--light);margin-top:2px;">${g.sub||''}</div>
-      </div>`).join('')}
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
+        <div style="font-size:11px;color:var(--light);margin-bottom:4px;">누계 매출</div>
+        <div style="font-size:22px;font-weight:500;color:#6B9E7A;">${fmtWon(yearTotal)||'—'}</div>
+        <div style="height:5px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden;">
+          <div style="height:100%;background:#6B9E7A;border-radius:3px;width:${pct}%;transition:width .4s;"></div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
+        <div style="font-size:11px;color:var(--light);margin-bottom:4px;">달성률</div>
+        <div style="font-size:22px;font-weight:500;">${pct?pct+'%':'—'}</div>
+        <div style="font-size:11px;color:var(--light);margin-top:2px;">${planYear}년 기준</div>
+      </div>
     </div>`;
   }
 
@@ -16184,10 +16198,10 @@ async function loadTaxAnnual() {
   const avgNet    = Math.round(totalNet/12);
 
   $('tax-annual-cards').innerHTML = [
-    { l:'연 매출',  v:fmtWon(totalRev),  s:'12개월 합계' },
-    { l:'연 비용',  v:fmtWon(totalCost), s:`매출 대비 ${totalRev?Math.round(totalCost/totalRev*100):0}%` },
-    { l:'연 순수익',v:fmtWon(totalNet),  s:`이익률 ${totalRev?Math.round(totalNet/totalRev*100):0}%`, c: totalNet>=0?'#3B6D11':'#A32D2D' },
-    { l:'월 평균 순수익',v:fmtWon(avgNet),s:'12개월 평균' },
+    { l:'연 매출',  v:fmtWonExact(totalRev),  s:'12개월 합계' },
+    { l:'연 비용',  v:fmtWonExact(totalCost), s:`매출 대비 ${totalRev?Math.round(totalCost/totalRev*100):0}%` },
+    { l:'연 순수익',v:fmtWonExact(totalNet),  s:`이익률 ${totalRev?Math.round(totalNet/totalRev*100):0}%`, c: totalNet>=0?'#3B6D11':'#A32D2D' },
+    { l:'월 평균 순수익',v:fmtWonExact(avgNet),s:'12개월 평균' },
   ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
     <div style="font-size:18px;font-weight:500;${c.c?'color:'+c.c:''}">${c.v}</div>
@@ -16219,7 +16233,7 @@ async function loadTaxAnnual() {
       <div style="width:80px;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;">
         <div style="width:${pct}%;height:100%;background:${TAX_CAT_COLOR[cat]||'#888'};border-radius:3px;"></div>
       </div>
-      <div style="font-size:12px;font-weight:500;min-width:64px;text-align:right;">${fmtWon(amt)}</div>
+      <div style="font-size:12px;font-weight:500;min-width:64px;text-align:right;">${fmtWonExact(amt)}</div>
     </div>`;
   }).join('') || '<div style="font-size:13px;color:var(--faint);padding:8px 0;">비용 데이터가 없어요</div>';
 
@@ -16229,9 +16243,9 @@ async function loadTaxAnnual() {
   const vatDue   = Math.max(0, vatSales-vatInput);
   const withhold = Object.values(SALARY_MAP).reduce((a,b)=>a+b,0)*0.033*12;
   $('tax-annual-tax-summary').innerHTML = [
-    { l:'부가세 1기 예상', v:fmtWon(Math.round(vatDue/2)), s:'7월 25일 납부', c:'#854F0B', bg:'#FAEEDA' },
-    { l:'부가세 2기 예상', v:fmtWon(Math.round(vatDue/2)), s:'1월 25일 납부', c:'#854F0B', bg:'#FAEEDA' },
-    { l:'연간 원천세 합계', v:fmtWon(withhold),            s:'매월 10일 납부', c:'#A32D2D', bg:'#FCEBEB' },
+    { l:'부가세 1기 예상', v:fmtWonExact(Math.round(vatDue/2)), s:'7월 25일 납부', c:'#854F0B', bg:'#FAEEDA' },
+    { l:'부가세 2기 예상', v:fmtWonExact(Math.round(vatDue/2)), s:'1월 25일 납부', c:'#854F0B', bg:'#FAEEDA' },
+    { l:'연간 원천세 합계', v:fmtWonExact(withhold),            s:'매월 10일 납부', c:'#A32D2D', bg:'#FCEBEB' },
   ].map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:${t.bg};border-radius:8px;margin-bottom:8px;">
     <div><div style="font-size:12px;font-weight:500;color:${t.c};">${t.l}</div><div style="font-size:10px;color:${t.c};opacity:.7;margin-top:1px;">${t.s}</div></div>
     <div style="font-size:16px;font-weight:500;color:${t.c};">${t.v}</div>
@@ -16259,9 +16273,9 @@ async function loadTaxVat() {
   const vatDue     = Math.max(0, vatSales-vatInput);
 
   $('tax-vat-cards').innerHTML = [
-    { l:'공급 대가 합계',  v:fmtWon(totalRev) },
-    { l:'매출 세액',      v:fmtWon(vatSales), s:'공급대가 ÷ 11' },
-    { l:'납부 예상 부가세',v:fmtWon(vatDue),  c:'#854F0B', bg:'#FAEEDA' },
+    { l:'공급 대가 합계',  v:fmtWonExact(totalRev) },
+    { l:'매출 세액',      v:fmtWonExact(vatSales), s:'공급대가 ÷ 11' },
+    { l:'납부 예상 부가세',v:fmtWonExact(vatDue),  c:'#854F0B', bg:'#FAEEDA' },
   ].map(c=>`<div style="background:${c.bg||'var(--surface2)'};border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:${c.c||'var(--light)'};opacity:.8;margin-bottom:3px;">${c.l}</div>
     <div style="font-size:18px;font-weight:500;color:${c.c||'var(--text)'};">${c.v}</div>
@@ -16272,18 +16286,18 @@ async function loadTaxVat() {
     ? taxCosts.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
         <div style="width:8px;height:8px;border-radius:50%;background:${TAX_CAT_COLOR[c.cat]||'#888'};flex-shrink:0;"></div>
         <div style="flex:1;"><div style="font-size:12px;">${c.desc||TAX_CAT_LABEL[c.cat]}</div><div style="font-size:10px;color:var(--light);">${c.year}.${c.month}</div></div>
-        <div style="font-size:11px;color:#3B6D11;">공제 ${fmtWon(Math.round((c.amount||0)/11))}</div>
-        <div style="font-size:12px;font-weight:500;">${fmtWon(c.amount||0)}</div>
+        <div style="font-size:11px;color:#3B6D11;">공제 ${fmtWonExact(Math.round((c.amount||0)/11))}</div>
+        <div style="font-size:12px;font-weight:500;">${fmtWonExact(c.amount||0)}</div>
       </div>`).join('')
     : '<div style="font-size:13px;color:var(--faint);padding:8px 0;">세금계산서 발행 매입이 없어요</div>';
 
   $('tax-vat-result').innerHTML = `
-    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--surface2);font-size:12px;"><span style="color:var(--muted);">과세 매출 합계</span><span style="font-weight:500;">${fmtWon(totalRev)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--surface2);font-size:12px;"><span style="color:var(--muted);">매출 세액 (÷11)</span><span style="font-weight:500;">${fmtWon(vatSales)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--surface2);font-size:12px;"><span style="color:var(--muted);">(-) 매입 세액 공제</span><span style="font-weight:500;color:#3B6D11;">- ${fmtWon(vatInput)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--surface2);font-size:12px;"><span style="color:var(--muted);">과세 매출 합계</span><span style="font-weight:500;">${fmtWonExact(totalRev)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--surface2);font-size:12px;"><span style="color:var(--muted);">매출 세액 (÷11)</span><span style="font-weight:500;">${fmtWonExact(vatSales)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--surface2);font-size:12px;"><span style="color:var(--muted);">(-) 매입 세액 공제</span><span style="font-weight:500;color:#3B6D11;">- ${fmtWonExact(vatInput)}</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#FAEEDA;border-radius:8px;margin-top:10px;">
       <div style="font-size:13px;font-weight:500;color:#854F0B;">납부할 부가세</div>
-      <div style="font-size:20px;font-weight:500;color:#854F0B;">${fmtWon(vatDue)}</div>
+      <div style="font-size:20px;font-weight:500;color:#854F0B;">${fmtWonExact(vatDue)}</div>
     </div>
     <div style="font-size:11px;color:var(--faint);margin-top:8px;">신고 기한: ${taxVatPeriod===1?'7월 25일':'다음해 1월 25일'}</div>`;
 }
@@ -16302,9 +16316,9 @@ async function loadTaxWithhold() {
   const annual = due * 12;
 
   $('tax-withhold-cards').innerHTML = [
-    { l:'직원 총 급여 합계', v:fmtWon(monthly), s:'월 기준 (5명)' },
-    { l:'이번 달 원천세',    v:fmtWon(due),     s:'납부 세율 3.3%', c:'#A32D2D', bg:'#FCEBEB' },
-    { l:'연간 원천세 예상',  v:fmtWon(annual),  s:'12개월 기준' },
+    { l:'직원 총 급여 합계', v:fmtWonExact(monthly), s:'월 기준 (5명)' },
+    { l:'이번 달 원천세',    v:fmtWonExact(due),     s:'납부 세율 3.3%', c:'#A32D2D', bg:'#FCEBEB' },
+    { l:'연간 원천세 예상',  v:fmtWonExact(annual),  s:'12개월 기준' },
   ].map(c=>`<div style="background:${c.bg||'var(--surface2)'};border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:${c.c||'var(--light)'};opacity:.8;margin-bottom:3px;">${c.l}</div>
     <div style="font-size:18px;font-weight:500;color:${c.c||'var(--text)'};">${c.v}</div>
@@ -16315,12 +16329,12 @@ async function loadTaxWithhold() {
     const wh = Math.round(salary*0.033);
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--surface2);">
       <div style="width:30px;height:30px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;">${name[0]}</div>
-      <div style="flex:1;"><div style="font-size:12px;font-weight:500;">${name}</div><div style="font-size:10px;color:var(--light);">급여 ${fmtWon(salary)}</div></div>
-      <div style="font-size:12px;font-weight:500;color:#A32D2D;">${fmtWon(wh)}</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:500;">${name}</div><div style="font-size:10px;color:var(--light);">급여 ${fmtWonExact(salary)}</div></div>
+      <div style="font-size:12px;font-weight:500;color:#A32D2D;">${fmtWonExact(wh)}</div>
     </div>`;
   }).join('') +
   `<div style="display:flex;justify-content:space-between;padding:9px 0;font-size:12px;font-weight:500;">
-    <span style="color:var(--light);">합계</span><span style="color:#A32D2D;">${fmtWon(due)}</span>
+    <span style="color:var(--light);">합계</span><span style="color:#A32D2D;">${fmtWonExact(due)}</span>
   </div>`;
 
   const today = new Date();
@@ -16333,7 +16347,7 @@ async function loadTaxWithhold() {
         <div style="font-size:13px;font-weight:500;color:#A32D2D;">${nextDue.getMonth()+1}월 10일</div>
         <div style="font-size:12px;font-weight:500;color:#A32D2D;">D-${diff}</div>
       </div>
-      <div style="font-size:11px;color:#A32D2D;margin-top:2px;">납부 예정: ${fmtWon(due)}</div>
+      <div style="font-size:11px;color:#A32D2D;margin-top:2px;">납부 예정: ${fmtWonExact(due)}</div>
     </div>
     <div style="font-size:11px;color:var(--faint);padding:8px 0;">납부 이력은 세무사를 통해 관리하고 있어요</div>`;
 }
@@ -16378,9 +16392,9 @@ async function loadTaxCosts() {
   const curFiltered = filtered;
   const curTotal = curFiltered.reduce((a,c)=>a+(c.amount||0),0);
   $('tax-costs-summary').innerHTML = [
-    { l:'비용 합계',      v:fmtWon(curTotal),  s:`${curFiltered.length}건` },
-    { l:'세금계산서 매입', v:fmtWon(taxTotal),  s:'부가세 공제 가능', c:'#3B6D11' },
-    { l:'매입세액 공제',   v:fmtWon(vatInput),  s:'÷11 계산', c:'#854F0B' },
+    { l:'비용 합계',      v:fmtWonExact(curTotal),  s:`${curFiltered.length}건` },
+    { l:'세금계산서 매입', v:fmtWonExact(taxTotal),  s:'부가세 공제 가능', c:'#3B6D11' },
+    { l:'매입세액 공제',   v:fmtWonExact(vatInput),  s:'÷11 계산', c:'#854F0B' },
   ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;">
     <div style="font-size:10px;color:var(--light);margin-bottom:2px;">${c.l}</div>
     <div style="font-size:16px;font-weight:500;${c.c?'color:'+c.c:''}">${c.v}</div>
@@ -16397,7 +16411,7 @@ async function loadTaxCosts() {
     return `<div onclick="taxCostsSetCat('${cat}',this)"
       style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;cursor:pointer;${isOn?'background:var(--surface2);':''} ">
       <div style="display:flex;align-items:center;gap:6px;font-size:12px;${isOn?'font-weight:500;color:var(--text);':'color:var(--muted);'}">${dot}${label}</div>
-      <div style="font-size:11px;color:var(--light);">${catTotal(cat)?fmtWon(catTotal(cat)):''}</div>
+      <div style="font-size:11px;color:var(--light);">${catTotal(cat)?fmtWonExact(catTotal(cat)):''}</div>
     </div>`;
   }).join('');
 
@@ -16425,7 +16439,7 @@ async function loadTaxCosts() {
       <td style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.desc||TAX_CAT_LABEL[c.cat]||c.cat}</td>
       <td><span style="font-size:10px;padding:2px 7px;border-radius:50px;background:${TAX_CAT_COLOR[c.cat]||'#888'}22;color:${TAX_CAT_COLOR[c.cat]||'#888'};">${TAX_CAT_LABEL[c.cat]||c.cat}</span></td>
       <td style="text-align:center;font-size:12px;${c.hasTax?'color:#3B6D11;':' color:var(--faint);'}">${c.hasTax?'✓':'—'}</td>
-      <td style="text-align:right;font-size:12px;font-weight:500;">${fmtWon(c.amount||0)}</td>
+      <td style="text-align:right;font-size:12px;font-weight:500;">${fmtWonExact(c.amount||0)}</td>
       <td><div class="card-link" onclick="openTaxCostModal('${c.id}')" style="text-align:center;">···</div></td>
     </tr>`).join('')}</tbody>
   </table>`;
