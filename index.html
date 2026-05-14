@@ -204,6 +204,24 @@ a { text-decoration:none; color:inherit; }
 }
 .card-title { font-size:13px; font-weight:500; }
 .card-sub   { font-size:11px; color:var(--light); margin-top:2px; }
+
+/* 판매분석 페이지 가독성 강화 */
+#page-sales .card { padding:24px 26px; }
+#page-sales .card-head { margin-bottom:18px; }
+#page-sales .card-title { font-size:15px; }
+#page-sales .card-sub { font-size:12px; color:var(--muted); }
+#page-sales .sales-quad-card { padding:14px 16px !important; }
+#page-sales .sales-quad-card .quad-title { font-size:13px !important; font-weight:600 !important; }
+#page-sales .sales-quad-card .quad-names { font-size:13px !important; color:var(--text) !important; line-height:1.65 !important; }
+#page-sales .sales-quad-card .quad-action { font-size:12px !important; color:var(--muted) !important; }
+#page-sales .sales-quad-card .quad-count { font-size:12px !important; color:var(--muted) !important; }
+#page-sales #sales-signal-body { font-size:13px; }
+#page-sales #sales-matrix { gap:10px !important; }
+#page-sales #sales-channel-list { font-size:13px; }
+#page-sales #sales-channel-list > div > div { font-size:13px !important; }
+#page-sales #sales-top10 > div { font-size:13px !important; }
+#page-sales #sales-metrics > div > div:first-child { font-size:12px !important; }
+#page-sales #sales-metrics > div > div:nth-child(2) { font-size:24px !important; }
 .card-link {
   width:26px; height:26px; border-radius:8px;
   border:0.5px solid var(--border); display:flex;
@@ -317,6 +335,10 @@ a { text-decoration:none; color:inherit; }
 .inv-inline-num::-webkit-outer-spin-button, .inv-inline-num::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 .inv-inline-num:hover { background:var(--surface2); box-shadow:inset 0 0 0 0.5px var(--border); }
 .inv-inline-num:focus { background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--text); }
+.ledger-note-inp { width:100%; box-sizing:border-box; font-family:var(--font); font-size:12px; padding:10px 12px; border:none; background:transparent; color:var(--text); outline:none; cursor:text; border-radius:4px; }
+.ledger-note-inp::placeholder { color:var(--faint); }
+.ledger-note-inp:hover { background:var(--surface2); box-shadow:inset 0 0 0 0.5px var(--border); }
+.ledger-note-inp:focus { background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--text); }
 .inv-red { color:var(--red); font-weight:500; }
 .inv-green { color:var(--green); }
 .inv-amber { color:var(--amber); }
@@ -1182,7 +1204,7 @@ a { text-decoration:none; color:inherit; }
               <div class="card-title">매출 추이</div>
               <div class="card-sub" id="sales-trend-sub"></div>
             </div>
-            <div style="position:relative;height:180px;"><canvas id="sales-trend-chart" role="img" aria-label="매출 추이 차트">매출 추이</canvas></div>
+            <div style="position:relative;height:240px;padding:6px 0 2px;"><canvas id="sales-trend-chart" role="img" aria-label="매출 추이 차트">매출 추이</canvas></div>
           </div>
           <div class="card">
             <div class="card-head"><div class="card-title">채널별 매출 비중</div></div>
@@ -1207,8 +1229,9 @@ a { text-decoration:none; color:inherit; }
                 </div>
               </div>
             </div>
-            <div id="sales-dow-chart" style="display:flex;align-items:flex-end;gap:6px;height:140px;margin-top:12px;padding-bottom:4px;"></div>
-            <div id="sales-dow-tip" style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6;background:var(--surface2);border-radius:var(--r);padding:8px 11px;"></div>
+            <div id="sales-dow-chart" style="display:flex;flex-direction:column;gap:11px;margin-top:18px;"></div>
+            <div id="sales-dow-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px;"></div>
+            <div id="sales-dow-tip" style="margin-top:14px;font-size:13px;line-height:1.65;background:var(--blue-bg,#E6F1FB);border-left:3px solid #185FA5;border-radius:0 var(--r) var(--r) 0;padding:12px 14px;"></div>
           </div>
           <div class="card">
             <div class="card-head">
@@ -2789,6 +2812,22 @@ a { text-decoration:none; color:inherit; }
         <button class="f-btn f-btn-cancel" style="flex:1;" onclick="closeModal('ch-alloc-modal')">취소</button>
         <button class="f-btn f-btn-save" style="flex:1;" onclick="saveChAlloc()">저장</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 판매분석: 상품 목록 상세 모달 ═══ -->
+<div class="modal-overlay" id="sales-prodlist-modal" onclick="if(event.target===this)closeModal('sales-prodlist-modal')">
+  <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div>
+        <div class="modal-kind" id="sales-prodlist-title">상품 목록</div>
+        <div id="sales-prodlist-sub" style="font-size:11px;color:var(--light);margin-top:2px;"></div>
+      </div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('sales-prodlist-modal')">✕</div></div>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div id="sales-prodlist-body" style="max-height:420px;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
@@ -4579,7 +4618,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.3.1</div>
+<div id="version">v5.3.3</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4622,7 +4661,15 @@ const dateStr = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).p
 const timeStr = () => { const n=new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; };
 const fmtWon  = n => { if(!n)return'—'; if(n>=100000000)return`₩${(n/100000000).toFixed(1)}억`; if(n>=10000)return`₩${Math.round(n/10000).toLocaleString()}만`; return`₩${n.toLocaleString()}`; };
 const fmtWonExact = n => { if(!n&&n!==0)return'—'; return`₩${Math.round(n).toLocaleString()}원`; }; // 1원 단위
-const fmtWonK = n => { if(!n&&n!==0)return'—'; return`₩${Math.round(n/1000).toLocaleString()}천원`; }; // 천원 단위
+const fmtWonK = n => { // 'ㅇ만ㅇ천원' 형식 (천원 단위 반올림)
+  if(!n&&n!==0) return '—';
+  const k = Math.round(n/1000); // 천원 단위
+  const man = Math.floor(k/10), cheon = k%10;
+  if(man>0 && cheon>0) return `₩${man}만${cheon}천원`;
+  if(man>0)            return `₩${man}만원`;
+  if(cheon>0)          return `₩${cheon}천원`;
+  return '₩0원';
+};
 const oneLine = s => String(s||'').replace(/[\r\n]+/g,' ').replace(/\s{2,}/g,' ').trim(); // 줄바꿈→한 줄
 
 let toastTimer;
@@ -10984,24 +11031,37 @@ async function loadSalesSignalAndMatrix(salesRows, prevRows, label) {
   // 각 분면 정렬 (수량 많은 순)
   Object.values(q).forEach(arr => arr.sort((a,b) => b.cur - a.cur));
 
-  const quadCard = (title, color, items, action) => {
+  // 분면별 상품 데이터를 전역 저장 (모달용)
+  window._salesQuadrants = {
+    core:   { title:'주력', color:'#3B6D11', desc:'많이 팔림 + 성장', action:'재고·노출 집중', items:q.core },
+    defend: { title:'방어', color:'#854F0B', desc:'많이 팔림 + 하락', action:'하락 원인 점검', items:q.defend },
+    grow:   { title:'키울 후보', color:'#185FA5', desc:'적게 팔림 + 성장', action:'마케팅 테스트', items:q.grow },
+    review: { title:'정리 검토', color:'#666', desc:'적게 팔림 + 하락', action:'단종·소진 검토', items:q.review },
+  };
+
+  const quadCard = (key) => {
+    const Q = window._salesQuadrants[key];
+    const items = Q.items;
     const names = items.slice(0,5).map(it => it.name).join(' · ') || '—';
-    const more  = items.length > 5 ? ` 외 ${items.length-5}종` : '';
-    return `<div style="border:0.5px solid var(--border);border-radius:var(--r);padding:11px 13px;">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-        <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-        <span style="font-size:12px;font-weight:500;color:${color};">${title}</span>
-        <span style="font-size:11px;color:var(--faint);margin-left:auto;">${items.length}종</span>
+    const more  = items.length > 5
+      ? ` <span style="color:${Q.color};font-weight:600;">외 ${items.length-5}종 →</span>`
+      : '';
+    const clickable = items.length > 0;
+    return `<div ${clickable?`onclick="openSalesQuadModal('${key}')"`:''}
+      class="sales-quad-card"
+      style="border:0.5px solid var(--border);border-radius:var(--r);${clickable?'cursor:pointer;':''}"
+      ${clickable?'onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'\'"':''}>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">
+        <span style="width:9px;height:9px;border-radius:50%;background:${Q.color};flex-shrink:0;"></span>
+        <span class="quad-title" style="color:${Q.color};">${Q.title} — ${Q.desc}</span>
+        <span class="quad-count" style="margin-left:auto;">${items.length}종</span>
       </div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.6;">${names}${more}</div>
-      <div style="font-size:11px;color:var(--faint);margin-top:5px;">→ ${action}</div>
+      <div class="quad-names">${names}${more}</div>
+      <div class="quad-action" style="margin-top:7px;">→ ${Q.action}</div>
     </div>`;
   };
   $('sales-matrix').innerHTML =
-    quadCard('주력 — 많이 팔림 + 성장', '#3B6D11', q.core,   '재고·노출 집중') +
-    quadCard('방어 — 많이 팔림 + 하락', '#854F0B', q.defend, '하락 원인 점검') +
-    quadCard('키울 후보 — 적게 팔림 + 성장', '#185FA5', q.grow, '마케팅 테스트') +
-    quadCard('정리 검토 — 적게 팔림 + 하락', '#666', q.review, '단종·소진 검토');
+    quadCard('core') + quadCard('defend') + quadCard('grow') + quadCard('review');
 
   // 전략 신호 카드 생성
   const signals = [];
@@ -11010,15 +11070,17 @@ async function loadSalesSignalAndMatrix(salesRows, prevRows, label) {
     .sort((a,b) => b.growth - a.growth);
   if (realGrow.length) {
     const t = realGrow[0];
-    signals.push({ icon:'trending-up', color:'#3B6D11', tag:'밀어볼 상품',
-      text:`${t.name} — 전월 대비 +${t.growth}% (${t.prev}→${t.cur}개). 노출·재고 확대 검토.` });
+    signals.push({ color:'#3B6D11', tag:'밀어볼 상품',
+      text:`${t.name} — 전월 대비 +${t.growth}% (${t.prev}→${t.cur}개). 노출·재고 확대 검토.`,
+      list:realGrow, listTitle:'성장 중인 주력 상품' });
   } else {
     // 신규 등장 중 수량 많은 것
     const newItems = items.filter(it => it.growth === 999).sort((a,b)=>b.cur-a.cur);
     if (newItems.length) {
       const t = newItems[0];
-      signals.push({ icon:'sparkles', color:'#3B6D11', tag:'새로 들어온 상품',
-        text:`${t.name} — 이번 달 ${t.cur}개로 신규 진입. 흐름 지켜볼 만함.` });
+      signals.push({ color:'#3B6D11', tag:'새로 들어온 상품',
+        text:`${t.name} — 이번 달 ${t.cur}개로 신규 진입. 흐름 지켜볼 만함.`,
+        list:newItems, listTitle:'이번 달 신규 진입 상품' });
     }
   }
   // 2) 가장 꺾인 상품
@@ -11026,34 +11088,88 @@ async function loadSalesSignalAndMatrix(salesRows, prevRows, label) {
     .sort((a,b) => a.growth - b.growth);
   if (realDrop.length) {
     const t = realDrop[0];
-    signals.push({ icon:'trending-down', color:'#A32D2D', tag:'꺾이고 있는 상품',
-      text:`${t.name} — 전월 대비 ${t.growth}% (${t.prev}→${t.cur}개). 원인 점검 필요.` });
+    signals.push({ color:'#A32D2D', tag:'꺾이고 있는 상품',
+      text:`${t.name} — 전월 대비 ${t.growth}% (${t.prev}→${t.cur}개). 원인 점검 필요.`,
+      list:realDrop, listTitle:'하락 중인 상품' });
   }
   // 3) 정리 검토 대상 수
   if (q.review.length >= 3) {
-    signals.push({ icon:'archive', color:'#666', tag:'정리 검토 대상',
-      text:`적게 팔리고 하락 중인 상품이 ${q.review.length}종. 단종·소진 여부 검토 시점.` });
+    signals.push({ color:'#666', tag:'정리 검토 대상',
+      text:`적게 팔리고 하락 중인 상품이 ${q.review.length}종. 단종·소진 여부 검토 시점.`,
+      list:q.review, listTitle:'정리 검토 대상 상품' });
   }
   // 4) 주력 상품 집중도
   if (q.core.length) {
     const coreQty = q.core.reduce((s,it)=>s+it.cur,0);
     const allQty  = items.reduce((s,it)=>s+it.cur,0);
     const pct = allQty ? Math.round(coreQty/allQty*100) : 0;
-    signals.push({ icon:'target', color:'#185FA5', tag:'주력 집중도',
-      text:`주력 ${q.core.length}종이 전체 판매량의 ${pct}%. ${pct>=60?'편중도가 높으니 후속 상품 발굴도 필요.':'분산이 양호한 편.'}` });
+    signals.push({ color:'#185FA5', tag:'주력 집중도',
+      text:`주력 ${q.core.length}종이 전체 판매량의 ${pct}%. ${pct>=60?'편중도가 높으니 후속 상품 발굴도 필요.':'분산이 양호한 편.'}`,
+      list:q.core, listTitle:'주력 상품' });
   }
+
+  window._salesSignals = signals;
 
   if ($('sales-signal-sub')) $('sales-signal-sub').textContent = `${label} 기준 · 전월 대비`;
   $('sales-signal-body').innerHTML = signals.length
-    ? signals.map(s => `
-      <div style="display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:0.5px solid var(--surface2);">
-        <div style="font-size:15px;color:${s.color};line-height:1.4;flex-shrink:0;">●</div>
+    ? signals.map((s, i) => `
+      <div onclick="openSalesSignalModal(${i})"
+        style="display:flex;gap:11px;align-items:flex-start;padding:12px 8px;margin:0 -8px;border-bottom:0.5px solid var(--surface2);cursor:pointer;border-radius:6px;"
+        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <div style="font-size:16px;color:${s.color};line-height:1.4;flex-shrink:0;">●</div>
         <div style="flex:1;">
-          <span style="font-size:12px;font-weight:500;color:${s.color};">${s.tag}</span>
-          <div style="font-size:12px;color:var(--text);line-height:1.6;margin-top:1px;">${s.text}</div>
+          <span style="font-size:13px;font-weight:600;color:${s.color};">${s.tag}</span>
+          <span style="font-size:12px;color:var(--muted);margin-left:6px;">${s.list.length}종 →</span>
+          <div style="font-size:13px;color:var(--text);line-height:1.65;margin-top:3px;">${s.text}</div>
         </div>
       </div>`).join('')
-    : '<div style="padding:14px 0;font-size:13px;color:var(--faint);">전월 데이터가 충분히 쌓이면 신호가 표시돼요</div>';
+    : '<div style="padding:16px 0;font-size:13px;color:var(--muted);">전월 데이터가 충분히 쌓이면 신호가 표시돼요</div>';
+}
+
+// ── 판매분석: 상품 목록 모달 ──
+function _renderSalesProdList(items) {
+  if (!items || !items.length) {
+    return '<div style="padding:24px;text-align:center;font-size:13px;color:var(--faint);">상품이 없어요</div>';
+  }
+  return `<table class="inv-tbl" style="width:100%;">
+    <thead><tr>
+      <th style="padding-left:20px;">상품명</th>
+      <th style="text-align:right;">이번달</th>
+      <th style="text-align:right;">전월</th>
+      <th style="text-align:right;padding-right:20px;">성장률</th>
+    </tr></thead>
+    <tbody>${items.map(it => {
+      let g, gc;
+      if (it.growth === 999)      { g = '신규'; gc = '#3B6D11'; }
+      else if (it.growth === null){ g = '—';   gc = 'var(--faint)'; }
+      else if (it.growth >= 0)    { g = `+${it.growth}%`; gc = '#3B6D11'; }
+      else                        { g = `${it.growth}%`;  gc = '#A32D2D'; }
+      return `<tr>
+        <td style="padding-left:20px;font-size:12px;font-weight:500;">${it.name}</td>
+        <td style="text-align:right;font-size:12px;">${it.cur}개</td>
+        <td style="text-align:right;font-size:12px;color:var(--muted);">${it.prev}개</td>
+        <td style="text-align:right;padding-right:20px;font-size:12px;font-weight:500;color:${gc};">${g}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function openSalesQuadModal(key) {
+  const Q = window._salesQuadrants && window._salesQuadrants[key];
+  if (!Q || !Q.items.length) return;
+  $('sales-prodlist-title').textContent = `${Q.title} 상품 — ${Q.items.length}종`;
+  $('sales-prodlist-sub').textContent = `${Q.desc} · ${Q.action}`;
+  $('sales-prodlist-body').innerHTML = _renderSalesProdList(Q.items);
+  $('sales-prodlist-modal').classList.add('on');
+}
+
+function openSalesSignalModal(idx) {
+  const s = window._salesSignals && window._salesSignals[idx];
+  if (!s || !s.list || !s.list.length) return;
+  $('sales-prodlist-title').textContent = `${s.listTitle} — ${s.list.length}종`;
+  $('sales-prodlist-sub').textContent = s.tag;
+  $('sales-prodlist-body').innerHTML = _renderSalesProdList(s.list);
+  $('sales-prodlist-modal').classList.add('on');
 }
 
 async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
@@ -11106,8 +11222,9 @@ async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
         data,
         borderColor: '#1C1E26',
         backgroundColor: 'rgba(28,30,38,0.05)',
-        borderWidth: 1.5,
-        pointRadius: isMultiMonth ? 3 : 1,
+        borderWidth: 2,
+        pointRadius: isMultiMonth ? 4 : 2,
+        pointHoverRadius: isMultiMonth ? 6 : 4,
         fill: true,
         tension: 0.35,
       }]
@@ -11115,22 +11232,29 @@ async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: { padding: { top: 6, bottom: 2 } },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => fmtWon(ctx.raw) } }
+        tooltip: {
+          titleFont: { size: 13 },
+          bodyFont: { size: 13 },
+          padding: 10,
+          callbacks: { label: ctx => fmtWon(ctx.raw) }
+        }
       },
       scales: {
         x: {
           grid: { display: false },
           ticks: {
-            font: { size: 10 },
+            font: { size: 12 },
+            color: '#5F5E5A',
             maxTicksLimit: isMultiMonth ? 6 : 10,
             autoSkip: true,
           }
         },
         y: {
-          grid: { color: 'rgba(0,0,0,0.04)' },
-          ticks: { font: { size: 10 }, callback: v => fmtWon(v) }
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          ticks: { font: { size: 12 }, color: '#5F5E5A', callback: v => fmtWon(v) }
         }
       }
     }
@@ -11316,46 +11440,72 @@ async function loadSalesDow() {
 
   const maxVal = Math.max(...vals, 1);
   const isAmt  = _salesDowType === 'amount';
+  const fmtV = v => isAmt
+    ? (v >= 100000000 ? `${Math.round(v/100000000*10)/10}억` : v >= 10000 ? `${Math.round(v/10000)}만` : v > 0 ? String(v) : '0')
+    : (v > 0 ? `${v}개` : '0');
 
+  // ── 가로 막대 (월~일 순서 고정) ──
   $('sales-dow-chart').innerHTML = vals.map((v, i) => {
-    const h   = Math.round((v / maxVal) * 88);
     const isWeekend = i >= 5;
-    const label = isAmt
-      ? (v >= 100000000 ? `${Math.round(v/100000000*10)/10}억` : v >= 10000 ? `${Math.round(v/10000)}만` : v > 0 ? String(v) : '')
-      : (v > 0 ? `${v}개` : '');
-    const barH = Math.max(h, 2);
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">
-      <div style="font-size:10px;color:var(--light);margin-bottom:4px;white-space:nowrap;">${label}</div>
-      <div style="width:100%;height:${barH}px;background:${isWeekend?'#6B9E7A':'#1C1E26'};border-radius:3px 3px 0 0;margin-top:auto;"></div>
-      <div style="font-size:11px;color:var(--light);margin-top:4px;">${DOW[i]}</div>
+    const barW = Math.max(Math.round((v / maxVal) * 100), 2);
+    return `<div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:26px;font-size:13px;flex-shrink:0;font-weight:${isWeekend?'600':'400'};color:${isWeekend?'#3B6D11':'var(--text)'};">${DOW[i]}</div>
+      <div style="flex:1;height:24px;background:var(--surface2);border-radius:var(--r);overflow:hidden;">
+        <div style="width:${barW}%;height:100%;background:${isWeekend?'#6B9E7A':'#1C1E26'};border-radius:var(--r);"></div>
+      </div>
+      <div style="width:62px;font-size:13px;font-weight:600;text-align:right;flex-shrink:0;">${fmtV(v)}</div>
     </div>`;
   }).join('');
 
-  // ── 행동 제안 ──
-  const tipEl = $('sales-dow-tip');
+  // ── 인사이트 3블록 ──
+  const totalVal = vals.reduce((s,v)=>s+v,0);
+  const statsEl = $('sales-dow-stats');
+  const tipEl   = $('sales-dow-tip');
+
+  if (totalVal === 0) {
+    if (statsEl) statsEl.innerHTML = '';
+    if (tipEl) { tipEl.style.background = 'var(--surface2)'; tipEl.style.borderLeft = 'none';
+      tipEl.innerHTML = '<span style="color:var(--faint);">데이터가 쌓이면 요일별 분석이 표시돼요</span>'; }
+    return;
+  }
+
+  const maxIdx = vals.indexOf(Math.max(...vals));
+  const nonZero = vals.filter(v=>v>0);
+  const minVal = nonZero.length ? Math.min(...nonZero) : 0;
+  const minIdx = vals.indexOf(minVal);
+  const weekendSum = vals[5]+vals[6];
+  const weekendPct = totalVal>0 ? Math.round(weekendSum/totalVal*100) : 0;
+  const weekdayAvg = (vals[0]+vals[1]+vals[2]+vals[3]+vals[4]) / 5;
+  const weekendAvg = (vals[5]+vals[6]) / 2;
+
+  if (statsEl) {
+    statsEl.innerHTML = [
+      { l:'최고 요일', v:`${DOW[maxIdx]} · ${fmtV(vals[maxIdx])}` },
+      { l:'최저 요일', v:`${DOW[minIdx]} · ${fmtV(minVal)}` },
+      { l:'주말 비중', v:`${weekendPct}%` },
+    ].map(s=>`<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;">
+      <div style="font-size:12px;color:var(--muted);">${s.l}</div>
+      <div style="font-size:16px;font-weight:600;margin-top:2px;">${s.v}</div>
+    </div>`).join('');
+  }
+
   if (tipEl) {
-    const totalVal = vals.reduce((s,v)=>s+v,0);
-    if (totalVal === 0) {
-      tipEl.innerHTML = '데이터가 쌓이면 요일별 행동 제안이 표시돼요';
+    const unit = isAmt ? '매출' : '판매량';
+    let tip = '';
+    if (weekendAvg > weekdayAvg * 1.25) {
+      const ratio = Math.round(weekendAvg / weekdayAvg * 10) / 10;
+      tip = `주말 ${unit}이 평일의 ${ratio}배예요. 신상품 출시·프로모션은 금요일 오후에 걸어 주말 피크를 노리는 게 유리해요.`;
+    } else if (weekdayAvg > weekendAvg * 1.25) {
+      const ratio = Math.round(weekdayAvg / weekendAvg * 10) / 10;
+      tip = `평일 ${unit}이 주말의 ${ratio}배예요. 주중 구매층이 핵심 — 광고·콘텐츠 노출을 평일 오전~점심에 집중해보세요.`;
     } else {
-      const weekdayAvg = (vals[0]+vals[1]+vals[2]+vals[3]+vals[4]) / 5;
-      const weekendAvg = (vals[5]+vals[6]) / 2;
-      const maxIdx = vals.indexOf(Math.max(...vals));
-      const minIdx = vals.indexOf(Math.min(...vals.filter(v=>v>0).length ? vals : [0]));
-      const unit = isAmt ? '매출' : '판매량';
-      let tip = '';
-      if (weekendAvg > weekdayAvg * 1.25) {
-        const ratio = Math.round(weekendAvg / weekdayAvg * 10) / 10;
-        tip = `주말 ${unit}이 평일의 ${ratio}배. 신상품 출시·프로모션은 금요일 오후에 걸어 주말 피크를 노리는 게 유리해요.`;
-      } else if (weekdayAvg > weekendAvg * 1.25) {
-        const ratio = Math.round(weekdayAvg / weekendAvg * 10) / 10;
-        tip = `평일 ${unit}이 주말의 ${ratio}배. 주중 구매층이 핵심 — 광고·콘텐츠 노출을 평일 오전~점심에 집중해보세요.`;
-      } else {
-        tip = `요일별 ${unit} 편차가 크지 않아요(${DOW[maxIdx]}요일 최고). 특정 요일에 의존하지 않는 안정적인 패턴이에요.`;
-      }
-      tip += ` 가장 약한 요일은 ${DOW[minIdx]}요일 — 이 날 타임특가나 쿠폰을 테스트하면 평탄화에 도움이 돼요.`;
-      tipEl.innerHTML = `<i class="ti ti-bulb" style="font-size:13px;color:#185FA5;"></i> ${tip}`;
+      tip = `요일별 ${unit} 편차가 크지 않아요 (${DOW[maxIdx]}요일 최고). 특정 요일에 의존하지 않는 안정적인 패턴이에요.`;
     }
+    tip += ` 가장 약한 ${DOW[minIdx]}요일에 타임특가·쿠폰을 테스트하면 매출 평탄화에 도움이 돼요.`;
+    tipEl.style.background = 'var(--blue-bg,#E6F1FB)';
+    tipEl.style.borderLeft = '3px solid #185FA5';
+    tipEl.style.color = 'var(--text)';
+    tipEl.innerHTML = `<i class="ti ti-bulb" style="font-size:13px;color:#185FA5;"></i> ${tip}`;
   }
 }
 
@@ -16828,17 +16978,18 @@ async function loadTaxCosts() {
   });
 
   $('tax-costs-table-wrap').innerHTML = `<table class="inv-tbl" style="table-layout:fixed;width:100%;">
-    <colgroup><col style="width:70px"><col style="width:auto"><col style="width:100px"><col style="width:80px"><col style="width:90px"><col style="width:36px"></colgroup>
+    <colgroup><col style="width:76px"><col style="width:190px"><col style="width:104px"><col style="width:48px"><col style="width:104px"><col style="width:auto"><col style="width:36px"></colgroup>
     <thead><tr>
-      <th>날짜</th><th>내용</th><th>카테고리</th><th style="text-align:center;">계산서</th><th style="text-align:right;">금액</th><th></th>
+      <th>날짜</th><th>내용</th><th>카테고리</th><th style="text-align:center;">계산서</th><th style="text-align:right;">금액</th><th>비고</th><th></th>
     </tr></thead>
     <tbody>${sorted.map(c=>`<tr>
-      <td style="font-size:11px;color:var(--muted);">${c.year}.${String(c.month).padStart(2,'0')}.${String(c.day||1).padStart(2,'0')}</td>
-      <td style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${oneLine(c.desc)||TAX_CAT_LABEL[c.cat]||c.cat}</td>
-      <td><span style="font-size:10px;padding:2px 7px;border-radius:50px;background:${TAX_CAT_COLOR[c.cat]||'#888'}22;color:${TAX_CAT_COLOR[c.cat]||'#888'};">${TAX_CAT_LABEL[c.cat]||c.cat}</span></td>
-      <td style="text-align:center;font-size:12px;${c.hasTax?'color:#3B6D11;':' color:var(--faint);'}">${c.hasTax?'✓':'—'}</td>
-      <td style="text-align:right;font-size:12px;font-weight:500;">${fmtWonExact(c.amount||0)}</td>
-      <td><div class="card-link" onclick="openTaxCostModal('${c.id}')" style="text-align:center;">···</div></td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${c.year}.${String(c.month).padStart(2,'0')}.${String(c.day||1).padStart(2,'0')}</td>
+      <td style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(oneLine(c.desc)||'').replace(/"/g,'&quot;')}">${oneLine(c.desc)||TAX_CAT_LABEL[c.cat]||c.cat}</td>
+      <td style="overflow:hidden;"><span style="display:inline-block;max-width:100%;font-size:11px;padding:2px 8px;border-radius:50px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;background:${TAX_CAT_COLOR[c.cat]||'#888'}22;color:${TAX_CAT_COLOR[c.cat]||'#888'};">${TAX_CAT_LABEL[c.cat]||c.cat}</span></td>
+      <td style="text-align:center;font-size:13px;${c.hasTax?'color:#3B6D11;':' color:var(--faint);'}">${c.hasTax?'✓':'—'}</td>
+      <td style="text-align:right;font-size:12px;font-weight:500;white-space:nowrap;">${fmtWonExact(c.amount||0)}</td>
+      <td style="padding:0;"><input class="ledger-note-inp" type="text" value="${(c.note||'').replace(/"/g,'&quot;')}" placeholder="비고…" data-ledger="cost" data-id="${c.id}" data-prev="${(c.note||'').replace(/"/g,'&quot;')}" onblur="saveLedgerNote(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}"></td>
+      <td style="text-align:center;"><div class="card-link" onclick="openTaxCostModal('${c.id}')" style="display:inline-block;">···</div></td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
@@ -16952,16 +17103,17 @@ async function loadTaxRev() {
   });
 
   $('tax-rev-table-wrap').innerHTML = `<table class="inv-tbl" style="table-layout:fixed;width:100%;">
-    <colgroup><col style="width:84px"><col style="width:auto"><col style="width:116px"><col style="width:52px"><col style="width:104px"><col style="width:40px"></colgroup>
+    <colgroup><col style="width:76px"><col style="width:190px"><col style="width:104px"><col style="width:48px"><col style="width:104px"><col style="width:auto"><col style="width:36px"></colgroup>
     <thead><tr>
-      <th>입금일</th><th>내용</th><th>구분</th><th style="text-align:center;">계산서</th><th style="text-align:right;">금액</th><th></th>
+      <th>입금일</th><th>내용</th><th>구분</th><th style="text-align:center;">계산서</th><th style="text-align:right;">금액</th><th>비고</th><th></th>
     </tr></thead>
     <tbody>${sorted.map(r=>`<tr>
-      <td style="font-size:11px;color:var(--muted);white-space:nowrap;">${r.year}.${String(r.month).padStart(2,'0')}.${String(r.day||1).padStart(2,'0')}</td>
-      <td style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${oneLine(r.desc)||TAX_REV_LABEL[r.cat]||r.cat}</td>
-      <td style="overflow:hidden;"><span style="display:inline-block;max-width:100%;font-size:10px;padding:2px 7px;border-radius:50px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;background:${TAX_REV_COLOR[r.cat]||'#888'}22;color:${TAX_REV_COLOR[r.cat]||'#888'};">${TAX_REV_LABEL[r.cat]||r.cat}</span></td>
-      <td style="text-align:center;font-size:12px;${r.hasTax?'color:#185FA5;':' color:var(--faint);'}">${r.hasTax?'✓':'—'}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${r.year}.${String(r.month).padStart(2,'0')}.${String(r.day||1).padStart(2,'0')}</td>
+      <td style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(oneLine(r.desc)||'').replace(/"/g,'&quot;')}">${oneLine(r.desc)||TAX_REV_LABEL[r.cat]||r.cat}</td>
+      <td style="overflow:hidden;"><span style="display:inline-block;max-width:100%;font-size:11px;padding:2px 8px;border-radius:50px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;background:${TAX_REV_COLOR[r.cat]||'#888'}22;color:${TAX_REV_COLOR[r.cat]||'#888'};">${TAX_REV_LABEL[r.cat]||r.cat}</span></td>
+      <td style="text-align:center;font-size:13px;${r.hasTax?'color:#185FA5;':' color:var(--faint);'}">${r.hasTax?'✓':'—'}</td>
       <td style="text-align:right;font-size:12px;font-weight:500;white-space:nowrap;${(r.amount||0)<0?'color:#A32D2D;':''}">${fmtWonExact(r.amount||0)}</td>
+      <td style="padding:0;"><input class="ledger-note-inp" type="text" value="${(r.note||'').replace(/"/g,'&quot;')}" placeholder="비고…" data-ledger="rev" data-id="${r.id}" data-prev="${(r.note||'').replace(/"/g,'&quot;')}" onblur="saveLedgerNote(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}"></td>
       <td style="text-align:center;"><div class="card-link" onclick="openTaxRevModal('${r.id}')" style="display:inline-block;">···</div></td>
     </tr>`).join('')}</tbody>
   </table>`;
@@ -17048,6 +17200,31 @@ async function deleteTaxRev() {
   loadTaxRev();
   if (taxTab==='monthly')  loadTaxMonthly();
   if (taxTab==='annual')   loadTaxAnnual();
+}
+
+// ── 매출장/매입장 비고 인라인 편집 ──
+async function saveLedgerNote(input) {
+  const ledger = input.dataset.ledger;   // 'cost' | 'rev'
+  const id     = input.dataset.id;
+  const prev   = input.dataset.prev || '';
+  const val    = input.value.trim();
+  if (val === prev) return;              // 변동 없음
+
+  try {
+    await patchAppState(s => {
+      const arr = ledger === 'rev' ? (s.tax_revenues = s.tax_revenues || [])
+                                   : (s.tax_costs    = s.tax_costs    || []);
+      const idx = arr.findIndex(x => x.id === id);
+      if (idx >= 0) arr[idx] = { ...arr[idx], note: val };
+      return s;
+    });
+    input.dataset.prev = val;
+    input.value = val;
+    toast('비고 저장됐어요 ✓');
+  } catch(e) {
+    input.value = prev;
+    toast('저장 실패: ' + e.message);
+  }
 }
 
 async function openTaxCostModal(id='') {
