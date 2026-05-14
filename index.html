@@ -2262,7 +2262,7 @@ a { text-decoration:none; color:inherit; }
 
           <!-- ━━━ 매출장 (입금) ━━━ -->
           <div id="tax-ledger-revenue">
-            <div style="display:grid;grid-template-columns:164px 1fr;gap:14px;align-items:start;">
+            <div style="display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start;">
               <!-- 사이드바 -->
               <div style="position:sticky;top:0;">
                 <div style="font-size:10px;font-weight:500;color:var(--light);margin-bottom:8px;letter-spacing:.3px;">매출 구분</div>
@@ -2280,7 +2280,7 @@ a { text-decoration:none; color:inherit; }
                     <div style="font-size:13px;font-weight:500;" id="tax-rev-table-title">매출 내역</div>
                     <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openTaxRevModal()">+ 매출 추가</button>
                   </div>
-                  <div id="tax-rev-table-wrap" style="overflow-x:auto;"></div>
+                  <div id="tax-rev-table-wrap"></div>
                 </div>
               </div>
             </div>
@@ -2288,7 +2288,7 @@ a { text-decoration:none; color:inherit; }
 
           <!-- ━━━ 매입장 (지출) ━━━ -->
           <div id="tax-ledger-cost" style="display:none;">
-            <div style="display:grid;grid-template-columns:164px 1fr;gap:14px;align-items:start;">
+            <div style="display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start;">
               <!-- 사이드바 -->
               <div style="position:sticky;top:0;">
                 <div style="font-size:10px;font-weight:500;color:var(--light);margin-bottom:8px;letter-spacing:.3px;">카테고리</div>
@@ -4579,7 +4579,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.3.0</div>
+<div id="version">v5.3.1</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4622,6 +4622,7 @@ const dateStr = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).p
 const timeStr = () => { const n=new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; };
 const fmtWon  = n => { if(!n)return'—'; if(n>=100000000)return`₩${(n/100000000).toFixed(1)}억`; if(n>=10000)return`₩${Math.round(n/10000).toLocaleString()}만`; return`₩${n.toLocaleString()}`; };
 const fmtWonExact = n => { if(!n&&n!==0)return'—'; return`₩${Math.round(n).toLocaleString()}원`; }; // 1원 단위
+const fmtWonK = n => { if(!n&&n!==0)return'—'; return`₩${Math.round(n/1000).toLocaleString()}천원`; }; // 천원 단위
 const oneLine = s => String(s||'').replace(/[\r\n]+/g,' ').replace(/\s{2,}/g,' ').trim(); // 줄바꿈→한 줄
 
 let toastTimer;
@@ -10842,27 +10843,58 @@ async function loadSalesData() {
   (chLogTotal||[]).forEach(r => { chMapForTotal[r.channel] = (chMapForTotal[r.channel]||0) + (r.amount||0); });
   const totalAmt = Object.values(chMapForTotal).reduce((s, v) => s + v, 0);
   const totalQty = salesRows.reduce((s, r) => s + (r.quantity || 0), 0);
-  // 평균 단가 = 총매출 ÷ 총 판매수량
-  const avgUnit  = totalQty ? Math.round(totalAmt / totalQty) : 0;
+
+  // 평균 단가 = (총매출 − 팝업 매출) ÷ 총 판매수량
+  // 팝업은 건당 매출이라 수량에 안 잡혀 평균단가를 왜곡 → 제외
+  const POPUP_CH = ['팝업','팝업·행사'];
+  const popupAmt = POPUP_CH.reduce((s,ch)=>s+(chMapForTotal[ch]||0),0);
+  const avgBaseAmt = totalAmt - popupAmt;
+  const avgUnit  = totalQty ? Math.round(avgBaseAmt / totalQty) : 0;
+
   // 취급 상품 수 = 이번 기간 출고된 고유 상품 수
   const skuCnt   = new Set(salesRows.filter(r=>r.product_id && (r.quantity||0)>0).map(r=>r.product_id)).size;
 
-  const prevAmtRows = await db.from('channel_sales_log').select('amount').gte('date', dateStr(new Date(new Date(from).getFullYear(), new Date(from).getMonth()-1, 1))).lte('date', dateStr(new Date(new Date(from).getFullYear(), new Date(from).getMonth(), 0)));
-  const prevAmt   = (prevAmtRows.data||[]).reduce((s,r)=>s+(r.amount||0),0);
-  const prevQty   = prevRows.reduce((s,r) => s+(r.quantity||0), 0);
+  // ── 전월 대비: 동기간 비교 ──
+  // 선택월이 현재 진행 중인 달이면, 전월도 "같은 일자까지"만 잘라서 공정 비교
+  const now = new Date();
+  const selY = _sales6m ? now.getFullYear() : _salesYear;
+  const selM = _sales6m ? now.getMonth()+1 : _salesMonth;
+  const isCurrentMonth = !_sales6m && selY === now.getFullYear() && selM === (now.getMonth()+1);
+  const cmpDay = isCurrentMonth ? now.getDate() : new Date(selY, selM, 0).getDate(); // 진행중이면 오늘 일자, 아니면 말일
+  // 전월 범위 (같은 일자까지)
+  const prevM_date = new Date(selY, selM-2, 1); // selM은 1-base, -2 하면 전월
+  const pY = prevM_date.getFullYear(), pM = prevM_date.getMonth()+1;
+  const prevLastDay = new Date(pY, pM, 0).getDate();
+  const prevCmpDay = Math.min(cmpDay, prevLastDay);
+  const prevFrom = `${pY}-${String(pM).padStart(2,'0')}-01`;
+  const prevToCmp = `${pY}-${String(pM).padStart(2,'0')}-${String(prevCmpDay).padStart(2,'0')}`;
+  // 이번달도 동일 일자까지로 자른 범위
+  const curToCmp = `${selY}-${String(selM).padStart(2,'0')}-${String(cmpDay).padStart(2,'0')}`;
+
+  const [prevAmtRes, prevQtyRes, curCmpAmtRes, curCmpQtyRes] = await Promise.all([
+    db.from('channel_sales_log').select('amount').gte('date', prevFrom).lte('date', prevToCmp),
+    db.from('sales_log').select('quantity').gte('sale_date', prevFrom).lte('sale_date', prevToCmp),
+    db.from('channel_sales_log').select('amount').gte('date', from).lte('date', curToCmp),
+    db.from('sales_log').select('quantity').gte('sale_date', from).lte('sale_date', curToCmp),
+  ]);
+  const prevAmt    = (prevAmtRes.data||[]).reduce((s,r)=>s+(r.amount||0),0);
+  const prevQty    = (prevQtyRes.data||[]).reduce((s,r)=>s+(r.quantity||0),0);
+  const curCmpAmt  = (curCmpAmtRes.data||[]).reduce((s,r)=>s+(r.amount||0),0);
+  const curCmpQty  = (curCmpQtyRes.data||[]).reduce((s,r)=>s+(r.quantity||0),0);
+  const cmpLabel   = isCurrentMonth ? `전월 1~${cmpDay}일 대비` : '전월 대비';
 
   const diff = (cur, prev) => {
     if (!prev) return '';
     const pct = Math.round((cur - prev) / prev * 100);
     return pct >= 0
-      ? `<span style="color:#3B6D11;font-size:11px;margin-top:4px;display:block;">▲ ${pct}% 전월 대비</span>`
-      : `<span style="color:#A32D2D;font-size:11px;margin-top:4px;display:block;">▼ ${Math.abs(pct)}% 전월 대비</span>`;
+      ? `<span style="color:#3B6D11;font-size:11px;margin-top:4px;display:block;">▲ ${pct}% ${cmpLabel}</span>`
+      : `<span style="color:#A32D2D;font-size:11px;margin-top:4px;display:block;">▼ ${Math.abs(pct)}% ${cmpLabel}</span>`;
   };
 
   $('sales-metrics').innerHTML = [
-    { label:'총 매출 · 일별등록 기준', val: fmtWon(totalAmt)||'—', sub: diff(totalAmt, prevAmt) },
-    { label:'총 판매 수량', val: totalQty ? totalQty.toLocaleString()+'개' : '—', sub: diff(totalQty, prevQty) },
-    { label:'평균 단가', val: avgUnit ? fmtWon(avgUnit) : '—', sub: '<span style="color:var(--light);font-size:11px;margin-top:4px;display:block;">매출 ÷ 수량</span>' },
+    { label:'총 매출 · 일별등록 기준', val: fmtWon(totalAmt)||'—', sub: diff(curCmpAmt, prevAmt) },
+    { label:'총 판매 수량', val: totalQty ? totalQty.toLocaleString()+'개' : '—', sub: diff(curCmpQty, prevQty) },
+    { label:'평균 단가 · 팝업 제외', val: avgUnit ? fmtWonK(avgUnit) : '—', sub: '<span style="color:var(--light);font-size:11px;margin-top:4px;display:block;">(매출−팝업) ÷ 수량</span>' },
     { label:'취급 상품 수', val: skuCnt ? skuCnt+'종' : '—', sub: '' },
   ].map(c => `
     <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
@@ -16896,10 +16928,12 @@ async function loadTaxRev() {
     const isOn  = cat===taxRevFilterCat;
     const label = cat==='all' ? '전체' : (TAX_REV_LABEL[cat]||cat);
     const dot   = cat!=='all' ? `<div style="width:7px;height:7px;border-radius:50%;background:${TAX_REV_COLOR[cat]||'#888'};flex-shrink:0;"></div>` : '';
+    const amt   = catTotal(cat);
     return `<div onclick="taxRevSetCat('${cat}')"
-      style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;cursor:pointer;${isOn?'background:var(--surface2);':''}">
-      <div style="display:flex;align-items:center;gap:6px;font-size:12px;${isOn?'font-weight:500;color:var(--text);':'color:var(--muted);'}">${dot}${label}</div>
-      <div style="font-size:11px;color:var(--light);">${catTotal(cat)?fmtWonExact(catTotal(cat)):''}</div>
+      style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;cursor:pointer;${isOn?'background:var(--surface2);':''}">
+      ${dot}
+      <div style="font-size:12px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${isOn?'font-weight:500;color:var(--text);':'color:var(--muted);'}">${label}</div>
+      <div style="font-size:10px;color:var(--light);flex-shrink:0;white-space:nowrap;">${amt?fmtWonExact(amt):''}</div>
     </div>`;
   }).join('');
 
@@ -16918,17 +16952,17 @@ async function loadTaxRev() {
   });
 
   $('tax-rev-table-wrap').innerHTML = `<table class="inv-tbl" style="table-layout:fixed;width:100%;">
-    <colgroup><col style="width:90px"><col style="width:auto"><col style="width:110px"><col style="width:70px"><col style="width:100px"><col style="width:36px"></colgroup>
+    <colgroup><col style="width:84px"><col style="width:auto"><col style="width:116px"><col style="width:52px"><col style="width:104px"><col style="width:40px"></colgroup>
     <thead><tr>
       <th>입금일</th><th>내용</th><th>구분</th><th style="text-align:center;">계산서</th><th style="text-align:right;">금액</th><th></th>
     </tr></thead>
     <tbody>${sorted.map(r=>`<tr>
-      <td style="font-size:11px;color:var(--muted);">${r.year}.${String(r.month).padStart(2,'0')}.${String(r.day||1).padStart(2,'0')}</td>
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap;">${r.year}.${String(r.month).padStart(2,'0')}.${String(r.day||1).padStart(2,'0')}</td>
       <td style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${oneLine(r.desc)||TAX_REV_LABEL[r.cat]||r.cat}</td>
-      <td><span style="font-size:10px;padding:2px 7px;border-radius:50px;background:${TAX_REV_COLOR[r.cat]||'#888'}22;color:${TAX_REV_COLOR[r.cat]||'#888'};">${TAX_REV_LABEL[r.cat]||r.cat}</span></td>
+      <td style="overflow:hidden;"><span style="display:inline-block;max-width:100%;font-size:10px;padding:2px 7px;border-radius:50px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;background:${TAX_REV_COLOR[r.cat]||'#888'}22;color:${TAX_REV_COLOR[r.cat]||'#888'};">${TAX_REV_LABEL[r.cat]||r.cat}</span></td>
       <td style="text-align:center;font-size:12px;${r.hasTax?'color:#185FA5;':' color:var(--faint);'}">${r.hasTax?'✓':'—'}</td>
-      <td style="text-align:right;font-size:12px;font-weight:500;${(r.amount||0)<0?'color:#A32D2D;':''}">${fmtWonExact(r.amount||0)}</td>
-      <td><div class="card-link" onclick="openTaxRevModal('${r.id}')" style="text-align:center;">···</div></td>
+      <td style="text-align:right;font-size:12px;font-weight:500;white-space:nowrap;${(r.amount||0)<0?'color:#A32D2D;':''}">${fmtWonExact(r.amount||0)}</td>
+      <td style="text-align:center;"><div class="card-link" onclick="openTaxRevModal('${r.id}')" style="display:inline-block;">···</div></td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
