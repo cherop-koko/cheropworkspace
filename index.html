@@ -2329,7 +2329,7 @@ a { text-decoration:none; color:inherit; }
                     <div style="font-size:13px;font-weight:500;" id="tax-costs-table-title">비용 내역</div>
                     <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openTaxCostModal()">+ 비용 추가</button>
                   </div>
-                  <div id="tax-costs-table-wrap" style="overflow-x:auto;"></div>
+                  <div id="tax-costs-table-wrap"></div>
                 </div>
               </div>
             </div>
@@ -4618,7 +4618,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.3.3</div>
+<div id="version">v5.3.4</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -16977,19 +16977,24 @@ async function loadTaxCosts() {
     return db2.localeCompare(da);
   });
 
-  $('tax-costs-table-wrap').innerHTML = `<table class="inv-tbl" style="table-layout:fixed;width:100%;">
-    <colgroup><col style="width:76px"><col style="width:190px"><col style="width:104px"><col style="width:48px"><col style="width:104px"><col style="width:auto"><col style="width:36px"></colgroup>
+  $('tax-costs-table-wrap').innerHTML = `<table class="inv-tbl" style="width:100%;table-layout:auto;">
     <thead><tr>
-      <th>날짜</th><th>내용</th><th>카테고리</th><th style="text-align:center;">계산서</th><th style="text-align:right;">금액</th><th>비고</th><th></th>
+      <th style="white-space:nowrap;">날짜</th>
+      <th>내용</th>
+      <th style="white-space:nowrap;">카테고리</th>
+      <th style="text-align:center;white-space:nowrap;">계산서</th>
+      <th style="text-align:right;white-space:nowrap;">금액</th>
+      <th style="white-space:nowrap;">비고</th>
+      <th style="width:32px;"></th>
     </tr></thead>
     <tbody>${sorted.map(c=>`<tr>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${c.year}.${String(c.month).padStart(2,'0')}.${String(c.day||1).padStart(2,'0')}</td>
-      <td style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(oneLine(c.desc)||'').replace(/"/g,'&quot;')}">${oneLine(c.desc)||TAX_CAT_LABEL[c.cat]||c.cat}</td>
-      <td style="overflow:hidden;"><span style="display:inline-block;max-width:100%;font-size:11px;padding:2px 8px;border-radius:50px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;background:${TAX_CAT_COLOR[c.cat]||'#888'}22;color:${TAX_CAT_COLOR[c.cat]||'#888'};">${TAX_CAT_LABEL[c.cat]||c.cat}</span></td>
-      <td style="text-align:center;font-size:13px;${c.hasTax?'color:#3B6D11;':' color:var(--faint);'}">${c.hasTax?'✓':'—'}</td>
+      <td style="font-size:12px;font-weight:500;max-width:320px;word-break:break-word;line-height:1.5;">${oneLine(c.desc)||TAX_CAT_LABEL[c.cat]||c.cat}</td>
+      <td style="white-space:nowrap;"><span style="display:inline-block;font-size:11px;padding:2px 9px;border-radius:50px;white-space:nowrap;background:${TAX_CAT_COLOR[c.cat]||'#888'}22;color:${TAX_CAT_COLOR[c.cat]||'#888'};">${TAX_CAT_LABEL[c.cat]||c.cat}</span></td>
+      <td style="text-align:center;font-size:13px;white-space:nowrap;${c.hasTax?'color:#3B6D11;':' color:var(--faint);'}">${c.hasTax?'✓':'—'}</td>
       <td style="text-align:right;font-size:12px;font-weight:500;white-space:nowrap;">${fmtWonExact(c.amount||0)}</td>
-      <td style="padding:0;"><input class="ledger-note-inp" type="text" value="${(c.note||'').replace(/"/g,'&quot;')}" placeholder="비고…" data-ledger="cost" data-id="${c.id}" data-prev="${(c.note||'').replace(/"/g,'&quot;')}" onblur="saveLedgerNote(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}"></td>
-      <td style="text-align:center;"><div class="card-link" onclick="openTaxCostModal('${c.id}')" style="display:inline-block;">···</div></td>
+      <td style="padding:0;min-width:90px;max-width:160px;"><input class="ledger-note-inp" type="text" value="${(c.note||'').replace(/"/g,'&quot;')}" placeholder="비고…" data-ledger="cost" data-id="${c.id}" data-prev="${(c.note||'').replace(/"/g,'&quot;')}" onblur="saveLedgerNote(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}"></td>
+      <td style="text-align:center;width:32px;"><div class="card-link" onclick="openTaxCostModal('${c.id}')" style="display:inline-block;">···</div></td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
@@ -17102,19 +17107,24 @@ async function loadTaxRev() {
     return db2.localeCompare(da);
   });
 
-  $('tax-rev-table-wrap').innerHTML = `<table class="inv-tbl" style="table-layout:fixed;width:100%;">
-    <colgroup><col style="width:76px"><col style="width:190px"><col style="width:104px"><col style="width:48px"><col style="width:104px"><col style="width:auto"><col style="width:36px"></colgroup>
+  $('tax-rev-table-wrap').innerHTML = `<table class="inv-tbl" style="width:100%;table-layout:auto;">
     <thead><tr>
-      <th>입금일</th><th>내용</th><th>구분</th><th style="text-align:center;">계산서</th><th style="text-align:right;">금액</th><th>비고</th><th></th>
+      <th style="white-space:nowrap;">입금일</th>
+      <th>내용</th>
+      <th style="white-space:nowrap;">구분</th>
+      <th style="text-align:center;white-space:nowrap;">계산서</th>
+      <th style="text-align:right;white-space:nowrap;">금액</th>
+      <th style="white-space:nowrap;">비고</th>
+      <th style="width:32px;"></th>
     </tr></thead>
     <tbody>${sorted.map(r=>`<tr>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${r.year}.${String(r.month).padStart(2,'0')}.${String(r.day||1).padStart(2,'0')}</td>
-      <td style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(oneLine(r.desc)||'').replace(/"/g,'&quot;')}">${oneLine(r.desc)||TAX_REV_LABEL[r.cat]||r.cat}</td>
-      <td style="overflow:hidden;"><span style="display:inline-block;max-width:100%;font-size:11px;padding:2px 8px;border-radius:50px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;background:${TAX_REV_COLOR[r.cat]||'#888'}22;color:${TAX_REV_COLOR[r.cat]||'#888'};">${TAX_REV_LABEL[r.cat]||r.cat}</span></td>
-      <td style="text-align:center;font-size:13px;${r.hasTax?'color:#185FA5;':' color:var(--faint);'}">${r.hasTax?'✓':'—'}</td>
+      <td style="font-size:12px;font-weight:500;max-width:320px;word-break:break-word;line-height:1.5;">${oneLine(r.desc)||TAX_REV_LABEL[r.cat]||r.cat}</td>
+      <td style="white-space:nowrap;"><span style="display:inline-block;font-size:11px;padding:2px 9px;border-radius:50px;white-space:nowrap;background:${TAX_REV_COLOR[r.cat]||'#888'}22;color:${TAX_REV_COLOR[r.cat]||'#888'};">${TAX_REV_LABEL[r.cat]||r.cat}</span></td>
+      <td style="text-align:center;font-size:13px;white-space:nowrap;${r.hasTax?'color:#185FA5;':' color:var(--faint);'}">${r.hasTax?'✓':'—'}</td>
       <td style="text-align:right;font-size:12px;font-weight:500;white-space:nowrap;${(r.amount||0)<0?'color:#A32D2D;':''}">${fmtWonExact(r.amount||0)}</td>
-      <td style="padding:0;"><input class="ledger-note-inp" type="text" value="${(r.note||'').replace(/"/g,'&quot;')}" placeholder="비고…" data-ledger="rev" data-id="${r.id}" data-prev="${(r.note||'').replace(/"/g,'&quot;')}" onblur="saveLedgerNote(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}"></td>
-      <td style="text-align:center;"><div class="card-link" onclick="openTaxRevModal('${r.id}')" style="display:inline-block;">···</div></td>
+      <td style="padding:0;min-width:90px;max-width:160px;"><input class="ledger-note-inp" type="text" value="${(r.note||'').replace(/"/g,'&quot;')}" placeholder="비고…" data-ledger="rev" data-id="${r.id}" data-prev="${(r.note||'').replace(/"/g,'&quot;')}" onblur="saveLedgerNote(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}"></td>
+      <td style="text-align:center;width:32px;"><div class="card-link" onclick="openTaxRevModal('${r.id}')" style="display:inline-block;">···</div></td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
