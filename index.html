@@ -2619,11 +2619,20 @@ a { text-decoration:none; color:inherit; }
     </div>
     <div class="modal-body">
       <div class="modal-props">
+        <!-- 품목 유형 -->
         <div class="prop-row">
-          <div class="prop-icon">📦</div><div class="prop-label">상품</div>
+          <div class="prop-icon">🗂</div><div class="prop-label">품목 유형</div>
+          <div class="prop-val" style="display:flex;gap:6px;">
+            <div class="inv-pill on" id="inv-r-type-prod" style="font-size:11px;padding:3px 10px;" onclick="invReceiptSetType('product')">상품</div>
+            <div class="inv-pill" id="inv-r-type-supply" style="font-size:11px;padding:3px 10px;" onclick="invReceiptSetType('supply')">소모품</div>
+          </div>
+        </div>
+        <input type="hidden" id="inv-r-item-type" value="product">
+        <div class="prop-row">
+          <div class="prop-icon">📦</div><div class="prop-label">품목</div>
           <div class="prop-val">
             <div class="inv-search-wrap">
-              <input type="text" class="inv-search-inp" id="inv-r-search" placeholder="상품명 검색..." oninput="invSearchProduct('inv-r-search','inv-r-drop','inv-r-product-id','inv-r-product-lbl')">
+              <input type="text" class="inv-search-inp" id="inv-r-search" placeholder="상품/소모품 검색..." oninput="invReceiptSearch()">
               <div class="inv-search-drop" id="inv-r-drop"></div>
             </div>
             <div id="inv-r-product-lbl" style="font-size:12px;color:var(--green);margin-top:4px;display:none;"></div>
@@ -2634,8 +2643,17 @@ a { text-decoration:none; color:inherit; }
           <div class="prop-icon">🔢</div><div class="prop-label">수량</div>
           <div class="prop-val"><input type="number" class="prop-inp" id="inv-r-qty" placeholder="0" min="1"></div>
         </div>
+        <!-- 날짜 3개 -->
         <div class="prop-row">
-          <div class="prop-icon">📅</div><div class="prop-label">예정일</div>
+          <div class="prop-icon">📋</div><div class="prop-label">발주일</div>
+          <div class="prop-val"><input type="date" class="prop-inp" id="inv-r-order-date"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🏭</div><div class="prop-label">공장출고일</div>
+          <div class="prop-val"><input type="date" class="prop-inp" id="inv-r-factory-date"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">📅</div><div class="prop-label">물류입고예정일</div>
           <div class="prop-val"><input type="date" class="prop-inp" id="inv-r-date"></div>
         </div>
         <div class="prop-row">
@@ -3326,6 +3344,16 @@ a { text-decoration:none; color:inherit; }
         <div class="prop-row">
           <div class="prop-icon">📝</div><div class="prop-label">메모</div>
           <div class="prop-val"><input type="text" class="prop-inp" id="defect-memo" placeholder="불량 원인 등 (선택)"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">📷</div><div class="prop-label">불량사진</div>
+          <div class="prop-val">
+            <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:0.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--light);">
+              <span>📎 사진 첨부</span>
+              <input type="file" id="defect-photo-input" accept="image/*" multiple style="display:none;" onchange="defectPhotoPreview(this)">
+            </label>
+            <div id="defect-photo-list" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"></div>
+          </div>
         </div>
       </div>
       <div id="defect-inv-preview" style="margin-top:4px;padding:10px 12px;background:var(--surface2);border-radius:var(--r);font-size:12px;color:var(--light);display:none;"></div>
@@ -4479,7 +4507,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.0.0</div>
+<div id="version">v5.0.3</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4521,6 +4549,7 @@ const $ = id => document.getElementById(id);
 const dateStr = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const timeStr = () => { const n=new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; };
 const fmtWon  = n => { if(!n)return'—'; if(n>=100000000)return`₩${(n/100000000).toFixed(1)}억`; if(n>=10000)return`₩${Math.round(n/10000).toLocaleString()}만`; return`₩${n.toLocaleString()}`; };
+const fmtWonExact = n => { if(!n&&n!==0)return'—'; return`₩${Math.round(n).toLocaleString()}원`; }; // 1원 단위
 
 let toastTimer;
 function toast(msg, dur=2400) {
@@ -4869,8 +4898,8 @@ function doLogin() {
 
 $('pin-input').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
-function logout() {
-  if(!confirm('로그아웃 하시겠어요?')) return;
+async function logout() {
+  const ok = await customConfirm('로그아웃 하시겠어요?', ''); if(!ok) return;
   sessionStorage.removeItem('cherop_uid');
   user=null; attState={}; attRowId=null;
   $('app').classList.remove('on');
@@ -6420,7 +6449,6 @@ async function runImport() {
         category:        r.category,
         sku:             null,
         is_discontinued: r.is_discontinued,
-        created_at:      new Date().toISOString(),
       }));
       const { error: pe } = await db.from('products').upsert(productRows, { onConflict: 'id', ignoreDuplicates: false });
       if (pe) { console.error('products upsert error:', pe); toast('상품 등록 실패: ' + pe.message); fail += batch.length; continue; }
@@ -6433,7 +6461,6 @@ async function runImport() {
         produced_stock:     r.produced,
         pending_production: r.pending,
         available_stock:    r.avail,
-        updated_at:         new Date().toISOString(),
       }));
       const { error: ie } = await db.from('inventory').upsert(invRows, { onConflict: 'id', ignoreDuplicates: false });
       if (ie) console.error('inventory upsert error:', ie);
@@ -6454,7 +6481,6 @@ async function runImport() {
               product_id: r.id,
               channel:    ch,
               stock:      r[key],
-              updated_at: new Date().toISOString(),
             });
           }
         }
@@ -7502,6 +7528,53 @@ async function loadReceiptSchedule() {
   } catch(e){ console.error(e); }
 }
 
+/* ── 입고 모달 품목유형/검색 ── */
+function invReceiptSetType(type) {
+  $('inv-r-item-type').value = type;
+  $('inv-r-type-prod').classList.toggle('on', type==='product');
+  $('inv-r-type-supply').classList.toggle('on', type==='supply');
+  $('inv-r-search').value = '';
+  $('inv-r-product-id').value = '';
+  $('inv-r-product-lbl').style.display = 'none';
+  $('inv-r-drop').innerHTML = '';
+}
+
+async function invReceiptSearch() {
+  const q = $('inv-r-search').value.trim();
+  const type = $('inv-r-item-type').value;
+  const drop = $('inv-r-drop'); if (!drop) return;
+  if (!q) { drop.innerHTML=''; return; }
+
+  let items = [];
+  if (type === 'product') {
+    const { data } = await db.from('products').select('id,name,option_name').ilike('name','%'+q+'%').limit(10);
+    items = (data||[]).map(p => ({ id:p.id, label: p.name + (p.option_name?' · '+p.option_name:'') }));
+  } else {
+    // 소모품 — app_state.consumables
+    const s = await getAppState();
+    items = (s.consumables||[])
+      .filter(c => (c.name||'').includes(q))
+      .slice(0,10)
+      .map(c => ({ id:'supply_'+c.id, label: c.name }));
+  }
+
+  drop.innerHTML = items.map(it =>
+    `<div onclick="invReceiptSelectItem('${it.id}','${it.label.replace(/'/g,"\'")}')"
+      style="padding:8px 12px;font-size:12px;cursor:pointer;border-bottom:0.5px solid var(--surface2);"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      ${it.label}
+    </div>`
+  ).join('');
+}
+
+function invReceiptSelectItem(id, label) {
+  $('inv-r-product-id').value = id;
+  $('inv-r-search').value = label;
+  $('inv-r-product-lbl').textContent = '✓ '+label;
+  $('inv-r-product-lbl').style.display = '';
+  $('inv-r-drop').innerHTML = '';
+}
+
 function openReceiptEdit(id) {
   db.from('stock_receipts').select('*').eq('id',id).single().then(({data:r})=>{
     if(!r) return;
@@ -7668,7 +7741,8 @@ function openInvModal(type) {
     $('inv-product-modal').classList.add('on'); setTimeout(()=>$('inv-p-name').focus(),80); }
   if(type==='receipt'){ invReceiptIsNew=true; invReceiptEditId=null;
     $('inv-receipt-kind').textContent='입고 등록';
-    ['inv-r-search','inv-r-qty','inv-r-note'].forEach(id=>$(id)&&($(id).value=''));
+    ['inv-r-search','inv-r-qty','inv-r-note','inv-r-order-date','inv-r-factory-date'].forEach(id=>$(id)&&($(id).value=''));
+    invReceiptSetType('product');
     $('inv-r-product-id').value=''; $('inv-r-product-lbl').style.display='none';
     $('inv-r-date').value=dateStr(); $('inv-r-drop').classList.remove('open');
     $('inv-receipt-modal').classList.add('on'); setTimeout(()=>$('inv-r-search').focus(),80); }
@@ -7803,19 +7877,27 @@ async function invSelectProduct(id, label, searchId, dropId, hiddenId, lblId) {
 }
 
 async function saveReceipt() {
-  const productId=$('inv-r-product-id').value;
-  const qty=parseInt($('inv-r-qty').value);
-  const date=$('inv-r-date').value;
-  if(!productId){ toast('상품을 선택해주세요'); return; }
+  const productId  = $('inv-r-product-id').value;
+  const itemType   = $('inv-r-item-type')?.value || 'product';
+  const qty        = parseInt($('inv-r-qty').value);
+  const orderDate  = $('inv-r-order-date')?.value || null;
+  const factDate   = $('inv-r-factory-date')?.value || null;
+  const schedDate  = $('inv-r-date').value;
+  if(!productId){ toast('품목을 선택해주세요'); return; }
   if(!qty||qty<1){ toast('수량을 입력해주세요'); return; }
-  if(!date){ toast('예정일을 선택해주세요'); return; }
   try {
     await db.from('stock_receipts').insert([{
-      id:`receipt-${Date.now()}`,product_id:productId,quantity:qty,
-      scheduled_date:date,status:'scheduled',
-      assigned_to:$('inv-r-assignee').value||null,
-      note:$('inv-r-note').value.trim()||null,
-      created_at:new Date().toISOString()
+      id: `receipt-${Date.now()}`,
+      product_id:     itemType==='product' ? productId : null,
+      supply_id:      itemType==='supply'  ? productId : null,
+      item_type:      itemType,
+      quantity:       qty,
+      order_date:     orderDate,
+      factory_date:   factDate,
+      scheduled_date: schedDate || null,
+      status:         'scheduled',
+      assigned_to:    $('inv-r-assignee').value||null,
+      note:           $('inv-r-note').value.trim()||null,
     }]);
     toast('입고 일정이 등록됐어요 ✓');
     closeModal('inv-receipt-modal'); loadReceiptSchedule();
@@ -9178,6 +9260,9 @@ function openDefectModal() {
   $('defect-search').value='';
   $('defect-qty').value='';
   $('defect-memo').value='';
+  _defectPhotos=[];
+  if($('defect-photo-list')) $('defect-photo-list').innerHTML='';
+  if($('defect-photo-input')) $('defect-photo-input').value='';
   $('defect-drop').innerHTML='';
   $('defect-selected-row').style.display='none';
   $('defect-inv-preview').style.display='none';
@@ -9216,6 +9301,52 @@ async function updateDefectPreview() {
     `현재 총재고 ${inv.total_stock||0}개 · 상품화완료 ${inv.produced_stock||0}개 · 가용 ${inv.available_stock||0}개`;
 }
 
+/* ── 불량 사진 ── */
+let _defectPhotos = []; // {dataUrl, name}
+
+function defectPhotoPreview(input) {
+  const files = [...input.files];
+  const list  = $('defect-photo-list');
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target.result;
+      _defectPhotos.push({ dataUrl, name: file.name });
+      const idx = _defectPhotos.length - 1;
+      const div = document.createElement('div');
+      div.style.cssText = 'position:relative;width:56px;height:56px;border-radius:6px;overflow:hidden;border:0.5px solid var(--border);';
+      div.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;">
+        <div onclick="removeDefectPhoto(${idx})" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:rgba(0,0,0,.5);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:9px;color:#fff;">✕</div>`;
+      div.dataset.photoIdx = idx;
+      list.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function removeDefectPhoto(idx) {
+  _defectPhotos[idx] = null;
+  const list = $('defect-photo-list');
+  const divs = list.querySelectorAll('[data-photo-idx]');
+  divs.forEach(d => { if (parseInt(d.dataset.photoIdx) === idx) d.remove(); });
+}
+
+async function uploadDefectPhotos() {
+  const photos = _defectPhotos.filter(Boolean);
+  const urls   = [];
+  for (const p of photos) {
+    const blob = await fetch(p.dataUrl).then(r=>r.blob());
+    const path = `defects/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+    const { data, error } = await db.storage.from('content-images').upload(path, blob, { upsert:true });
+    if (!error) {
+      const { data: urlData } = db.storage.from('content-images').getPublicUrl(path);
+      urls.push(urlData.publicUrl);
+    }
+  }
+  return urls;
+}
+
 async function saveDefect() {
   if(!defectSelId){ toast('상품을 선택해주세요'); return; }
   const qty  = parseInt($('defect-qty').value)||0;
@@ -9250,12 +9381,16 @@ async function saveDefect() {
     // app_state에 불량 기록 저장
     const s = await getAppState();
     s.prod_defects = s.prod_defects||[];
+    const photoUrls = await uploadDefectPhotos();
+    _defectPhotos = [];
+    if ($('defect-photo-list')) $('defect-photo-list').innerHTML = '';
     s.prod_defects.push({
       id: `df-${Date.now()}`,
       product_id: defectSelId,
       type: defectType,
       channel: ch,
       qty, memo,
+      photo_urls: photoUrls.length ? photoUrls : [],
       status: 'pending',
       date: dateStr(),
     });
@@ -15287,9 +15422,9 @@ async function loadPlanBudget() {
       : salesRows.filter(r=>{ const m=parseInt((r.date||'').slice(5,7)); return m===_budgetMonth; }).reduce((s,r)=>s+(r.amount||0),0);
     const profit     = totalSales - totalCost;
     kpiEl.innerHTML = [
-      {label:_budgetMonth?`${_budgetMonth}월 매출 실적`:'연간 매출 실적', val:fmtWon(totalSales)||'—', color:'#6B9E7A'},
-      {label:_budgetMonth?`${_budgetMonth}월 지출 실적`:'총 지출 실적', val:totalCost?fmtWon(totalCost):'—', sub:'세무관리 비용 연동', color:'#C4736A'},
-      {label:'순수익',         val:totalSales?fmtWon(profit):'—', color:profit>=0?'#3B6D11':'#C4736A'},
+      {label:_budgetMonth?`${_budgetMonth}월 매출 실적`:'연간 매출 실적', val:fmtWonExact(totalSales)||'—', color:'#6B9E7A'},
+      {label:_budgetMonth?`${_budgetMonth}월 지출 실적`:'총 지출 실적', val:totalCost?fmtWonExact(totalCost):'—', sub:'세무관리 비용 연동', color:'#C4736A'},
+      {label:'순수익',         val:totalSales?fmtWonExact(profit):'—', color:profit>=0?'#3B6D11':'#C4736A'},
     ].map(k=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
       <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${k.label}</div>
       <div style="font-size:22px;font-weight:500;color:${k.color};">${k.val}</div>
@@ -15308,7 +15443,7 @@ async function loadPlanBudget() {
         actEl.innerHTML = Object.entries(CAT_LBL).filter(([k])=>catMap[k]).map(([k,lbl])=>`
           <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
             <div style="flex:1;font-size:12px;">${lbl}</div>
-            <div style="font-size:12px;font-weight:500;">${fmtWon(catMap[k])}</div>
+            <div style="font-size:12px;font-weight:500;">${fmtWonExact(catMap[k])}</div>
           </div>`).join('');
       }
     }
@@ -15328,8 +15463,8 @@ async function loadPlanBudget() {
   const maxAmt = Math.max(...budgetItems.map(x=>x.amount||0),1);
 
   $('plan-budget-summary').innerHTML = [
-    {l:'월 총예산', v:fmtWon(totalMonthly)},
-    {l:'연간 예산', v:fmtWon(totalMonthly*12)},
+    {l:'월 총예산', v:fmtWonExact(totalMonthly)},
+    {l:'연간 예산', v:fmtWonExact(totalMonthly*12)},
     {l:'올해 집행률', v:(budget.execRate||0)+'%'},
   ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;">
     <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
@@ -15343,7 +15478,7 @@ async function loadPlanBudget() {
       <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
         <div style="width:${pct}%;height:100%;background:${item.color};border-radius:3px;"></div>
       </div>
-      <div style="font-size:12px;font-weight:500;min-width:64px;text-align:right;">${fmtWon(item.amount)}</div>
+      <div style="font-size:12px;font-weight:500;min-width:64px;text-align:right;">${fmtWonExact(item.amount)}</div>
     </div>`;
   }).join('');
 
@@ -15352,7 +15487,7 @@ async function loadPlanBudget() {
     ? items.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 10px;background:var(--surface2);border-radius:6px;margin-bottom:6px;">
         <span>${x.title}</span>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-weight:500;color:var(--amber);">+${fmtWon(x.amount)}</span>
+          <span style="font-weight:500;color:var(--amber);">+${fmtWonExact(x.amount)}</span>
           <div class="card-link" onclick="openPlanItemModal('season-budget','${x.id}')">···</div>
         </div>
       </div>`).join('')
@@ -15887,11 +16022,11 @@ async function loadTaxMonthly() {
 
   // 요약 카드
   $('tax-summary-cards').innerHTML = [
-    { l:'총 매출',    v:fmtWon(totalRevenue), s:'채널 자동 집계',                color:'var(--text)' },
-    { l:'총 비용',    v:fmtWon(totalCost),    s:`매출 대비 ${totalRevenue?Math.round(totalCost/totalRevenue*100):0}%`, color:'var(--text)' },
-    { l:'순수익',     v:fmtWon(netProfit),    s:`이익률 ${totalRevenue?Math.round(netProfit/totalRevenue*100):0}%`, color: netProfit>=0?'#3B6D11':'#A32D2D' },
-    { l:'부가세 예상', v:fmtWon(vatDue),       s:'매출세 - 매입세',               color:'#854F0B' },
-    { l:'원천세 납부', v:fmtWon(withholdDue),  s:`${taxMonth+1}월 10일 납부`,      color:'#A32D2D' },
+    { l:'총 매출',    v:fmtWonExact(totalRevenue), s:'채널 자동 집계',                color:'var(--text)' },
+    { l:'총 비용',    v:fmtWonExact(totalCost),    s:`매출 대비 ${totalRevenue?Math.round(totalCost/totalRevenue*100):0}%`, color:'var(--text)' },
+    { l:'순수익',     v:fmtWonExact(netProfit),    s:`이익률 ${totalRevenue?Math.round(netProfit/totalRevenue*100):0}%`, color: netProfit>=0?'#3B6D11':'#A32D2D' },
+    { l:'부가세 예상', v:fmtWonExact(vatDue),       s:'매출세 - 매입세',               color:'#854F0B' },
+    { l:'원천세 납부', v:fmtWonExact(withholdDue),  s:`${taxMonth+1}월 10일 납부`,      color:'#A32D2D' },
   ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
     <div style="font-size:18px;font-weight:500;color:${c.color};">${c.v}</div>
@@ -15909,11 +16044,11 @@ async function loadTaxMonthly() {
       <div style="flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;">
         <div style="width:${pct}%;height:100%;background:${CH_COLORS[ch]||'#888'};border-radius:3px;"></div>
       </div>
-      <div style="font-size:12px;font-weight:500;min-width:72px;text-align:right;">${fmtWon(amt)}</div>
+      <div style="font-size:12px;font-weight:500;min-width:72px;text-align:right;">${fmtWonExact(amt)}</div>
       <div style="font-size:10px;color:var(--light);min-width:28px;text-align:right;">${totalRevenue?Math.round(amt/totalRevenue*100):0}%</div>
     </div>`;
   }).join('') + `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12px;">
-    <span style="color:var(--light);">합계</span><span style="font-weight:500;">${fmtWon(totalRevenue)}</span>
+    <span style="color:var(--light);">합계</span><span style="font-weight:500;">${fmtWonExact(totalRevenue)}</span>
   </div>`;
 
   // 비용 내역
@@ -15928,11 +16063,11 @@ async function loadTaxMonthly() {
           <div style="font-size:10px;color:var(--light);">${TAX_CAT_LABEL[c.cat]||c.cat}</div>
         </div>
         <div style="font-size:10px;${c.hasTax?'color:#3B6D11;':'color:var(--faint);'};">${c.hasTax?'세금계산서 ✓':'—'}</div>
-        <div style="font-size:12px;font-weight:500;">${fmtWon(c.amount||0)}</div>
+        <div style="font-size:12px;font-weight:500;">${fmtWonExact(c.amount||0)}</div>
         <div class="card-link" onclick="openTaxCostModal('${c.id}')" style="font-size:13px;">···</div>
       </div>`).join('') +
       `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12px;">
-        <span style="color:var(--light);">합계</span><span style="font-weight:500;">${fmtWon(totalCost)}</span>
+        <span style="color:var(--light);">합계</span><span style="font-weight:500;">${fmtWonExact(totalCost)}</span>
       </div>`;
   }
 
@@ -15942,15 +16077,15 @@ async function loadTaxMonthly() {
   $('tax-vat-calc').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
       <div style="font-size:12px;color:var(--muted);">매출 세액 (공급대가 ÷ 11)</div>
-      <div style="font-size:12px;font-weight:500;">${fmtWon(vatSales)}</div>
+      <div style="font-size:12px;font-weight:500;">${fmtWonExact(vatSales)}</div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
       <div style="font-size:12px;color:var(--muted);">매입 세액 공제</div>
-      <div style="font-size:12px;font-weight:500;color:#3B6D11;">- ${fmtWon(vatInput)}</div>
+      <div style="font-size:12px;font-weight:500;color:#3B6D11;">- ${fmtWonExact(vatInput)}</div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-top:8px;background:#FAEEDA;border-radius:8px;">
       <div style="font-size:13px;font-weight:500;color:#854F0B;">납부 예상 부가세</div>
-      <div style="font-size:18px;font-weight:500;color:#854F0B;">${fmtWon(vatDue)}</div>
+      <div style="font-size:18px;font-weight:500;color:#854F0B;">${fmtWonExact(vatDue)}</div>
     </div>
     <div style="font-size:11px;color:var(--faint);margin-top:8px;">* 세금계산서 발행 매입분만 공제 적용</div>`;
 
@@ -15997,8 +16132,8 @@ async function loadTaxQuarter() {
     const isCur = d.q===cur && taxYear===new Date().getFullYear();
     return `<div style="background:${isCur?'var(--text)':'var(--surface2)'};border-radius:var(--r);padding:12px 14px;cursor:pointer;" onclick="taxSetQtr(${d.q})">
       <div style="font-size:11px;color:${isCur?'rgba(255,255,255,.6)':'var(--light)'};margin-bottom:3px;">Q${d.q}${isCur?' · 현재':''}</div>
-      <div style="font-size:16px;font-weight:500;color:${isCur?'#fff':'var(--text)'};">${fmtWon(d.rev)}</div>
-      <div style="font-size:11px;color:${d.net>=0?(isCur?'#9FC':'#3B6D11'):(isCur?'#F99':'#A32D2D')};margin-top:2px;">순수익 ${fmtWon(d.net)}</div>
+      <div style="font-size:16px;font-weight:500;color:${isCur?'#fff':'var(--text)'};">${fmtWonExact(d.rev)}</div>
+      <div style="font-size:11px;color:${d.net>=0?(isCur?'#9FC':'#3B6D11'):(isCur?'#F99':'#A32D2D')};margin-top:2px;">순수익 ${fmtWonExact(d.net)}</div>
     </div>`;
   }).join('');
 
