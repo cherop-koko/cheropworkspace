@@ -2737,9 +2737,9 @@ a { text-decoration:none; color:inherit; }
         <div class="prop-row">
           <div class="prop-icon">📦</div><div class="prop-label">품목</div>
           <div class="prop-val">
-            <div class="inv-search-wrap">
+            <div class="inv-search-wrap" style="position:static;">
               <input type="text" class="inv-search-inp" id="inv-r-search" placeholder="상품/소모품 검색..." oninput="invReceiptSearch()">
-              <div class="inv-search-drop" id="inv-r-drop"></div>
+              <div class="inv-search-drop" id="inv-r-drop" style="position:static;margin-top:6px;box-shadow:none;"></div>
             </div>
             <div id="inv-r-product-lbl" style="font-size:12px;color:var(--green);margin-top:4px;display:none;"></div>
             <input type="hidden" id="inv-r-product-id">
@@ -4734,7 +4734,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.4.0</div>
+<div id="version">v5.4.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -7906,13 +7906,14 @@ function invReceiptSetType(type) {
   $('inv-r-product-id').value = '';
   $('inv-r-product-lbl').style.display = 'none';
   $('inv-r-drop').innerHTML = '';
+  $('inv-r-drop').classList.remove('open');
 }
 
 async function invReceiptSearch() {
   const q = $('inv-r-search').value.trim();
   const type = $('inv-r-item-type').value;
   const drop = $('inv-r-drop'); if (!drop) return;
-  if (!q) { drop.innerHTML=''; return; }
+  if (!q) { drop.innerHTML=''; drop.classList.remove('open'); return; }
 
   let items = [];
   if (type === 'product') {
@@ -7931,6 +7932,7 @@ async function invReceiptSearch() {
   window._invReceiptResults = items;
   if (!items.length) {
     drop.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--faint);">검색 결과가 없어요</div>`;
+    drop.classList.add('open');
     return;
   }
   drop.innerHTML = items.map((it, i) =>
@@ -7940,6 +7942,7 @@ async function invReceiptSearch() {
       ${escapeHtml(it.label)}
     </div>`
   ).join('');
+  drop.classList.add('open');
 }
 
 function invReceiptSelectItem(idx) {
@@ -7950,6 +7953,7 @@ function invReceiptSelectItem(idx) {
   $('inv-r-product-lbl').textContent = '✓ '+it.label;
   $('inv-r-product-lbl').style.display = '';
   $('inv-r-drop').innerHTML = '';
+  $('inv-r-drop').classList.remove('open');
 }
 
 async function openReceiptEdit(id) {
