@@ -1730,6 +1730,7 @@ a { text-decoration:none; color:inherit; }
             <div class="page-tab"   onclick="mktSetTab('perf',this)">퍼포먼스</div>
             <div class="page-tab"   onclick="mktSetTab('apptest',this)">소구 테스트</div>
             <div class="page-tab"   onclick="mktSetTab('crm',this)">CRM</div>
+            <div class="page-tab"   onclick="mktSetTab('adbrief',this)">광고 소재 기획</div>
           </div>
         </div>
 
@@ -1832,6 +1833,35 @@ a { text-decoration:none; color:inherit; }
                 <div class="card-head"><div class="card-title">고객 등급 분포</div></div>
                 <div id="mkt-crm-grade"></div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ━━━ 광고 소재 기획 탭 ━━━ -->
+        <div id="mkt-tab-adbrief" style="display:none;">
+          <div style="display:grid;grid-template-columns:380px 1fr;gap:14px;align-items:start;min-height:560px;">
+            <!-- 좌측: 리스트 -->
+            <div class="card" style="padding:0;overflow:hidden;">
+              <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
+                <div style="display:flex;gap:5px;flex-wrap:wrap;" id="adbrief-status-pills">
+                  <div class="inv-pill on" onclick="adBriefSetFilter('all',this)">전체</div>
+                  <div class="inv-pill"   onclick="adBriefSetFilter('idea',this)">아이디어</div>
+                  <div class="inv-pill"   onclick="adBriefSetFilter('plan',this)">기획중</div>
+                  <div class="inv-pill"   onclick="adBriefSetFilter('shot',this)">촬영완료</div>
+                  <div class="inv-pill"   onclick="adBriefSetFilter('edit',this)">편집중</div>
+                  <div class="inv-pill"   onclick="adBriefSetFilter('live',this)">집행중</div>
+                </div>
+                <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;margin-left:auto;" onclick="openAdBriefModal()">+ 소재 추가</button>
+              </div>
+              <div id="adbrief-list"></div>
+            </div>
+
+            <!-- 우측: 상세 패널 -->
+            <div class="card" id="adbrief-detail" style="min-height:540px;">
+              <div id="adbrief-detail-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:480px;color:var(--faint);font-size:13px;line-height:1.7;text-align:center;">
+                소재를 선택하면<br>상세 내용이 표시돼요
+              </div>
+              <div id="adbrief-detail-body" style="display:none;"></div>
             </div>
           </div>
         </div>
@@ -4395,6 +4425,54 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ═══ 마케팅: 광고 소재 기획 모달 ═══ -->
+<div class="modal-overlay" id="adbrief-modal" onclick="if(event.target===this)closeModal('adbrief-modal')">
+  <div class="modal" style="max-width:600px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div style="display:flex;gap:5px;flex-wrap:wrap;" id="adbrief-modal-status-pills">
+        <div class="inv-pill on" data-st="idea" onclick="adBriefModalSetStatus('idea',this)">아이디어</div>
+        <div class="inv-pill"   data-st="plan" onclick="adBriefModalSetStatus('plan',this)">기획중</div>
+        <div class="inv-pill"   data-st="shot" onclick="adBriefModalSetStatus('shot',this)">촬영완료</div>
+        <div class="inv-pill"   data-st="edit" onclick="adBriefModalSetStatus('edit',this)">편집중</div>
+        <div class="inv-pill"   data-st="live" onclick="adBriefModalSetStatus('live',this)">집행중</div>
+      </div>
+      <div class="modal-bar-right">
+        <div class="mbtn" id="adbrief-del-btn" onclick="deleteAdBrief()" style="display:none;color:var(--red);">삭제</div>
+        <div class="mbtn" onclick="closeModal('adbrief-modal')">✕</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="prop-inp" id="adbrief-title" placeholder="소재 제목을 입력하세요" style="font-size:20px;font-weight:600;border:none;padding:8px 0;margin-bottom:16px;border-bottom:0.5px solid var(--border);border-radius:0;">
+      <div class="modal-props">
+        <div class="prop-row">
+          <div class="prop-icon">📦</div><div class="prop-label">필요 제품</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="adbrief-product" placeholder="입력하세요"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">📍</div><div class="prop-label">촬영 장소</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="adbrief-place" placeholder="입력하세요"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">📅</div><div class="prop-label">촬영 일정</div>
+          <div class="prop-val"><input type="date" class="prop-inp" id="adbrief-date"></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">🎤 멘트 / 스크립트</div>
+        <textarea class="prop-inp" id="adbrief-script" placeholder="광고에 사용할 멘트나 스크립트를 입력하세요..." style="width:100%;min-height:110px;resize:vertical;font-family:inherit;line-height:1.6;"></textarea>
+      </div>
+      <div style="margin-top:14px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">💡 아이디어 메모</div>
+        <textarea class="prop-inp" id="adbrief-note" placeholder="레퍼런스, 톤앤매너, 촬영 방향 등 자유롭게..." style="width:100%;min-height:110px;resize:vertical;font-family:inherit;line-height:1.6;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="f-btn f-btn-cancel" onclick="closeModal('adbrief-modal')">취소</button>
+      <button class="f-btn f-btn-save" onclick="saveAdBrief()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 컬러 보드 추가/편집 모달 ═══ -->
 <div class="modal-overlay" id="board-modal" onclick="if(event.target===this)closeModal('board-modal')">
   <div class="modal-box" style="max-width:360px;">
@@ -4656,7 +4734,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.3.6</div>
+<div id="version">v5.4.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -6011,10 +6089,12 @@ async function loadMemoList() {
    CUSTOM CONFIRM
 ═══════════════════════════════════════ */
 let confirmResolve = ()=>{};
-function customConfirm(msg, sub='이 작업은 되돌릴 수 없어요.') {
+function customConfirm(msg, sub='이 작업은 되돌릴 수 없어요.', yesLabel='삭제') {
   return new Promise(resolve => {
     $('confirm-msg').textContent = msg;
     $('confirm-sub').textContent = sub;
+    const yesBtn = document.querySelector('#confirm-overlay .confirm-yes');
+    if (yesBtn) yesBtn.textContent = yesLabel;
     $('confirm-overlay').classList.add('on');
     confirmResolve = (v) => {
       $('confirm-overlay').classList.remove('on');
@@ -12474,13 +12554,14 @@ function mktSetTab(tab, el) {
   mktTab = tab;
   document.querySelectorAll('#mkt-tabs .page-tab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  ['today','perf','apptest','crm'].forEach(t=>{
+  ['today','perf','apptest','crm','adbrief'].forEach(t=>{
     const d=$(`mkt-tab-${t}`); if(d) d.style.display=(t===tab)?'':'none';
   });
   if(tab==='today')   loadMktToday();
   if(tab==='perf')    loadMktPerf();
   if(tab==='apptest') loadMktApptest();
   if(tab==='crm')     loadMktCrm();
+  if(tab==='adbrief') loadAdBrief();
 }
 
 /* ── 오늘 현황 ── */
@@ -13152,6 +13233,209 @@ async function saveMktCrm() {
   }
   await setAppState(s); toast('저장됐어요 ✓'); closeModal('mkt-crm-modal'); loadMktCrm();
 }
+
+/* ══════════════════════════════
+   광고 소재 기획 (Ad Brief)
+══════════════════════════════ */
+const AD_BRIEF_STATUS = {
+  idea: { label:'아이디어',   color:'#94928D' },
+  plan: { label:'기획중',     color:'#C4A96A' },
+  shot: { label:'촬영완료',   color:'#6B9E7A' },
+  edit: { label:'편집중',     color:'#7B68C8' },
+  live: { label:'집행중',     color:'#378ADD' },
+};
+let adBriefFilter = 'all';
+let adBriefSelectedId = null;
+let adBriefEditId = null;
+let adBriefModalStatus = 'idea';
+
+async function loadAdBrief() {
+  const s = await getAppState();
+  const all = s.ad_briefs || [];
+
+  // 사이드바 카운트 업데이트
+  const pills = document.querySelectorAll('#adbrief-status-pills .inv-pill');
+  pills.forEach(p => p.classList.remove('on'));
+  const onPill = Array.from(pills).find(p => {
+    const oc = p.getAttribute('onclick')||'';
+    const m = oc.match(/adBriefSetFilter\('([^']+)'/);
+    return m && m[1] === adBriefFilter;
+  });
+  if (onPill) onPill.classList.add('on');
+
+  // 필터링
+  const filtered = adBriefFilter==='all' ? all : all.filter(b => b.status === adBriefFilter);
+  // 최신순 정렬
+  filtered.sort((a,b) => (b.updated_at||0) - (a.updated_at||0));
+
+  // 리스트 렌더
+  if (!filtered.length) {
+    $('adbrief-list').innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--faint);font-size:13px;">
+      ${adBriefFilter==='all' ? '아직 등록된 소재가 없어요' : '이 상태의 소재가 없어요'}
+    </div>`;
+  } else {
+    $('adbrief-list').innerHTML = filtered.map(b => {
+      const st = AD_BRIEF_STATUS[b.status] || AD_BRIEF_STATUS.idea;
+      const isSel = b.id === adBriefSelectedId;
+      return `<div onclick="adBriefSelect('${b.id}')"
+        style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:0.5px solid var(--surface2);cursor:pointer;${isSel?'background:var(--surface2);border-left:3px solid var(--text);padding-left:13px;':''}">
+        <span style="width:8px;height:8px;border-radius:50%;background:${st.color};flex-shrink:0;"></span>
+        <div style="flex:1;font-size:13px;font-weight:${isSel?'600':'500'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.title||'(제목 없음)')}</div>
+        <span style="font-size:10px;color:var(--muted);background:${st.color}22;color:${st.color};padding:2px 8px;border-radius:50px;white-space:nowrap;">${st.label}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // 상세 패널
+  const sel = adBriefSelectedId ? all.find(b => b.id === adBriefSelectedId) : null;
+  if (sel) {
+    const st = AD_BRIEF_STATUS[sel.status] || AD_BRIEF_STATUS.idea;
+    $('adbrief-detail-empty').style.display = 'none';
+    $('adbrief-detail-body').style.display = '';
+    const fmtDate = d => d ? d.replace(/-/g,'.') : '미정';
+    $('adbrief-detail-body').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:14px;border-bottom:0.5px solid var(--surface2);">
+        <div>
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+            <span style="width:9px;height:9px;border-radius:50%;background:${st.color};"></span>
+            <span style="font-size:12px;color:${st.color};font-weight:600;">${st.label}</span>
+          </div>
+          <div style="font-size:20px;font-weight:600;">${escapeHtml(sel.title||'(제목 없음)')}</div>
+        </div>
+        <button class="f-btn" style="font-size:11px;padding:5px 13px;" onclick="openAdBriefModal('${sel.id}')">편집</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;">
+        <div>
+          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">📦 필요 제품</div>
+          <div style="font-size:13px;line-height:1.6;">${escapeHtml(sel.product)||'<span style="color:var(--faint);">미입력</span>'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">📍 촬영 장소</div>
+          <div style="font-size:13px;line-height:1.6;">${escapeHtml(sel.place)||'<span style="color:var(--faint);">미입력</span>'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">📅 촬영 일정</div>
+          <div style="font-size:13px;line-height:1.6;">${fmtDate(sel.date)}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--light);margin-bottom:6px;">🎤 멘트 / 스크립트</div>
+        <div style="font-size:13px;line-height:1.7;background:var(--surface2);border-radius:var(--r);padding:12px 14px;white-space:pre-wrap;">${escapeHtml(sel.script)||'<span style="color:var(--faint);">미입력</span>'}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--light);margin-bottom:6px;">💡 아이디어 메모</div>
+        <div style="font-size:13px;line-height:1.7;background:var(--surface2);border-radius:var(--r);padding:12px 14px;white-space:pre-wrap;color:var(--muted);">${escapeHtml(sel.note)||'<span style="color:var(--faint);">미입력</span>'}</div>
+      </div>
+    `;
+  } else {
+    $('adbrief-detail-empty').style.display = '';
+    $('adbrief-detail-body').style.display = 'none';
+  }
+}
+
+function adBriefSetFilter(f, el) {
+  adBriefFilter = f;
+  // 필터 바뀌면 선택 유지하되, 안 보이면 해제됨 (loadAdBrief에서 자동)
+  loadAdBrief();
+}
+
+function adBriefSelect(id) {
+  adBriefSelectedId = id;
+  loadAdBrief();
+}
+
+function openAdBriefModal(id) {
+  adBriefEditId = id || null;
+  const pills = document.querySelectorAll('#adbrief-modal-status-pills .inv-pill');
+
+  if (id) {
+    // 편집 모드
+    getAppState().then(s => {
+      const b = (s.ad_briefs||[]).find(x => x.id === id);
+      if (!b) return;
+      adBriefModalStatus = b.status || 'idea';
+      $('adbrief-title').value   = b.title   || '';
+      $('adbrief-product').value = b.product || '';
+      $('adbrief-place').value   = b.place   || '';
+      $('adbrief-date').value    = b.date    || '';
+      $('adbrief-script').value  = b.script  || '';
+      $('adbrief-note').value    = b.note    || '';
+      pills.forEach(p => p.classList.toggle('on', p.dataset.st === adBriefModalStatus));
+      $('adbrief-del-btn').style.display = '';
+      $('adbrief-modal').classList.add('on');
+    });
+  } else {
+    // 신규
+    adBriefModalStatus = 'idea';
+    $('adbrief-title').value   = '';
+    $('adbrief-product').value = '';
+    $('adbrief-place').value   = '';
+    $('adbrief-date').value    = '';
+    $('adbrief-script').value  = '';
+    $('adbrief-note').value    = '';
+    pills.forEach(p => p.classList.toggle('on', p.dataset.st === 'idea'));
+    $('adbrief-del-btn').style.display = 'none';
+    $('adbrief-modal').classList.add('on');
+  }
+}
+
+function adBriefModalSetStatus(st, el) {
+  adBriefModalStatus = st;
+  document.querySelectorAll('#adbrief-modal-status-pills .inv-pill').forEach(p => p.classList.remove('on'));
+  if (el) el.classList.add('on');
+}
+
+async function saveAdBrief() {
+  const title = $('adbrief-title').value.trim();
+  if (!title) { toast('소재 제목을 입력해주세요'); return; }
+
+  const data = {
+    title,
+    status:  adBriefModalStatus,
+    product: $('adbrief-product').value.trim(),
+    place:   $('adbrief-place').value.trim(),
+    date:    $('adbrief-date').value || '',
+    script:  $('adbrief-script').value.trim(),
+    note:    $('adbrief-note').value.trim(),
+    updated_at: Date.now(),
+  };
+
+  try {
+    await patchAppState(s => {
+      s.ad_briefs = s.ad_briefs || [];
+      if (adBriefEditId) {
+        const i = s.ad_briefs.findIndex(b => b.id === adBriefEditId);
+        if (i >= 0) s.ad_briefs[i] = { ...s.ad_briefs[i], ...data };
+      } else {
+        const newId = `brief_${Date.now()}`;
+        s.ad_briefs.push({ id: newId, created_at: Date.now(), ...data });
+        adBriefSelectedId = newId;  // 새로 만든 거 자동 선택
+      }
+      return s;
+    });
+    toast(adBriefEditId ? '수정됐어요 ✓' : '추가됐어요 ✓');
+    closeModal('adbrief-modal');
+    loadAdBrief();
+  } catch(e) {
+    toast('저장 실패: ' + e.message);
+  }
+}
+
+async function deleteAdBrief() {
+  if (!adBriefEditId) return;
+  const ok = await customConfirm('이 소재를 삭제할까요?', '되돌릴 수 없어요.');
+  if (!ok) return;
+  const delId = adBriefEditId;
+  await patchAppState(s => {
+    s.ad_briefs = (s.ad_briefs||[]).filter(b => b.id !== delId);
+    return s;
+  });
+  if (adBriefSelectedId === delId) adBriefSelectedId = null;
+  toast('삭제됐어요');
+  closeModal('adbrief-modal');
+  loadAdBrief();
+}
+
 const CONTENT_TYPES = {
   visual:     { label:'비주얼보드', color:'#8A7A6A', bg:'#F5F0E8', textColor:'#4A3D30', icon:'◼', desc:'Brand Visual' },
   mongmozzal: { label:'몽모짤',     color:'#8A4A5A', bg:'#F5E8EC', textColor:'#5A2D3A', icon:'✦', desc:'Mongmo Cut' },
@@ -17363,7 +17647,7 @@ async function taxRevBulkCat() {
   if (taxRevSelected.size === 0) { toast('선택된 항목이 없어요'); return; }
   const ids = new Set(taxRevSelected);
   const label = TAX_REV_LABEL[cat] || cat;
-  const ok = await customConfirm(`선택한 ${ids.size}건의 구분을 "${label}"(으)로 변경할까요?`);
+  const ok = await customConfirm(`선택한 ${ids.size}건의 구분을 "${label}"(으)로 변경할까요?`, '여러 건이 한 번에 변경됩니다.', '적용');
   if (!ok) return;
   await patchAppState(s => {
     s.tax_revenues = (s.tax_revenues||[]).map(r => ids.has(r.id) ? { ...r, cat } : r);
@@ -17429,7 +17713,7 @@ async function taxCostsBulkCat() {
   if (taxCostsSelected.size === 0) { toast('선택된 항목이 없어요'); return; }
   const ids = new Set(taxCostsSelected);
   const label = TAX_CAT_LABEL[cat] || cat;
-  const ok = await customConfirm(`선택한 ${ids.size}건의 카테고리를 "${label}"(으)로 변경할까요?`);
+  const ok = await customConfirm(`선택한 ${ids.size}건의 카테고리를 "${label}"(으)로 변경할까요?`, '여러 건이 한 번에 변경됩니다.', '적용');
   if (!ok) return;
   await patchAppState(s => {
     s.tax_costs = (s.tax_costs||[]).map(c => ids.has(c.id) ? { ...c, cat } : c);
