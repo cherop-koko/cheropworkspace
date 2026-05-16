@@ -2208,6 +2208,7 @@ a { text-decoration:none; color:inherit; }
             <div class="page-tab"   onclick="taxSetTab('vat',this)">부가세</div>
             <div class="page-tab"   onclick="taxSetTab('withhold',this)">원천세</div>
             <div class="page-tab"   onclick="taxSetTab('costs',this)">비용 관리</div>
+            <div class="page-tab"   onclick="taxSetTab('card',this)">카드 이용내역</div>
           </div>
         </div>
 
@@ -2399,6 +2400,50 @@ a { text-decoration:none; color:inherit; }
                   </div>
                   <div id="tax-costs-table-wrap"></div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ━━━ 카드 이용내역 탭 ━━━ -->
+        <div id="tax-tab-card" style="display:none;">
+          <div style="display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start;">
+            <!-- 사이드바: 카드사 -->
+            <div style="position:sticky;top:0;">
+              <div style="font-size:10px;font-weight:500;color:var(--light);margin-bottom:8px;letter-spacing:.3px;">카드사</div>
+              <div id="card-usage-sidebar" style="display:flex;flex-direction:column;gap:2px;margin-bottom:6px;"></div>
+              <div onclick="addCardCompany()" style="display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:6px;cursor:pointer;color:var(--light);">
+                <span style="font-size:14px;">+</span><span style="font-size:12px;">카드사 추가</span>
+              </div>
+              <div style="font-size:10px;color:var(--faint);padding:2px 9px 12px;line-height:1.5;">카드사명 클릭 → 이름 수정</div>
+              <div style="border-top:0.5px solid var(--border);padding-top:12px;">
+                <div style="font-size:10px;color:var(--light);margin-bottom:5px;">기간 선택</div>
+                <select class="prop-inp" id="card-usage-month-sel" onchange="cardUsageSetMonth(this.value)" style="font-size:11px;padding:5px 8px;width:100%;"></select>
+              </div>
+            </div>
+            <!-- 메인 -->
+            <div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;" id="card-usage-summary"></div>
+              <div class="card" style="padding:0;overflow:hidden;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
+                  <div style="font-size:13px;font-weight:500;" id="card-usage-table-title">카드 이용내역</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+                    <input type="text" id="card-usage-search" class="inv-search-inp" placeholder="가맹점 검색..." style="width:150px;padding:5px 10px;font-size:12px;" oninput="cardUsageSetSearch(this.value)">
+                    <button class="f-btn" style="font-size:11px;padding:5px 13px;" onclick="$('card-usage-xlsx-input').click()">엑셀 업로드</button>
+                    <input type="file" id="card-usage-xlsx-input" accept=".xlsx,.xls" style="display:none;" onchange="cardUsageImportXlsx(this)">
+                    <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openCardUsageModal()">+ 내역 추가</button>
+                  </div>
+                </div>
+                <div id="card-usage-bulkbar" style="display:none;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);border-bottom:0.5px solid var(--border);">
+                  <span id="card-usage-bulk-count" style="font-size:12px;font-weight:500;"></span>
+                  <select id="card-usage-bulk-cat" class="prop-inp" style="font-size:11px;padding:4px 8px;width:auto;">
+                    <option value="">카테고리 변경...</option>
+                  </select>
+                  <button class="f-btn" style="font-size:11px;padding:4px 11px;" onclick="cardUsageBulkCat()">적용</button>
+                  <button class="f-btn" style="font-size:11px;padding:4px 11px;color:var(--red);border-color:var(--red);" onclick="cardUsageBulkDelete()">선택 삭제</button>
+                  <button class="f-btn" style="font-size:11px;padding:4px 11px;margin-left:auto;" onclick="cardUsageClearSel()">선택 해제</button>
+                </div>
+                <div id="card-usage-table-wrap"></div>
               </div>
             </div>
           </div>
@@ -4473,8 +4518,50 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
-<!-- ═══ 컬러 보드 추가/편집 모달 ═══ -->
-<div class="modal-overlay" id="board-modal" onclick="if(event.target===this)closeModal('board-modal')">
+<!-- ═══ 세무: 카드 이용내역 입력 모달 ═══ -->
+<div class="modal-overlay" id="card-usage-modal" onclick="if(event.target===this)closeModal('card-usage-modal')">
+  <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind" id="card-usage-modal-kind">카드 이용내역 입력</div>
+      <div class="modal-bar-right">
+        <div class="mbtn" id="card-usage-del-btn" onclick="deleteCardUsage()" style="display:none;color:var(--red);">삭제</div>
+        <div class="mbtn" onclick="closeModal('card-usage-modal')">✕</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-props">
+        <div class="prop-row">
+          <div class="prop-icon">💳</div><div class="prop-label">카드사</div>
+          <div class="prop-val"><select class="prop-inp" id="cu-card"></select></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🔢</div><div class="prop-label">카드번호</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="cu-cardno" placeholder="예: ****1214"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">📅</div><div class="prop-label">승인일자</div>
+          <div class="prop-val"><input type="date" class="prop-inp" id="cu-date"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🏪</div><div class="prop-label">가맹점명</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="cu-merchant" placeholder="입력하세요"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">💰</div><div class="prop-label">승인금액</div>
+          <div class="prop-val"><input type="number" class="prop-inp" id="cu-amount" placeholder="0"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🏷️</div><div class="prop-label">카테고리</div>
+          <div class="prop-val"><select class="prop-inp" id="cu-cat"></select></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="f-btn f-btn-cancel" onclick="closeModal('card-usage-modal')">취소</button>
+      <button class="f-btn f-btn-save" onclick="saveCardUsage()">저장</button>
+    </div>
+  </div>
+</div>
   <div class="modal-box" style="max-width:360px;">
     <div class="modal-bar">
       <div class="modal-kind" id="board-modal-title">보드 추가</div>
@@ -4733,8 +4820,20 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<div class="confirm-overlay" id="prompt-overlay">
+  <div class="confirm-box">
+    <div class="confirm-msg" id="prompt-msg">입력하세요</div>
+    <input type="text" id="prompt-input" class="prop-inp" style="width:100%;margin:12px 0 4px;padding:9px 11px;font-size:13px;"
+      onkeydown="if(event.key==='Enter')promptResolve($('prompt-input').value);if(event.key==='Escape')promptResolve(null);">
+    <div class="confirm-btns">
+      <button class="confirm-no"  onclick="promptResolve(null)">취소</button>
+      <button class="confirm-yes" style="background:var(--text);" onclick="promptResolve($('prompt-input').value)">확인</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
-<div id="version">v5.4.2</div>
+<div id="version">v5.5.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -6103,9 +6202,21 @@ function customConfirm(msg, sub='이 작업은 되돌릴 수 없어요.', yesLab
   });
 }
 
-/* ═══════════════════════════════════════
-   MODALS
-═══════════════════════════════════════ */
+let promptResolve = ()=>{};
+function customPrompt(msg, placeholder='', initial='') {
+  return new Promise(resolve => {
+    $('prompt-msg').textContent = msg;
+    const inp = $('prompt-input');
+    inp.placeholder = placeholder;
+    inp.value = initial;
+    $('prompt-overlay').classList.add('on');
+    setTimeout(()=>{ inp.focus(); inp.select(); }, 50);
+    promptResolve = (v) => {
+      $('prompt-overlay').classList.remove('on');
+      resolve(v);
+    };
+  });
+}
 function closeModal(id) {
   $(id).classList.remove('on');
   // 업로드 모달 위에서 상품 모달 닫을 때 z-index만 복원 (key 초기화는 saveProduct에서)
@@ -12517,15 +12628,23 @@ async function loadLineupProducts() {
   const STATUS_LBL = {active:'판매중', new:'신규', planned:'출시예정', discontinued:'단종'};
   const STATUS_COLOR = {active:'#EAF3DE;color:#27500A', new:'#E6F1FB;color:#0C447C', planned:'#FDF3E0;color:#7A5C1E', discontinued:'var(--surface2);color:var(--muted)'};
 
-  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">` +
-    prods.map(p=>{
+  // 드래그 활성화 여부 — 전체 탭(월·카테고리 필터 둘 다 없을 때)에서만 가능
+  const dragEnabled = !_lineupMonth && !_lineupCat;
+  // prods의 각 원소는 allProds 안에서의 실제 인덱스를 알아야 순서 변경 가능
+  // 필터 안 걸린 상태(=dragEnabled)에선 prods === allProds 이므로 같은 인덱스 사용
+
+  el.innerHTML = `<div id="lineup-grid-inner" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">` +
+    prods.map((p,idx)=>{
       const st   = p.status||'active';
       const sc   = STATUS_COLOR[st]||STATUS_COLOR.active;
       const dim  = st==='discontinued' ? 'opacity:.45;' : '';
       const monthLabel = p.month ? `${p.month}월` : '';
-      return `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;${dim}" onclick="openPlanProductModal('${p.id}')">
+      const dragAttr = dragEnabled
+        ? `draggable="true" data-lineup-idx="${idx}" class="lineup-card-draggable"`
+        : '';
+      return `<div ${dragAttr} style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:${dragEnabled?'grab':'pointer'};${dim}" onclick="if(!this.classList.contains('lineup-dragging'))openPlanProductModal('${p.id}')">
         <div style="aspect-ratio:1;background:${p.color||'var(--surface2)'};display:flex;align-items:center;justify-content:center;overflow:hidden;">
-          ${(p.imgs?.front||p.imgUrl)?`<img src="${p.imgs?.front||p.imgUrl}" style="width:100%;height:100%;object-fit:cover;">`:
+          ${(p.imgs?.front||p.imgUrl)?`<img src="${p.imgs?.front||p.imgUrl}" style="width:100%;height:100%;object-fit:cover;" draggable="false">`:
             `<span style="font-size:28px;">${p.emoji||'📦'}</span>`}
         </div>
         <div style="padding:8px 10px;">
@@ -12541,6 +12660,72 @@ async function loadLineupProducts() {
       <span style="font-size:12px;color:var(--light);">+ 추가</span>
     </div>
   </div>`;
+
+  // 드래그앤드롭 초기화
+  if (dragEnabled) attachLineupDnd();
+}
+
+// ── 라인업 카드 드래그앤드롭 ──
+let _lineupDragEl = null;
+function attachLineupDnd() {
+  const cards = document.querySelectorAll('#lineup-grid-inner .lineup-card-draggable');
+  cards.forEach(card => {
+    card.addEventListener('dragstart', e => {
+      _lineupDragEl = card;
+      card.classList.add('lineup-dragging');
+      card.style.opacity = '.45';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('lineup-dragging');
+      card.style.opacity = '';
+      // dragend는 클릭 직후에 일어나므로, 약간 지연 후 dragEl 해제
+      setTimeout(()=>{ _lineupDragEl = null; }, 0);
+    });
+    card.addEventListener('dragover', e => {
+      if (!_lineupDragEl || card === _lineupDragEl) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      // 시각 표시 — 마우스 위치에 따라 좌/우 어느쪽에 드롭될지 보더로
+      const rect = card.getBoundingClientRect();
+      const after = (e.clientX - rect.left) > rect.width/2;
+      card.style.borderLeft  = after ? '' : '2px solid var(--text)';
+      card.style.borderRight = after ? '2px solid var(--text)' : '';
+    });
+    card.addEventListener('dragleave', () => {
+      card.style.borderLeft = ''; card.style.borderRight = '';
+    });
+    card.addEventListener('drop', async e => {
+      e.preventDefault();
+      card.style.borderLeft = ''; card.style.borderRight = '';
+      if (!_lineupDragEl || card === _lineupDragEl) return;
+      const fromIdx = parseInt(_lineupDragEl.dataset.lineupIdx);
+      let   toIdx   = parseInt(card.dataset.lineupIdx);
+      const rect    = card.getBoundingClientRect();
+      const after   = (e.clientX - rect.left) > rect.width/2;
+      if (after) toIdx += 1;
+      // fromIdx 자체를 제거할 거니까, toIdx가 fromIdx보다 뒤면 1 빼서 보정
+      if (toIdx > fromIdx) toIdx -= 1;
+      if (toIdx === fromIdx) return;
+      await reorderLineup(fromIdx, toIdx);
+    });
+  });
+}
+
+async function reorderLineup(fromIdx, toIdx) {
+  await patchAppState(s => {
+    s.plan = s.plan || {};
+    s.plan[_lineupYear] = s.plan[_lineupYear] || {};
+    const arr = s.plan[_lineupYear].products || [];
+    if (fromIdx < 0 || fromIdx >= arr.length) return s;
+    const [moved] = arr.splice(fromIdx, 1);
+    arr.splice(Math.max(0, Math.min(toIdx, arr.length)), 0, moved);
+    s.plan[_lineupYear].products = arr;
+    return s;
+  });
+  // 캐시 무효화 후 재렌더
+  window._lineupCache = null;
+  loadLineupProducts();
 }
 
 function openLineupProductModal() { openPlanProductModal(); }
@@ -13439,6 +13624,435 @@ async function deleteAdBrief() {
   closeModal('adbrief-modal');
   loadAdBrief();
 }
+
+/* ══════════════════════════════
+   세무: 카드 이용내역
+══════════════════════════════ */
+const CARD_CAT_LABEL = {
+  ad:'마케팅·광고비', prod:'생산·원자재', fee:'플랫폼·수수료',
+  logistics:'물류·배송비', fixed:'고정비·임차료',
+  meal:'식대', car:'차량유지비', supply:'비품', etc:'기타'
+};
+const CARD_CAT_COLOR = {
+  ad:'#1877F2', prod:'#6B9E7A', fee:'#888', logistics:'#378ADD',
+  fixed:'#C4736A', meal:'#C4A96A', car:'#7B68C8', supply:'#5A9A8A', etc:'#bbb'
+};
+let cardUsageCardId   = null;   // 선택된 카드사 id (null이면 전체)
+let cardUsageMonth    = '';     // 'YYYY-MM' (빈 값이면 전체)
+let cardUsageSearch   = '';
+let cardUsageSelected = new Set();
+let cardUsageEditId   = null;
+
+// app_state.card_usage 구조 보장
+function ensureCardUsage(s) {
+  s.card_usage = s.card_usage || {};
+  s.card_usage.cards = s.card_usage.cards || [];
+  s.card_usage.logs  = s.card_usage.logs  || [];
+  return s.card_usage;
+}
+
+async function loadCardUsage() {
+  const s  = await getAppState();
+  const cu = ensureCardUsage(s);
+  const cards = cu.cards;
+  const logs  = cu.logs;
+
+  // 월 셀렉트 채우기 (로그에 있는 월 + 최근 12개월)
+  const monthSel = $('card-usage-month-sel');
+  if (monthSel) {
+    const monthsSet = new Set(logs.map(l=>l.month).filter(Boolean));
+    const now = new Date();
+    for (let i=0;i<12;i++){
+      const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+      monthsSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    }
+    const months = [...monthsSet].sort().reverse();
+    if (!cardUsageMonth && months.length) cardUsageMonth = months[0];
+    monthSel.innerHTML = `<option value="">전체 기간</option>` +
+      months.map(m=>{
+        const [y,mm]=m.split('-');
+        return `<option value="${m}"${m===cardUsageMonth?' selected':''}>${y}년 ${parseInt(mm)}월</option>`;
+      }).join('');
+  }
+
+  // 사이드바: 카드사 목록
+  const sideEl = $('card-usage-sidebar');
+  if (sideEl) {
+    const monthLogs = cardUsageMonth ? logs.filter(l=>l.month===cardUsageMonth) : logs;
+    const allSum = monthLogs.reduce((sm,l)=>sm+(l.amount||0),0);
+    let html = `<div onclick="cardUsageSetCard(null)"
+      style="display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:6px;cursor:pointer;${cardUsageCardId===null?'background:var(--surface2);':''}">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--text);flex-shrink:0;"></span>
+      <span style="font-size:12px;font-weight:${cardUsageCardId===null?'500':'400'};flex:1;${cardUsageCardId===null?'color:var(--text);':'color:var(--muted);'}">전체</span>
+      <span style="font-size:10px;color:var(--light);">${allSum?fmtWonExact(allSum):''}</span>
+    </div>`;
+    const COLORS = ['#378ADD','#C4736A','#6B9E7A','#C4A96A','#7B68C8','#5A9A8A'];
+    html += cards.map((c,i)=>{
+      const sum = monthLogs.filter(l=>l.cardId===c.id).reduce((sm,l)=>sm+(l.amount||0),0);
+      const on  = cardUsageCardId===c.id;
+      return `<div style="display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:6px;cursor:pointer;${on?'background:var(--surface2);':''}">
+        <span style="width:7px;height:7px;border-radius:50%;background:${COLORS[i%COLORS.length]};flex-shrink:0;"></span>
+        <span onclick="cardUsageSetCard('${c.id}')" style="font-size:12px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${on?'font-weight:500;color:var(--text);':'color:var(--muted);'}">${escapeHtml(c.name)}</span>
+        <span onclick="renameCardCompany('${c.id}')" title="이름 수정" style="font-size:10px;color:var(--faint);cursor:pointer;flex-shrink:0;">✏️</span>
+        <span onclick="deleteCardCompany('${c.id}')" title="삭제" style="font-size:11px;color:var(--faint);cursor:pointer;flex-shrink:0;">✕</span>
+      </div>`;
+    }).join('');
+    sideEl.innerHTML = html;
+  }
+
+  // 일괄변경 select 옵션 채우기
+  const bulkSel = $('card-usage-bulk-cat');
+  if (bulkSel && bulkSel.options.length <= 1) {
+    bulkSel.innerHTML = `<option value="">카테고리 변경...</option>` +
+      Object.entries(CARD_CAT_LABEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  }
+
+  // 필터링
+  let filtered = logs;
+  if (cardUsageMonth)  filtered = filtered.filter(l=>l.month===cardUsageMonth);
+  if (cardUsageCardId) filtered = filtered.filter(l=>l.cardId===cardUsageCardId);
+  if (cardUsageSearch.trim()) {
+    const q = cardUsageSearch.trim().toLowerCase();
+    filtered = filtered.filter(l=>(l.merchant||'').toLowerCase().includes(q));
+  }
+  // 최신순
+  filtered.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  // 요약
+  const total   = filtered.reduce((sm,l)=>sm+(l.amount||0),0);
+  const cnt     = filtered.length;
+  const unclass = filtered.filter(l=>!l.cat || l.cat==='').length;
+  $('card-usage-summary').innerHTML = [
+    {l:'이용 합계', v:fmtWonExact(total)},
+    {l:'이용 건수', v:cnt+'건'},
+    {l:'미분류',   v:unclass+'건', red:unclass>0},
+  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
+    <div style="font-size:11px;color:var(--light);margin-bottom:5px;">${c.l}</div>
+    <div style="font-size:18px;font-weight:600;${c.red?'color:#A32D2D;':''}">${c.v}</div>
+  </div>`).join('');
+
+  // 테이블 제목
+  const cardName = cardUsageCardId ? (cards.find(c=>c.id===cardUsageCardId)?.name||'') : '전체';
+  $('card-usage-table-title').textContent = `${cardName} · ${cnt}건`;
+
+  // 카드사 이름 빠른 참조
+  const cardNameMap = Object.fromEntries(cards.map(c=>[c.id,c.name]));
+
+  // 유효하지 않은 선택 제거
+  const visIds = new Set(filtered.map(l=>l.id));
+  cardUsageSelected.forEach(id=>{ if(!visIds.has(id)) cardUsageSelected.delete(id); });
+  const allChk = filtered.length>0 && filtered.every(l=>cardUsageSelected.has(l.id));
+
+  // 테이블
+  const wrap = $('card-usage-table-wrap');
+  if (!filtered.length) {
+    wrap.innerHTML = '<div style="padding:30px 20px;text-align:center;font-size:13px;color:var(--faint);">이용내역이 없어요 · 엑셀 업로드나 직접 추가로 등록해보세요</div>';
+  } else {
+    wrap.innerHTML = `<table class="inv-tbl" style="width:100%;table-layout:auto;">
+      <thead><tr>
+        <th style="width:34px;text-align:center;"><input type="checkbox" ${allChk?'checked':''} onchange="cardUsageToggleAll(this.checked)" style="cursor:pointer;"></th>
+        <th style="white-space:nowrap;">승인일자</th>
+        ${cardUsageCardId?'':'<th style="white-space:nowrap;">카드사</th>'}
+        <th style="white-space:nowrap;">카드번호</th>
+        <th>가맹점명</th>
+        <th style="white-space:nowrap;">카테고리</th>
+        <th style="text-align:right;white-space:nowrap;">승인금액</th>
+        <th style="width:32px;"></th>
+      </tr></thead>
+      <tbody>${filtered.map(l=>{
+        const catK = l.cat||'etc';
+        const catLbl = l.cat ? (CARD_CAT_LABEL[l.cat]||l.cat) : '미분류';
+        const catCol = l.cat ? (CARD_CAT_COLOR[l.cat]||'#888') : '#bbb';
+        return `<tr${cardUsageSelected.has(l.id)?' style="background:var(--surface2);"':''}>
+          <td style="width:34px;text-align:center;"><input type="checkbox" ${cardUsageSelected.has(l.id)?'checked':''} onchange="cardUsageToggleOne('${l.id}',this.checked)" style="cursor:pointer;"></td>
+          <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${(l.date||'').replace(/-/g,'.')}</td>
+          ${cardUsageCardId?'':`<td style="font-size:12px;white-space:nowrap;">${escapeHtml(cardNameMap[l.cardId]||'-')}</td>`}
+          <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${escapeHtml(l.cardNo||'-')}</td>
+          <td style="font-size:12px;font-weight:500;max-width:280px;word-break:break-word;line-height:1.5;">${escapeHtml(l.merchant||'')}</td>
+          <td style="white-space:nowrap;"><span style="display:inline-block;font-size:11px;padding:2px 9px;border-radius:50px;white-space:nowrap;background:${catCol}22;color:${catCol};">${catLbl}</span></td>
+          <td style="text-align:right;font-size:12px;font-weight:500;white-space:nowrap;${(l.amount||0)<0?'color:#A32D2D;':''}">${fmtWonExact(l.amount||0)}</td>
+          <td style="text-align:center;width:32px;"><div class="card-link" onclick="openCardUsageModal('${l.id}')" style="display:inline-block;">···</div></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+  cardUsageUpdateBulkbar();
+}
+
+function cardUsageSetCard(id) { cardUsageCardId = id; loadCardUsage(); }
+function cardUsageSetMonth(m) { cardUsageMonth = m; cardUsageSelected.clear(); loadCardUsage(); }
+function cardUsageSetSearch(v) { cardUsageSearch = v; loadCardUsage(); }
+
+async function addCardCompany() {
+  const name = await customPrompt('새 카드사 이름', '예: 신한카드 (1214)');
+  if (!name || !name.trim()) return;
+  await patchAppState(s => {
+    const cu = ensureCardUsage(s);
+    cu.cards.push({ id:`card_${Date.now()}`, name:name.trim() });
+    return s;
+  });
+  toast('카드사 추가됐어요 ✓');
+  loadCardUsage();
+}
+async function renameCardCompany(id) {
+  const s = await getAppState();
+  const card = ensureCardUsage(s).cards.find(c=>c.id===id);
+  if (!card) return;
+  const name = await customPrompt('카드사 이름 수정', card.name, card.name);
+  if (name===null || !name.trim()) return;
+  await patchAppState(st => {
+    const c = ensureCardUsage(st).cards.find(x=>x.id===id);
+    if (c) c.name = name.trim();
+    return st;
+  });
+  toast('이름 변경됐어요 ✓');
+  loadCardUsage();
+}
+async function deleteCardCompany(id) {
+  const s = await getAppState();
+  const cu = ensureCardUsage(s);
+  const card = cu.cards.find(c=>c.id===id);
+  if (!card) return;
+  const cnt = cu.logs.filter(l=>l.cardId===id).length;
+  const ok = await customConfirm(
+    `"${card.name}" 카드사를 삭제할까요?`,
+    cnt>0 ? `이 카드사의 이용내역 ${cnt}건도 함께 삭제됩니다.` : '되돌릴 수 없어요.');
+  if (!ok) return;
+  await patchAppState(st => {
+    const c = ensureCardUsage(st);
+    c.cards = c.cards.filter(x=>x.id!==id);
+    c.logs  = c.logs.filter(l=>l.cardId!==id);
+    return st;
+  });
+  if (cardUsageCardId===id) cardUsageCardId = null;
+  toast('삭제됐어요');
+  loadCardUsage();
+}
+
+async function openCardUsageModal(id) {
+  cardUsageEditId = id||null;
+  const s = await getAppState();
+  const cu = ensureCardUsage(s);
+  if (!cu.cards.length) { toast('먼저 카드사를 추가해주세요'); return; }
+
+  // 카드사 select
+  $('cu-card').innerHTML = cu.cards.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  // 카테고리 select
+  $('cu-cat').innerHTML = `<option value="">미분류</option>` +
+    Object.entries(CARD_CAT_LABEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+
+  if (id) {
+    const l = cu.logs.find(x=>x.id===id);
+    if (!l) return;
+    $('card-usage-modal-kind').textContent = '카드 이용내역 편집';
+    $('cu-card').value     = l.cardId||'';
+    $('cu-cardno').value   = l.cardNo||'';
+    $('cu-date').value     = l.date||'';
+    $('cu-merchant').value = l.merchant||'';
+    $('cu-amount').value   = l.amount||0;
+    $('cu-cat').value      = l.cat||'';
+    $('card-usage-del-btn').style.display = '';
+  } else {
+    $('card-usage-modal-kind').textContent = '카드 이용내역 입력';
+    $('cu-card').value     = cardUsageCardId || cu.cards[0].id;
+    $('cu-cardno').value   = '';
+    $('cu-date').value     = dateStr();
+    $('cu-merchant').value = '';
+    $('cu-amount').value   = '';
+    $('cu-cat').value      = '';
+    $('card-usage-del-btn').style.display = 'none';
+  }
+  $('card-usage-modal').classList.add('on');
+}
+
+async function saveCardUsage() {
+  const cardId   = $('cu-card').value;
+  const date     = $('cu-date').value;
+  const merchant = $('cu-merchant').value.trim();
+  const amount   = parseInt($('cu-amount').value)||0;
+  if (!cardId)   { toast('카드사를 선택해주세요'); return; }
+  if (!date)     { toast('승인일자를 입력해주세요'); return; }
+  if (!merchant) { toast('가맹점명을 입력해주세요'); return; }
+
+  const data = {
+    cardId, date,
+    month:    date.slice(0,7),
+    cardNo:   $('cu-cardno').value.trim(),
+    merchant,
+    amount,
+    cat:      $('cu-cat').value,
+  };
+  try {
+    await patchAppState(s => {
+      const cu = ensureCardUsage(s);
+      if (cardUsageEditId) {
+        const i = cu.logs.findIndex(l=>l.id===cardUsageEditId);
+        if (i>=0) cu.logs[i] = { ...cu.logs[i], ...data };
+      } else {
+        cu.logs.push({ id:`cu_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, ...data });
+      }
+      return s;
+    });
+    toast(cardUsageEditId ? '수정됐어요 ✓' : '추가됐어요 ✓');
+    closeModal('card-usage-modal');
+    loadCardUsage();
+  } catch(e) { toast('저장 실패: '+e.message); }
+}
+
+async function deleteCardUsage() {
+  if (!cardUsageEditId) return;
+  const ok = await customConfirm('이 이용내역을 삭제할까요?', '되돌릴 수 없어요.');
+  if (!ok) return;
+  const delId = cardUsageEditId;
+  await patchAppState(s => {
+    const cu = ensureCardUsage(s);
+    cu.logs = cu.logs.filter(l=>l.id!==delId);
+    return s;
+  });
+  toast('삭제됐어요');
+  closeModal('card-usage-modal');
+  loadCardUsage();
+}
+
+// ── 검색/체크박스/일괄작업 ──
+function cardUsageToggleOne(id, checked) {
+  if (checked) cardUsageSelected.add(id); else cardUsageSelected.delete(id);
+  loadCardUsage();
+}
+function cardUsageToggleAll(checked) {
+  document.querySelectorAll('#card-usage-table-wrap tbody input[type="checkbox"]').forEach(cb=>{
+    const m = (cb.getAttribute('onchange')||'').match(/cardUsageToggleOne\('([^']+)'/);
+    if (m) { if (checked) cardUsageSelected.add(m[1]); else cardUsageSelected.delete(m[1]); }
+  });
+  loadCardUsage();
+}
+function cardUsageClearSel() { cardUsageSelected.clear(); loadCardUsage(); }
+function cardUsageUpdateBulkbar() {
+  const bar = $('card-usage-bulkbar');
+  if (!bar) return;
+  if (cardUsageSelected.size>0) {
+    bar.style.display = 'flex';
+    $('card-usage-bulk-count').textContent = `${cardUsageSelected.size}건 선택됨`;
+  } else bar.style.display = 'none';
+}
+async function cardUsageBulkCat() {
+  const cat = $('card-usage-bulk-cat').value;
+  if (!cat) { toast('변경할 카테고리를 선택해주세요'); return; }
+  if (!cardUsageSelected.size) { toast('선택된 항목이 없어요'); return; }
+  const ids = new Set(cardUsageSelected);
+  const ok = await customConfirm(`선택한 ${ids.size}건의 카테고리를 "${CARD_CAT_LABEL[cat]}"(으)로 변경할까요?`, '여러 건이 한 번에 변경됩니다.', '적용');
+  if (!ok) return;
+  await patchAppState(s => {
+    const cu = ensureCardUsage(s);
+    cu.logs = cu.logs.map(l=>ids.has(l.id)?{...l,cat}:l);
+    return s;
+  });
+  cardUsageSelected.clear();
+  $('card-usage-bulk-cat').value = '';
+  toast(`${ids.size}건 변경됐어요 ✓`);
+  loadCardUsage();
+}
+async function cardUsageBulkDelete() {
+  if (!cardUsageSelected.size) { toast('선택된 항목이 없어요'); return; }
+  const ids = new Set(cardUsageSelected);
+  const ok = await customConfirm(`선택한 ${ids.size}건을 삭제할까요?`, '되돌릴 수 없어요.');
+  if (!ok) return;
+  await patchAppState(s => {
+    const cu = ensureCardUsage(s);
+    cu.logs = cu.logs.filter(l=>!ids.has(l.id));
+    return s;
+  });
+  cardUsageSelected.clear();
+  toast(`${ids.size}건 삭제됐어요`);
+  loadCardUsage();
+}
+
+// ── 엑셀 업로드 ──
+async function cardUsageImportXlsx(input) {
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    if (typeof XLSX === 'undefined') { toast('엑셀 라이브러리 로딩 중… 잠시 후 다시 시도해주세요'); return; }
+    const buf  = await file.arrayBuffer();
+    const wb   = XLSX.read(buf, { type:'array' });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+    if (!rows.length) { toast('빈 파일이에요'); return; }
+
+    // 헤더 행 찾기 (카드번호/승인일자/가맹점명/승인금액 포함된 행)
+    let headIdx = -1;
+    for (let i=0;i<Math.min(rows.length,10);i++){
+      const joined = (rows[i]||[]).join('');
+      if (joined.includes('승인일자') && joined.includes('가맹점')) { headIdx = i; break; }
+    }
+    if (headIdx < 0) { toast('카드 내역 양식이 아니에요 (헤더를 못 찾음)'); return; }
+
+    const head = rows[headIdx].map(h=>String(h||'').trim());
+    const col = (kw)=>head.findIndex(h=>h.includes(kw));
+    const ci = {
+      cardNo:   col('카드번호'),
+      date:     col('승인일자'),
+      merchant: col('가맹점'),
+      amount:   head.findIndex(h=>h.includes('승인금액')),
+    };
+    if (ci.date<0 || ci.merchant<0 || ci.amount<0) { toast('필수 컬럼(승인일자·가맹점명·승인금액)을 못 찾았어요'); return; }
+
+    // 업로드 대상 카드사 결정
+    const s  = await getAppState();
+    const cu = ensureCardUsage(s);
+    let targetCardId = cardUsageCardId;
+    if (!targetCardId) {
+      if (!cu.cards.length) {
+        const nm = await customPrompt('이 내역을 등록할 카드사 이름', '예: 신한카드');
+        if (!nm || !nm.trim()) return;
+        targetCardId = `card_${Date.now()}`;
+        await patchAppState(st => { ensureCardUsage(st).cards.push({id:targetCardId,name:nm.trim()}); return st; });
+      } else {
+        toast('왼쪽에서 카드사를 먼저 선택한 뒤 업로드해주세요');
+        return;
+      }
+    }
+
+    // 행 파싱
+    const parsed = [];
+    for (let i=headIdx+1;i<rows.length;i++){
+      const r = rows[i]; if (!r || !r.length) continue;
+      let dateRaw = String(r[ci.date]||'').trim();
+      if (!dateRaw) continue;
+      // 2026.01.31 → 2026-01-31
+      const date = dateRaw.replace(/\./g,'-').replace(/-+$/,'');
+      const merchant = String(r[ci.merchant]||'').trim();
+      const amount   = parseInt(String(r[ci.amount]||'0').replace(/[^0-9-]/g,''))||0;
+      if (!merchant && !amount) continue;
+      parsed.push({
+        id:`cu_${Date.now()}_${i}_${Math.random().toString(36).slice(2,6)}`,
+        cardId: targetCardId,
+        date,
+        month: date.slice(0,7),
+        cardNo: ci.cardNo>=0 ? String(r[ci.cardNo]||'').trim() : '',
+        merchant, amount,
+        cat: '',
+      });
+    }
+    if (!parsed.length) { toast('등록할 행이 없어요'); return; }
+
+    const ok = await customConfirm(`${parsed.length}건의 이용내역을 등록할까요?`, '카테고리는 미분류로 들어가며, 나중에 일괄 변경할 수 있어요.', '등록');
+    if (!ok) return;
+
+    await patchAppState(st => {
+      ensureCardUsage(st).logs.push(...parsed);
+      return st;
+    });
+    cardUsageCardId = targetCardId;
+    toast(`${parsed.length}건 등록됐어요 ✓`);
+    loadCardUsage();
+  } catch(e) {
+    console.error('cardUsageImportXlsx:', e);
+    toast('엑셀 처리 실패: '+e.message);
+  }
+}
+
 
 const CONTENT_TYPES = {
   visual:     { label:'비주얼보드', color:'#8A7A6A', bg:'#F5F0E8', textColor:'#4A3D30', icon:'◼', desc:'Brand Visual' },
@@ -16829,7 +17443,7 @@ async function initTaxPage() {
   taxYear  = new Date().getFullYear();
   taxMonth = new Date().getMonth() + 1;
   document.querySelectorAll('#tax-tabs .page-tab').forEach((t,i)=>t.classList.toggle('on',i===0));
-  ['quarter','annual','vat','withhold','costs'].forEach(t=>{ const d=$(`tax-tab-${t}`); if(d) d.style.display='none'; });
+  ['quarter','annual','vat','withhold','costs','card'].forEach(t=>{ const d=$(`tax-tab-${t}`); if(d) d.style.display='none'; });
   $('tax-tab-monthly').style.display = '';
   renderTaxYearPills();
   await loadTaxMonthly();
@@ -16839,7 +17453,7 @@ function taxSetTab(tab, el) {
   taxTab = tab;
   document.querySelectorAll('#tax-tabs .page-tab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  ['monthly','quarter','annual','vat','withhold','costs'].forEach(t=>{
+  ['monthly','quarter','annual','vat','withhold','costs','card'].forEach(t=>{
     const d=$(`tax-tab-${t}`); if(d) d.style.display=(t===tab)?'':'none';
   });
   if(tab==='monthly')  loadTaxMonthly();
@@ -16848,6 +17462,7 @@ function taxSetTab(tab, el) {
   if(tab==='vat')      loadTaxVat();
   if(tab==='withhold') loadTaxWithhold();
   if(tab==='costs')    { loadTaxCosts(); loadTaxRev(); }
+  if(tab==='card')     loadCardUsage();
 }
 
 function renderTaxYearPills() {
