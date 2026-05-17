@@ -2407,19 +2407,24 @@ a { text-decoration:none; color:inherit; }
 
         <!-- ━━━ 카드 이용내역 탭 ━━━ -->
         <div id="tax-tab-card" style="display:none;">
-          <div style="display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start;">
-            <!-- 사이드바: 카드사 -->
+          <!-- 카드사 상단 탭 -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+            <div id="card-usage-card-tabs" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+            <div onclick="addCardCompany()" style="font-size:12px;padding:6px 12px;border-radius:8px;border:1px dashed var(--border2);color:var(--light);cursor:pointer;">+ 카드사</div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+              <select class="prop-inp" id="card-usage-month-sel" onchange="cardUsageSetMonth(this.value)" style="font-size:11px;padding:5px 10px;width:auto;"></select>
+              <button class="f-btn" style="font-size:11px;padding:5px 13px;" onclick="$('card-usage-xlsx-input').click()">엑셀 업로드</button>
+              <input type="file" id="card-usage-xlsx-input" accept=".xlsx,.xls" style="display:none;" onchange="cardUsageImportXlsx(this)">
+              <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openCardUsageModal()">+ 내역 추가</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:200px 1fr;gap:14px;align-items:start;">
+            <!-- 카테고리 사이드바 -->
             <div style="position:sticky;top:0;">
-              <div style="font-size:10px;font-weight:500;color:var(--light);margin-bottom:8px;letter-spacing:.3px;">카드사</div>
-              <div id="card-usage-sidebar" style="display:flex;flex-direction:column;gap:2px;margin-bottom:6px;"></div>
-              <div onclick="addCardCompany()" style="display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:6px;cursor:pointer;color:var(--light);">
-                <span style="font-size:14px;">+</span><span style="font-size:12px;">카드사 추가</span>
-              </div>
-              <div style="font-size:10px;color:var(--faint);padding:2px 9px 12px;line-height:1.5;">카드사명 클릭 → 이름 수정</div>
-              <div style="border-top:0.5px solid var(--border);padding-top:12px;">
-                <div style="font-size:10px;color:var(--light);margin-bottom:5px;">기간 선택</div>
-                <select class="prop-inp" id="card-usage-month-sel" onchange="cardUsageSetMonth(this.value)" style="font-size:11px;padding:5px 8px;width:100%;"></select>
-              </div>
+              <div style="font-size:10px;font-weight:500;color:var(--light);margin-bottom:8px;letter-spacing:.3px;">카테고리</div>
+              <div id="card-usage-cat-sidebar" style="display:flex;flex-direction:column;gap:2px;"></div>
+              <div style="font-size:10px;color:var(--faint);padding:8px 9px 0;line-height:1.5;">카드사 탭 더블클릭 → 이름 수정</div>
             </div>
             <!-- 메인 -->
             <div>
@@ -2427,12 +2432,7 @@ a { text-decoration:none; color:inherit; }
               <div class="card" style="padding:0;overflow:hidden;">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
                   <div style="font-size:13px;font-weight:500;" id="card-usage-table-title">카드 이용내역</div>
-                  <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
-                    <input type="text" id="card-usage-search" class="inv-search-inp" placeholder="가맹점 검색..." style="width:150px;padding:5px 10px;font-size:12px;" oninput="cardUsageSetSearch(this.value)">
-                    <button class="f-btn" style="font-size:11px;padding:5px 13px;" onclick="$('card-usage-xlsx-input').click()">엑셀 업로드</button>
-                    <input type="file" id="card-usage-xlsx-input" accept=".xlsx,.xls" style="display:none;" onchange="cardUsageImportXlsx(this)">
-                    <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openCardUsageModal()">+ 내역 추가</button>
-                  </div>
+                  <input type="text" id="card-usage-search" class="inv-search-inp" placeholder="가맹점 검색..." style="width:150px;padding:5px 10px;font-size:12px;margin-left:auto;" oninput="cardUsageSetSearch(this.value)">
                 </div>
                 <div id="card-usage-bulkbar" style="display:none;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);border-bottom:0.5px solid var(--border);">
                   <span id="card-usage-bulk-count" style="font-size:12px;font-weight:500;"></span>
@@ -4833,7 +4833,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.5.0</div>
+<div id="version">v5.5.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -13638,7 +13638,8 @@ const CARD_CAT_COLOR = {
   fixed:'#C4736A', meal:'#C4A96A', car:'#7B68C8', supply:'#5A9A8A', etc:'#bbb'
 };
 let cardUsageCardId   = null;   // 선택된 카드사 id (null이면 전체)
-let cardUsageMonth    = '';     // 'YYYY-MM' (빈 값이면 전체)
+let cardUsageMonth    = '';     // 'YYYY-MM' (빈 값이면 전체 기간)
+let cardUsageCat      = 'all';  // 카테고리 필터 ('all'이면 전체)
 let cardUsageSearch   = '';
 let cardUsageSelected = new Set();
 let cardUsageEditId   = null;
@@ -13657,7 +13658,7 @@ async function loadCardUsage() {
   const cards = cu.cards;
   const logs  = cu.logs;
 
-  // 월 셀렉트 채우기 (로그에 있는 월 + 최근 12개월)
+  // ── 월 셀렉트: 로그에 있는 월 + 최근 12개월 ──
   const monthSel = $('card-usage-month-sel');
   if (monthSel) {
     const monthsSet = new Set(logs.map(l=>l.month).filter(Boolean));
@@ -13667,61 +13668,89 @@ async function loadCardUsage() {
       monthsSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
     }
     const months = [...monthsSet].sort().reverse();
-    if (!cardUsageMonth && months.length) cardUsageMonth = months[0];
-    monthSel.innerHTML = `<option value="">전체 기간</option>` +
+    monthSel.innerHTML = `<option value=""${cardUsageMonth===''?' selected':''}>전체 기간</option>` +
       months.map(m=>{
         const [y,mm]=m.split('-');
         return `<option value="${m}"${m===cardUsageMonth?' selected':''}>${y}년 ${parseInt(mm)}월</option>`;
       }).join('');
   }
 
-  // 사이드바: 카드사 목록
-  const sideEl = $('card-usage-sidebar');
-  if (sideEl) {
-    const monthLogs = cardUsageMonth ? logs.filter(l=>l.month===cardUsageMonth) : logs;
-    const allSum = monthLogs.reduce((sm,l)=>sm+(l.amount||0),0);
-    let html = `<div onclick="cardUsageSetCard(null)"
-      style="display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:6px;cursor:pointer;${cardUsageCardId===null?'background:var(--surface2);':''}">
-      <span style="width:7px;height:7px;border-radius:50%;background:var(--text);flex-shrink:0;"></span>
-      <span style="font-size:12px;font-weight:${cardUsageCardId===null?'500':'400'};flex:1;${cardUsageCardId===null?'color:var(--text);':'color:var(--muted);'}">전체</span>
-      <span style="font-size:10px;color:var(--light);">${allSum?fmtWonExact(allSum):''}</span>
-    </div>`;
-    const COLORS = ['#378ADD','#C4736A','#6B9E7A','#C4A96A','#7B68C8','#5A9A8A'];
+  // ── 카드사 상단 탭 ──
+  const COLORS = ['#378ADD','#C4736A','#6B9E7A','#C4A96A','#7B68C8','#5A9A8A'];
+  const tabsEl = $('card-usage-card-tabs');
+  if (tabsEl) {
+    let html = `<div onclick="cardUsageSetCard(null)" style="font-size:12px;font-weight:${cardUsageCardId===null?'600':'400'};padding:6px 14px;border-radius:8px;cursor:pointer;${cardUsageCardId===null?'background:var(--text);color:#fff;':'background:var(--surface);border:0.5px solid var(--border);color:var(--muted);'}">전체</div>`;
     html += cards.map((c,i)=>{
-      const sum = monthLogs.filter(l=>l.cardId===c.id).reduce((sm,l)=>sm+(l.amount||0),0);
-      const on  = cardUsageCardId===c.id;
-      return `<div style="display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:6px;cursor:pointer;${on?'background:var(--surface2);':''}">
-        <span style="width:7px;height:7px;border-radius:50%;background:${COLORS[i%COLORS.length]};flex-shrink:0;"></span>
-        <span onclick="cardUsageSetCard('${c.id}')" style="font-size:12px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${on?'font-weight:500;color:var(--text);':'color:var(--muted);'}">${escapeHtml(c.name)}</span>
-        <span onclick="renameCardCompany('${c.id}')" title="이름 수정" style="font-size:10px;color:var(--faint);cursor:pointer;flex-shrink:0;">✏️</span>
-        <span onclick="deleteCardCompany('${c.id}')" title="삭제" style="font-size:11px;color:var(--faint);cursor:pointer;flex-shrink:0;">✕</span>
+      const on = cardUsageCardId===c.id;
+      return `<div onclick="cardUsageSetCard('${c.id}')" ondblclick="renameCardCompany('${c.id}')" title="더블클릭 시 이름 수정"
+        style="font-size:12px;font-weight:${on?'600':'400'};padding:6px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;${on?'background:var(--text);color:#fff;':'background:var(--surface);border:0.5px solid var(--border);color:var(--muted);'}">
+        <span style="width:6px;height:6px;border-radius:50%;background:${COLORS[i%COLORS.length]};"></span>
+        ${escapeHtml(c.name)}
+        <span onclick="event.stopPropagation();deleteCardCompany('${c.id}')" style="font-size:11px;opacity:.55;margin-left:2px;">\u2715</span>
       </div>`;
     }).join('');
+    tabsEl.innerHTML = html;
+  }
+
+  // ── 필터링: 월 + 카드사 (카테고리 사이드바 금액 계산용은 카테고리 필터 제외) ──
+  let base = logs;
+  if (cardUsageMonth)  base = base.filter(l=>l.month===cardUsageMonth);
+  if (cardUsageCardId) base = base.filter(l=>l.cardId===cardUsageCardId);
+
+  // ── 카테고리 사이드바 ──
+  const catSums = {};
+  let unclassSum = 0;
+  base.forEach(l=>{
+    if (l.cat && CARD_CAT_LABEL[l.cat]) catSums[l.cat] = (catSums[l.cat]||0) + (l.amount||0);
+    else unclassSum += (l.amount||0);
+  });
+  const baseTotal = base.reduce((sm,l)=>sm+(l.amount||0),0);
+  const sideEl = $('card-usage-cat-sidebar');
+  if (sideEl) {
+    let html = `<div onclick="cardUsageSetCat('all')" style="display:flex;justify-content:space-between;padding:7px 9px;border-radius:6px;cursor:pointer;${cardUsageCat==='all'?'background:var(--surface2);':''}">
+      <span style="font-size:12px;font-weight:600;">전체</span>
+      <span style="font-size:11px;color:var(--text);">${baseTotal?fmtWonExact(baseTotal):'0원'}</span>
+    </div>`;
+    html += Object.entries(CARD_CAT_LABEL).map(([k,v])=>{
+      const on = cardUsageCat===k;
+      const amt = catSums[k]||0;
+      return `<div onclick="cardUsageSetCat('${k}')" style="display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:6px;cursor:pointer;${on?'background:var(--surface2);':''}">
+        <span style="width:7px;height:7px;border-radius:50%;background:${CARD_CAT_COLOR[k]};flex-shrink:0;"></span>
+        <span style="font-size:12px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${on?'font-weight:500;color:var(--text);':'color:var(--muted);'}">${v}</span>
+        <span style="font-size:11px;color:var(--light);">${amt?fmtWonExact(amt):''}</span>
+      </div>`;
+    }).join('');
+    // 미분류
+    const onU = cardUsageCat==='__unclass__';
+    html += `<div onclick="cardUsageSetCat('__unclass__')" style="display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:6px;cursor:pointer;${onU?'background:var(--surface2);':''}">
+      <span style="width:7px;height:7px;border-radius:50%;background:#bbb;flex-shrink:0;"></span>
+      <span style="font-size:12px;flex:1;${onU?'font-weight:500;color:var(--text);':'color:var(--muted);'}">미분류</span>
+      <span style="font-size:11px;color:${unclassSum?'#A32D2D':'var(--light)'};">${unclassSum?fmtWonExact(unclassSum):''}</span>
+    </div>`;
     sideEl.innerHTML = html;
   }
 
-  // 일괄변경 select 옵션 채우기
+  // ── 일괄변경 select 옵션 ──
   const bulkSel = $('card-usage-bulk-cat');
   if (bulkSel && bulkSel.options.length <= 1) {
     bulkSel.innerHTML = `<option value="">카테고리 변경...</option>` +
       Object.entries(CARD_CAT_LABEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
   }
 
-  // 필터링
-  let filtered = logs;
-  if (cardUsageMonth)  filtered = filtered.filter(l=>l.month===cardUsageMonth);
-  if (cardUsageCardId) filtered = filtered.filter(l=>l.cardId===cardUsageCardId);
+  // ── 테이블 대상: base + 카테고리 필터 + 검색 ──
+  let filtered = base;
+  if (cardUsageCat==='__unclass__') filtered = filtered.filter(l=>!l.cat || !CARD_CAT_LABEL[l.cat]);
+  else if (cardUsageCat!=='all')    filtered = filtered.filter(l=>l.cat===cardUsageCat);
   if (cardUsageSearch.trim()) {
     const q = cardUsageSearch.trim().toLowerCase();
     filtered = filtered.filter(l=>(l.merchant||'').toLowerCase().includes(q));
   }
-  // 최신순
   filtered.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
-  // 요약
+  // ── 요약 카드 ──
   const total   = filtered.reduce((sm,l)=>sm+(l.amount||0),0);
   const cnt     = filtered.length;
-  const unclass = filtered.filter(l=>!l.cat || l.cat==='').length;
+  const unclass = filtered.filter(l=>!l.cat || !CARD_CAT_LABEL[l.cat]).length;
   $('card-usage-summary').innerHTML = [
     {l:'이용 합계', v:fmtWonExact(total)},
     {l:'이용 건수', v:cnt+'건'},
@@ -13731,11 +13760,11 @@ async function loadCardUsage() {
     <div style="font-size:18px;font-weight:600;${c.red?'color:#A32D2D;':''}">${c.v}</div>
   </div>`).join('');
 
-  // 테이블 제목
+  // ── 테이블 제목 ──
   const cardName = cardUsageCardId ? (cards.find(c=>c.id===cardUsageCardId)?.name||'') : '전체';
-  $('card-usage-table-title').textContent = `${cardName} · ${cnt}건`;
+  const catName  = cardUsageCat==='all' ? '' : (cardUsageCat==='__unclass__' ? ' · 미분류' : ' · '+(CARD_CAT_LABEL[cardUsageCat]||''));
+  $('card-usage-table-title').textContent = `${cardName}${catName} · ${cnt}건`;
 
-  // 카드사 이름 빠른 참조
   const cardNameMap = Object.fromEntries(cards.map(c=>[c.id,c.name]));
 
   // 유효하지 않은 선택 제거
@@ -13743,10 +13772,10 @@ async function loadCardUsage() {
   cardUsageSelected.forEach(id=>{ if(!visIds.has(id)) cardUsageSelected.delete(id); });
   const allChk = filtered.length>0 && filtered.every(l=>cardUsageSelected.has(l.id));
 
-  // 테이블
+  // ── 테이블 ──
   const wrap = $('card-usage-table-wrap');
   if (!filtered.length) {
-    wrap.innerHTML = '<div style="padding:30px 20px;text-align:center;font-size:13px;color:var(--faint);">이용내역이 없어요 · 엑셀 업로드나 직접 추가로 등록해보세요</div>';
+    wrap.innerHTML = '<div style="padding:30px 20px;text-align:center;font-size:13px;color:var(--faint);">이용내역이 없어요 \u00b7 엑셀 업로드나 직접 추가로 등록해보세요</div>';
   } else {
     wrap.innerHTML = `<table class="inv-tbl" style="width:100%;table-layout:auto;">
       <thead><tr>
@@ -13760,9 +13789,9 @@ async function loadCardUsage() {
         <th style="width:32px;"></th>
       </tr></thead>
       <tbody>${filtered.map(l=>{
-        const catK = l.cat||'etc';
-        const catLbl = l.cat ? (CARD_CAT_LABEL[l.cat]||l.cat) : '미분류';
-        const catCol = l.cat ? (CARD_CAT_COLOR[l.cat]||'#888') : '#bbb';
+        const hasCat = l.cat && CARD_CAT_LABEL[l.cat];
+        const catLbl = hasCat ? CARD_CAT_LABEL[l.cat] : '미분류';
+        const catCol = hasCat ? (CARD_CAT_COLOR[l.cat]||'#888') : '#bbb';
         return `<tr${cardUsageSelected.has(l.id)?' style="background:var(--surface2);"':''}>
           <td style="width:34px;text-align:center;"><input type="checkbox" ${cardUsageSelected.has(l.id)?'checked':''} onchange="cardUsageToggleOne('${l.id}',this.checked)" style="cursor:pointer;"></td>
           <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${(l.date||'').replace(/-/g,'.')}</td>
@@ -13771,7 +13800,7 @@ async function loadCardUsage() {
           <td style="font-size:12px;font-weight:500;max-width:280px;word-break:break-word;line-height:1.5;">${escapeHtml(l.merchant||'')}</td>
           <td style="white-space:nowrap;"><span style="display:inline-block;font-size:11px;padding:2px 9px;border-radius:50px;white-space:nowrap;background:${catCol}22;color:${catCol};">${catLbl}</span></td>
           <td style="text-align:right;font-size:12px;font-weight:500;white-space:nowrap;${(l.amount||0)<0?'color:#A32D2D;':''}">${fmtWonExact(l.amount||0)}</td>
-          <td style="text-align:center;width:32px;"><div class="card-link" onclick="openCardUsageModal('${l.id}')" style="display:inline-block;">···</div></td>
+          <td style="text-align:center;width:32px;"><div class="card-link" onclick="openCardUsageModal('${l.id}')" style="display:inline-block;">\u00b7\u00b7\u00b7</div></td>
         </tr>`;
       }).join('')}</tbody>
     </table>`;
@@ -13779,9 +13808,10 @@ async function loadCardUsage() {
   cardUsageUpdateBulkbar();
 }
 
-function cardUsageSetCard(id) { cardUsageCardId = id; loadCardUsage(); }
+function cardUsageSetCard(id) { cardUsageCardId = id; cardUsageSelected.clear(); loadCardUsage(); }
 function cardUsageSetMonth(m) { cardUsageMonth = m; cardUsageSelected.clear(); loadCardUsage(); }
-function cardUsageSetSearch(v) { cardUsageSearch = v; loadCardUsage(); }
+function cardUsageSetCat(c)   { cardUsageCat = c; cardUsageSelected.clear(); loadCardUsage(); }
+function cardUsageSetSearch(v){ cardUsageSearch = v; loadCardUsage(); }
 
 async function addCardCompany() {
   const name = await customPrompt('새 카드사 이름', '예: 신한카드 (1214)');
@@ -17388,11 +17418,13 @@ async function deletePlanProduct() {
 ════════════════════════════════ */
 const TAX_CAT_LABEL = {
   ad:'마케팅·광고비', prod:'생산·원자재', salary:'인건비',
-  fee:'플랫폼·수수료', logistics:'물류·배송비', fixed:'고정비·임차료', etc:'기타'
+  fee:'플랫폼·수수료', logistics:'물류·배송비', fixed:'고정비·임차료',
+  meal:'식대', car:'차량유지비', supply:'비품', etc:'기타'
 };
 const TAX_CAT_COLOR = {
   ad:'#1877F2', prod:'#6B9E7A', salary:'#C4A96A',
-  fee:'#888', logistics:'#378ADD', fixed:'#C4736A', etc:'#bbb'
+  fee:'#888', logistics:'#378ADD', fixed:'#C4736A',
+  meal:'#C4A96A', car:'#7B68C8', supply:'#5A9A8A', etc:'#bbb'
 };
 const TAX_REV_LABEL = {
   own:'자사몰', kakao:'카카오선물하기', smart:'스마트스토어',
@@ -17427,6 +17459,7 @@ const TAX_SCHEDULE = [
 let taxTab   = 'monthly';
 let taxYear  = new Date().getFullYear();
 let taxMonth = new Date().getMonth() + 1; // 1~12
+let taxCostListExpanded = false; // 월간 비용내역 더보기 펼침 여부
 let taxQtr   = Math.ceil((new Date().getMonth() + 1) / 3);
 let taxVatPeriod = 1; // 1기(1~6월) or 2기(7~12월)
 let taxCostEditId = null;
@@ -17488,13 +17521,37 @@ function taxChangeMonth(d) {
   taxMonth += d;
   if(taxMonth < 1)  { taxMonth = 12; taxYear--; renderTaxYearPills(); }
   if(taxMonth > 12) { taxMonth = 1;  taxYear++; renderTaxYearPills(); }
+  taxCostListExpanded = false;
+  loadTaxMonthly();
+}
+
+function taxCostListToggle() {
+  taxCostListExpanded = !taxCostListExpanded;
   loadTaxMonthly();
 }
 
 /* ── 데이터 수집 ── */
 async function getTaxCosts(year, month=null, qtr=null) {
   const s = await getAppState();
-  let costs = s.tax_costs||[];
+  let costs = (s.tax_costs||[]).map(c => ({ ...c }));
+
+  // 카드 이용내역도 비용에 합산 (카드로 쓴 돈도 지출이므로)
+  const cu = s.card_usage || {};
+  (cu.logs || []).forEach(l => {
+    if (!l.date) return;
+    const [ly, lm] = l.date.split('-').map(Number);
+    if (!ly || !lm) return;
+    costs.push({
+      id: 'cardcost_' + l.id,
+      year: ly, month: lm,
+      amount: l.amount || 0,
+      cat: l.cat || 'etc',
+      desc: l.merchant || '카드 이용',
+      hasTax: false,
+      _source: 'card',   // 카드 출처 표시
+    });
+  });
+
   costs = costs.filter(c=>Number(c.year)===Number(year));
   if(month) costs = costs.filter(c=>c.month===month);
   if(qtr)   costs = costs.filter(c=>Math.ceil(c.month/3)===qtr);
@@ -17579,20 +17636,38 @@ async function loadTaxMonthly() {
   if(!costs.length) {
     $('tax-cost-list').innerHTML = '<div style="font-size:13px;color:var(--faint);padding:8px 0;">이번 달 비용이 없어요 · + 비용 추가</div>';
   } else {
-    $('tax-cost-list').innerHTML = costs.map(c=>`
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
+    const LIMIT = 10;
+    const sortedCosts = costs.slice().sort((a,b)=>(b.amount||0)-(a.amount||0));
+    const shown = taxCostListExpanded ? sortedCosts : sortedCosts.slice(0, LIMIT);
+    const rowHtml = c => {
+      const isCard = c._source === 'card';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
         <div style="width:8px;height:8px;border-radius:50%;background:${TAX_CAT_COLOR[c.cat]||'#888'};flex-shrink:0;"></div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${oneLine(c.desc)||TAX_CAT_LABEL[c.cat]||c.cat}</div>
-          <div style="font-size:10px;color:var(--light);">${TAX_CAT_LABEL[c.cat]||c.cat}</div>
+          <div style="font-size:10px;color:var(--light);">${TAX_CAT_LABEL[c.cat]||c.cat}${isCard?' · 카드':''}</div>
         </div>
         <div style="font-size:10px;${c.hasTax?'color:#3B6D11;':'color:var(--faint);'};">${c.hasTax?'세금계산서 ✓':'—'}</div>
         <div style="font-size:12px;font-weight:500;">${fmtWonExact(c.amount||0)}</div>
-        <div class="card-link" onclick="openTaxCostModal('${c.id}')" style="font-size:13px;">···</div>
-      </div>`).join('') +
-      `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12px;">
-        <span style="color:var(--light);">합계</span><span style="font-weight:500;">${fmtWonExact(totalCost)}</span>
+        ${isCard
+          ? `<div style="width:18px;"></div>`
+          : `<div class="card-link" onclick="openTaxCostModal('${c.id}')" style="font-size:13px;">···</div>`}
       </div>`;
+    };
+    let html = shown.map(rowHtml).join('');
+    // 더보기 / 접기
+    if (sortedCosts.length > LIMIT) {
+      html += `<div onclick="taxCostListToggle()" style="text-align:center;padding:9px 0;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:0.5px solid var(--surface2);">
+        ${taxCostListExpanded
+          ? '접기 ▲'
+          : `더보기 ▾ <span style="color:var(--faint);">(나머지 ${sortedCosts.length - LIMIT}건)</span>`}
+      </div>`;
+    }
+    html += `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12px;">
+      <span style="color:var(--light);">합계 <span style="color:var(--faint);">· ${sortedCosts.length}건</span></span>
+      <span style="font-weight:500;">${fmtWonExact(totalCost)}</span>
+    </div>`;
+    $('tax-cost-list').innerHTML = html;
   }
 
   // 부가세 계산
