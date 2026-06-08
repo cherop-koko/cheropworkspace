@@ -4833,7 +4833,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.5.2</div>
+<div id="version">v5.5.3</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -7781,26 +7781,59 @@ async function saveShipment() {
 
   if (!items.length) { toast('출고 상품과 수량을 입력해주세요'); return; }
 
+  // 사전 검증: 각 상품의 채널 재고가 출고량을 감당할 수 있는지
+  const warnings = [];
+  for (const item of items) {
+    const { data: ci } = await db.from('channel_inventory')
+      .select('stock').eq('product_id', item.productId).eq('channel', channel).maybeSingle();
+    const { data: inv } = await db.from('inventory')
+      .select('total_stock,produced_stock').eq('product_id', item.productId).maybeSingle();
+    const { data: pr } = await db.from('products').select('name,option_name').eq('id', item.productId).maybeSingle();
+    const lbl = pr ? (pr.name + (pr.option_name?' · '+pr.option_name:'')) : item.productId;
+    const chStock   = ci?.stock || 0;
+    const produced  = inv?.produced_stock || 0;
+    const total     = inv?.total_stock || 0;
+    if (chStock < item.qty)  warnings.push(`${lbl}: ${channel} 재고 ${chStock}개 < 출고 ${item.qty}개`);
+    if (produced < item.qty) warnings.push(`${lbl}: 생산화완료 재고 ${produced}개 < 출고 ${item.qty}개`);
+    if (total < item.qty)    warnings.push(`${lbl}: 총재고 ${total}개 < 출고 ${item.qty}개`);
+  }
+  if (warnings.length) {
+    const ok = await customConfirm(
+      '재고 부족 경고',
+      warnings.slice(0,3).join(' / ') + (warnings.length>3?` 외 ${warnings.length-3}건`:'') + ' — 그래도 진행할까요? (재고는 0까지만 빠집니다)',
+      '진행'
+    );
+    if (!ok) return;
+  }
+
   try {
-    // 1. sales_log에 저장
-    const upsertId = `ship-${shipDate}-${channel.replace(/[^a-z0-9]/gi,'')}-${Date.now()}`;
     for (const item of items) {
+      // 1. sales_log에 출고 기록
       await db.from('sales_log').insert([{
         id:         `ship-${shipDate}-${channel}-${item.productId}-${Date.now()}`,
         product_id: item.productId,
         channel,
         quantity:   item.qty,
-        amount:     0,  // 매출은 아래 channel_sales_log에 별도 저장
+        amount:     0,  // 매출은 channel_sales_log에 별도 저장
         sale_date:  shipDate,
         created_at: new Date().toISOString(),
       }]);
 
-      // 2. 재고 차감
+      // 2. 재고 차감 — total_stock, produced_stock 모두 감소시켜 정합성 유지
+      //    (total = pending + produced 등식, available = produced - 채널배분 등식 둘 다 유지)
       const { data: inv } = await db.from('inventory').select('*').eq('product_id', item.productId).maybeSingle();
-      if (inv) await db.from('inventory').update({
-        total_stock: Math.max(0, (inv.total_stock||0) - item.qty),
-        updated_at:  new Date().toISOString(),
-      }).eq('product_id', item.productId);
+      if (inv) {
+        const newTotal    = Math.max(0, (inv.total_stock    || 0) - item.qty);
+        const newProduced = Math.max(0, (inv.produced_stock || 0) - item.qty);
+        // pending = total - produced 유지를 위해 다시 계산
+        const newPending  = Math.max(0, newTotal - newProduced);
+        await db.from('inventory').update({
+          total_stock:        newTotal,
+          produced_stock:     newProduced,
+          pending_production: newPending,
+          updated_at:         new Date().toISOString(),
+        }).eq('product_id', item.productId);
+      }
 
       // 3. 채널 재고 차감
       const { data: ci } = await db.from('channel_inventory').select('*').eq('product_id', item.productId).eq('channel', channel).maybeSingle();
@@ -7809,8 +7842,6 @@ async function saveShipment() {
         updated_at: new Date().toISOString(),
       }).eq('id', ci.id);
     }
-
-
 
     toast(`출고 등록 완료 ✓ (${items.length}개 상품, 재고 차감됨)`);
     closeModal('shipment-modal');
