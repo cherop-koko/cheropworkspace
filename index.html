@@ -1560,16 +1560,16 @@ a { text-decoration:none; color:inherit; }
               <div class="insta-feed-fade-wrap"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);" id="insta-feed-grid"></div></div>
             </div>
 
-            <!-- 2열: 피드 상세 패널 (피드 선택 시) 또는 빠른추가+리스트 (선택 없을 때) -->
+            <!-- 2열: 빠른추가 + 피드 리스트 (인스타 피드와 동기화, 항상 표시) -->
             <div style="width:340px;flex-shrink:0;" id="insta-detail-panel">
-              <!-- 빠른추가 + 피드 리스트 (인스타 피드와 동기화) - 평소 표시 -->
               <div id="content-quickadd-panel" style="border:0.5px solid var(--border);border-radius:var(--rlg);background:var(--surface);overflow:hidden;">
                 <div style="padding:14px 16px;background:var(--surface2);border-bottom:0.5px solid var(--border);">
                   <div style="font-size:11px;font-weight:500;color:var(--muted);margin-bottom:8px;">+ 빠른 추가</div>
-                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:8px;">
-                    <button onclick="quickAddContent('visual')" style="padding:8px 4px;font-size:11px;background:#F5F0E8;color:#4A3D30;border:none;border-radius:6px;cursor:pointer;font-weight:500;">◼ 비주얼보드</button>
-                    <button onclick="quickAddContent('mongmozzal')" style="padding:8px 4px;font-size:11px;background:#F5E8EC;color:#8A4A5A;border:none;border-radius:6px;cursor:pointer;font-weight:500;">✦ 몽모짤</button>
-                    <button onclick="quickAddContent('reels')" style="padding:8px 4px;font-size:11px;background:#E0EBF0;color:#244A60;border:none;border-radius:6px;cursor:pointer;font-weight:500;">▶ 릴스</button>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:8px;">
+                    <button onclick="quickAddContent('visual')" style="padding:8px 2px;font-size:10px;background:#F5F0E8;color:#4A3D30;border:none;border-radius:6px;cursor:pointer;font-weight:500;">◼ 비주얼보드</button>
+                    <button onclick="quickAddContent('mongmozzal')" style="padding:8px 2px;font-size:10px;background:#F5E8EC;color:#8A4A5A;border:none;border-radius:6px;cursor:pointer;font-weight:500;">✦ 몽모짤</button>
+                    <button onclick="quickAddContent('reels')" style="padding:8px 2px;font-size:10px;background:#E0EBF0;color:#244A60;border:none;border-radius:6px;cursor:pointer;font-weight:500;">▶ 릴스</button>
+                    <button onclick="quickAddContent('magazine')" style="padding:8px 2px;font-size:10px;background:#EAF3DE;color:#27500A;border:none;border-radius:6px;cursor:pointer;font-weight:500;">◇ 기타</button>
                   </div>
                   <button onclick="openContentModalNew(dateStr())" style="width:100%;padding:8px;font-size:12px;background:var(--text);color:#fff;border:none;border-radius:6px;cursor:pointer;">+ 직접 작성</button>
                 </div>
@@ -1582,11 +1582,9 @@ a { text-decoration:none; color:inherit; }
                       <span class="content-list-pill" data-st="scheduled" onclick="contentListSetStatus('scheduled',this)" style="font-size:10px;padding:2px 7px;border-radius:50px;color:var(--light);cursor:pointer;">예약</span>
                     </div>
                   </div>
-                  <div id="content-feed-list" style="display:flex;flex-direction:column;max-height:520px;overflow-y:auto;"></div>
+                  <div id="content-feed-list" style="display:flex;flex-direction:column;max-height:calc(100vh - 380px);overflow-y:auto;"></div>
                 </div>
               </div>
-              <!-- 피드 상세 (선택 시 표시) -->
-              <div id="insta-post-detail" style="display:none;"></div>
             </div>
 
             <!-- 아이디어 보드 (보드 탭 클릭 시 표시) -->
@@ -4855,7 +4853,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.5.6</div>
+<div id="version">v5.5.7</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -14564,12 +14562,6 @@ async function switchBoard(boardId) {
   currentBoardId = boardId;
   instaSelectedId = null;
 
-  // 빠른추가 패널 다시 표시, 상세 숨김
-  const quickPanel = $('content-quickadd-panel');
-  if (quickPanel) quickPanel.style.display = '';
-  const postDetail = $('insta-post-detail');
-  if (postDetail) { postDetail.style.display = 'none'; postDetail.innerHTML = ''; }
-
   const calCol    = $('content-calendar-col');
   const feedCol   = $('insta-feed-column');
   const detailCol = $('insta-detail-panel');
@@ -15303,8 +15295,6 @@ async function deletePostFromDetail(id) {
   (s.instaBoards||[]).forEach(b => { b.feedOrder = (b.feedOrder||[]).filter(x => x !== id); });
   await setAppState(s);
   toast('삭제됐어요 ✓');
-  const detail = $('insta-post-detail');
-  if (detail) detail.innerHTML = '<div style="border:0.5px solid var(--border);border-radius:var(--rlg);display:flex;align-items:center;justify-content:center;min-height:480px;background:var(--surface);font-size:13px;color:var(--faint);">피드를 선택하면 표시돼요</div>';
   await renderInstaBoard(currentBoardId);
 }
 
@@ -15316,101 +15306,10 @@ function openContentEditModal(id) {
 }
 
 function instaSelectPost(id) {
+  // 피드 클릭 시: 선택 표시 + 편집 모달 열기 (오른쪽 상세 패널은 더이상 사용 안 함)
   instaSelectedId = id;
   renderInstaFeed();
-  const p = (window._instaPostsMap || {})[id]; if (!p) return;
-  // 빠른추가 패널 숨기고 상세 패널 표시
-  const quickPanel = $('content-quickadd-panel');
-  if (quickPanel) quickPanel.style.display = 'none';
-  const postDetail = $('insta-post-detail'); if (!postDetail) return;
-  postDetail.style.display = '';
-  const panel = postDetail;
-
-  const src  = p.imgUrl || p.imgData || '';
-  const tc   = p.type ? (CONTENT_TYPES[p.type]?.color || '#ccc') : '#e0ddd8';
-  const st   = p.stats || {};
-  const fmtN = n => {
-    if (!n) return '0';
-    if (n >= 10000) return (Math.round(n/1000)/10) + '만';
-    if (n >= 1000)  return (Math.round(n/100)/10) + 'k';
-    return String(n);
-  };
-  const stLbl   = p.status==='published' ? '업로드됨' : p.status==='scheduled' ? `${(p.date||'').slice(5).replace('-','/')} 예정` : '초안';
-  const stStyle = p.status==='published'
-    ? 'background:#e8f5e9;color:#2e7d32'
-    : p.status==='scheduled'
-    ? 'background:#fff3e0;color:#e65100'
-    : 'background:#f5f5f5;color:#757575';
-
-  panel.innerHTML = `
-    <div style="border:0.5px solid #dbdbdb;border-radius:3px;overflow:hidden;background:#fff;max-width:470px;">
-      <!-- 상단 헤더 -->
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:0.5px solid #efefef;">
-        <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;background:#f0ece8;flex-shrink:0;border:0.5px solid #dbdbdb;">
-          ${(_appStateCache?.instaProfile?.imgUrl)
-            ? `<img src="${_appStateCache.instaProfile.imgUrl}" style="width:100%;height:100%;object-fit:cover;">`
-            : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;">체</div>`}
-        </div>
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:600;color:#1c1e26;">cheropstore</div>
-          ${p.bgm ? `<div style="font-size:11px;color:#666;display:flex;align-items:center;gap:3px;">🎵 ${p.bgm}</div>` : ''}
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:500;${stStyle};">${stLbl}</span>
-          <div style="position:relative;display:inline-block;">
-            <div onclick="togglePostMenu('${p.id}')" style="cursor:pointer;padding:4px;border-radius:50%;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="5" cy="10" r="1.5" fill="#1c1e26"/><circle cx="10" cy="10" r="1.5" fill="#1c1e26"/><circle cx="15" cy="10" r="1.5" fill="#1c1e26"/></svg>
-            </div>
-            <div id="post-menu-${p.id}" style="display:none;position:absolute;right:0;top:28px;background:#fff;border:0.5px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:100;min-width:120px;overflow:hidden;">
-              <div onclick="editPostFromDetail('${p.id}')" style="padding:10px 14px;font-size:12px;cursor:pointer;border-bottom:0.5px solid #f0f0f0;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">✏ 수정</div>
-              <div onclick="deletePostFromDetail('${p.id}')" style="padding:10px 14px;font-size:12px;cursor:pointer;color:#C4736A;" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background=''">🗑 삭제</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- 이미지 -->
-      <div style="aspect-ratio:4/5;background:${tc}22;overflow:hidden;">
-        ${src
-          ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;">`
-          : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:${tc};opacity:.5;">${p.title||''}</div>`}
-      </div>
-      <!-- 액션 아이콘 -->
-      <div style="padding:10px 12px 6px;display:flex;align-items:center;gap:14px;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.7"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.7"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.7"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 19-7z"/></svg>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1e26" stroke-width="1.7" style="margin-left:auto;"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-      </div>
-      <!-- 좋아요/실적 -->
-      ${p.status==='published' && (st.likes||st.views) ? `
-      <div style="padding:0 12px 6px;">
-        <div style="font-size:13px;font-weight:600;color:#1c1e26;">좋아요 ${fmtN(st.likes)}개</div>
-        <div style="display:flex;gap:14px;margin-top:3px;">
-          ${[[' 조회',st.views],[' 저장',st.saves],[' 댓글',st.comments],[' 공유',st.shares]].filter(([,v])=>v).map(([l,v])=>`<span style="font-size:12px;color:#666;">${fmtN(v)}${l}</span>`).join('')}
-        </div>
-      </div>` : ''}
-      <!-- 캡션 -->
-      <div style="padding:2px 12px 8px;">
-        ${p.caption ? `<div style="font-size:13px;color:#1c1e26;line-height:1.55;"><span style="font-weight:600;">cheropstore</span> ${p.caption.replace(/\n/g,'<br>')}</div>` : ''}
-        ${(p.tags||[]).length ? `<div style="margin-top:4px;">${(p.tags||[]).map(t=>`<span style="font-size:13px;color:#0095f6;">${t} </span>`).join('')}</div>` : ''}
-        <div style="font-size:11px;color:#999;margin-top:6px;">${p.date||''}</div>
-      </div>
-      <!-- 하단 액션 -->
-      <div style="display:flex;gap:6px;padding:10px 12px;border-top:0.5px solid #efefef;">
-        <div style="flex:1;padding:7px;border-radius:6px;border:0.5px solid #dbdbdb;font-size:12px;color:#1c1e26;cursor:pointer;text-align:center;font-weight:500;" onclick="openContentModal('${p.date||''}','${p.id}')">수정</div>
-        <div style="flex:1;padding:7px;border-radius:6px;border:0.5px solid #dbdbdb;font-size:12px;color:#ed4956;cursor:pointer;text-align:center;font-weight:500;" onclick="instaDeletePost('${p.id}')">삭제</div>
-        ${p.link ? `<div style="flex:1;padding:7px;border-radius:6px;background:#0095f6;font-size:12px;color:#fff;cursor:pointer;text-align:center;font-weight:500;" onclick="window.open('${p.link}','_blank')">인스타 열기</div>` : ''}
-      </div>
-      ${currentBoardId === 'all' ? `
-      <div style="padding:0 12px 10px;">
-        <div style="font-size:11px;color:#aaa;margin-bottom:6px;">보드에 추가</div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;" id="post-board-chips-${p.id}"></div>
-      </div>` : ''}
-    </div>`;
-  // 전체 피드일 때 보드 칩 렌더
-  if (currentBoardId === 'all') {
-    setTimeout(() => renderPostBoardChips(id), 50);
-  }
+  openContentEditModal(id);
 }
 
 async function renderPostBoardChips(postId) {
@@ -15452,10 +15351,6 @@ async function instaDeletePost(id) {
   if (error) { toast('삭제 실패: ' + error.message); return; }
   if (instaSelectedId === id) {
     instaSelectedId = null;
-    const postDetail = $('insta-post-detail');
-    if (postDetail) { postDetail.style.display = 'none'; postDetail.innerHTML = ''; }
-    const quickPanel = $('content-quickadd-panel');
-    if (quickPanel) quickPanel.style.display = '';
     renderContentFeedList();
   }
   toast('삭제됐어요');
