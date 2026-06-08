@@ -4562,6 +4562,9 @@ a { text-decoration:none; color:inherit; }
     </div>
   </div>
 </div>
+
+<!-- ═══ 컬러 보드 추가/편집 모달 ═══ -->
+<div class="modal-overlay" id="board-modal" onclick="if(event.target===this)closeModal('board-modal')">
   <div class="modal-box" style="max-width:360px;">
     <div class="modal-bar">
       <div class="modal-kind" id="board-modal-title">보드 추가</div>
@@ -4833,7 +4836,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.5.3</div>
+<div id="version">v5.5.4</div>
 
 <script>
 /* ═══════════════════════════════════════
