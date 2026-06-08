@@ -1523,7 +1523,7 @@ a { text-decoration:none; color:inherit; }
           <div class="page-header-top">
             <div style="display:flex;align-items:center;gap:12px;">
               <div class="page-header-title">콘텐츠</div>
-              <button id="content-add-btn" class="f-btn f-btn-save" style="padding:7px 14px;font-size:12px;display:none;" onclick="openContentModal(dateStr())">+ 새 게시물</button>
+              <button id="content-add-btn" class="f-btn f-btn-save" style="padding:7px 14px;font-size:12px;display:none;" onclick="openContentModalNew(dateStr())">+ 새 게시물</button>
             </div>
           </div>
           <div class="page-tabs" id="content-tabs">
@@ -1560,14 +1560,33 @@ a { text-decoration:none; color:inherit; }
               <div class="insta-feed-fade-wrap"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);" id="insta-feed-grid"></div></div>
             </div>
 
-            <!-- 2열: 피드 상세 패널 (항상 표시) -->
-            <div style="width:300px;flex-shrink:0;" id="insta-detail-panel">
-              <div id="insta-post-detail">
-                <div style="border:0.5px solid var(--border);border-radius:var(--rlg);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;gap:8px;background:var(--surface);">
-                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="4" width="28" height="28" rx="6" stroke="#ccc" stroke-width="1.5"/><circle cx="13" cy="14" r="3" stroke="#ccc" stroke-width="1.5"/><path d="M4 26l8-7 6 5 5-4 9 8" stroke="#ccc" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                  <div style="font-size:13px;color:var(--faint);">피드를 선택하면 표시돼요</div>
+            <!-- 2열: 피드 상세 패널 (피드 선택 시) 또는 빠른추가+리스트 (선택 없을 때) -->
+            <div style="width:340px;flex-shrink:0;" id="insta-detail-panel">
+              <!-- 빠른추가 + 피드 리스트 (인스타 피드와 동기화) - 평소 표시 -->
+              <div id="content-quickadd-panel" style="border:0.5px solid var(--border);border-radius:var(--rlg);background:var(--surface);overflow:hidden;">
+                <div style="padding:14px 16px;background:var(--surface2);border-bottom:0.5px solid var(--border);">
+                  <div style="font-size:11px;font-weight:500;color:var(--muted);margin-bottom:8px;">+ 빠른 추가</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:8px;">
+                    <button onclick="quickAddContent('visual')" style="padding:8px 4px;font-size:11px;background:#F5F0E8;color:#4A3D30;border:none;border-radius:6px;cursor:pointer;font-weight:500;">◼ 비주얼보드</button>
+                    <button onclick="quickAddContent('mongmozzal')" style="padding:8px 4px;font-size:11px;background:#F5E8EC;color:#8A4A5A;border:none;border-radius:6px;cursor:pointer;font-weight:500;">✦ 몽모짤</button>
+                    <button onclick="quickAddContent('reels')" style="padding:8px 4px;font-size:11px;background:#E0EBF0;color:#244A60;border:none;border-radius:6px;cursor:pointer;font-weight:500;">▶ 릴스</button>
+                  </div>
+                  <button onclick="openContentModalNew(dateStr())" style="width:100%;padding:8px;font-size:12px;background:var(--text);color:#fff;border:none;border-radius:6px;cursor:pointer;">+ 직접 작성</button>
+                </div>
+                <div style="padding:12px 14px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div style="font-size:12px;font-weight:600;">피드 리스트</div>
+                    <div style="display:flex;gap:3px;" id="content-list-status-pills">
+                      <span class="content-list-pill on" data-st="all" onclick="contentListSetStatus('all',this)" style="font-size:10px;padding:2px 7px;border-radius:50px;background:#1c1e26;color:#fff;cursor:pointer;">전체</span>
+                      <span class="content-list-pill" data-st="draft" onclick="contentListSetStatus('draft',this)" style="font-size:10px;padding:2px 7px;border-radius:50px;color:var(--light);cursor:pointer;">임시</span>
+                      <span class="content-list-pill" data-st="scheduled" onclick="contentListSetStatus('scheduled',this)" style="font-size:10px;padding:2px 7px;border-radius:50px;color:var(--light);cursor:pointer;">예약</span>
+                    </div>
+                  </div>
+                  <div id="content-feed-list" style="display:flex;flex-direction:column;max-height:520px;overflow-y:auto;"></div>
                 </div>
               </div>
+              <!-- 피드 상세 (선택 시 표시) -->
+              <div id="insta-post-detail" style="display:none;"></div>
             </div>
 
             <!-- 아이디어 보드 (보드 탭 클릭 시 표시) -->
@@ -4836,7 +4855,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.5.4</div>
+<div id="version">v5.5.6</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -14545,6 +14564,12 @@ async function switchBoard(boardId) {
   currentBoardId = boardId;
   instaSelectedId = null;
 
+  // 빠른추가 패널 다시 표시, 상세 숨김
+  const quickPanel = $('content-quickadd-panel');
+  if (quickPanel) quickPanel.style.display = '';
+  const postDetail = $('insta-post-detail');
+  if (postDetail) { postDetail.style.display = 'none'; postDetail.innerHTML = ''; }
+
   const calCol    = $('content-calendar-col');
   const feedCol   = $('insta-feed-column');
   const detailCol = $('insta-detail-panel');
@@ -14972,7 +14997,7 @@ function renderInstaProfile(s) {
     </div>
     <!-- 계정명 + 소개 -->
     <div style="font-size:13px;font-weight:700;color:#1c1e26;margin-bottom:3px;">체로프 몽모 CHEROP MONGMO®</div>
-    <div style="font-size:13px;color:#1c1e26;line-height:1.55;margin-bottom:4px;">CHEROP KOREA ORIGINAL PREMIUM MONGMO<br>✶ POPUP &lt;더현대 판교&gt; 4.24- COMINGSOON！<br>✶ WORLDWIDE SHIPPING</div>
+    <div style="font-size:13px;color:#1c1e26;line-height:1.55;margin-bottom:4px;">몽모 세상에 온 걸 환영해 ♡˚₊·<br>✶ ᴡᴏʀʟᴅᴡɪᴅᴇ sʜɪᴘᴘɪɴɢ<br>↓ 몽모 입양하기 / 몽모짤 다운받기</div>
     <!-- 링크 -->
     <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;cursor:pointer;" onclick="window.open('https://litt.ly/cherop','_blank')">
       <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5C3.7 1.5 1.5 3.7 1.5 6.5S3.7 11.5 6.5 11.5 11.5 9.3 11.5 6.5 9.3 1.5 6.5 1.5Z" stroke="#0095f6" stroke-width="1.2"/><path d="M1.5 6.5h10M6.5 1.5C5.2 3 4.5 4.7 4.5 6.5S5.2 10 6.5 11.5M6.5 1.5C7.8 3 8.5 4.7 8.5 6.5S7.8 10 6.5 11.5" stroke="#0095f6" stroke-width="1.2"/></svg>
@@ -15077,6 +15102,175 @@ function renderInstaFeed() {
 
   grid.innerHTML = html;
   initInstaFeedDrag();
+  renderContentFeedList();   // 우측 리스트도 같은 순서로 동기 렌더
+}
+
+/* ── 우측 피드 리스트 (인스타 피드와 동기화) ── */
+let _contentListStatus = 'all'; // 'all' | 'draft' | 'scheduled'
+
+function contentListSetStatus(st, el) {
+  _contentListStatus = st;
+  document.querySelectorAll('.content-list-pill').forEach(p => {
+    p.classList.remove('on');
+    p.style.background = '';
+    p.style.color = 'var(--light)';
+  });
+  if (el) {
+    el.classList.add('on');
+    el.style.background = '#1c1e26';
+    el.style.color = '#fff';
+  }
+  renderContentFeedList();
+}
+
+function renderContentFeedList() {
+  const wrap = $('content-feed-list'); if (!wrap) return;
+  const map  = window._instaPostsMap || {};
+  const DAY  = ['일','월','화','수','목','금','토'];
+  const STATUS_LABEL = { draft:'임시', scheduled:'예약', published:'완료' };
+  const STATUS_BG    = { draft:'#FFF3E0', scheduled:'#E0EBF0', published:'#EAF3DE' };
+  const STATUS_COLOR = { draft:'#7A5C1E', scheduled:'#244A60', published:'#27500A' };
+
+  // 인스타 피드와 같은 순서 (instaFeedOrder)
+  let items = (instaFeedOrder||[]).map(id => map[id]).filter(Boolean);
+
+  // 상태 필터
+  if (_contentListStatus !== 'all') items = items.filter(p => p.status === _contentListStatus);
+
+  if (!items.length) {
+    wrap.innerHTML = `<div style="padding:24px 8px;text-align:center;font-size:12px;color:var(--faint);">표시할 게시물이 없어요</div>`;
+    return;
+  }
+
+  wrap.innerHTML = items.map((p, idx) => {
+    const t       = CONTENT_TYPES[p.type] || { label:'기타', icon:'◇', bg:'#f5f5f5', textColor:'#333' };
+    const st      = p.status || 'draft';
+    const stLbl   = STATUS_LABEL[st] || '';
+    const stBg    = STATUS_BG[st]    || '#eee';
+    const stCol   = STATUS_COLOR[st] || '#666';
+    const sel     = p.id === instaSelectedId;
+
+    // 날짜·요일
+    let mm = '', dd = '', dayLbl = '';
+    if (p.date) {
+      const [, m, d] = p.date.split('-');
+      mm = m; dd = d;
+      const dt = new Date(p.date+'T00:00:00');
+      if (!isNaN(dt)) dayLbl = DAY[dt.getDay()];
+    }
+
+    const src = p.imgUrl || p.imgData || '';
+    const thumb = src
+      ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;" draggable="false">`
+      : `<div style="width:100%;height:100%;background:${t.bg};display:flex;align-items:center;justify-content:center;color:${t.textColor};font-size:15px;">${t.icon}</div>`;
+
+    return `<div class="content-list-item" data-post-id="${p.id}" draggable="true"
+      onclick="instaSelectPost('${p.id}')"
+      style="display:flex;align-items:center;gap:8px;padding:9px 6px;border-bottom:0.5px solid var(--surface2);cursor:pointer;${sel?'background:var(--surface2);border-radius:6px;':''}">
+      <div class="content-list-handle" style="font-size:14px;color:var(--light);cursor:grab;flex-shrink:0;line-height:1;user-select:none;" title="드래그하여 순서 변경">⋮⋮</div>
+      <div style="width:34px;flex-shrink:0;text-align:center;line-height:1.25;">
+        ${p.date
+          ? `<div style="font-size:11px;font-weight:500;color:var(--muted);">${mm}.${dd}</div>
+             <div style="font-size:10px;color:var(--light);">${dayLbl}</div>`
+          : `<div style="font-size:10px;color:var(--faint);">—</div>`}
+      </div>
+      <div style="width:38px;height:38px;border-radius:5px;overflow:hidden;flex-shrink:0;background:${t.bg};">${thumb}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:10px;color:${t.textColor};font-weight:500;margin-bottom:1px;">${t.label||''}</div>
+        <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.title||'(제목 없음)')}</div>
+      </div>
+      <span style="font-size:9px;padding:1px 6px;border-radius:50px;background:${stBg};color:${stCol};flex-shrink:0;">${stLbl}</span>
+    </div>`;
+  }).join('');
+
+  // 드래그앤드롭 초기화 (우측 리스트에서 → 인스타 피드 순서도 같이 갱신)
+  initContentFeedListDrag();
+}
+
+/* 우측 리스트 드래그 — instaFeedOrder를 갱신하고 인스타 피드 다시 그림 */
+function initContentFeedListDrag() {
+  let dragEl = null;
+  const items = document.querySelectorAll('#content-feed-list .content-list-item');
+  items.forEach(el => {
+    el.addEventListener('dragstart', e => {
+      dragEl = el; el.style.opacity = '.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    el.addEventListener('dragend', () => {
+      el.style.opacity = ''; dragEl = null;
+      items.forEach(x => { x.style.borderTop = ''; x.style.borderBottom = ''; });
+    });
+    el.addEventListener('dragover', e => {
+      if (!dragEl || el === dragEl) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      const after = (e.clientY - r.top) > r.height/2;
+      items.forEach(x => { x.style.borderTop = ''; x.style.borderBottom = ''; });
+      el.style[after ? 'borderBottom' : 'borderTop'] = '2px solid var(--text)';
+    });
+    el.addEventListener('drop', async e => {
+      e.preventDefault();
+      items.forEach(x => { x.style.borderTop = ''; x.style.borderBottom = ''; });
+      if (!dragEl || el === dragEl) return;
+      const fromId = dragEl.dataset.postId;
+      const toId   = el.dataset.postId;
+      const r      = el.getBoundingClientRect();
+      const after  = (e.clientY - r.top) > r.height/2;
+
+      // instaFeedOrder 갱신
+      const order = [...instaFeedOrder];
+      const fromIdx = order.indexOf(fromId);
+      if (fromIdx < 0) return;
+      order.splice(fromIdx, 1);
+      let toIdx = order.indexOf(toId);
+      if (toIdx < 0) return;
+      if (after) toIdx += 1;
+      order.splice(toIdx, 0, fromId);
+      instaFeedOrder = order;
+
+      // 보드별 feedOrder 저장
+      await saveFeedOrderToBoard(order);
+
+      // 인스타 피드 + 우측 리스트 동시 재렌더
+      renderInstaFeed();
+    });
+  });
+}
+
+/* 우측 리스트 드래그로 바뀐 순서를 현재 보드의 feedOrder에 저장 */
+async function saveFeedOrderToBoard(order) {
+  try {
+    await patchAppState(s => {
+      s.instaBoards = s.instaBoards || [];
+      if (currentBoardId && currentBoardId !== 'all') {
+        const b = s.instaBoards.find(x => x.id === currentBoardId);
+        if (b) b.feedOrder = order;
+      } else {
+        // 전체 보드일 땐 모든 보드에 같이 반영 (포함된 ID만 자신의 순서로)
+        s.instaBoards.forEach(b => {
+          if (!b.feedOrder) return;
+          const inBoard = new Set(b.feedOrder);
+          b.feedOrder = order.filter(id => inBoard.has(id));
+        });
+        s.instaFeedOrder = order;
+      }
+      return s;
+    });
+  } catch(e) { console.warn('피드 순서 저장 실패:', e); }
+}
+
+/* 빠른 추가 — 유형 미리 선택하고 모달 열기 */
+function quickAddContent(type) {
+  openContentModalNew(dateStr());
+  // 모달 열린 뒤 유형 미리 선택
+  setTimeout(() => {
+    contentType = type;
+    document.querySelectorAll('#content-type-pills .inv-pill').forEach(p => {
+      p.classList.toggle('on', p.dataset.type === type);
+    });
+    const mw = $('content-mongmo-topic-wrap');
+    if (mw) mw.style.display = type === 'mongmozzal' ? '' : 'none';
+  }, 60);
 }
 
 /* ── 피드 선택 → 오른쪽 상세 ── */
@@ -15125,7 +15319,9 @@ function instaSelectPost(id) {
   instaSelectedId = id;
   renderInstaFeed();
   const p = (window._instaPostsMap || {})[id]; if (!p) return;
-  // 상세 패널 (항상 표시 — width 고정)
+  // 빠른추가 패널 숨기고 상세 패널 표시
+  const quickPanel = $('content-quickadd-panel');
+  if (quickPanel) quickPanel.style.display = 'none';
   const postDetail = $('insta-post-detail'); if (!postDetail) return;
   postDetail.style.display = '';
   const panel = postDetail;
@@ -15258,6 +15454,9 @@ async function instaDeletePost(id) {
     instaSelectedId = null;
     const postDetail = $('insta-post-detail');
     if (postDetail) { postDetail.style.display = 'none'; postDetail.innerHTML = ''; }
+    const quickPanel = $('content-quickadd-panel');
+    if (quickPanel) quickPanel.style.display = '';
+    renderContentFeedList();
   }
   toast('삭제됐어요');
   loadContentCal();
@@ -15510,7 +15709,7 @@ function openInstaProfileEdit() {
   const el_bio  = $('insta-modal-bio');
   const el_fol  = $('insta-modal-followers');
   if (el_name) el_name.value = prof.name      || 'cheropstore';
-  if (el_bio)  el_bio.value  = prof.bio       || 'CHEROP KOREA ORIGINAL PREMIUM MONGMO\n✶ POPUP <더현대 판교> 4.24- COMINGSOON！\n✶ WORLDWIDE SHIPPING';
+  if (el_bio)  el_bio.value  = prof.bio       || '몽모 세상에 온 걸 환영해 ♡˚₊·\n✶ ᴡᴏʀʟᴅᴡɪᴅᴇ sʜɪᴘᴘɪɴɢ\n↓ 몽모 입양하기 / 몽모짤 다운받기';
   if (el_fol)  el_fol.value  = prof.followers || '11만';
   $('insta-profile-modal').classList.add('on');
   setTimeout(() => el_name?.focus(), 80);
