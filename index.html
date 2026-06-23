@@ -2474,21 +2474,35 @@ a { text-decoration:none; color:inherit; }
 <div class="modal-overlay" id="task-modal">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-bar">
-      <div class="modal-kind" id="task-modal-kind">할일 추가</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="modal-kind" id="task-modal-kind">할일 추가</div>
+        <span id="task-st-chip" style="font-size:11px;padding:2px 9px;border-radius:50px;background:var(--surface2);color:var(--muted);">시작 전</span>
+      </div>
       <div class="modal-bar-right">
         <div class="mbtn" id="task-star-btn" onclick="toggleStar()" title="중요">☆</div>
         <div class="mbtn" id="task-del-btn" onclick="deleteTask()" style="display:none;" title="삭제">🗑</div>
         <div class="mbtn" onclick="closeModal('task-modal')" title="닫기">✕</div>
       </div>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" style="padding-top:14px;padding-bottom:0;">
       <input class="modal-title-inp" id="task-title" placeholder="할일 제목을 입력하세요">
-      <!-- 한줄 참조 -->
-      <input type="text" id="task-note" placeholder="한줄 참조 (리스트에 제목 아래 표시됩니다)" style="width:100%;border:none;outline:none;font-size:14px;color:var(--muted);background:transparent;font-family:var(--font);margin-bottom:22px;padding:0;">
-      <div class="modal-props">
+      <input type="text" id="task-note" placeholder="한줄 참조 (리스트에 제목 아래 표시됩니다)" style="width:100%;border:none;outline:none;font-size:14px;color:var(--muted);background:transparent;font-family:var(--font);margin-bottom:14px;padding:0;">
+
+      <!-- 속성 요약 바 (접힌 상태) -->
+      <div id="task-props-summary" onclick="toggleTaskProps()" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:6px;cursor:pointer;font-size:11px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;">
+        <span id="task-sum-due">📅 마감일 미정</span>
+        <span style="color:var(--border2);">·</span>
+        <span id="task-sum-urgent" style="color:var(--light);">⚑ 일반</span>
+        <span style="color:var(--border2);">·</span>
+        <span id="task-sum-assignee">👤 —</span>
+        <span style="margin-left:auto;color:var(--light);font-size:11px;" id="task-props-toggle-lbl">▾ 속성 펼치기</span>
+      </div>
+
+      <!-- 속성 펼침 영역 (기본 숨김) -->
+      <div id="task-props-expanded" class="modal-props" style="display:none;margin-bottom:14px;border:0.5px solid var(--surface2);border-radius:6px;">
         <div class="prop-row">
           <div class="prop-icon">📅</div><div class="prop-label">마감일</div>
-          <div class="prop-val"><input type="date" class="prop-inp" id="task-due"></div>
+          <div class="prop-val"><input type="date" class="prop-inp" id="task-due" onchange="renderTaskPropsSummary()"></div>
         </div>
         <div class="prop-row">
           <div class="prop-icon">◎</div><div class="prop-label">상태</div>
@@ -2515,9 +2529,9 @@ a { text-decoration:none; color:inherit; }
           <div class="prop-val" id="task-assignee">—</div>
         </div>
       </div>
-      <div class="modal-div"></div>
-      <div class="modal-memo-lbl">메모</div>
-      <textarea class="modal-textarea" id="task-memo" placeholder="내용을 입력하세요..."></textarea>
+
+      <div class="modal-memo-lbl">📝 메모</div>
+      <textarea class="modal-textarea" id="task-memo" placeholder="내용을 입력하세요..." style="min-height:340px;"></textarea>
     </div>
     <div class="modal-footer">
       <button class="f-btn f-btn-cancel" onclick="closeModal('task-modal')">취소</button>
@@ -4853,7 +4867,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.5.7</div>
+<div id="version">v5.5.8</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5350,8 +5364,8 @@ async function loadDashTasks() {
     $('dash-task-sub').textContent = pending.length ? `미완료 ${pending.length}건` : '모두 완료 🎉';
     $('dash-sub').textContent = pending.length ? `오늘도 좋은 하루 되세요. 담당 할일 ${pending.length}건이 있어요.` : '오늘도 좋은 하루 되세요. 담당 할일을 모두 완료했어요 🎉';
     const stM={todo:{c:'sbadge-todo',l:'시작 전'},ing:{c:'sbadge-ing',l:'진행 중'},hold:{c:'sbadge-hold',l:'보류'},done:{c:'sbadge-done',l:'완료'}};
-    $('dash-task-list').innerHTML = list.length
-      ? list.slice(0,5).map(t => {
+    $('dash-task-list').innerHTML = pending.length
+      ? pending.slice(0,5).map(t => {
           const done=t.status==='done', st=stM[t.status]||stM.todo;
           return `<div class="dtask">
             <div class="dtask-check${done?' on':''}" onclick="dashToggleTask(${t.id},${done})"></div>
@@ -5363,7 +5377,7 @@ async function loadDashTasks() {
             <button class="trow-status-btn ${st.c}" style="font-size:11px;padding:3px 10px;flex-shrink:0;" onclick="event.stopPropagation();dashCycleStatus(${t.id},'${t.status}')">${st.l}</button>
           </div>`;
         }).join('')
-      : '<div style="padding:12px 0;font-size:13px;color:var(--light);">할일이 없어요 🎉</div>';
+      : (list.length ? '<div style="padding:12px 0;font-size:13px;color:var(--light);">모두 완료했어요 🎉</div>' : '<div style="padding:12px 0;font-size:13px;color:var(--light);">할일이 없어요 🎉</div>');
     loadTodayAtt();
   } catch(e) { console.error(e); }
 }
@@ -6258,7 +6272,11 @@ function openTaskModal(id) {
   $('task-del-btn').style.display=id?'flex':'none';
   $('task-title').value=''; $('task-note').value=''; $('task-due').value=''; $('task-memo').value='';
   $('task-assignee').textContent=tasksWho;
+  // 속성 영역 기본 접힘
+  $('task-props-expanded').style.display = 'none';
+  $('task-props-toggle-lbl').textContent = '▾ 속성 펼치기';
   applyTaskSt(); applyUrgent(); applyStarred();
+  renderTaskPropsSummary();
   if(id) {
     db.from('tasks').select('*').eq('id',id).single().then(({data:t})=>{
       if(!t)return;
@@ -6266,21 +6284,74 @@ function openTaskModal(id) {
       $('task-due').value=t.due_date||''; $('task-memo').value=t.memo||'';
       taskSt=t.status||'todo'; taskUrgent=!!t.is_urgent; taskStarred=!!t.is_starred;
       applyTaskSt(); applyUrgent(); applyStarred();
+      renderTaskPropsSummary();
     });
   }
   $('task-modal').classList.add('on');
   setTimeout(()=>$('task-title').focus(),80);
 }
 
+function toggleTaskProps() {
+  const exp = $('task-props-expanded');
+  const isOpen = exp.style.display !== 'none';
+  exp.style.display = isOpen ? 'none' : '';
+  $('task-props-toggle-lbl').textContent = isOpen ? '▾ 속성 펼치기' : '▴ 속성 접기';
+}
+
+function renderTaskPropsSummary() {
+  // 마감일
+  const due = $('task-due').value;
+  let dueLbl = '📅 마감일 미정';
+  if (due) {
+    const [y,m,d] = due.split('-');
+    const dt = new Date(due+'T00:00:00');
+    const dayLbl = ['일','월','화','수','목','금','토'][dt.getDay()] || '';
+    dueLbl = `📅 ${m}.${d}${dayLbl?' ('+dayLbl+')':''}`;
+  }
+  $('task-sum-due').textContent = dueLbl;
+
+  // 중요
+  const urgentEl = $('task-sum-urgent');
+  if (taskUrgent) {
+    urgentEl.textContent = '⚑ 중요';
+    urgentEl.style.color = 'var(--red)';
+    urgentEl.style.fontWeight = '500';
+  } else {
+    urgentEl.textContent = '⚑ 일반';
+    urgentEl.style.color = 'var(--light)';
+    urgentEl.style.fontWeight = '';
+  }
+
+  // 담당자
+  $('task-sum-assignee').textContent = '👤 ' + (tasksWho || '—');
+
+  // 상단 헤더의 상태 칩
+  const stChip = $('task-st-chip');
+  if (stChip) {
+    const STATE = {
+      todo: { label:'시작 전', bg:'var(--surface2)', col:'var(--muted)' },
+      ing:  { label:'진행 중', bg:'var(--green-bg)', col:'var(--green-tx)' },
+      hold: { label:'보류',   bg:'var(--amber-bg)', col:'var(--amber)' },
+      done: { label:'완료',   bg:'var(--surface2)', col:'var(--faint)' },
+    };
+    const s = STATE[taskSt] || STATE.todo;
+    stChip.textContent = s.label;
+    stChip.style.background = s.bg;
+    stChip.style.color = s.col;
+  }
+}
+
 function applyTaskSt() {
   document.querySelectorAll('#task-st-pills .st-pill').forEach(el=>el.classList.toggle('on',el.classList.contains(taskSt)));
+  renderTaskPropsSummary();
 }
-function setTaskSt(st,el) { taskSt=st; document.querySelectorAll('#task-st-pills .st-pill').forEach(e=>e.classList.remove('on')); el.classList.add('on'); }
+function setTaskSt(st,el) { taskSt=st; document.querySelectorAll('#task-st-pills .st-pill').forEach(e=>e.classList.remove('on')); el.classList.add('on'); renderTaskPropsSummary(); }
 function applyUrgent() {
   $('urgent-track').classList.toggle('on',taskUrgent);
   $('urgent-lbl').textContent = taskUrgent ? '중요 항목으로 표시됩니다' : '표시 안 함';
   $('urgent-lbl').classList.toggle('on',taskUrgent);
   $('task-title').classList.toggle('urgent',taskUrgent);
+  renderTaskPropsSummary();
 }
 function toggleUrgent() { taskUrgent=!taskUrgent; applyUrgent(); }
 function applyStarred() { const b=$('task-star-btn'); b.textContent=taskStarred?'★':'☆'; b.classList.toggle('starred',taskStarred); }
