@@ -4867,7 +4867,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.5.8</div>
+<div id="version">v5.5.9</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -8471,15 +8471,56 @@ async function saveProduct() {
 }
 
 async function deleteProduct() {
-  const ok=await customConfirm('상품을 삭제할까요?','재고, 매핑 정보도 함께 삭제됩니다.');
+  const ok=await customConfirm('상품을 삭제할까요?','재고·매핑·매출 기록도 함께 삭제됩니다.');
   if(!ok) return;
-  try {
-    await db.from('channel_product_mapping').delete().eq('product_id',invProdEditId);
-    await db.from('channel_inventory').delete().eq('product_id',invProdEditId);
-    await db.from('inventory').delete().eq('product_id',invProdEditId);
-    await db.from('products').delete().eq('id',invProdEditId);
-    toast('삭제됐어요'); closeModal('inv-product-modal'); loadInvOverview();
-  } catch(e){ toast('삭제 실패: '+e.message); }
+  const pid = invProdEditId;
+  if (!pid) { toast('삭제 대상이 없어요'); return; }
+
+  // 단계별로 에러 확인하면서 삭제 (참조 테이블 → 본 테이블 순서)
+  const steps = [
+    { name: 'sales_log',               run: () => db.from('sales_log').delete().eq('product_id', pid) },
+    { name: 'channel_sales_log',       run: () => db.from('channel_sales_log').delete().eq('product_id', pid) },
+    { name: 'channel_product_mapping', run: () => db.from('channel_product_mapping').delete().eq('product_id', pid) },
+    { name: 'channel_inventory',       run: () => db.from('channel_inventory').delete().eq('product_id', pid) },
+    { name: 'inventory',               run: () => db.from('inventory').delete().eq('product_id', pid) },
+    { name: 'products',                run: () => db.from('products').delete().eq('id', pid) },
+  ];
+
+  const failed = [];
+  for (const s of steps) {
+    try {
+      const res = await s.run();
+      if (res.error) {
+        // 테이블 자체가 없는 경우(42P01)는 무시
+        if (res.error.code === '42P01' || /does not exist/i.test(res.error.message||'')) continue;
+        failed.push(`${s.name}: ${res.error.message}`);
+        console.error(`[deleteProduct] ${s.name} 실패`, res.error);
+      }
+    } catch (err) {
+      failed.push(`${s.name}: ${err.message}`);
+      console.error(`[deleteProduct] ${s.name} 예외`, err);
+    }
+  }
+
+  // 실제로 삭제됐는지 검증
+  const { data: stillExists } = await db.from('products').select('id').eq('id', pid).maybeSingle();
+  if (stillExists) {
+    const msg = failed.length
+      ? `삭제 실패: ${failed[0]}`
+      : '삭제가 반영되지 않았어요 (콘솔 확인)';
+    toast(msg);
+    console.error('[deleteProduct] 상품이 아직 DB에 존재:', pid, '실패 단계:', failed);
+    return;
+  }
+
+  if (failed.length) {
+    toast('일부 단계 실패 (콘솔 확인) — 상품은 삭제됨');
+    console.warn('[deleteProduct] 일부 단계 실패:', failed);
+  } else {
+    toast('삭제됐어요');
+  }
+  closeModal('inv-product-modal');
+  loadInvOverview();
 }
 
 /* ═══ 입고 등록 모달 ═══ */
