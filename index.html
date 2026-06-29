@@ -4880,7 +4880,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.6.4</div>
+<div id="version">v5.6.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5625,7 +5625,8 @@ async function loadAttMonthlySummary() {
     const month = String(now.getMonth()+1).padStart(2,'0');
     if (sub) sub.textContent = `${year}년 ${now.getMonth()+1}월`;
     const from  = `${year}-${month}-01`;
-    const to    = `${year}-${month}-31`;
+    const lastDay = new Date(year, now.getMonth()+1, 0).getDate();
+    const to    = `${year}-${month}-${String(lastDay).padStart(2,'0')}`;
     const [attData, leaveData] = await Promise.all([
       db.from('attendances').select('*').gte('date',from).lte('date',to),
       db.from('leaves').select('*').gte('start_date',from).lte('start_date',to),
@@ -5715,8 +5716,12 @@ async function loadDashRevenue() {
     const today = dateStr();
     const todayDay = n.getDate();
 
+    // 이번 달 마지막 날 (월별로 28/29/30/31 다르므로 정확히 계산)
+    const monthEnd = new Date(yyyy, n.getMonth()+1, 0).getDate();
+    const monthEndStr = `${month}-${String(monthEnd).padStart(2,'0')}`;
+
     // 이번 달 데이터 (channel_sales_log — 판매탭에서 입력하는 매출)
-    const { data: curData, error: curErr } = await db.from('channel_sales_log').select('*').gte('date', `${month}-01`).lte('date', `${month}-31`);
+    const { data: curData, error: curErr } = await db.from('channel_sales_log').select('*').gte('date', `${month}-01`).lte('date', monthEndStr);
     if (curErr) {
       console.error('[loadDashRevenue] channel_sales_log 조회 에러:', curErr);
       if ($('dash-rev-val')) $('dash-rev-val').textContent = '에러';
