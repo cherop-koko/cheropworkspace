@@ -1185,20 +1185,26 @@ a { text-decoration:none; color:inherit; }
         <!-- 요약 카드 -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;" id="sales-metrics"></div>
 
-        <!-- 전략 신호 -->
-        <div class="card" style="margin-bottom:14px;">
-          <div class="card-head"><div class="card-title">이번 달 전략 신호</div><div class="card-sub" id="sales-signal-sub"></div></div>
-          <div id="sales-signal-body"></div>
+        <!-- 전략 신호 + 판매 TOP 10 (한 줄) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+          <div class="card">
+            <div class="card-head"><div class="card-title">이번 달 전략 신호</div><div class="card-sub" id="sales-signal-sub"></div></div>
+            <div id="sales-signal-body"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">판매 TOP 10</div>
+              <div style="display:flex;gap:3px;" id="sales-top10-mode-pills">
+                <div class="inv-pill on" style="font-size:11px;padding:3px 8px;" onclick="salesSetTop10Mode('qty',this)">수량</div>
+                <div class="inv-pill"    style="font-size:11px;padding:3px 8px;" onclick="salesSetTop10Mode('amount',this)">금액</div>
+              </div>
+            </div>
+            <div id="sales-top10"></div>
+          </div>
         </div>
 
-        <!-- 상품 포지셔닝 4분면 -->
-        <div class="card" style="margin-bottom:14px;">
-          <div class="card-head"><div class="card-title">상품 포지셔닝</div><div class="card-sub">판매량 × 전월 대비 성장률</div></div>
-          <div id="sales-matrix" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;"></div>
-        </div>
-
-        <!-- 추이 + 채널 -->
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;">
+        <!-- 매출 추이 + 요일별 판매 패턴 + 채널별 매출 비중 (한 줄) -->
+        <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr;gap:14px;margin-bottom:14px;">
           <div class="card">
             <div class="card-head">
               <div class="card-title">매출 추이</div>
@@ -1206,14 +1212,6 @@ a { text-decoration:none; color:inherit; }
             </div>
             <div style="position:relative;height:240px;padding:6px 0 2px;"><canvas id="sales-trend-chart" role="img" aria-label="매출 추이 차트">매출 추이</canvas></div>
           </div>
-          <div class="card">
-            <div class="card-head"><div class="card-title">채널별 매출 비중</div></div>
-            <div id="sales-channel-list"></div>
-          </div>
-        </div>
-
-        <!-- 요일 패턴 + TOP10 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
           <div class="card">
             <div class="card-head">
               <div class="card-title">요일별 판매 패턴</div>
@@ -1234,14 +1232,8 @@ a { text-decoration:none; color:inherit; }
             <div id="sales-dow-tip" style="margin-top:14px;font-size:13px;line-height:1.65;background:var(--blue-bg,#E6F1FB);border-left:3px solid #185FA5;border-radius:0 var(--r) var(--r) 0;padding:12px 14px;"></div>
           </div>
           <div class="card">
-            <div class="card-head">
-              <div class="card-title">판매 TOP 10</div>
-              <div style="display:flex;gap:3px;" id="sales-top10-mode-pills">
-                <div class="inv-pill on" style="font-size:11px;padding:3px 8px;" onclick="salesSetTop10Mode('qty',this)">수량</div>
-                <div class="inv-pill"    style="font-size:11px;padding:3px 8px;" onclick="salesSetTop10Mode('amount',this)">금액</div>
-              </div>
-            </div>
-            <div id="sales-top10"></div>
+            <div class="card-head"><div class="card-title">채널별 매출 비중</div></div>
+            <div id="sales-channel-list"></div>
           </div>
         </div>
 
@@ -4867,7 +4859,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.6.0</div>
+<div id="version">v5.6.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -6213,9 +6205,31 @@ async function loadMemoList() {
     const list=(s.memos||[]).filter(m=>m.author===tasksWho).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     $('memo-count').textContent=`${list.length}건`;
     $('memo-list').innerHTML=list.length
-      ? list.map(m=>`<div class="mrow" onclick="openMemoModal('${m.id}')"><div class="mrow-date">${m.date?m.date.slice(5).replace('-','/'):'오늘'}</div><div class="mrow-txt">${m.title?`<strong>${m.title}</strong> `:''}${m.content||''}</div></div>`).join('')
+      ? list.map(m=>{
+          const dateStr = m.date ? m.date.slice(5).replace('-','/') : '오늘';
+          const title   = m.title || (m.content?.split('\n')[0]?.slice(0,40)) || '(제목 없음)';
+          const content = m.content || '';
+          return `<div class="mrow-wrap" data-memo-id="${m.id}">
+            <div class="mrow" onclick="toggleMemoExpand('${m.id}')" style="cursor:pointer;">
+              <div class="mrow-date">${dateStr}</div>
+              <div class="mrow-txt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"><strong>${escapeHtml(title)}</strong></div>
+              <div onclick="event.stopPropagation();openMemoModal('${m.id}')" style="font-size:12px;color:var(--light);cursor:pointer;padding:0 4px;flex-shrink:0;" title="편집">✏️</div>
+              <div class="mrow-caret" id="mrow-caret-${m.id}" style="font-size:11px;color:var(--light);flex-shrink:0;">▾</div>
+            </div>
+            ${content ? `<div class="mrow-body" id="mrow-body-${m.id}" style="display:none;padding:0 16px 12px 56px;font-size:12px;color:var(--muted);line-height:1.6;white-space:pre-wrap;border-bottom:0.5px solid var(--surface2);">${escapeHtml(content)}</div>` : ''}
+          </div>`;
+        }).join('')
       : '<div style="padding:14px 16px;font-size:12px;color:var(--faint);">메모가 없어요</div>';
   } catch(e) { console.error('loadMemoList',e); }
+}
+
+function toggleMemoExpand(id) {
+  const body  = $(`mrow-body-${id}`);
+  const caret = $(`mrow-caret-${id}`);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (caret) caret.textContent = isOpen ? '▾' : '▴';
 }
 
 /* ═══════════════════════════════════════
@@ -10187,8 +10201,11 @@ async function resolveDefect(defectId, status) {
 }
 
 /* ── 생산 추천 (오늘 일정 탭 내 간략) ── */
+let _prodRecoHiddenExpanded = false;
 async function loadProdRecommend() {
   try {
+    const s        = await getAppState();
+    const hidden   = new Set(s.prod_reco_hidden || []);
     const prods    = (await db.from('products').select('*').eq('is_discontinued',false).order('name')).data||[];
     const invRows  = (await db.from('inventory').select('*')).data||[];
     const salesRows= (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
@@ -10211,7 +10228,11 @@ async function loadProdRecommend() {
     const el = $('prod-recommend');
     if(!items.length){ el.innerHTML='<div style="padding:14px 0;font-size:13px;color:var(--faint);">데이터가 없어요</div>'; return; }
 
-    el.innerHTML = items.slice(0,10).map(({p,produced,velAll,days})=>{
+    // 숨김 / 표시 분리
+    const visible = items.filter(x => !hidden.has(x.p.id));
+    const hiddenList = items.filter(x => hidden.has(x.p.id));
+
+    const renderRow = ({p,produced,velAll,days}, isHidden=false) => {
       const label = p.option_name ? `${p.name} · ${p.option_name}` : p.name;
       const weekSales = Math.round(velAll*7);
       const badge = days===null
@@ -10224,16 +10245,59 @@ async function loadProdRecommend() {
       const subTxt = days!==null
         ? `주간 ${weekSales}개 판매 · 완료재고 D+${days}`
         : `완료재고 ${produced}개 · 판매 데이터 없음`;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--surface2);">
+      const actionBtn = isHidden
+        ? `<button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 12px;" onclick="prodRecoUnhide('${p.id}')">다시 보기</button>`
+        : `<button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 12px;" onclick="addProdToToday('${p.id}')">담기</button>
+           <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;color:var(--light);" onclick="prodRecoHide('${p.id}')" title="이 상품을 추천에서 숨김">숨김</button>`;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:0.5px solid var(--surface2);${isHidden?'opacity:.6;':''}">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:500;">${label}</div>
+          <div style="font-size:13px;font-weight:500;">${escapeHtml(label)}</div>
           <div style="font-size:11px;color:var(--light);margin-top:2px;">${subTxt}</div>
         </div>
         ${badge}
-        <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 12px;" onclick="addProdToToday('${p.id}')">담기</button>
+        ${actionBtn}
       </div>`;
-    }).join('');
+    };
+
+    let html = visible.slice(0,10).map(it => renderRow(it,false)).join('')
+      || '<div style="padding:14px 0;font-size:13px;color:var(--faint);">표시할 추천이 없어요 (모두 숨김)</div>';
+
+    // 숨김 항목 (있을 때만)
+    if (hiddenList.length) {
+      html += `<div style="margin-top:14px;padding-top:10px;border-top:0.5px dashed var(--border);">
+        <div onclick="prodRecoToggleHidden()" style="display:flex;align-items:center;gap:6px;padding:6px 0;cursor:pointer;font-size:12px;color:var(--light);">
+          <span>${_prodRecoHiddenExpanded?'▴':'▾'}</span>
+          <span>숨긴 항목 ${hiddenList.length}개</span>
+        </div>
+        ${_prodRecoHiddenExpanded ? `<div style="margin-top:4px;">${hiddenList.map(it=>renderRow(it,true)).join('')}</div>` : ''}
+      </div>`;
+    }
+    el.innerHTML = html;
   } catch(e){ console.error(e); }
+}
+
+async function prodRecoHide(productId) {
+  await patchAppState(s => {
+    s.prod_reco_hidden = s.prod_reco_hidden || [];
+    if (!s.prod_reco_hidden.includes(productId)) s.prod_reco_hidden.push(productId);
+    return s;
+  });
+  toast('추천에서 숨겼어요');
+  loadProdRecommend();
+}
+
+async function prodRecoUnhide(productId) {
+  await patchAppState(s => {
+    s.prod_reco_hidden = (s.prod_reco_hidden || []).filter(id => id !== productId);
+    return s;
+  });
+  toast('추천에 다시 표시돼요');
+  loadProdRecommend();
+}
+
+function prodRecoToggleHidden() {
+  _prodRecoHiddenExpanded = !_prodRecoHiddenExpanded;
+  loadProdRecommend();
 }
 
 /* ── 오늘 일정 ── */
@@ -10261,6 +10325,10 @@ async function loadProdShipCard() {
   const pids = [...new Set(ships.map(s=>s.product_id))];
   const { data: prods } = await db.from('products').select('id,name,option_name,category').in('id', pids);
   const prodMap = Object.fromEntries((prods||[]).map(p=>[p.id,p]));
+
+  // 재고 정보도 함께 조회 (생산화완료/대기 표시용)
+  const { data: invRows } = await db.from('inventory').select('product_id,produced_stock,pending_production').in('product_id', pids);
+  const invMap = Object.fromEntries((invRows||[]).map(i=>[i.product_id,i]));
 
   // 카테고리 목록 구성
   const cats = [...new Set((prods||[]).map(p=>p.category).filter(Boolean))];
@@ -10290,11 +10358,16 @@ async function loadProdShipCard() {
   el.innerHTML = `<div style="display:flex;align-items:center;justify-content:flex-end;padding:6px 0;font-size:11px;color:var(--light);">총 ${total}개</div>` +
     entries.map(([pid, qty]) => {
       const p   = prodMap[pid]||{name:'(알수없음)'};
+      const inv = invMap[pid] || {};
+      const produced = inv.produced_stock     || 0;
+      const pending  = inv.pending_production || 0;
       const lbl = p.option_name ? `${p.name} · ${p.option_name}` : p.name;
       return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
         ${p.category?`<span style="font-size:10px;background:var(--surface2);color:var(--muted);padding:2px 7px;border-radius:20px;white-space:nowrap;">${p.category}</span>`:''}
-        <span style="flex:1;font-size:12px;color:var(--text);">${lbl}</span>
-        <span style="font-size:12px;font-weight:500;">${qty}개</span>
+        <span style="flex:1;font-size:12px;color:var(--text);">${escapeHtml(lbl)}</span>
+        <span style="font-size:11px;color:var(--light);white-space:nowrap;" title="생산화완료 재고">완 ${produced}</span>
+        <span style="font-size:11px;color:var(--light);white-space:nowrap;" title="생산화대기 재고">대 ${pending}</span>
+        <span style="font-size:12px;font-weight:500;white-space:nowrap;">${qty}개</span>
       </div>`;
     }).join('');
 }
@@ -10613,7 +10686,7 @@ async function loadSupplyLinkCard() {
         <div style="font-size:12px;font-weight:500;">${lbl}</div>
         <div style="margin-top:4px;">${linked||'<span style="font-size:11px;color:var(--faint);">연동된 소모품 없음</span>'}</div>
       </div>
-      <button onclick="openSupplyLinkModal('${p.id}')" class="f-btn f-btn-cancel" style="font-size:11px;padding:3px 10px;flex-shrink:0;">${hasLink?'수정':'설정'}</button>
+      <button onclick="openProdLinkModal('${p.id}')" class="f-btn f-btn-cancel" style="font-size:11px;padding:3px 10px;flex-shrink:0;">${hasLink?'수정':'설정'}</button>
     </div>`;
   }).join('');
 }
@@ -11411,7 +11484,7 @@ async function loadSalesSignalAndMatrix(salesRows, prevRows, label) {
   const allPids = [...new Set([...Object.keys(curQty), ...Object.keys(prevQty)])];
   if (!allPids.length) {
     $('sales-signal-body').innerHTML = '<div style="padding:14px 0;font-size:13px;color:var(--faint);">이 기간의 출고 데이터가 없어요</div>';
-    $('sales-matrix').innerHTML = '<div style="grid-column:1/-1;padding:14px 0;font-size:13px;color:var(--faint);">출고 데이터가 쌓이면 상품 포지셔닝이 표시돼요</div>';
+    if ($('sales-matrix')) $('sales-matrix').innerHTML = '';
     if ($('sales-signal-sub')) $('sales-signal-sub').textContent = '';
     return;
   }
@@ -11475,8 +11548,10 @@ async function loadSalesSignalAndMatrix(salesRows, prevRows, label) {
       <div class="quad-action" style="margin-top:7px;">→ ${Q.action}</div>
     </div>`;
   };
-  $('sales-matrix').innerHTML =
-    quadCard('core') + quadCard('defend') + quadCard('grow') + quadCard('review');
+  if ($('sales-matrix')) {
+    $('sales-matrix').innerHTML =
+      quadCard('core') + quadCard('defend') + quadCard('grow') + quadCard('review');
+  }
 
   // 전략 신호 카드 생성
   const signals = [];
