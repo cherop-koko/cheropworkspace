@@ -882,7 +882,7 @@ a { text-decoration:none; color:inherit; }
                 <div style="font-size:11px;opacity:.6;letter-spacing:1.5px;margin-bottom:4px;">MONTHLY REVENUE</div>
                 <div style="font-size:14px;opacity:.8;" id="dash-rev-month">—</div>
               </div>
-              <div style="font-size:11px;opacity:.7;cursor:pointer;" onclick="nav('revenue')">매출 페이지 ↗</div>
+              <div style="font-size:11px;opacity:.7;cursor:pointer;" onclick="nav('sales')">판매 페이지 ↗</div>
             </div>
             <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:30px;align-items:end;">
               <div>
@@ -4880,7 +4880,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.6.3</div>
+<div id="version">v5.6.4</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5715,9 +5715,16 @@ async function loadDashRevenue() {
     const today = dateStr();
     const todayDay = n.getDate();
 
-    // 이번 달 데이터
-    const { data: curData } = await db.from('channel_sales_log').select('*').gte('date', `${month}-01`).lte('date', `${month}-31`);
+    // 이번 달 데이터 (channel_sales_log — 판매탭에서 입력하는 매출)
+    const { data: curData, error: curErr } = await db.from('channel_sales_log').select('*').gte('date', `${month}-01`).lte('date', `${month}-31`);
+    if (curErr) {
+      console.error('[loadDashRevenue] channel_sales_log 조회 에러:', curErr);
+      if ($('dash-rev-val')) $('dash-rev-val').textContent = '에러';
+      if ($('dash-rev-mom')) $('dash-rev-mom').textContent = curErr.message || '조회 실패';
+      return;
+    }
     const curRows = curData || [];
+    console.log(`[loadDashRevenue] ${month} 데이터 ${curRows.length}건`, curRows.slice(0,3));
     const total = curRows.reduce((s,r)=>s+(r.amount||0),0);
     const todayAmt = curRows.filter(r=>r.date===today).reduce((s,r)=>s+(r.amount||0),0);
 
