@@ -455,7 +455,7 @@ a { text-decoration:none; color:inherit; }
 .wd-desc { font-size:11px; color:var(--muted); }
 
 /* 대시보드 그리드 */
-.dash-grid { display:grid; grid-template-columns:280px 1fr 240px; gap:16px; }
+.dash-grid { display:grid; grid-template-columns:1fr; gap:14px; }
 .dash-col  { display:flex; flex-direction:column; gap:16px; }
 
 /* 할일 (대시보드용) */
@@ -766,7 +766,7 @@ a { text-decoration:none; color:inherit; }
     <h2>안녕하세요 👋</h2>
     <p>이름을 선택하고 PIN을 입력해주세요.</p>
     <div class="login-grid" id="login-grid"></div>
-    <input type="password" class="pin-input" id="pin-input" placeholder="PIN 4자리" maxlength="4" inputmode="numeric">
+    <input type="password" class="pin-input" id="pin-input" placeholder="비밀번호 6자리" maxlength="6" inputmode="numeric">
     <button class="login-btn" onclick="doLogin()">워크스페이스 입장</button>
     <div class="login-err" id="login-err"></div>
   </div>
@@ -875,59 +875,99 @@ a { text-decoration:none; color:inherit; }
         </div>
 
         <div class="dash-grid">
-          <div class="dash-col">
-            <div class="card" id="dash-rev-card">
-              <div class="card-head"><div><div class="card-title">이번 달 매출</div><div class="card-sub" id="dash-rev-month"></div></div><div class="card-link" onclick="nav('revenue')">↗</div></div>
-              <div id="dash-sales-alert" style="display:none;font-size:11px;color:#C4736A;background:#FAECEB;padding:6px 10px;border-radius:var(--r);margin-bottom:8px;"></div>
-              <div class="hero"><div class="hero-lbl">MONTHLY REVENUE</div><div class="hero-val" id="dash-rev-val">—</div><div class="hero-sub" id="dash-rev-sub">연간 목표 300억</div></div>
-              <div style="display:flex;align-items:baseline;justify-content:space-between;">
-                <div><div style="font-size:11px;color:var(--light);margin-bottom:4px;">전월 대비</div><div style="font-size:22px;font-weight:500;" id="dash-rev-mom">—</div></div>
-                <div class="sbadge sbadge-ing" id="dash-rev-goal">—</div>
+          <!-- 1단: 매출 히어로 (풀폭) -->
+          <div class="card" id="dash-rev-card" style="background:#1c1e26;color:#fff;padding:24px 28px;grid-column:1/-1;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+              <div>
+                <div style="font-size:11px;opacity:.6;letter-spacing:1.5px;margin-bottom:4px;">MONTHLY REVENUE</div>
+                <div style="font-size:14px;opacity:.8;" id="dash-rev-month">—</div>
+              </div>
+              <div style="font-size:11px;opacity:.7;cursor:pointer;" onclick="nav('revenue')">매출 페이지 ↗</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:30px;align-items:end;">
+              <div>
+                <div style="font-size:42px;font-weight:600;line-height:1;letter-spacing:-1px;" id="dash-rev-val">—</div>
+                <div style="display:flex;align-items:baseline;gap:18px;margin-top:12px;flex-wrap:wrap;">
+                  <div><div style="font-size:10px;opacity:.6;margin-bottom:2px;">전월 동기간 대비</div><div style="font-size:16px;font-weight:500;" id="dash-rev-mom">—</div></div>
+                  <div><div style="font-size:10px;opacity:.6;margin-bottom:2px;">오늘 매출</div><div style="font-size:16px;font-weight:500;" id="dash-rev-today">—</div></div>
+                  <div><div style="font-size:10px;opacity:.6;margin-bottom:2px;">일평균</div><div style="font-size:16px;font-weight:500;" id="dash-rev-avg">—</div></div>
+                </div>
+                <div id="dash-sales-alert" style="display:none;font-size:11px;color:#FFB8B0;margin-top:10px;"></div>
+              </div>
+              <div>
+                <div style="font-size:10px;opacity:.6;margin-bottom:8px;">채널별</div>
+                <div id="dash-rev-channels" style="display:flex;flex-direction:column;gap:5px;font-size:12px;">—</div>
               </div>
             </div>
-            <div class="card">
-              <div class="card-head"><div><div class="card-title">재고 현황</div></div><div class="card-link" onclick="nav('inventory')">↗</div></div>
-              <div class="mstat"><div class="mstat-lbl">전체 SKU</div><div class="mstat-val" id="dash-inv-sku">—</div></div>
-              <div class="mstat"><div class="mstat-lbl">부족 임박</div><div class="mstat-val warn" id="dash-inv-low">—</div></div>
-              <div class="mstat"><div class="mstat-lbl">생산 진행 중</div><div class="mstat-val" id="dash-inv-prod">—</div></div>
+          </div>
+
+          <!-- 2단: KPI 4개 -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;grid-column:1/-1;">
+            <div class="dday-card" id="dash-kpi-dday" style="padding:14px 16px;">
+              <div class="dday-tag" id="dday-tag" style="font-size:10px;">📍 중요 일정</div>
+              <div class="dday-title" id="dday-title" style="font-size:13px;font-weight:500;margin:4px 0 2px;">—</div>
+              <div class="dday-range" id="dday-range" style="font-size:11px;">—</div>
+              <div class="dday-lbl" id="dday-lbl" style="font-size:10px;margin-top:6px;">시작까지</div>
+              <div class="dday-num"  id="dday-num"  style="font-size:22px;">—</div>
+            </div>
+            <div class="card" style="padding:14px 16px;">
+              <div style="font-size:10px;color:var(--light);letter-spacing:.5px;margin-bottom:4px;">오늘 출고</div>
+              <div style="font-size:22px;font-weight:600;line-height:1.1;" id="dash-kpi-ship-qty">—</div>
+              <div style="font-size:11px;color:var(--light);margin-top:4px;" id="dash-kpi-ship-sub">—</div>
+            </div>
+            <div class="card" style="padding:14px 16px;" id="dash-task-card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:10px;color:var(--light);letter-spacing:.5px;margin-bottom:4px;">내 할일 (미완료)</div>
+                <div class="card-link" onclick="nav('tasks')" style="font-size:12px;">↗</div>
+              </div>
+              <div style="font-size:22px;font-weight:600;line-height:1.1;" id="dash-kpi-task">—</div>
+              <div style="font-size:11px;margin-top:4px;" id="dash-kpi-task-sub">—</div>
+            </div>
+            <div class="card" style="padding:14px 16px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:10px;color:var(--light);letter-spacing:.5px;margin-bottom:4px;">재고 부족 임박</div>
+                <div class="card-link" onclick="nav('inventory')" style="font-size:12px;">↗</div>
+              </div>
+              <div style="font-size:22px;font-weight:600;line-height:1.1;color:#C4736A;" id="dash-kpi-inv-low">—</div>
+              <div style="font-size:11px;color:var(--light);margin-top:4px;" id="dash-kpi-inv-sub">—</div>
             </div>
           </div>
-          <div class="dash-col">
-            <div class="card" id="dash-task-card">
-              <div class="card-head"><div><div class="card-title" id="dash-task-card-title">내 할일</div><div class="card-sub" id="dash-task-sub">—</div></div><div class="card-link" id="dash-task-card-link" onclick="nav('tasks')">↗</div></div>
+
+          <!-- 3단: 매출 추이 + 할일 + 출결 원형 -->
+          <div style="display:grid;grid-template-columns:1.6fr 1.2fr 1fr;gap:12px;grid-column:1/-1;">
+            <div class="card">
+              <div class="card-head">
+                <div><div class="card-title">최근 14일 매출 추이</div><div class="card-sub">일별 (₩, 자사몰+카카오+스마트스토어)</div></div>
+                <div class="card-link" onclick="nav('sales')">↗</div>
+              </div>
+              <div style="position:relative;height:130px;margin-top:8px;"><canvas id="dash-trend-chart" style="width:100%;height:100%;"></canvas></div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--light);margin-top:4px;" id="dash-trend-xlbl"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <div><div class="card-title" id="dash-task-card-title">내 할일</div><div class="card-sub" id="dash-task-sub">—</div></div>
+                <div class="card-link" onclick="nav('tasks')">↗</div>
+              </div>
               <div id="dash-task-list"><div style="padding:12px 0;font-size:13px;color:var(--light);">불러오는 중...</div></div>
             </div>
+
             <div class="card">
-              <div class="card-head"><div><div class="card-title">공지사항</div></div><div class="card-link" onclick="nav('notice')">↗</div></div>
-              <div id="dash-notice-list"><div style="padding:12px 0;font-size:13px;color:var(--light);">불러오는 중...</div></div>
+              <div class="card-head">
+                <div><div class="card-title">출결 · 오늘</div></div>
+                <div class="card-link" onclick="nav('attendance')">↗</div>
+              </div>
+              <div id="dash-att-block" style="margin-top:8px;"></div>
             </div>
           </div>
-          <div class="dash-col">
-            <!-- 마감 임박 알림 카드 -->
-            <div class="card" id="dash-due-card" style="display:none;">
-              <div class="card-head"><div><div class="card-title">⚠ 마감 임박</div><div class="card-sub">D-3 이하</div></div><div class="card-link" onclick="nav('tasks')">↗</div></div>
-              <div id="dash-due-list"></div>
+
+          <!-- 4단: 공지사항 -->
+          <div class="card" style="grid-column:1/-1;">
+            <div class="card-head">
+              <div><div class="card-title">공지사항</div></div>
+              <div class="card-link" onclick="nav('notice')">↗</div>
             </div>
-            <!-- 직원별 루틴 현황 (admin only) -->
-            <div class="card" id="dash-routine-all-card" style="display:none;">
-              <div class="card-head"><div><div class="card-title">팀 루틴 현황</div><div class="card-sub">오늘</div></div></div>
-              <div id="dash-routine-all-list"></div>
-            </div>
-            <div class="dday-card">
-              <div class="dday-tag" id="dday-tag">📍 중요 일정</div>
-              <div class="dday-title" id="dday-title">—</div>
-              <div class="dday-range" id="dday-range">—</div>
-              <div class="dday-lbl" id="dday-lbl">시작까지</div>
-              <div class="dday-num"  id="dday-num">—</div>
-              <div class="dday-prog-wrap">
-                <div class="dday-prog-row"><span id="dday-status">준비 중</span><span id="dday-pct">—</span></div>
-                <div class="dday-prog-bar"><div class="dday-prog-fill" id="dday-fill" style="width:0%"></div></div>
-              </div>
-            </div>
-            <div class="card">
-              <div class="card-head"><div><div class="card-title">출결 현황</div><div class="card-sub">오늘</div></div><div class="card-link" onclick="nav('attendance')">↗</div></div>
-              <div class="chips" id="dash-att-chips"></div>
-            </div>
+            <div id="dash-notice-list"><div style="padding:12px 0;font-size:13px;color:var(--light);">불러오는 중...</div></div>
           </div>
         </div>
       </div>
@@ -1203,33 +1243,14 @@ a { text-decoration:none; color:inherit; }
           </div>
         </div>
 
-        <!-- 매출 추이 + 요일별 판매 패턴 + 채널별 매출 비중 (한 줄) -->
-        <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr;gap:14px;margin-bottom:14px;">
+        <!-- 매출 추이 + 채널별 매출 비중 (한 줄) -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;">
           <div class="card">
             <div class="card-head">
               <div class="card-title">매출 추이</div>
               <div class="card-sub" id="sales-trend-sub"></div>
             </div>
             <div style="position:relative;height:240px;padding:6px 0 2px;"><canvas id="sales-trend-chart" role="img" aria-label="매출 추이 차트">매출 추이</canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-head">
-              <div class="card-title">요일별 판매 패턴</div>
-              <div style="display:flex;gap:5px;align-items:center;">
-                <div style="display:flex;gap:3px;" id="sales-dow-type-pills">
-                  <div class="inv-pill on" style="font-size:11px;padding:3px 8px;" onclick="salesSetDowType('amount',this)">금액</div>
-                  <div class="inv-pill"    style="font-size:11px;padding:3px 8px;" onclick="salesSetDowType('qty',this)">수량</div>
-                </div>
-                <div style="width:0.5px;height:12px;background:var(--border);"></div>
-                <div style="display:flex;gap:3px;" id="sales-dow-pills">
-                  <div class="inv-pill on" style="font-size:11px;padding:3px 8px;" onclick="salesSetDow(30,this)">30일</div>
-                  <div class="inv-pill"    style="font-size:11px;padding:3px 8px;" onclick="salesSetDow(90,this)">90일</div>
-                </div>
-              </div>
-            </div>
-            <div id="sales-dow-chart" style="display:flex;flex-direction:column;gap:11px;margin-top:18px;"></div>
-            <div id="sales-dow-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px;"></div>
-            <div id="sales-dow-tip" style="margin-top:14px;font-size:13px;line-height:1.65;background:var(--blue-bg,#E6F1FB);border-left:3px solid #185FA5;border-radius:0 var(--r) var(--r) 0;padding:12px 14px;"></div>
           </div>
           <div class="card">
             <div class="card-head"><div class="card-title">채널별 매출 비중</div></div>
@@ -4859,7 +4880,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.6.2</div>
+<div id="version">v5.6.3</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -4870,10 +4891,10 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const db = supabase.createClient(SB_URL, SB_KEY);
 
 const MEMBERS = [
-  { id:'ceo',     name:'고예흰', label:'대표님',   av:'고예', role:'대표',   pin:'0000', admin:true  },
-  { id:'hyomin',  name:'김효민', label:'김효민님', av:'김효', role:'운영',   pin:'0000', admin:true  },
-  { id:'hyunjin', name:'정현진', label:'정현진님', av:'정현', role:'물류',   pin:'0000', admin:false },
-  { id:'sungae',  name:'김성애', label:'김성애님', av:'김성', role:'QC',     pin:'0000', admin:false },
+  { id:'ceo',     name:'고예흰', label:'대표님',   av:'고예', role:'대표',   pin:'960923', admin:true  },
+  { id:'hyomin',  name:'김효민', label:'김효민님', av:'김효', role:'운영',   pin:'970121', admin:true  },
+  { id:'hyunjin', name:'정현진', label:'정현진님', av:'정현', role:'물류',   pin:'960524', admin:false },
+  { id:'sungae',  name:'김성애', label:'김성애님', av:'김성', role:'QC',     pin:'711209', admin:false },
 ];
 
 const POPUP = { title:'더현대 서울\n팝업 스토어', range:'8월 6일 – 8월 12일', start:new Date('2026-08-06'), end:new Date('2026-08-12'), prep:new Date('2026-06-26') };
@@ -5266,7 +5287,7 @@ function selMember(id) {
 function doLogin() {
   if(!selMemberId) { $('login-err').textContent='팀원을 선택해주세요.'; return; }
   const m = MEMBERS.find(x=>x.id===selMemberId);
-  if($('pin-input').value !== m.pin) { $('login-err').textContent='PIN이 올바르지 않아요.'; $('pin-input').value=''; return; }
+  if($('pin-input').value !== m.pin) { $('login-err').textContent='비밀번호가 올바르지 않아요.'; $('pin-input').value=''; return; }
   user = m;
   sessionStorage.setItem('cherop_uid', m.id);
   startApp();
@@ -5336,42 +5357,88 @@ async function loadDashboard() {
   await getAppState(); // 캐시 프리로드 → qlGetLinks가 정확한 데이터 반환
   initMemberColors(); // 담당자 색상 적용
   loadDashQuickLinks();
-  await Promise.all([loadDashTasks(), loadDashNotices(), loadDashAtt(), loadDashRevenue(), loadDashInventory()]);
-  loadDashRoutineAll();
+  await Promise.all([loadDashTasks(), loadDashNotices(), loadDashAtt(), loadDashRevenue(), loadDashInventory(), loadDashTodayShip()]);
   loadDashDday();
 }
 
 async function loadDashTasks() {
-  await loadDashDueSoon(); // 마감 임박 알림
-  // 김성애는 생산 일정 표시
-  if(user?.id === 'sungae') {
-    await loadDashProdSchedule();
-    return;
-  }
+  await loadDashDueSoon(); // 마감 임박 알림 (별도 카드 — 새 레이아웃엔 없지만 호출 유지)
   try {
     const { data, error } = await db.from('tasks').select('*').eq('assignee', user.name).order('created_at',{ascending:true});
-    if(error) throw error;
+    if (error) throw error;
     const list    = data||[];
     const pending = list.filter(t=>t.status!=='done');
-    $('dash-task-sub').textContent = pending.length ? `미완료 ${pending.length}건` : '모두 완료 🎉';
-    $('dash-sub').textContent = pending.length ? `오늘도 좋은 하루 되세요. 담당 할일 ${pending.length}건이 있어요.` : '오늘도 좋은 하루 되세요. 담당 할일을 모두 완료했어요 🎉';
-    const stM={todo:{c:'sbadge-todo',l:'시작 전'},ing:{c:'sbadge-ing',l:'진행 중'},hold:{c:'sbadge-hold',l:'보류'},done:{c:'sbadge-done',l:'완료'}};
-    $('dash-task-list').innerHTML = pending.length
-      ? pending.slice(0,5).map(t => {
-          const done=t.status==='done', st=stM[t.status]||stM.todo;
-          return `<div class="dtask">
-            <div class="dtask-check${done?' on':''}" onclick="dashToggleTask(${t.id},${done})"></div>
-            <div style="flex:1;min-width:0;">
-              <div class="dtask-txt${done?' done':''}">${t.title}</div>
-              ${t.note?`<div style="font-size:11px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.note}</div>`:''}
-            </div>
-            ${t.due_date?`<div class="dtask-due">${t.due_date.slice(5)}</div>`:''}
-            <button class="trow-status-btn ${st.c}" style="font-size:11px;padding:3px 10px;flex-shrink:0;" onclick="event.stopPropagation();dashCycleStatus(${t.id},'${t.status}')">${st.l}</button>
-          </div>`;
-        }).join('')
-      : (list.length ? '<div style="padding:12px 0;font-size:13px;color:var(--light);">모두 완료했어요 🎉</div>' : '<div style="padding:12px 0;font-size:13px;color:var(--light);">할일이 없어요 🎉</div>');
+
+    // 마감 임박 카운트 (D-3 이하, 미완료만)
+    const todayMs = (() => { const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); })();
+    const dueSoon = pending.filter(t => {
+      if (!t.due_date) return false;
+      const dueMs = new Date(t.due_date+'T00:00:00').getTime();
+      const diff  = Math.ceil((dueMs - todayMs) / 86400000);
+      return diff >= 0 && diff <= 3;
+    });
+
+    // KPI 카드 채우기
+    if ($('dash-kpi-task'))     $('dash-kpi-task').textContent     = pending.length + '건';
+    if ($('dash-kpi-task-sub')) {
+      const sub = $('dash-kpi-task-sub');
+      if (dueSoon.length) {
+        sub.innerHTML = `<span style="color:#C4736A;font-weight:500;">⚠ D-3 이하 ${dueSoon.length}건</span>`;
+      } else if (pending.length) {
+        sub.innerHTML = '<span style="color:var(--light);">마감 임박 없음</span>';
+      } else {
+        sub.innerHTML = '<span style="color:var(--light);">모두 완료 🎉</span>';
+      }
+    }
+    if ($('dash-task-sub')) $('dash-task-sub').textContent = pending.length ? `미완료 ${pending.length}건` : '모두 완료 🎉';
+    if ($('dash-sub')) $('dash-sub').textContent = pending.length ? `오늘도 좋은 하루 되세요. 담당 할일 ${pending.length}건이 있어요.` : '오늘도 좋은 하루 되세요. 담당 할일을 모두 완료했어요 🎉';
+
+    // 할일 리스트 (3단 카드) — 마감 임박은 빨간 행으로 강조
+    const stM = {todo:{c:'sbadge-todo',l:'시작 전'},ing:{c:'sbadge-ing',l:'진행 중'},hold:{c:'sbadge-hold',l:'보류'},done:{c:'sbadge-done',l:'완료'}};
+    if ($('dash-task-list')) {
+      // 마감 임박을 위에, 나머지를 아래에
+      const sorted = [...pending].sort((a,b) => {
+        const aSoon = a.due_date && (new Date(a.due_date+'T00:00:00').getTime() - todayMs) / 86400000 <= 3 ? 0 : 1;
+        const bSoon = b.due_date && (new Date(b.due_date+'T00:00:00').getTime() - todayMs) / 86400000 <= 3 ? 0 : 1;
+        if (aSoon !== bSoon) return aSoon - bSoon;
+        return (a.due_date||'9999').localeCompare(b.due_date||'9999');
+      });
+      $('dash-task-list').innerHTML = sorted.length
+        ? sorted.slice(0,5).map(t => {
+            const done = t.status === 'done';
+            const st   = stM[t.status]||stM.todo;
+            let dueLabel = '';
+            let urgent   = false;
+            if (t.due_date) {
+              const dueMs = new Date(t.due_date+'T00:00:00').getTime();
+              const diff  = Math.ceil((dueMs - todayMs) / 86400000);
+              if (diff >= 0 && diff <= 3) {
+                urgent   = true;
+                dueLabel = diff === 0 ? '오늘' : `D-${diff}`;
+              } else {
+                dueLabel = t.due_date.slice(5).replace('-','.');
+              }
+            }
+            const rowStyle = urgent
+              ? 'background:#FBF0EF;border-radius:4px;padding:7px 9px;margin-bottom:3px;'
+              : 'padding:7px 0;border-bottom:0.5px solid var(--surface2);';
+            const titleColor = urgent ? '#A3534C' : 'var(--text)';
+            const dueColor   = urgent ? '#A3534C' : 'var(--light)';
+            const dueWeight  = urgent ? '600' : '400';
+            return `<div style="display:flex;align-items:center;gap:7px;${rowStyle}">
+              <div class="dtask-check${done?' on':''}" onclick="dashToggleTask(${t.id},${done})" style="flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;color:${titleColor};font-weight:${urgent?'500':'400'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(t.title||'')}</div>
+                ${t.note?`<div style="font-size:11px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(t.note)}</div>`:''}
+              </div>
+              ${dueLabel?`<span style="font-size:10px;color:${dueColor};font-weight:${dueWeight};flex-shrink:0;">${dueLabel}</span>`:''}
+              <button class="trow-status-btn ${st.c}" style="font-size:10px;padding:2px 8px;flex-shrink:0;" onclick="event.stopPropagation();dashCycleStatus(${t.id},'${t.status}')">${st.l}</button>
+            </div>`;
+          }).join('')
+        : (list.length ? '<div style="padding:12px 0;font-size:13px;color:var(--light);">모두 완료했어요 🎉</div>' : '<div style="padding:12px 0;font-size:13px;color:var(--light);">할일이 없어요 🎉</div>');
+    }
     loadTodayAtt();
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error('loadDashTasks:', e); }
 }
 
 async function loadDashRoutineAll() {
@@ -5496,14 +5563,57 @@ async function loadDashNotices() {
 async function loadDashAtt() {
   try {
     const today = dateStr();
-    const { data } = await db.from('attendances').select('member,clock_in,clock_out').eq('date',today);
+    const { data } = await db.from('attendances').select('member,clock_in,clock_out').eq('date', today);
     const map = {};
-    (data||[]).forEach(r=>{ map[r.member]=r; });
-    $('dash-att-chips').innerHTML = MEMBERS.map(m=>{
-      const r=map[m.name], isIn=r?.clock_in;
-      return `<div class="chip${isIn?'':' off'}"><div class="chip-dot" style="background:${isIn?'#6B9E7A':'#B8BBCC'}"></div><span>${m.name}</span></div>`;
-    }).join('');
-  } catch(e) {}
+    (data||[]).forEach(r => { map[r.member] = r; });
+
+    // 새 구조: 원형 게이지 + 인원별 점
+    const block = $('dash-att-block');
+    if (block) {
+      const inCnt    = MEMBERS.filter(m => map[m.name]?.clock_in).length;
+      const totalCnt = MEMBERS.length;
+      const pct      = totalCnt ? (inCnt / totalCnt) : 0;
+      const C        = 2 * Math.PI * 15.5; // 약 97.4
+      const dash     = (pct * C).toFixed(1);
+      const memColor = { 'ceo':'#1c1e26', 'hyomin':'#6B9E7A', 'hyunjin':'#C4A96A', 'sungae':'#C4736A' };
+
+      block.innerHTML = `<div style="display:flex;align-items:center;gap:12px;">
+        <div style="position:relative;width:64px;height:64px;flex-shrink:0;">
+          <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:100%;height:100%;">
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--surface2)" stroke-width="3"/>
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="#27500A" stroke-width="3"
+              stroke-dasharray="${dash} ${C.toFixed(1)}" stroke-linecap="round"/>
+          </svg>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+            <div style="font-size:13px;font-weight:600;line-height:1;">${inCnt}/${totalCnt}</div>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
+          ${MEMBERS.map(m => {
+            const r = map[m.name];
+            const isIn = !!r?.clock_in;
+            const opa  = isIn ? '1' : '.55';
+            const dot  = isIn ? '#27500A' : 'var(--border2)';
+            const timeStr = (r && r.clock_in) ? r.clock_in.slice(0,5) : '—';
+            return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;opacity:${opa};">
+              <span style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0;"></span>
+              <span style="flex:1;">${m.name}</span>
+              <span style="color:var(--light);font-size:10px;">${timeStr}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+
+    // 구 구조 호환: dash-att-chips가 남아있으면 같이 채움
+    const chips = $('dash-att-chips');
+    if (chips) {
+      chips.innerHTML = MEMBERS.map(m => {
+        const r = map[m.name], isIn = r?.clock_in;
+        return `<div class="chip${isIn?'':' off'}"><div class="chip-dot" style="background:${isIn?'#6B9E7A':'#B8BBCC'}"></div><span>${m.name}</span></div>`;
+      }).join('');
+    }
+  } catch(e) { console.error('loadDashAtt:', e); }
 }
 
 async function loadAttMonthlySummary() {
@@ -5543,64 +5653,181 @@ async function loadAttMonthlySummary() {
   } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:12px;">불러오기 실패</div>'; }
 }
 
+async function loadDashTodayShip() {
+  try {
+    const today = dateStr();
+    const { data } = await db.from('sales_log').select('product_id,quantity,channel').eq('sale_date', today).gt('quantity', 0);
+    const rows = data || [];
+    const total = rows.reduce((s,r)=>s+(r.quantity||0), 0);
+    const byCh = {};
+    rows.forEach(r => { byCh[r.channel] = (byCh[r.channel]||0) + (r.quantity||0); });
+    const chTop = Object.entries(byCh).sort((a,b)=>b[1]-a[1]).slice(0,2);
+
+    if ($('dash-kpi-ship-qty')) $('dash-kpi-ship-qty').textContent = total ? (total + '개') : '0개';
+    if ($('dash-kpi-ship-sub')) {
+      $('dash-kpi-ship-sub').textContent = chTop.length
+        ? chTop.map(([ch,q]) => `${ch} ${q}`).join(' · ')
+        : '오늘 출고 없음';
+    }
+  } catch(e) {
+    console.error('loadDashTodayShip:', e);
+    if ($('dash-kpi-ship-qty')) $('dash-kpi-ship-qty').textContent = '—';
+  }
+}
+
 async function loadDashInventory() {
   try {
-    const prods = (await db.from('products').select('id').eq('is_discontinued',false)).data||[];
+    const prods = (await db.from('products').select('id,disc_status').eq('is_discontinued',false)).data||[];
     const invRows = (await db.from('inventory').select('*')).data||[];
     const salesRows = (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
-    const chInvRows = (await db.from('channel_inventory').select('*')).data||[];
     let lowCount=0;
     for(const p of prods){
-      if(p.disc_status === 'planned') continue; // 단종예정은 발주필요 제외
+      if(p.disc_status === 'planned') continue;
       const velAll=CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
       const inv=invRows.find(x=>x.product_id===p.id)||{};
       const total=(inv.produced_stock||0)+(inv.available_stock||0);
-      if(velAll>0&&total/velAll<=45) lowCount++;
+      if(velAll>0 && total/velAll <= 45) lowCount++;
     }
-    const pendProd=invRows.reduce((s,r)=>s+(r.pending_production||0),0);
-    if($('dash-inv-sku'))  $('dash-inv-sku').textContent  = prods.length+'개';
-    if($('dash-inv-low'))  $('dash-inv-low').textContent  = lowCount+'개';
-    if($('dash-inv-prod')) $('dash-inv-prod').textContent = pendProd+'개';
-  } catch(e) { console.error('loadDashInventory',e); }
+    const pendProd = invRows.reduce((s,r)=>s+(r.pending_production||0),0);
+    const pendSkuCnt = invRows.filter(r => (r.pending_production||0) > 0).length;
+
+    // 새 KPI 카드 (3안 레이아웃)
+    if ($('dash-kpi-inv-low')) $('dash-kpi-inv-low').textContent = lowCount + ' SKU';
+    if ($('dash-kpi-inv-sub')) $('dash-kpi-inv-sub').textContent = pendSkuCnt
+      ? `생산 진행 중 ${pendSkuCnt}건 (${pendProd.toLocaleString()}개)`
+      : '생산 진행 중인 항목 없음';
+
+    // 구 ID 호환 (다른 화면에서 사용 가능)
+    if ($('dash-inv-sku'))  $('dash-inv-sku').textContent  = prods.length + '개';
+    if ($('dash-inv-low'))  $('dash-inv-low').textContent  = lowCount + '개';
+    if ($('dash-inv-prod')) $('dash-inv-prod').textContent = pendProd + '개';
+  } catch(e) { console.error('loadDashInventory:', e); }
 }
 
 async function loadDashRevenue() {
-  if(!user.admin) { $('dash-rev-card').style.display='none'; return; }
-  $('dash-rev-card').style.display='';
+  // 4명 모두 동일하게 표시 (이전 admin 분기 제거)
+  if ($('dash-rev-card')) $('dash-rev-card').style.display='';
   try {
-    const n=new Date(), month=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+    const n = new Date();
+    const yyyy = n.getFullYear();
+    const mm   = String(n.getMonth()+1).padStart(2,'0');
+    const month = `${yyyy}-${mm}`;
     const today = dateStr();
-    const yesterday = dateStr(new Date(Date.now()-86400000));
-    const { data } = await db.from('channel_sales_log').select('*').gte('date',`${month}-01`).lte('date',`${month}-31`);
-    const rows = data||[];
-    const total = rows.reduce((s,r)=>s+(r.amount||0),0);
-    // 전일 vs 전전일 매출 비교
-    const todayAmt = rows.filter(r=>r.date===today).reduce((s,r)=>s+(r.amount||0),0);
-    const ystdAmt  = rows.filter(r=>r.date===yesterday).reduce((s,r)=>s+(r.amount||0),0);
-    const mom = total ? Math.round((total/3000000000)*100) : 0;
-    if($('dash-rev-val'))   $('dash-rev-val').textContent   = fmtWon(total)||'—';
-    if($('dash-rev-month')) $('dash-rev-month').textContent = `${n.getMonth()+1}월 누계`;
-    if($('dash-rev-goal'))  $('dash-rev-goal').textContent  = `목표 ${mom}%`;
-    if($('dash-rev-mom'))   $('dash-rev-mom').textContent   = ystdAmt ? fmtWon(todayAmt) : '—';
-    // 판매 이상 알림: 전일 대비 50% 미만이거나 3일 이상 0원
+    const todayDay = n.getDate();
+
+    // 이번 달 데이터
+    const { data: curData } = await db.from('channel_sales_log').select('*').gte('date', `${month}-01`).lte('date', `${month}-31`);
+    const curRows = curData || [];
+    const total = curRows.reduce((s,r)=>s+(r.amount||0),0);
+    const todayAmt = curRows.filter(r=>r.date===today).reduce((s,r)=>s+(r.amount||0),0);
+
+    // 전월 데이터 (동기간 비교: 1일 ~ 오늘 일자)
+    const prevMonthDate = new Date(yyyy, n.getMonth()-1, 1);
+    const py = prevMonthDate.getFullYear();
+    const pm = String(prevMonthDate.getMonth()+1).padStart(2,'0');
+    const prevMonth = `${py}-${pm}`;
+    const prevEnd = `${prevMonth}-${String(todayDay).padStart(2,'0')}`;
+    const { data: prevData } = await db.from('channel_sales_log').select('*').gte('date', `${prevMonth}-01`).lte('date', prevEnd);
+    const prevTotal = (prevData||[]).reduce((s,r)=>s+(r.amount||0),0);
+
+    // 일평균 (오늘까지 일수 기준)
+    const avg = todayDay > 0 ? Math.round(total / todayDay) : 0;
+
+    // 전월 동기간 대비 %
+    let momLabel = '—';
+    let momColor = '#A0D88B';
+    if (prevTotal > 0) {
+      const pct = Math.round((total - prevTotal) / prevTotal * 100);
+      momLabel = pct >= 0 ? `+${pct}% ↑` : `${pct}% ↓`;
+      momColor = pct >= 0 ? '#A0D88B' : '#FFB8B0';
+    } else if (total > 0) {
+      momLabel = '신규';
+    }
+
+    // 채널별 합계
+    const chMap = {};
+    curRows.forEach(r => { chMap[r.channel] = (chMap[r.channel]||0) + (r.amount||0); });
+    const chSorted = Object.entries(chMap).sort((a,b)=>b[1]-a[1]);
+
+    if ($('dash-rev-val'))    $('dash-rev-val').textContent   = total ? '₩'+total.toLocaleString() : '₩0';
+    if ($('dash-rev-month'))  $('dash-rev-month').textContent = `${yyyy}년 ${parseInt(mm)}월 누계`;
+    if ($('dash-rev-today'))  $('dash-rev-today').textContent = todayAmt ? '₩'+todayAmt.toLocaleString() : '₩0';
+    if ($('dash-rev-avg'))    $('dash-rev-avg').textContent   = avg ? '₩'+avg.toLocaleString() : '₩0';
+    if ($('dash-rev-mom'))   {
+      $('dash-rev-mom').textContent = momLabel;
+      $('dash-rev-mom').style.color = momColor;
+    }
+    if ($('dash-rev-channels')) {
+      $('dash-rev-channels').innerHTML = chSorted.length
+        ? chSorted.slice(0,5).map(([ch, amt]) =>
+            `<div style="display:flex;justify-content:space-between;"><span style="opacity:.8;">${ch}</span><span style="font-weight:500;">₩${amt.toLocaleString()}</span></div>`
+          ).join('')
+        : '<div style="opacity:.6;">데이터가 없어요</div>';
+    }
+
+    // 매출 이상 알림
     const alertEl = $('dash-sales-alert');
     if (alertEl) {
-      const isDropped = ystdAmt > 0 && todayAmt < ystdAmt * 0.5;
-      const zeroRows  = [0,1,2].every(i => {
+      const yesterday = dateStr(new Date(Date.now()-86400000));
+      const ystdAmt = curRows.filter(r=>r.date===yesterday).reduce((s,r)=>s+(r.amount||0),0);
+      const zeroDays = [0,1,2].every(i => {
         const d = dateStr(new Date(Date.now()-i*86400000));
-        return rows.filter(r=>r.date===d).reduce((s,r)=>s+(r.amount||0),0) === 0;
+        return curRows.filter(r=>r.date===d).reduce((s,r)=>s+(r.amount||0),0) === 0;
       });
-      if (isDropped) {
-        alertEl.style.display='';
-        alertEl.textContent=`⚠ 오늘 매출이 전일 대비 ${Math.round((1-todayAmt/ystdAmt)*100)}% 감소했어요`;
-      } else if (zeroRows) {
-        alertEl.style.display='';
-        alertEl.textContent='⚠ 최근 3일간 매출 데이터가 없어요';
+      if (ystdAmt > 0 && todayAmt < ystdAmt * 0.5 && todayAmt > 0) {
+        alertEl.style.display = '';
+        alertEl.textContent = `⚠ 오늘 매출이 전일 대비 ${Math.round((1-todayAmt/ystdAmt)*100)}% 감소`;
+      } else if (zeroDays) {
+        alertEl.style.display = '';
+        alertEl.textContent = '⚠ 최근 3일간 매출 데이터가 없어요 — 입력 확인 필요';
       } else {
-        alertEl.style.display='none';
+        alertEl.style.display = 'none';
       }
     }
-  } catch(e) { if($('dash-rev-val')) $('dash-rev-val').textContent='—'; }
+
+    // 14일 매출 추이 차트 렌더
+    renderDashTrendChart(curRows, prevData||[]);
+  } catch(e) {
+    console.error('loadDashRevenue:', e);
+    if ($('dash-rev-val')) $('dash-rev-val').textContent='—';
+  }
+}
+
+function renderDashTrendChart(curRows, prevRows) {
+  const canvas = $('dash-trend-chart'); if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  // 디바이스 픽셀 비 고려
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+
+  // 최근 14일 매출 합산
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = [];
+  for (let i=13; i>=0; i--) {
+    const d = new Date(today.getTime() - i*86400000);
+    const dStr = dateStr(d);
+    const amt  = (curRows.concat(prevRows)).filter(r=>r.date===dStr).reduce((s,r)=>s+(r.amount||0),0);
+    days.push({ date:dStr, amt, day:d.getDate() });
+  }
+  const max = Math.max(...days.map(x=>x.amt), 1);
+  const bw  = (W - 10) / days.length;
+  const padTop = 8;
+
+  days.forEach((d,i) => {
+    const h = max ? (d.amt / max) * (H - padTop - 18) : 0;
+    const x = 5 + i*bw;
+    const y = H - 18 - h;
+    ctx.fillStyle = i === days.length-1 ? '#1c1e26' : '#E4E1DC';
+    ctx.fillRect(x+1, y, Math.max(bw-3, 2), h);
+  });
+  // x축 라벨 갱신
+  const xlbl = $('dash-trend-xlbl');
+  if (xlbl) {
+    xlbl.innerHTML = `<span>${days[0].day}일</span><span>${days[7].day}일</span><span>오늘</span>`;
+  }
 }
 
 function loadDashDday() {
@@ -5617,10 +5844,13 @@ function loadDashDday() {
     dday=`D+${Math.ceil((today-start)/ms)}`; lbl='진행 중 · 종료까지'; status='진행 중';
     pct=Math.round(((today-start)/(end-start))*100);
   } else { dday='종료'; lbl='종료됨'; status='완료'; pct=100; }
-  $('dday-title').textContent=POPUP.title; $('dday-range').textContent=POPUP.range;
-  $('dday-num').textContent=dday; $('dday-lbl').textContent=lbl;
-  $('dday-status').textContent=status; $('dday-pct').textContent=`${pct}%`;
-  $('dday-fill').style.width=`${pct}%`;
+  if($('dday-title'))  $('dday-title').textContent = POPUP.title;
+  if($('dday-range'))  $('dday-range').textContent = POPUP.range;
+  if($('dday-num'))    $('dday-num').textContent   = dday;
+  if($('dday-lbl'))    $('dday-lbl').textContent   = lbl;
+  if($('dday-status')) $('dday-status').textContent = status;
+  if($('dday-pct'))    $('dday-pct').textContent   = `${pct}%`;
+  if($('dday-fill'))   $('dday-fill').style.width  = `${pct}%`;
 }
 
 /* ═══════════════════════════════════════
@@ -11895,6 +12125,8 @@ async function loadSalesTop10() {
 }
 
 async function loadSalesDow() {
+  // 요일별 패턴 카드가 제거된 경우 즉시 리턴
+  if (!$('sales-dow-chart')) return;
   const now  = new Date();
   const from = dateStr(new Date(now.getTime() - salesDowDays * 86400000));
   const DOW  = ['월','화','수','목','금','토','일'];
