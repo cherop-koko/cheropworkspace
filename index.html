@@ -181,7 +181,7 @@ a { text-decoration:none; color:inherit; }
 /* MAIN */
 .main {
   flex:1; overflow-y:auto; overflow-x:hidden;
-  padding:32px 36px 60px;
+  padding:32px 36px 200px;
 }
 .main::-webkit-scrollbar { width:5px; }
 .main::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
@@ -330,7 +330,7 @@ a { text-decoration:none; color:inherit; }
 .inv-drag-handle:active { cursor:grabbing; }
 .inv-tbl tr:last-child td { border-bottom:none; }
 .inv-tbl tr:hover td { background:var(--surface3); }
-.inv-num { font-family:var(--mono); font-size:12px; }
+.inv-num { font-family:var(--mono); font-size:12px; text-align:right; }
 .inv-inline-num { width:100%; box-sizing:border-box; font-family:var(--mono); font-size:12px; text-align:left; padding:11px 16px; border:none; background:transparent; color:inherit; outline:none; -moz-appearance:textfield; cursor:text; border-radius:4px; }
 .inv-inline-num::-webkit-outer-spin-button, .inv-inline-num::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 .inv-inline-num:hover { background:var(--surface2); box-shadow:inset 0 0 0 0.5px var(--border); }
@@ -1311,19 +1311,8 @@ a { text-decoration:none; color:inherit; }
 
         <!-- 오늘 일정 탭 -->
         <div id="prod-tab-today">
-          <!-- 상단 풀폭: 오늘 출고 내역 -->
+          <!-- 상단 풀폭: 작업 기록 (위로 이동) -->
           <div class="card" style="margin-bottom:14px;">
-            <div class="card-head">
-              <div><div class="card-title">📤 오늘 출고 내역</div><div class="card-sub" id="prod-ship-date-lbl"></div></div>
-              <div style="display:flex;gap:4px;flex-wrap:wrap;" id="prod-ship-cat-pills">
-                <div class="inv-pill on" style="font-size:11px;padding:3px 9px;" onclick="prodShipSetCat('',this)">전체</div>
-              </div>
-            </div>
-            <div id="prod-ship-list"></div>
-          </div>
-
-          <!-- 하단 풀폭: 작업 기록 (인라인 입력 + 날짜별 리스트) -->
-          <div class="card">
             <div class="card-head">
               <div><div class="card-title">✏️ 작업 기록</div><div class="card-sub">날짜별 작업 내역 · ··· 으로 수정/삭제</div></div>
               <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
@@ -1333,21 +1322,30 @@ a { text-decoration:none; color:inherit; }
                 <div class="inv-pill"    id="work-log-period-30" style="font-size:11px;padding:3px 9px;" onclick="workLogSetPeriod(30,this)">30일</div>
               </div>
             </div>
-            <div style="padding:0;overflow:hidden;border:0.5px solid var(--border);border-radius:var(--r);">
+            <div style="padding:0;border:0.5px solid var(--border);border-radius:var(--r);">
               <table class="inv-tbl" style="margin:0;">
                 <thead>
                   <tr style="background:#FBF0EF;">
                     <th style="width:100px;color:#A3534C;">날짜</th>
                     <th style="color:#A3534C;">상품명</th>
                     <th style="width:90px;text-align:right;color:#A3534C;">수량</th>
-                    <th style="width:80px;text-align:right;"></th>
+                    <th style="width:110px;text-align:right;"></th>
                   </tr>
                 </thead>
                 <tbody id="work-log-tbody"></tbody>
               </table>
             </div>
-            <!-- 빠른 입력 (테이블 위에 별도 카드 형식) -->
-            <div style="margin-top:0;"></div>
+          </div>
+
+          <!-- 하단 풀폭: 오늘 출고 내역 (아래로 이동) -->
+          <div class="card">
+            <div class="card-head">
+              <div><div class="card-title">📤 오늘 출고 내역</div><div class="card-sub" id="prod-ship-date-lbl"></div></div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;" id="prod-ship-cat-pills">
+                <div class="inv-pill on" style="font-size:11px;padding:3px 9px;" onclick="prodShipSetCat('',this)">전체</div>
+              </div>
+            </div>
+            <div id="prod-ship-list"></div>
           </div>
         </div>
 
@@ -1544,9 +1542,8 @@ a { text-decoration:none; color:inherit; }
           </div>
           <div class="page-tabs" id="content-tabs">
             <div class="page-tab on" onclick="contentSetTab('season',this)">📅 시즌 이슈</div>
-            <div class="page-tab"   onclick="contentSetTab('remake',this)">🔥 히트 콘텐츠</div>
+            <div class="page-tab"   onclick="contentSetTab('remake',this)">🏆 잘된 콘텐츠</div>
             <div class="page-tab"   onclick="contentSetTab('idea',this)">💡 릴스 아이디어</div>
-            <div class="page-tab"   onclick="contentSetTab('stats',this)">📊 콘텐츠 실적</div>
           </div>
         </div>
 
@@ -1724,40 +1721,40 @@ a { text-decoration:none; color:inherit; }
           </div>
         </div>
 
-        <!-- 🔥 히트 콘텐츠 / 리메이크 워크플로우 탭 -->
+        <!-- 🏆 잘된 콘텐츠 라이브러리 (C1+C2 결합) -->
         <div id="content-tab-remake" style="display:none;">
-          <!-- 메인: 리메이크 워크플로우 칸반 -->
+          <!-- 상단 인사이트 요약 -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;" id="content-lib-summary"></div>
+
+          <!-- 필터/정렬 + 등록 버튼 -->
           <div class="card">
             <div class="card-head">
-              <div><div class="card-title">🔥 히트 콘텐츠 · 리메이크 워크플로우</div><div class="card-sub">드래그하여 단계 이동 · 잘 터진 콘텐츠를 리메이크로 발전시키세요</div></div>
-              <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 12px;" onclick="openRemakeCardModal(null,'hit')">+ 히트 콘텐츠 등록</button>
+              <div><div class="card-title">🏆 잘된 콘텐츠 라이브러리</div><div class="card-sub">잘 터진 릴스/피드를 모아 관리 · 리메이크 진행 추적</div></div>
+              <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;" onclick="openRemakeCardModal(null,'hit')">+ 콘텐츠 등록</button>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:6px;">
-              <!-- 1열: 히트 라이브러리 -->
-              <div data-remake-col="hit">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--surface2);border-radius:6px 6px 0 0;font-size:12px;font-weight:500;">
-                  <span>🔥 히트 라이브러리</span>
-                  <span id="remake-cnt-hit" style="font-size:10px;color:var(--light);">0</span>
-                </div>
-                <div id="remake-col-hit" class="remake-col" style="border:0.5px solid var(--surface2);border-top:none;border-radius:0 0 6px 6px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:200px;"></div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+              <input type="text" id="content-lib-search" placeholder="검색..." style="width:160px;border:0.5px solid var(--border);border-radius:5px;padding:5px 10px;font-size:11px;outline:none;" oninput="loadRemakeBoard()">
+              <div style="display:flex;gap:5px;" id="content-lib-type-pills">
+                <span class="inv-pill on" style="font-size:11px;padding:3px 9px;" onclick="contentLibSetType('all',this)">전체</span>
+                <span class="inv-pill"    style="font-size:11px;padding:3px 9px;" onclick="contentLibSetType('reels',this)">릴스</span>
+                <span class="inv-pill"    style="font-size:11px;padding:3px 9px;" onclick="contentLibSetType('post',this)">피드</span>
               </div>
-              <!-- 2열: 리메이크 작업중 -->
-              <div data-remake-col="wip">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#FDF3E0;color:#7A5C1E;border-radius:6px 6px 0 0;font-size:12px;font-weight:500;">
-                  <span>🛠 리메이크 작업중</span>
-                  <span id="remake-cnt-wip" style="font-size:10px;opacity:.8;">0</span>
-                </div>
-                <div id="remake-col-wip" class="remake-col" style="border:0.5px solid #FDF3E0;border-top:none;border-radius:0 0 6px 6px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:200px;"></div>
+              <div style="display:flex;gap:5px;" id="content-lib-stage-pills">
+                <span class="inv-pill on" style="font-size:11px;padding:3px 9px;" onclick="contentLibSetStage('all',this)">상태 전체</span>
+                <span class="inv-pill"    style="font-size:11px;padding:3px 9px;" onclick="contentLibSetStage('hit',this)">🔥 히트</span>
+                <span class="inv-pill"    style="font-size:11px;padding:3px 9px;" onclick="contentLibSetStage('wip',this)">🛠 작업중</span>
+                <span class="inv-pill"    style="font-size:11px;padding:3px 9px;" onclick="contentLibSetStage('done',this)">✓ 발행 완료</span>
               </div>
-              <!-- 3열: 발행 완료 -->
-              <div data-remake-col="done">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#EAF3DE;color:#27500A;border-radius:6px 6px 0 0;font-size:12px;font-weight:500;">
-                  <span>✓ 발행 완료</span>
-                  <span id="remake-cnt-done" style="font-size:10px;opacity:.8;">0</span>
-                </div>
-                <div id="remake-col-done" class="remake-col" style="border:0.5px solid #EAF3DE;border-top:none;border-radius:0 0 6px 6px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:200px;"></div>
-              </div>
+              <div style="flex:1;"></div>
+              <span style="font-size:11px;color:var(--light);">정렬:</span>
+              <select id="content-lib-sort" style="font-size:11px;padding:4px 8px;border-radius:5px;border:0.5px solid var(--border);outline:none;" onchange="loadRemakeBoard()">
+                <option value="views">조회수 높은순</option>
+                <option value="likes">좋아요 많은순</option>
+                <option value="recent">최근 등록순</option>
+                <option value="oldest">오래된 등록순</option>
+              </select>
             </div>
+            <div id="content-lib-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;"></div>
           </div>
         </div>
 
@@ -2190,14 +2187,17 @@ a { text-decoration:none; color:inherit; }
           <!-- 목표달성률/핵심방향 제거됨 (A안) -->
           <div class="card">
             <div class="card-head">
-              <div class="card-title">월별 매출 목표 vs 실적</div>
-              <div class="card-sub">단위: 만원</div>
+              <div><div class="card-title">📈 2026년 누적 매출 추이</div><div class="card-sub" id="plan-annual-sub">목표 라인 대비 실적 라인 · 단위: 만원</div></div>
+              <div style="display:flex;gap:12px;font-size:11px;color:var(--light);">
+                <span><span style="display:inline-block;width:14px;height:2px;background:#C4A96A;margin-right:4px;vertical-align:middle;border-radius:1px;"></span>목표</span>
+                <span><span style="display:inline-block;width:14px;height:2px;background:#1c1e26;margin-right:4px;vertical-align:middle;border-radius:1px;"></span>실적</span>
+              </div>
             </div>
-            <div id="plan-monthly-chart" style="display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:6px;"></div>
-            <div style="display:flex;gap:14px;margin-top:4px;">
-              <span style="font-size:10px;color:var(--light);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:6px;border-radius:2px;background:#6B9E7A;display:inline-block;"></span>실적</span>
-              <span style="font-size:10px;color:var(--light);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:6px;border-radius:2px;background:#C4A96A;display:inline-block;opacity:.5;border:1px dashed #C4A96A;"></span>목표 (미입력)</span>
+            <div id="plan-monthly-chart" style="position:relative;height:260px;margin-top:8px;">
+              <svg id="plan-trend-svg" style="width:100%;height:100%;overflow:visible;"></svg>
+              <div id="plan-trend-tooltip" style="position:absolute;display:none;background:#1c1e26;color:#fff;padding:7px 10px;border-radius:6px;font-size:11px;line-height:1.4;pointer-events:none;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.15);"></div>
             </div>
+            <div id="plan-trend-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;"></div>
           </div>
         </div>
 
@@ -3575,6 +3575,63 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <!-- ═══ 생산: 불량 등록 모달 ═══ -->
+<!-- ═══ 불량 그룹 메모 수정 모달 ═══ -->
+<div class="modal-overlay" id="defect-group-edit-modal" onclick="if(event.target===this)closeModal('defect-group-edit-modal')">
+  <div class="modal" style="max-width:440px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind">불량 내역 수정</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('defect-group-edit-modal')">✕</div></div>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--surface);border-radius:6px;padding:10px 12px;margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--light);margin-bottom:3px;">대상</div>
+        <div style="font-size:13px;font-weight:500;" id="defect-grp-lbl">—</div>
+        <div style="font-size:11px;color:var(--light);margin-top:6px;" id="defect-grp-meta">—</div>
+      </div>
+      <div class="modal-memo-lbl">메모</div>
+      <textarea class="modal-textarea" id="defect-grp-memo" placeholder="불량 원인 등"></textarea>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:space-between;">
+      <button class="f-btn f-btn-cancel" style="color:var(--red);" onclick="deleteDefectGroup()">🗑 그룹 전체 삭제</button>
+      <div style="display:flex;gap:6px;">
+        <button class="f-btn f-btn-cancel" onclick="closeModal('defect-group-edit-modal')">취소</button>
+        <button class="f-btn f-btn-save" onclick="saveDefectGroupEdit()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 작업 기록 수정 모달 ═══ -->
+<div class="modal-overlay" id="work-log-edit-modal" onclick="if(event.target===this)closeModal('work-log-edit-modal')">
+  <div class="modal" style="max-width:420px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind">작업 기록 수정</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('work-log-edit-modal')">✕</div></div>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--surface);border-radius:6px;padding:10px 12px;margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--light);margin-bottom:3px;">상품</div>
+        <div style="font-size:13px;font-weight:500;" id="work-log-edit-prod-lbl">—</div>
+        <div style="font-size:11px;color:var(--light);margin-top:6px;" id="work-log-edit-date-lbl">—</div>
+      </div>
+      <div class="modal-props">
+        <div class="prop-row">
+          <div class="prop-icon">🔢</div><div class="prop-label">수량</div>
+          <div class="prop-val"><input type="number" class="prop-inp" id="work-log-edit-qty" min="1"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:space-between;">
+      <button class="f-btn f-btn-cancel" style="color:var(--red);" onclick="deleteWorkLog()">🗑 삭제</button>
+      <div style="display:flex;gap:6px;">
+        <button class="f-btn f-btn-cancel" onclick="closeModal('work-log-edit-modal')">취소</button>
+        <button class="f-btn f-btn-save" onclick="saveWorkLogEdit()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 생산: 불량 등록 모달 ═══ -->
 <div class="modal-overlay" id="prod-defect-modal" onclick="if(event.target===this)closeModal('prod-defect-modal')">
   <div class="modal" style="max-width:460px;" onclick="event.stopPropagation()">
     <div class="modal-bar">
@@ -3779,9 +3836,9 @@ a { text-decoration:none; color:inherit; }
 
 <!-- ═══ 리메이크 카드 모달 ═══ -->
 <div class="modal-overlay" id="remake-card-modal" onclick="if(event.target===this)closeModal('remake-card-modal')">
-  <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+  <div class="modal" style="max-width:520px;" onclick="event.stopPropagation()">
     <div class="modal-bar">
-      <div class="modal-kind" id="remake-card-modal-kind">히트 콘텐츠 등록</div>
+      <div class="modal-kind" id="remake-card-modal-kind">잘된 콘텐츠 등록</div>
       <div class="modal-bar-right">
         <div class="mbtn" id="remake-card-del-btn" onclick="deleteRemakeCard()" style="display:none;">🗑</div>
         <div class="mbtn" onclick="closeModal('remake-card-modal')">✕</div>
@@ -3791,7 +3848,7 @@ a { text-decoration:none; color:inherit; }
       <input class="modal-title-inp" id="remake-card-title" placeholder="콘텐츠 제목 (예: 몽모 빨래 챌린지)">
       <div class="modal-props" style="margin-top:14px;">
         <div class="prop-row">
-          <div class="prop-icon">📍</div><div class="prop-label">단계</div>
+          <div class="prop-icon">📍</div><div class="prop-label">상태</div>
           <div class="prop-val">
             <div class="st-pills" id="remake-stage-pills">
               <div class="st-pill on" data-stage="hit"  onclick="setRemakeStage('hit',this)">🔥 히트</div>
@@ -3801,8 +3858,22 @@ a { text-decoration:none; color:inherit; }
           </div>
         </div>
         <div class="prop-row">
+          <div class="prop-icon">📱</div><div class="prop-label">유형</div>
+          <div class="prop-val">
+            <select class="prop-inp" id="remake-card-type">
+              <option value="reels">릴스</option>
+              <option value="post">피드 (게시물)</option>
+              <option value="story">스토리</option>
+            </select>
+          </div>
+        </div>
+        <div class="prop-row">
           <div class="prop-icon">🔗</div><div class="prop-label">릴스 URL</div>
           <div class="prop-val"><input type="text" class="prop-inp" id="remake-card-url" placeholder="https://instagram.com/reel/..."></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🖼</div><div class="prop-label">썸네일</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="remake-card-thumb" placeholder="이미지 URL (선택)"></div>
         </div>
         <div class="prop-row">
           <div class="prop-icon">👁</div><div class="prop-label">조회수</div>
@@ -3811,6 +3882,14 @@ a { text-decoration:none; color:inherit; }
         <div class="prop-row">
           <div class="prop-icon">❤</div><div class="prop-label">좋아요</div>
           <div class="prop-val"><input type="text" class="prop-inp" id="remake-card-likes" placeholder="예: 1200 또는 1.2k"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🔖</div><div class="prop-label">저장</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="remake-card-saves" placeholder="예: 320"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">📅</div><div class="prop-label">발행일</div>
+          <div class="prop-val"><input type="date" class="prop-inp" id="remake-card-date"></div>
         </div>
         <div class="prop-row">
           <div class="prop-icon">📝</div><div class="prop-label">원본 콘텐츠</div>
@@ -5078,7 +5157,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.6.8</div>
+<div id="version">v5.6.9</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -10475,10 +10554,10 @@ async function loadWorkLogList() {
         <div id="work-log-sel-lbl" style="display:none;font-size:11px;color:#27500A;margin-top:3px;"></div>
       </td>
       <td style="text-align:right;">
-        <input type="number" id="work-log-qty" placeholder="0" min="1" class="prop-inp" style="width:70px;font-size:13px;padding:5px 8px;text-align:right;" onkeypress="if(event.key==='Enter')addWorkLog()">
+        <input type="number" id="work-log-qty" placeholder="0" min="1" class="prop-inp" style="width:65px;font-size:13px;padding:5px 8px;text-align:right;" onkeypress="if(event.key==='Enter')addWorkLog()">
       </td>
-      <td style="text-align:right;">
-        <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 12px;" onclick="addWorkLog()">+추가</button>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 16px;white-space:nowrap;" onclick="addWorkLog()">+ 추가</button>
       </td>
     </tr>`;
 
@@ -10612,31 +10691,42 @@ async function openWorkLogEdit(id) {
   const s = await getAppState();
   const w = (s.work_logs||[]).find(x=>x.id===id);
   if (!w) return;
-  // 간단한 prompt 방식 — customPrompt로 수량 수정 (삭제 옵션도)
-  const newQtyStr = await customPrompt(
-    `"${w.label || '(상품)'}" 작업 기록`,
-    '수량을 수정하세요 (0 또는 빈값 입력 시 삭제)',
-    String(w.qty)
-  );
-  if (newQtyStr === null) return; // 취소
-  const newQty = parseInt(newQtyStr);
-  if (!newQty || newQty < 1) {
-    // 삭제
-    const ok = await customConfirm('이 작업 기록을 삭제할까요?');
-    if (!ok) return;
-    await patchAppState(s2 => {
-      s2.work_logs = (s2.work_logs||[]).filter(x=>x.id!==id);
-      return s2;
-    });
-    toast('삭제됐어요');
-  } else {
-    await patchAppState(s2 => {
-      const target = (s2.work_logs||[]).find(x=>x.id===id);
-      if (target) target.qty = newQty;
-      return s2;
-    });
-    toast('수정됐어요 ✓');
-  }
+  _workLogEditId = id;
+  $('work-log-edit-prod-lbl').textContent = w.label || '(상품)';
+  const dObj = new Date(w.date + 'T00:00:00');
+  const DOW = ['일','월','화','수','목','금','토'];
+  $('work-log-edit-date-lbl').textContent = `${w.date} (${DOW[dObj.getDay()]})`;
+  $('work-log-edit-qty').value = w.qty;
+  $('work-log-edit-modal').classList.add('on');
+  setTimeout(()=>$('work-log-edit-qty').focus(), 80);
+}
+
+async function saveWorkLogEdit() {
+  if (!_workLogEditId) return;
+  const newQty = parseInt($('work-log-edit-qty').value) || 0;
+  if (!newQty || newQty < 1) { toast('수량을 입력해주세요 (1 이상)'); return; }
+  await patchAppState(s => {
+    const target = (s.work_logs||[]).find(x=>x.id===_workLogEditId);
+    if (target) target.qty = newQty;
+    return s;
+  });
+  toast('수정됐어요 ✓');
+  closeModal('work-log-edit-modal');
+  _workLogEditId = null;
+  loadWorkLogList();
+}
+
+async function deleteWorkLog() {
+  if (!_workLogEditId) return;
+  const ok = await customConfirm('이 작업 기록을 삭제할까요?');
+  if (!ok) return;
+  await patchAppState(s => {
+    s.work_logs = (s.work_logs||[]).filter(x=>x.id!==_workLogEditId);
+    return s;
+  });
+  toast('삭제됐어요');
+  closeModal('work-log-edit-modal');
+  _workLogEditId = null;
   loadWorkLogList();
 }
 
@@ -10850,10 +10940,11 @@ async function loadProdDefect() {
               <strong>${escapeHtml(label)}</strong>
               <span style="color:var(--light);">${ch} · 총 ${total}개</span>
             </div>
-            <div style="display:flex;gap:4px;font-size:10px;">
+            <div style="display:flex;gap:4px;align-items:center;font-size:10px;">
               ${p?`<span style="padding:2px 7px;border-radius:50px;background:var(--red-bg);color:var(--red);">대기 ${p}</span>`:''}
               ${r?`<span style="padding:2px 7px;border-radius:50px;background:var(--green-bg);color:var(--green-tx);">복원 ${r}</span>`:''}
               ${d?`<span style="padding:2px 7px;border-radius:50px;background:var(--surface);color:var(--faint);">폐기 ${d}</span>`:''}
+              <button class="f-btn f-btn-cancel" style="font-size:10px;padding:3px 9px;margin-left:6px;" onclick="openDefectGroupEdit('${head.group_id}')">✏️ 수정</button>
             </div>
           </div>
           ${head.memo?`<div style="font-size:11px;color:var(--light);margin-top:4px;">📝 ${escapeHtml(head.memo)}</div>`:''}
@@ -11090,6 +11181,58 @@ async function deleteDefect(defectId) {
     return s;
   });
   toast('삭제됐어요');
+  loadProdDefect();
+}
+
+let _defectGroupEditId = null;
+async function openDefectGroupEdit(groupId) {
+  if (!groupId) return;
+  _defectGroupEditId = groupId;
+  const s = await getAppState();
+  const items = (s.prod_defects||[]).filter(x => x.group_id === groupId);
+  if (!items.length) return;
+  const head = items[0];
+  const pid = head.product_id;
+  let label = '(상품)';
+  try {
+    const r = await db.from('products').select('name,option_name').eq('id', pid).maybeSingle();
+    if (r.data) label = r.data.option_name ? `${r.data.name} · ${r.data.option_name}` : r.data.name;
+  } catch(e) {}
+  $('defect-grp-lbl').textContent = label;
+  const typeLbl = head.type === 'production' ? '생산불량' : '반품불량';
+  const chLbl = head.channel ? ` · ${head.channel}` : '';
+  $('defect-grp-meta').textContent = `${head.date} · ${typeLbl}${chLbl} · 총 ${items.length}개`;
+  $('defect-grp-memo').value = head.memo || '';
+  $('defect-group-edit-modal').classList.add('on');
+  setTimeout(()=>$('defect-grp-memo').focus(), 80);
+}
+
+async function saveDefectGroupEdit() {
+  if (!_defectGroupEditId) return;
+  const newMemo = $('defect-grp-memo').value.trim();
+  await patchAppState(s => {
+    (s.prod_defects||[]).forEach(x => {
+      if (x.group_id === _defectGroupEditId) x.memo = newMemo;
+    });
+    return s;
+  });
+  toast('수정됐어요 ✓');
+  closeModal('defect-group-edit-modal');
+  _defectGroupEditId = null;
+  loadProdDefect();
+}
+
+async function deleteDefectGroup() {
+  if (!_defectGroupEditId) return;
+  const ok = await customConfirm('이 불량 그룹 전체를 삭제할까요?', '같은 등록의 모든 개별 항목이 삭제됩니다 (재고는 자동 복원 안 됨)');
+  if (!ok) return;
+  await patchAppState(s => {
+    s.prod_defects = (s.prod_defects||[]).filter(x => x.group_id !== _defectGroupEditId);
+    return s;
+  });
+  toast('그룹이 삭제됐어요');
+  closeModal('defect-group-edit-modal');
+  _defectGroupEditId = null;
   loadProdDefect();
 }
 
@@ -13621,19 +13764,73 @@ async function saveOpsOrder() {
     return s;
   });
 
-  // 제품 발주 → stock_receipts 자동 생성 (입고 일정에 자동 표시)
-  if (_opsOrderKind === 'product' && productId && data.arrivalDate && !opsOrderEditId) {
+  // 제품 발주 → stock_receipts 자동 동기화 (입고 일정에 자동 표시)
+  if (_opsOrderKind === 'product' && productId) {
     try {
-      await db.from('stock_receipts').insert([{
-        id: 'rcpt-ord-' + Date.now(),
-        product_id: productId,
-        quantity: data.qty,
-        scheduled_date: data.arrivalDate,
-        receipt_date: null,
-        status: data.status === 'received' ? 'completed' : 'scheduled',
-        note: `발주 자동 생성${data.memo ? ' · ' + data.memo : ''}`,
-      }]);
-    } catch(err) { console.warn('입고일정 자동 생성 실패:', err); }
+      // 입고예정일: 입력 없으면 발주일 + 7일 (기본값)
+      let scheduled = data.arrivalDate;
+      if (!scheduled) {
+        const baseDate = data.orderDate || dateStr();
+        const d = new Date(baseDate + 'T00:00:00');
+        d.setDate(d.getDate() + 7);
+        scheduled = dateStr(d);
+      }
+      const receiptStatus = data.status === 'received' ? 'completed' : 'scheduled';
+
+      // 편집 모드: 기존 발주의 receipt_id로 갱신
+      if (opsOrderEditId) {
+        // 최신 발주 데이터 조회 (방금 저장됨)
+        const sNow = await getAppState();
+        const ord = (sNow.ops_orders||[]).find(o => o.id === opsOrderEditId);
+        if (ord && ord.receipt_id) {
+          await db.from('stock_receipts').update({
+            product_id: productId,
+            quantity: data.qty,
+            scheduled_date: scheduled,
+            status: receiptStatus,
+            note: `발주 자동 생성${data.memo ? ' · ' + data.memo : ''}`,
+          }).eq('id', ord.receipt_id);
+        } else {
+          // receipt_id 없는 기존 발주 → 신규 생성
+          const newReceiptId = 'rcpt-ord-' + Date.now();
+          await db.from('stock_receipts').insert([{
+            id: newReceiptId,
+            product_id: productId,
+            quantity: data.qty,
+            scheduled_date: scheduled,
+            receipt_date: null,
+            status: receiptStatus,
+            note: `발주 자동 생성${data.memo ? ' · ' + data.memo : ''}`,
+          }]);
+          // 발주에 receipt_id 저장
+          await patchAppState(s2 => {
+            const o2 = (s2.ops_orders||[]).find(o => o.id === opsOrderEditId);
+            if (o2) o2.receipt_id = newReceiptId;
+            return s2;
+          });
+        }
+      } else {
+        // 신규 등록 — 방금 push한 발주의 id를 찾아 receipt_id 매핑
+        const newReceiptId = 'rcpt-ord-' + Date.now();
+        await db.from('stock_receipts').insert([{
+          id: newReceiptId,
+          product_id: productId,
+          quantity: data.qty,
+          scheduled_date: scheduled,
+          receipt_date: null,
+          status: receiptStatus,
+          note: `발주 자동 생성${data.memo ? ' · ' + data.memo : ''}`,
+        }]);
+        await patchAppState(s2 => {
+          // 가장 최근 발주(방금 추가한 것)에 receipt_id 부여
+          if (s2.ops_orders && s2.ops_orders.length) {
+            const latest = s2.ops_orders[s2.ops_orders.length - 1];
+            latest.receipt_id = newReceiptId;
+          }
+          return s2;
+        });
+      }
+    } catch(err) { console.warn('입고일정 자동 동기화 실패:', err); toast('입고일정 동기화 실패: ' + (err.message||'')); }
   }
 
   toast(opsOrderEditId ? '수정됐어요 ✓' : '발주가 등록됐어요 ✓');
@@ -13644,8 +13841,18 @@ async function saveOpsOrder() {
 
 async function deleteOpsOrder() {
   if(!opsOrderEditId) return;
-  const ok = await customConfirm('발주 내역을 삭제할까요?'); if(!ok) return;
+  const ok = await customConfirm('발주 내역을 삭제할까요?', '연동된 입고일정도 함께 삭제됩니다'); if(!ok) return;
   const s = await getAppState();
+  const target = (s.ops_orders||[]).find(o=>o.id===opsOrderEditId);
+  // 연동된 stock_receipt 삭제 (입고완료가 아닌 경우만)
+  if (target && target.receipt_id) {
+    try {
+      const r = await db.from('stock_receipts').select('status').eq('id', target.receipt_id).maybeSingle();
+      if (r.data && r.data.status !== 'completed') {
+        await db.from('stock_receipts').delete().eq('id', target.receipt_id);
+      }
+    } catch(e) { console.warn('연동 receipt 삭제 실패:', e); }
+  }
   s.ops_orders = (s.ops_orders||[]).filter(o=>o.id!==opsOrderEditId);
   await setAppState(s);
   toast('삭제됐어요'); closeModal('ops-order-modal'); loadOpsOrderList();
@@ -15821,27 +16028,28 @@ async function initContentPage() {
 }
 
 function contentSetTab(tab, el) {
+  // stats 탭은 제거됨 → remake로 자동 리디렉트 (구 데이터/URL 호환)
+  if (tab === 'stats') tab = 'remake';
   document.querySelectorAll('#content-tabs .page-tab').forEach(t=>t.classList.remove('on'));
   if (el) {
     el.classList.add('on');
   } else {
-    const tabIdx = ['season','remake','idea','stats'].indexOf(tab);
+    const tabIdx = ['season','remake','idea'].indexOf(tab);
     const tabs = document.querySelectorAll('#content-tabs .page-tab');
     if (tabs[tabIdx]) tabs[tabIdx].classList.add('on');
   }
-  // 모든 탭 숨김
+  // 모든 탭 숨김 (stats DOM은 있어도 항상 숨김 처리)
   ['calendar','season','remake','idea','stats'].forEach(t=>{
     const d = $(`content-tab-${t}`);
     if (d) d.style.display = t===tab ? '' : 'none';
   });
-  // 새 게시물 버튼은 1안에서 캘린더 탭이 없으니까 항상 숨김
+  // 새 게시물 버튼은 캘린더 탭이 없으니까 항상 숨김
   const addBtn = $('content-add-btn');
   if (addBtn) addBtn.style.display = 'none';
   // 탭별 로더
   if(tab==='season')   loadContentSeason();
   if(tab==='remake')   loadRemakeBoard();
   if(tab==='idea')     loadReelsIdeasFull();
-  if(tab==='stats')    loadContentStats();
 }
 
 /* ─────────────────────────────────────
@@ -15849,83 +16057,140 @@ function contentSetTab(tab, el) {
    app_state.remake_cards: [{id, title, stage, url, views, likes, origin, memo, createdAt, updatedAt}]
 ─────────────────────────────────────── */
 
+let _contentLibType  = 'all';
+let _contentLibStage = 'all';
+
+function contentLibSetType(type, el) {
+  _contentLibType = type;
+  document.querySelectorAll('#content-lib-type-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  if (el) el.classList.add('on');
+  loadRemakeBoard();
+}
+
+function contentLibSetStage(stage, el) {
+  _contentLibStage = stage;
+  document.querySelectorAll('#content-lib-stage-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  if (el) el.classList.add('on');
+  loadRemakeBoard();
+}
+
+// 숫자 파싱 (28만, 1.2k, 1200 등 → 숫자)
+function parseRemakeNum(v) {
+  if (v == null || v === '') return 0;
+  const s = String(v).trim().toLowerCase().replace(/,/g,'').replace(/\s/g,'');
+  if (s.includes('만')) return Math.round(parseFloat(s)*10000);
+  if (s.includes('억')) return Math.round(parseFloat(s)*100000000);
+  if (s.endsWith('k')) return Math.round(parseFloat(s)*1000);
+  if (s.endsWith('m')) return Math.round(parseFloat(s)*1000000);
+  return Math.round(parseFloat(s)) || 0;
+}
+
+function fmtRemakeNum(n) {
+  if (!n) return '—';
+  if (n >= 10000) return (n/10000).toFixed(n>=100000?0:1).replace(/\.0$/,'') + '만';
+  if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,'') + 'k';
+  return String(n);
+}
+
 async function loadRemakeBoard() {
   try {
     const s = await getAppState();
-    const cards = s.remake_cards || [];
-    const STAGES = ['hit','wip','done'];
-    STAGES.forEach(stage => {
-      const list = cards.filter(c => c.stage === stage);
-      const col = $(`remake-col-${stage}`);
-      const cnt = $(`remake-cnt-${stage}`);
-      if (cnt) cnt.textContent = list.length;
-      if (!col) return;
-      col.innerHTML = list.length
-        ? list.map(c => remakeCardHtml(c)).join('')
-        : `<div style="padding:24px 8px;text-align:center;font-size:11px;color:var(--light);">${stage==='hit'?'+ 히트 콘텐츠 등록':stage==='wip'?'카드를 여기로 드래그':'발행 완료한 카드'}</div>`;
+    const allCards = s.remake_cards || [];
+
+    // 필터링
+    const qEl = $('content-lib-search');
+    const q = qEl ? qEl.value.trim().toLowerCase() : '';
+    let filtered = allCards.filter(c => {
+      if (_contentLibType !== 'all' && (c.type || 'reels') !== _contentLibType) return false;
+      if (_contentLibStage !== 'all' && (c.stage || 'hit') !== _contentLibStage) return false;
+      if (q && !((c.title||'').toLowerCase().includes(q) || (c.memo||'').toLowerCase().includes(q) || (c.origin||'').toLowerCase().includes(q))) return false;
+      return true;
     });
-    initRemakeBoardDrag();
-    loadRemakeSeasonSummary();
-    loadReelsIdeas();
+
+    // 정렬
+    const sortEl = $('content-lib-sort');
+    const sortBy = sortEl ? sortEl.value : 'views';
+    filtered.sort((a,b) => {
+      if (sortBy === 'views')  return parseRemakeNum(b.views) - parseRemakeNum(a.views);
+      if (sortBy === 'likes')  return parseRemakeNum(b.likes) - parseRemakeNum(a.likes);
+      if (sortBy === 'recent') return (b.createdAt||'').localeCompare(a.createdAt||'');
+      if (sortBy === 'oldest') return (a.createdAt||'').localeCompare(b.createdAt||'');
+      return 0;
+    });
+
+    // 상단 인사이트 요약 (전체 기준, 필터와 무관)
+    const sumEl = $('content-lib-summary');
+    if (sumEl) {
+      const total = allCards.length;
+      const hits = allCards.filter(c => (c.stage||'hit')==='hit').length;
+      const maxView = allCards.reduce((m,c) => Math.max(m, parseRemakeNum(c.views)), 0);
+      const maxViewCard = allCards.find(c => parseRemakeNum(c.views) === maxView && maxView > 0);
+      const avgLikes = total ? Math.round(allCards.reduce((s,c)=>s+parseRemakeNum(c.likes),0) / total) : 0;
+      const remakeCount = allCards.filter(c => (c.stage||'hit')!=='hit').length;
+      sumEl.innerHTML = `
+        <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:6px;padding:12px 14px;">
+          <div style="font-size:11px;color:var(--light);margin-bottom:4px;">전체 등록</div>
+          <div style="font-size:20px;font-weight:500;">${total}개</div>
+          <div style="font-size:10px;color:var(--light);margin-top:2px;">🔥 히트 ${hits} · 작업/완료 ${remakeCount}</div>
+        </div>
+        <div style="background:#FBF0EF;border-radius:6px;padding:12px 14px;">
+          <div style="font-size:11px;color:#A3534C;margin-bottom:4px;">최고 조회수</div>
+          <div style="font-size:20px;font-weight:500;color:#A3534C;">${fmtRemakeNum(maxView)}</div>
+          <div style="font-size:10px;color:#A3534C;opacity:.8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${maxViewCard ? escapeHtml(maxViewCard.title||'—') : '—'}</div>
+        </div>
+        <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:6px;padding:12px 14px;">
+          <div style="font-size:11px;color:var(--light);margin-bottom:4px;">평균 좋아요</div>
+          <div style="font-size:20px;font-weight:500;">${fmtRemakeNum(avgLikes)}</div>
+        </div>
+        <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:6px;padding:12px 14px;">
+          <div style="font-size:11px;color:var(--light);margin-bottom:4px;">리메이크 진행/완료</div>
+          <div style="font-size:20px;font-weight:500;">${remakeCount}회</div>
+        </div>`;
+    }
+
+    // 그리드
+    const grid = $('content-lib-grid'); if (!grid) return;
+    if (!filtered.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;padding:32px 8px;text-align:center;font-size:12px;color:var(--faint);">조건에 맞는 콘텐츠가 없어요. 우측 상단 "+ 콘텐츠 등록" 버튼으로 추가해보세요.</div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(c => {
+      const stage = c.stage || 'hit';
+      const type = c.type || 'reels';
+      const typeLbl = type === 'reels' ? '릴스' : type === 'post' ? '피드' : '스토리';
+      const typeBg = type === 'reels' ? '#F4B8C1' : type === 'post' ? '#C4A96A' : '#A3B6D6';
+      const stageBadge = stage === 'hit' ? `<span style="position:absolute;top:6px;right:6px;font-size:9px;padding:2px 6px;border-radius:4px;background:#F4B8C1;color:#fff;font-weight:600;">🔥 히트</span>`
+                       : stage === 'wip' ? `<span style="position:absolute;top:6px;right:6px;font-size:9px;padding:2px 6px;border-radius:4px;background:#FDF3E0;color:#7A5C1E;">🛠 작업중</span>`
+                       : `<span style="position:absolute;top:6px;right:6px;font-size:9px;padding:2px 6px;border-radius:4px;background:#EAF3DE;color:#27500A;">✓ 완료</span>`;
+      const thumb = c.thumb && c.thumb.trim()
+        ? `<img src="${escapeHtml(c.thumb)}" style="width:100%;aspect-ratio:9/16;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex');">
+           <div style="display:none;aspect-ratio:9/16;background:${typeBg}22;align-items:center;justify-content:center;color:${typeBg};font-size:32px;">${type==='reels'?'▶':'📷'}</div>`
+        : `<div style="aspect-ratio:9/16;background:${typeBg}22;display:flex;align-items:center;justify-content:center;color:${typeBg};font-size:32px;">${type==='reels'?'▶':'📷'}</div>`;
+      const views = parseRemakeNum(c.views);
+      const likes = parseRemakeNum(c.likes);
+      const saves = parseRemakeNum(c.saves);
+      return `<div style="border:0.5px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;background:var(--surface);" onclick="openRemakeCardModal('${c.id}')">
+        <div style="position:relative;">
+          ${thumb}
+          <span style="position:absolute;top:6px;left:6px;font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.6);color:#fff;">${typeLbl}</span>
+          ${stageBadge}
+        </div>
+        <div style="padding:9px 11px;">
+          <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.title||'(제목 없음)')}</div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--light);margin-top:4px;">
+            <span>👁 ${fmtRemakeNum(views)}</span>
+            <span>❤ ${fmtRemakeNum(likes)}</span>
+            <span>🔖 ${fmtRemakeNum(saves)}</span>
+          </div>
+          ${c.date ? `<div style="font-size:9px;color:var(--faint);margin-top:3px;">${c.date}</div>` : ''}
+          ${c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" onclick="event.stopPropagation()" style="font-size:9px;color:#185FA5;display:inline-block;margin-top:2px;">원본 보기 ↗</a>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+    // 시즌/릴스아이디어 요약은 시즌 탭에 있던 거 — 이 탭에서는 호출 안 함
   } catch(e) { console.error('loadRemakeBoard', e); }
-}
-
-function remakeCardHtml(c) {
-  const isHit  = c.stage === 'hit';
-  const isWip  = c.stage === 'wip';
-  const isDone = c.stage === 'done';
-  const bg = isHit ? 'var(--surface)' : isWip ? '#FFFBF1' : '#F7FBEF';
-  const bd = isHit ? 'var(--border)' : isWip ? '#FDF3E0' : '#EAF3DE';
-  const viewsLikes = (c.views || c.likes)
-    ? `👁 ${c.views||'-'} · ❤ ${c.likes||'-'}`
-    : '';
-  const stageMeta = isWip ? (c.memo ? `📝 ${oneLine(c.memo).slice(0,30)}` : '🛠 작업중')
-                : isDone ? '✓ 발행 완료'
-                : '';
-  return `<div class="remake-card" draggable="true" data-card-id="${c.id}" data-stage="${c.stage}"
-    style="background:${bg};border:0.5px solid ${bd};border-radius:5px;padding:9px 11px;cursor:grab;user-select:none;"
-    onclick="openRemakeCardModal('${c.id}')">
-    <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.title||'(제목 없음)')}</div>
-    ${viewsLikes ? `<div style="font-size:10px;color:var(--light);margin-top:3px;">${viewsLikes}</div>` : ''}
-    ${c.origin ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">원본: ${escapeHtml(c.origin)}</div>` : ''}
-    ${stageMeta && !isHit ? `<div style="font-size:10px;color:${isWip?'#7A5C1E':'#27500A'};margin-top:3px;">${escapeHtml(stageMeta)}</div>` : ''}
-    ${c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#185FA5;margin-top:3px;display:inline-block;">원본 ↗</a>` : ''}
-  </div>`;
-}
-
-function initRemakeBoardDrag() {
-  let dragId = null;
-  document.querySelectorAll('.remake-card').forEach(card => {
-    card.addEventListener('dragstart', e => {
-      dragId = card.dataset.cardId;
-      card.style.opacity = '.4';
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    card.addEventListener('dragend', () => {
-      card.style.opacity = '';
-      dragId = null;
-    });
-  });
-  document.querySelectorAll('.remake-col').forEach(col => {
-    col.addEventListener('dragover', e => {
-      e.preventDefault();
-      col.style.background = 'rgba(0,0,0,.03)';
-    });
-    col.addEventListener('dragleave', () => { col.style.background = ''; });
-    col.addEventListener('drop', async e => {
-      e.preventDefault();
-      col.style.background = '';
-      if (!dragId) return;
-      const newStage = col.id.replace('remake-col-','');
-      await patchAppState(s => {
-        s.remake_cards = s.remake_cards || [];
-        const c = s.remake_cards.find(x=>x.id===dragId);
-        if (c) { c.stage = newStage; c.updatedAt = new Date().toISOString(); }
-        return s;
-      });
-      loadRemakeBoard();
-    });
-  });
 }
 
 let _remakeCardEditId = null;
@@ -15934,12 +16199,16 @@ let _remakeCardStage  = 'hit';
 async function openRemakeCardModal(id, defaultStage='hit') {
   _remakeCardEditId = id;
   _remakeCardStage  = defaultStage;
-  $('remake-card-modal-kind').textContent = id ? '카드 편집' : '히트 콘텐츠 등록';
+  $('remake-card-modal-kind').textContent = id ? '콘텐츠 편집' : '잘된 콘텐츠 등록';
   $('remake-card-del-btn').style.display = id ? 'flex' : 'none';
   $('remake-card-title').value  = '';
   $('remake-card-url').value    = '';
+  $('remake-card-thumb').value  = '';
+  $('remake-card-type').value   = 'reels';
   $('remake-card-views').value  = '';
   $('remake-card-likes').value  = '';
+  $('remake-card-saves').value  = '';
+  $('remake-card-date').value   = '';
   $('remake-card-origin').value = '';
   $('remake-card-memo').value   = '';
   applyRemakeStagePills();
@@ -15950,8 +16219,12 @@ async function openRemakeCardModal(id, defaultStage='hit') {
     if (c) {
       $('remake-card-title').value  = c.title  || '';
       $('remake-card-url').value    = c.url    || '';
+      $('remake-card-thumb').value  = c.thumb  || '';
+      $('remake-card-type').value   = c.type   || 'reels';
       $('remake-card-views').value  = c.views  || '';
       $('remake-card-likes').value  = c.likes  || '';
+      $('remake-card-saves').value  = c.saves  || '';
+      $('remake-card-date').value   = c.date   || '';
       $('remake-card-origin').value = c.origin || '';
       $('remake-card-memo').value   = c.memo   || '';
       _remakeCardStage = c.stage || 'hit';
@@ -15979,9 +16252,13 @@ async function saveRemakeCard() {
   const data = {
     title,
     stage:  _remakeCardStage,
+    type:   $('remake-card-type').value,
     url:    $('remake-card-url').value.trim(),
+    thumb:  $('remake-card-thumb').value.trim(),
     views:  $('remake-card-views').value.trim(),
     likes:  $('remake-card-likes').value.trim(),
+    saves:  $('remake-card-saves').value.trim(),
+    date:   $('remake-card-date').value,
     origin: $('remake-card-origin').value.trim(),
     memo:   $('remake-card-memo').value.trim(),
     updatedAt: new Date().toISOString(),
@@ -18499,25 +18776,183 @@ async function loadPlanAnnual() {
     100
   );
 
-  // 차트
-  $('plan-monthly-chart').innerHTML = PLAN_MONTHS.map((lbl,i)=>{
-    const m      = monthly[i+1]||{};
-    const target = m.target||0;
-    const actual = actualByMonth[i+1]||0;
-    const isPast = i < curMonth;
-    const isCur  = i === curMonth;
-    const tH     = maxVal>0 ? Math.round(target/maxVal*100) : 0;
-    const aH     = maxVal>0 ? Math.round(actual/maxVal*100) : 0;
-    const achv   = target>0 ? Math.round(actual/target*100) : null;
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-      ${achv!==null&&isPast?`<div style="font-size:8px;color:${achv>=100?'#6B9E7A':'#C4736A'};font-weight:600;">${achv}%</div>`:'<div style="font-size:8px;"></div>'}
-      <div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:56px;">
-        ${target>0 ? `<div style="flex:1;height:${tH}%;background:#C4A96A;border-radius:2px 2px 0 0;opacity:.5;"></div>` : '<div style="flex:1;"></div>'}
-        ${actual>0 ? `<div style="flex:1;height:${aH}%;background:${isCur?'#1C1E26':'#6B9E7A'};border-radius:2px 2px 0 0;"></div>` : '<div style="flex:1;"></div>'}
+  // M3안 — 누적 라인 차트 (SVG)
+  renderPlanTrendChart(monthly, actualByMonth, curMonth);
+  // 월별 상세 테이블 (지출·순수익 포함)
+  loadPlanAnnualTable();
+}
+
+function renderPlanTrendChart(monthly, actualByMonth, curMonth) {
+  const svg = $('plan-trend-svg'); if (!svg) return;
+  const wrap = $('plan-monthly-chart');
+  const tooltip = $('plan-trend-tooltip');
+  const summaryEl = $('plan-trend-summary');
+
+  // 월별 목표 누계 + 실적 누계 계산
+  let cumTarget = 0, cumActual = 0;
+  const points = [];
+  for (let i = 0; i < 12; i++) {
+    const t = monthly[i+1]?.target || 0;
+    const a = actualByMonth[i+1] || 0;
+    cumTarget += t;
+    cumActual += a;
+    points.push({
+      month: i+1,
+      target: t,
+      actual: a,
+      cumTarget,
+      cumActual,
+      isPast: i < curMonth,
+      isCur:  i === curMonth,
+      isFuture: i > curMonth,
+    });
+  }
+
+  const yearTarget = cumTarget;
+  const W = wrap.clientWidth || 600;
+  const H = 260;
+  const padL = 50, padR = 30, padT = 20, padB = 30;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+
+  // Y축 최대값
+  const maxVal = Math.max(yearTarget, cumActual, 100);
+  const niceMax = (() => {
+    if (maxVal >= 100000000) return Math.ceil(maxVal/10000000) * 10000000;
+    if (maxVal >= 10000000)  return Math.ceil(maxVal/1000000)  * 1000000;
+    if (maxVal >= 1000000)   return Math.ceil(maxVal/100000)   * 100000;
+    return Math.max(maxVal, 100000);
+  })();
+
+  const fmtY = v => {
+    if (v >= 100000000) return (v/100000000).toFixed(1).replace(/\.0$/,'') + '억';
+    if (v >= 10000) return Math.round(v/10000) + '만';
+    return String(v);
+  };
+  const fmtFull = v => '₩' + (v||0).toLocaleString();
+
+  const xAt = i => padL + (chartW * i / 11);
+  const yAt = v => padT + chartH - (v / niceMax) * chartH;
+
+  let html = '';
+  // 가이드 + Y축 라벨
+  [0, 0.5, 1].forEach((r, i) => {
+    const y = padT + chartH * (1-r);
+    const v = niceMax * r;
+    html += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#F0EDE8" stroke-width="0.5" stroke-dasharray="${i===0?'0':'2 3'}"/>`;
+    html += `<text x="${padL-6}" y="${y+3}" text-anchor="end" font-size="10" fill="#999" font-family="var(--font)">${fmtY(v)}</text>`;
+  });
+
+  // 목표 라인 (1월 시작 0 → 12월 끝 yearTarget) — 선형
+  if (yearTarget > 0) {
+    const pathGoal = points.map((p,i) => `${i===0?'M':'L'} ${xAt(i).toFixed(1)} ${yAt(p.cumTarget).toFixed(1)}`).join(' ');
+    html += `<path d="${pathGoal}" fill="none" stroke="#C4A96A" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+    // 목표 점들
+    points.forEach((p,i) => {
+      html += `<circle cx="${xAt(i)}" cy="${yAt(p.cumTarget)}" r="2.5" fill="#C4A96A" data-idx="${i}" data-kind="target" class="trend-pt" style="cursor:pointer;"/>`;
+    });
+  }
+
+  // 실적 라인 (현재까지만)
+  const actualPoints = points.filter(p => !p.isFuture);
+  if (actualPoints.length) {
+    const pathActual = actualPoints.map((p,i) => `${i===0?'M':'L'} ${xAt(p.month-1).toFixed(1)} ${yAt(p.cumActual).toFixed(1)}`).join(' ');
+    html += `<path d="${pathActual}" fill="none" stroke="#1c1e26" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // 면적
+    const lastP = actualPoints[actualPoints.length-1];
+    const areaPath = pathActual + ` L ${xAt(lastP.month-1).toFixed(1)} ${(padT+chartH).toFixed(1)} L ${xAt(0).toFixed(1)} ${(padT+chartH).toFixed(1)} Z`;
+    html += `<path d="${areaPath}" fill="#1c1e26" opacity="0.06"/>`;
+    // 점
+    actualPoints.forEach((p,i) => {
+      const isLast = i === actualPoints.length - 1;
+      const r = isLast ? 4 : 2.5;
+      const col = isLast ? '#A3534C' : '#1c1e26';
+      html += `<circle cx="${xAt(p.month-1)}" cy="${yAt(p.cumActual)}" r="${r}" fill="${col}" data-idx="${p.month-1}" data-kind="actual" class="trend-pt" style="cursor:pointer;"/>`;
+    });
+    // 현재 위치 라벨
+    html += `<text x="${xAt(lastP.month-1)}" y="${yAt(lastP.cumActual)-10}" text-anchor="middle" font-size="11" fill="#A3534C" font-weight="600">${fmtY(lastP.cumActual)}</text>`;
+
+    // 페이스 예상 (현재 페이스 유지 시 연말 예상)
+    if (curMonth >= 0 && curMonth < 11 && lastP.cumActual > 0) {
+      const monthsElapsed = curMonth + 1;
+      const projectedYearEnd = lastP.cumActual / monthsElapsed * 12;
+      html += `<line x1="${xAt(lastP.month-1)}" y1="${yAt(lastP.cumActual)}" x2="${xAt(11)}" y2="${yAt(projectedYearEnd)}" stroke="#A3534C" stroke-width="1" stroke-dasharray="3 3"/>`;
+      html += `<circle cx="${xAt(11)}" cy="${yAt(projectedYearEnd)}" r="3" fill="none" stroke="#A3534C" stroke-width="1.5"/>`;
+    }
+  }
+
+  // X축 라벨
+  for (let i = 0; i < 12; i++) {
+    const isCur = i === curMonth;
+    const col = isCur ? '#A3534C' : '#999';
+    const fw = isCur ? '600' : '400';
+    const lbl = isCur ? '오늘' : `${i+1}월`;
+    html += `<text x="${xAt(i)}" y="${H-10}" text-anchor="middle" font-size="10" fill="${col}" font-weight="${fw}" font-family="var(--font)">${lbl}</text>`;
+  }
+
+  svg.innerHTML = html;
+
+  // 호버
+  const showTooltip = (idx, kind) => {
+    const p = points[idx]; if (!p) return;
+    const txt = kind === 'target'
+      ? `<div style="opacity:.7;font-size:10px;margin-bottom:2px;">${p.month}월 누계 목표</div><div style="font-weight:600;font-size:12px;color:#FAE0B0;">${fmtFull(p.cumTarget)}</div>`
+      : `<div style="opacity:.7;font-size:10px;margin-bottom:2px;">${p.month}월 누계 실적</div><div style="font-weight:600;font-size:12px;">${fmtFull(p.cumActual)}</div>${p.target?`<div style="font-size:10px;opacity:.8;margin-top:2px;">목표 ${fmtFull(p.cumTarget)} · ${Math.round(p.cumActual/p.cumTarget*100)}%</div>`:''}`;
+    tooltip.innerHTML = txt;
+    tooltip.style.display = 'block';
+    const rect = wrap.getBoundingClientRect();
+    const px = xAt(idx) * (rect.width / W);
+    tooltip.style.left = Math.max(0, Math.min(rect.width - tooltip.offsetWidth, px - tooltip.offsetWidth/2)) + 'px';
+    tooltip.style.top = '0px';
+  };
+  const hideTooltip = () => { tooltip.style.display = 'none'; };
+  svg.querySelectorAll('.trend-pt').forEach(el => {
+    el.addEventListener('mouseenter', () => showTooltip(+el.dataset.idx, el.dataset.kind));
+    el.addEventListener('mouseleave', hideTooltip);
+  });
+
+  // 하단 진단 카드
+  if (summaryEl) {
+    const targetNow = points[curMonth]?.cumTarget || 0;
+    const actualNow = points[curMonth]?.cumActual || 0;
+    const monthsElapsed = curMonth + 1;
+    const projectedYearEnd = monthsElapsed > 0 ? Math.round(actualNow / monthsElapsed * 12) : 0;
+    const projectedPct = yearTarget > 0 ? Math.round(projectedYearEnd / yearTarget * 100) : 0;
+    const isAhead = actualNow > targetNow;
+    summaryEl.innerHTML = `
+      <div style="padding:10px 12px;background:var(--surface);border-radius:6px;">
+        <div style="font-size:10px;color:var(--light);">목표 (현시점)</div>
+        <div style="font-size:14px;font-weight:500;margin-top:2px;">${targetNow ? fmtFull(targetNow) : '—'}</div>
       </div>
-      <div style="font-size:9px;color:${isCur?'var(--text)':'var(--light)'};font-weight:${isCur?600:400};">${i+1}월</div>
-    </div>`;
-  }).join('');
+      <div style="padding:10px 12px;background:${isAhead?'#EAF3DE':'#FBF0EF'};border-radius:6px;">
+        <div style="font-size:10px;color:${isAhead?'#27500A':'#A3534C'};">실적 (현시점)</div>
+        <div style="font-size:14px;font-weight:600;color:${isAhead?'#27500A':'#A3534C'};margin-top:2px;">${actualNow ? fmtFull(actualNow) : '—'}</div>
+      </div>
+      <div style="padding:10px 12px;background:#FFFBF1;border-radius:6px;">
+        <div style="font-size:10px;color:#7A5C1E;">연말 예상</div>
+        <div style="font-size:14px;font-weight:600;color:#7A5C1E;margin-top:2px;">${projectedYearEnd?fmtFull(projectedYearEnd):'—'}${projectedPct?` (${projectedPct}%)`:''}</div>
+      </div>`;
+  }
+}
+
+async function loadPlanAnnualTable() {
+  // 월별 상세 테이블 (지출·순수익 포함) — M3 차트 아래에 함께 렌더
+  const s = await getPlanData();
+  const p = s.plan[planYear];
+  const monthly = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {};
+  const now = new Date();
+  const curMonth = now.getFullYear()===planYear ? now.getMonth() : 11;
+
+  // 실적 (channel_sales_log)
+  const chSalesRes = await db.from('channel_sales_log').select('date,amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
+  const actualByMonth = {};
+  (chSalesRes.data||[]).forEach(r => {
+    const m = parseInt((r.date||'').slice(5,7));
+    if (m) actualByMonth[m] = (actualByMonth[m]||0) + (r.amount||0);
+  });
 
   // 지출 데이터 — app_state tax_costs (세무관리 연동)
   const appStateForCost = await getAppState();
@@ -19020,16 +19455,23 @@ async function openPlanMonthlyModal() {
 }
 
 async function savePlanMonthlyModal() {
-  const s = await getPlanData();
-  s.plan[planYear].memos = s.plan[planYear].memos||{};
+  // 입력값 수집
   const monthly = {};
   for(let i=1;i<=12;i++){
-    const t=parseInt($(`pm-target-${i}`)?.value)||0;
-    const a=parseInt($(`pm-actual-${i}`)?.value)||0;
+    const tEl = $(`pm-target-${i}`);
+    const aEl = $(`pm-actual-${i}`);
+    const t = tEl ? (parseInt(tEl.value)||0) : 0;
+    const a = aEl ? (parseInt(aEl.value)||0) : 0;
     if(t||a) monthly[i]={target:t,actual:a};
   }
-  s.plan[planYear].memos.monthly = JSON.stringify(monthly);
-  await setAppState(s);
+  // patchAppState로 안전 저장 (DB fresh read 후 병합)
+  await patchAppState(s => {
+    s.plan = s.plan || {};
+    s.plan[planYear] = s.plan[planYear] || { goals:[], items:[], memos:{}, budget:{}, teamGoals:[] };
+    s.plan[planYear].memos = s.plan[planYear].memos || {};
+    s.plan[planYear].memos.monthly = JSON.stringify(monthly);
+    return s;
+  });
   toast('저장됐어요 ✓');
   closeModal('plan-monthly-modal');
   loadPlanAnnual();
