@@ -477,17 +477,17 @@ a { text-decoration:none; color:inherit; }
 .nbadge-dark { background:var(--text); color:#fff; }
 .nbadge-gray { background:var(--surface2); color:var(--muted); }
 
-/* D-day 카드 */
-.dday-card { background:var(--text); border-radius:var(--rlg); padding:22px; }
-.dday-tag { display:inline-block; background:rgba(255,255,255,.12); color:rgba(255,255,255,.6); font-size:10px; padding:3px 10px; border-radius:var(--rpill); margin-bottom:14px; }
+/* D-day 카드 — 핑크 배경 + 흰색 강조 */
+.dday-card { background:#E59A9A; border-radius:var(--rlg); padding:22px; }
+.dday-tag { display:inline-block; background:rgba(255,255,255,.2); color:#fff; font-size:10px; padding:3px 10px; border-radius:var(--rpill); margin-bottom:14px; }
 .dday-title { font-size:15px; font-weight:500; color:#fff; line-height:1.45; margin-bottom:4px; }
-.dday-range { font-size:12px; color:rgba(255,255,255,.4); margin-bottom:16px; }
-.dday-lbl   { font-size:12px; color:rgba(255,255,255,.4); margin-bottom:2px; }
+.dday-range { font-size:12px; color:#fff; opacity:.85; margin-bottom:16px; }
+.dday-lbl   { font-size:12px; color:#fff; opacity:.85; margin-bottom:2px; }
 .dday-num   { font-size:44px; font-weight:500; color:#fff; letter-spacing:-.04em; line-height:1.1; }
 .dday-prog-wrap { margin-top:16px; }
-.dday-prog-row  { display:flex; justify-content:space-between; font-size:11px; color:rgba(255,255,255,.35); margin-bottom:7px; }
-.dday-prog-bar  { height:3px; background:rgba(255,255,255,.12); border-radius:2px; }
-.dday-prog-fill { height:3px; background:rgba(255,255,255,.7); border-radius:2px; transition:width .6s; }
+.dday-prog-row  { display:flex; justify-content:space-between; font-size:11px; color:#fff; opacity:.8; margin-bottom:7px; }
+.dday-prog-bar  { height:3px; background:rgba(255,255,255,.25); border-radius:2px; }
+.dday-prog-fill { height:3px; background:#fff; border-radius:2px; transition:width .6s; }
 
 /* ═══════════════════════════════════════
    TASKS PAGE
@@ -787,7 +787,7 @@ a { text-decoration:none; color:inherit; }
       <div class="tb-nav-item" data-page="production">생산</div>
       <div class="tb-nav-item" data-page="ops">운영</div>
       <div class="tb-nav-item" data-page="content">콘텐츠</div>
-      <div class="tb-nav-item" data-page="marketing">마케팅</div>
+      <div class="tb-nav-item" data-page="marketing" style="display:none;">마케팅</div>
       <div class="tb-nav-item" data-page="lineup">라인업</div>
     </nav>
     <div class="tb-right">
@@ -879,24 +879,24 @@ a { text-decoration:none; color:inherit; }
           <div class="card" id="dash-rev-card" style="background:#1c1e26;color:#fff;padding:24px 28px;grid-column:1/-1;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
               <div>
-                <div style="font-size:11px;opacity:.6;letter-spacing:1.5px;margin-bottom:4px;">MONTHLY REVENUE</div>
-                <div style="font-size:14px;opacity:.8;" id="dash-rev-month">—</div>
+                <div style="font-size:11px;color:#fff;opacity:.75;letter-spacing:1.5px;margin-bottom:4px;">MONTHLY REVENUE</div>
+                <div style="font-size:14px;color:#fff;opacity:.9;" id="dash-rev-month">—</div>
               </div>
-              <div style="font-size:11px;opacity:.7;cursor:pointer;" onclick="nav('sales')">판매 페이지 ↗</div>
+              <div style="font-size:11px;color:#fff;opacity:.85;cursor:pointer;" onclick="nav('sales')">판매 페이지 ↗</div>
             </div>
             <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:30px;align-items:end;">
               <div>
-                <div style="font-size:42px;font-weight:600;line-height:1;letter-spacing:-1px;" id="dash-rev-val">—</div>
+                <div style="font-size:42px;font-weight:600;line-height:1;letter-spacing:-1px;color:#fff;" id="dash-rev-val">—</div>
                 <div style="display:flex;align-items:baseline;gap:18px;margin-top:12px;flex-wrap:wrap;">
-                  <div><div style="font-size:10px;opacity:.6;margin-bottom:2px;">전월 동기간 대비</div><div style="font-size:16px;font-weight:500;" id="dash-rev-mom">—</div></div>
-                  <div><div style="font-size:10px;opacity:.6;margin-bottom:2px;">오늘 매출</div><div style="font-size:16px;font-weight:500;" id="dash-rev-today">—</div></div>
-                  <div><div style="font-size:10px;opacity:.6;margin-bottom:2px;">일평균</div><div style="font-size:16px;font-weight:500;" id="dash-rev-avg">—</div></div>
+                  <div><div style="font-size:10px;color:#fff;opacity:.75;margin-bottom:2px;">전월 동기간 대비</div><div style="font-size:16px;font-weight:500;color:#fff;" id="dash-rev-mom">—</div></div>
+                  <div><div style="font-size:10px;color:#fff;opacity:.75;margin-bottom:2px;">어제 매출</div><div style="font-size:16px;font-weight:500;color:#fff;" id="dash-rev-today">—</div></div>
+                  <div><div style="font-size:10px;color:#fff;opacity:.75;margin-bottom:2px;">일평균</div><div style="font-size:16px;font-weight:500;color:#fff;" id="dash-rev-avg">—</div></div>
                 </div>
                 <div id="dash-sales-alert" style="display:none;font-size:11px;color:#FFB8B0;margin-top:10px;"></div>
               </div>
               <div>
-                <div style="font-size:10px;opacity:.6;margin-bottom:8px;">채널별</div>
-                <div id="dash-rev-channels" style="display:flex;flex-direction:column;gap:5px;font-size:12px;">—</div>
+                <div style="font-size:10px;color:#fff;opacity:.75;margin-bottom:8px;">채널별</div>
+                <div id="dash-rev-channels" style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#fff;">—</div>
               </div>
             </div>
           </div>
@@ -940,7 +940,10 @@ a { text-decoration:none; color:inherit; }
                 <div><div class="card-title">최근 14일 매출 추이</div><div class="card-sub">일별 (₩, 자사몰+카카오+스마트스토어)</div></div>
                 <div class="card-link" onclick="nav('sales')">↗</div>
               </div>
-              <div style="position:relative;height:130px;margin-top:8px;"><canvas id="dash-trend-chart" style="width:100%;height:100%;"></canvas></div>
+              <div style="position:relative;height:160px;margin-top:8px;" id="dash-trend-wrap">
+                <svg id="dash-trend-svg" style="width:100%;height:100%;overflow:visible;"></svg>
+                <div id="dash-trend-tooltip" style="position:absolute;display:none;background:#1c1e26;color:#fff;padding:7px 10px;border-radius:6px;font-size:11px;line-height:1.4;pointer-events:none;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.15);"></div>
+              </div>
               <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--light);margin-top:4px;" id="dash-trend-xlbl"></div>
             </div>
 
@@ -1541,6 +1544,7 @@ a { text-decoration:none; color:inherit; }
           </div>
           <div class="page-tabs" id="content-tabs">
             <div class="page-tab on" onclick="contentSetTab('calendar',this)">피드</div>
+            <div class="page-tab"   onclick="contentSetTab('remake',this)">🎬 리메이크 보드</div>
             <div class="page-tab"   onclick="contentSetTab('stats',this)">콘텐츠 실적</div>
             <div class="page-tab"   onclick="contentSetTab('season',this)">시즌 이슈</div>
           </div>
@@ -1720,21 +1724,89 @@ a { text-decoration:none; color:inherit; }
           </div>
         </div>
 
+        <!-- 🎬 리메이크 보드 탭 -->
+        <div id="content-tab-remake" style="display:none;">
+          <!-- 상단: 시즌 이슈 요약 + 릴스 아이디어 (레퍼런스) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div class="card" style="padding:14px 18px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-size:13px;font-weight:600;">시즌 이슈 · 이벤트 (이번 달)</div>
+                <div style="font-size:11px;color:var(--light);cursor:pointer;" onclick="contentSetTab('season',null)">자세히 →</div>
+              </div>
+              <div id="remake-season-summary" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+            </div>
+            <div class="card" style="padding:14px 18px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-size:13px;font-weight:600;">💡 릴스 아이디어 (레퍼런스)</div>
+                <button class="f-btn f-btn-cancel" style="font-size:11px;padding:3px 10px;" onclick="openReelsIdeaModal(null)">+ 추가</button>
+              </div>
+              <div id="reels-ideas-list" style="display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;"></div>
+            </div>
+          </div>
+
+          <!-- 메인: 리메이크 워크플로우 칸반 -->
+          <div class="card">
+            <div class="card-head">
+              <div><div class="card-title">🎬 릴스 리메이크 워크플로우</div><div class="card-sub">드래그하여 단계 이동</div></div>
+              <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 12px;" onclick="openRemakeCardModal(null,'hit')">+ 히트 콘텐츠 등록</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:6px;">
+              <!-- 1열: 히트 라이브러리 -->
+              <div data-remake-col="hit">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--surface2);border-radius:6px 6px 0 0;font-size:12px;font-weight:500;">
+                  <span>🔥 히트 라이브러리</span>
+                  <span id="remake-cnt-hit" style="font-size:10px;color:var(--light);">0</span>
+                </div>
+                <div id="remake-col-hit" class="remake-col" style="border:0.5px solid var(--surface2);border-top:none;border-radius:0 0 6px 6px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:200px;"></div>
+              </div>
+              <!-- 2열: 리메이크 작업중 -->
+              <div data-remake-col="wip">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#FDF3E0;color:#7A5C1E;border-radius:6px 6px 0 0;font-size:12px;font-weight:500;">
+                  <span>🛠 리메이크 작업중</span>
+                  <span id="remake-cnt-wip" style="font-size:10px;opacity:.8;">0</span>
+                </div>
+                <div id="remake-col-wip" class="remake-col" style="border:0.5px solid #FDF3E0;border-top:none;border-radius:0 0 6px 6px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:200px;"></div>
+              </div>
+              <!-- 3열: 발행 완료 -->
+              <div data-remake-col="done">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#EAF3DE;color:#27500A;border-radius:6px 6px 0 0;font-size:12px;font-weight:500;">
+                  <span>✓ 발행 완료</span>
+                  <span id="remake-cnt-done" style="font-size:10px;opacity:.8;">0</span>
+                </div>
+                <div id="remake-col-done" class="remake-col" style="border:0.5px solid #EAF3DE;border-top:none;border-radius:0 0 6px 6px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:200px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 시즌 이슈 탭 -->
         <div id="content-tab-season" style="display:none;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div class="card">
               <div class="card-head">
-                <div class="card-title" id="content-season-title">이번 달 시즌 이슈</div>
-                <div class="card-sub">콘텐츠 기회</div>
+                <div><div class="card-title" id="content-season-title">이번 달 시즌 이슈</div><div class="card-sub">기념일 + 이벤트 아이디어</div></div>
               </div>
+              <!-- 기념일 -->
+              <div style="font-size:10px;color:var(--light);letter-spacing:.5px;font-weight:500;margin:6px 0 5px;">📅 기념일 · 절기</div>
               <div id="content-season-list"></div>
+              <!-- 이벤트 아이디어 -->
+              <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 5px;">
+                <div style="font-size:10px;color:var(--light);letter-spacing:.5px;font-weight:500;">💡 이달 이벤트 아이디어</div>
+                <button class="f-btn f-btn-cancel" style="font-size:10px;padding:2px 8px;" onclick="openSeasonIdeaModal(null,'current')">+ 추가</button>
+              </div>
+              <div id="content-season-ideas" style="display:flex;flex-direction:column;gap:5px;"></div>
             </div>
             <div class="card">
               <div class="card-head">
-                <div class="card-title" id="content-season-next-title">다음 달 시즌 이슈</div>
+                <div><div class="card-title" id="content-season-next-title">다음 달 시즌 이슈</div><div class="card-sub">미리 준비할 것들</div></div>
               </div>
+              <div style="font-size:10px;color:var(--light);letter-spacing:.5px;font-weight:500;margin:6px 0 5px;">📅 기념일 · 절기</div>
               <div id="content-season-next-list"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 5px;">
+                <div style="font-size:10px;color:var(--light);letter-spacing:.5px;font-weight:500;">💡 이벤트 아이디어</div>
+                <button class="f-btn f-btn-cancel" style="font-size:10px;padding:2px 8px;" onclick="openSeasonIdeaModal(null,'next')">+ 추가</button>
+              </div>
+              <div id="content-season-next-ideas" style="display:flex;flex-direction:column;gap:5px;"></div>
             </div>
           </div>
         </div>
@@ -3712,6 +3784,110 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ═══ 리메이크 카드 모달 ═══ -->
+<div class="modal-overlay" id="remake-card-modal" onclick="if(event.target===this)closeModal('remake-card-modal')">
+  <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind" id="remake-card-modal-kind">히트 콘텐츠 등록</div>
+      <div class="modal-bar-right">
+        <div class="mbtn" id="remake-card-del-btn" onclick="deleteRemakeCard()" style="display:none;">🗑</div>
+        <div class="mbtn" onclick="closeModal('remake-card-modal')">✕</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input class="modal-title-inp" id="remake-card-title" placeholder="콘텐츠 제목 (예: 몽모 빨래 챌린지)">
+      <div class="modal-props" style="margin-top:14px;">
+        <div class="prop-row">
+          <div class="prop-icon">📍</div><div class="prop-label">단계</div>
+          <div class="prop-val">
+            <div class="st-pills" id="remake-stage-pills">
+              <div class="st-pill on" data-stage="hit"  onclick="setRemakeStage('hit',this)">🔥 히트</div>
+              <div class="st-pill"    data-stage="wip"  onclick="setRemakeStage('wip',this)">🛠 작업중</div>
+              <div class="st-pill"    data-stage="done" onclick="setRemakeStage('done',this)">✓ 완료</div>
+            </div>
+          </div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🔗</div><div class="prop-label">릴스 URL</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="remake-card-url" placeholder="https://instagram.com/reel/..."></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">👁</div><div class="prop-label">조회수</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="remake-card-views" placeholder="예: 280000 또는 28만"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">❤</div><div class="prop-label">좋아요</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="remake-card-likes" placeholder="예: 1200 또는 1.2k"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">📝</div><div class="prop-label">원본 콘텐츠</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="remake-card-origin" placeholder="리메이크인 경우 원본 제목"></div>
+        </div>
+      </div>
+      <div class="modal-memo-lbl" style="margin-top:14px;">메모</div>
+      <textarea class="modal-textarea" id="remake-card-memo" placeholder="기획 메모, 진행 상황 등"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="f-btn f-btn-cancel" onclick="closeModal('remake-card-modal')">취소</button>
+      <button class="f-btn f-btn-save" onclick="saveRemakeCard()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 릴스 아이디어 모달 ═══ -->
+<div class="modal-overlay" id="reels-idea-modal" onclick="if(event.target===this)closeModal('reels-idea-modal')">
+  <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind" id="reels-idea-modal-kind">릴스 아이디어 등록</div>
+      <div class="modal-bar-right">
+        <div class="mbtn" id="reels-idea-del-btn" onclick="deleteReelsIdea()" style="display:none;">🗑</div>
+        <div class="mbtn" onclick="closeModal('reels-idea-modal')">✕</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input class="modal-title-inp" id="reels-idea-title" placeholder="아이디어 제목 (예: 몽모랑 카페가기 V-log)">
+      <div class="modal-props" style="margin-top:14px;">
+        <div class="prop-row">
+          <div class="prop-icon">🔗</div><div class="prop-label">레퍼런스 URL</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="reels-idea-ref" placeholder="https://instagram.com/... 또는 메모"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🏷</div><div class="prop-label">출처</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="reels-idea-source" placeholder="예: @cafe_account 또는 자체 기획"></div>
+        </div>
+      </div>
+      <div class="modal-memo-lbl" style="margin-top:14px;">메모</div>
+      <textarea class="modal-textarea" id="reels-idea-memo" placeholder="기획 포인트, 콘셉트, 트렌드 BGM 등"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="f-btn f-btn-cancel" onclick="closeModal('reels-idea-modal')">취소</button>
+      <button class="f-btn f-btn-save" onclick="saveReelsIdea()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 시즌 이벤트 아이디어 모달 ═══ -->
+<div class="modal-overlay" id="season-idea-modal" onclick="if(event.target===this)closeModal('season-idea-modal')">
+  <div class="modal" style="max-width:440px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind" id="season-idea-modal-kind">이벤트 아이디어 등록</div>
+      <div class="modal-bar-right">
+        <div class="mbtn" id="season-idea-del-btn" onclick="deleteSeasonIdea()" style="display:none;">🗑</div>
+        <div class="mbtn" onclick="closeModal('season-idea-modal')">✕</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input class="modal-title-inp" id="season-idea-title" placeholder="아이디어 제목 (예: 장마 시작 - 우비 몽모)">
+      <div class="modal-memo-lbl" style="margin-top:14px;">설명</div>
+      <textarea class="modal-textarea" id="season-idea-memo" placeholder="콘셉트, 실행 방향 메모"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="f-btn f-btn-cancel" onclick="closeModal('season-idea-modal')">취소</button>
+      <button class="f-btn f-btn-save" onclick="saveSeasonIdea()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 운영: 일정 등록/편집 모달 ═══ -->
 <div class="modal-overlay" id="ops-event-modal" onclick="if(event.target===this)closeModal('ops-event-modal')">
   <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
@@ -4880,7 +5056,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.6.5</div>
+<div id="version">v5.6.6</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5208,7 +5384,7 @@ async function resetMemberColors() {
 /* ═══════════════════════════════════════
    ROUTER (hash 기반)
 ═══════════════════════════════════════ */
-const VALID_PAGES = ['dashboard','tasks','project','inventory','sales','production','ops','content','marketing','lineup','notice','assets','attendance','plan','revenue','tax'];
+const VALID_PAGES = ['dashboard','tasks','project','inventory','sales','production','ops','content','lineup','notice','assets','attendance','plan','revenue','tax'];
 
 function nav(page, sub='') {
   const hash = sub ? `#${page}/${encodeURIComponent(sub)}` : `#${page}`;
@@ -5241,7 +5417,8 @@ function renderPage(page, sub='') {
   if(page==='production') initProductionPage();
   if(page==='ops')        initOpsPage();
   if(page==='content')    initContentPage();
-  if(page==='marketing')  initMktPage();
+  // 마케팅 탭은 제거됨
+  // if(page==='marketing')  initMktPage();
   window.currentPage = page;
   if(page==='lineup')     initLineupPage();
   if(page==='assets')     initAssetsPage();
@@ -5731,6 +5908,8 @@ async function loadDashRevenue() {
     const curRows = curData || [];
     console.log(`[loadDashRevenue] ${month} 데이터 ${curRows.length}건`, curRows.slice(0,3));
     const total = curRows.reduce((s,r)=>s+(r.amount||0),0);
+    const yesterday = dateStr(new Date(Date.now()-86400000));
+    const yesterdayAmt = curRows.filter(r=>r.date===yesterday).reduce((s,r)=>s+(r.amount||0),0);
     const todayAmt = curRows.filter(r=>r.date===today).reduce((s,r)=>s+(r.amount||0),0);
 
     // 전월 데이터 (동기간 비교: 1일 ~ 오늘 일자)
@@ -5763,7 +5942,7 @@ async function loadDashRevenue() {
 
     if ($('dash-rev-val'))    $('dash-rev-val').textContent   = total ? '₩'+total.toLocaleString() : '₩0';
     if ($('dash-rev-month'))  $('dash-rev-month').textContent = `${yyyy}년 ${parseInt(mm)}월 누계`;
-    if ($('dash-rev-today'))  $('dash-rev-today').textContent = todayAmt ? '₩'+todayAmt.toLocaleString() : '₩0';
+    if ($('dash-rev-today'))  $('dash-rev-today').textContent = yesterdayAmt ? '₩'+yesterdayAmt.toLocaleString() : '₩0';
     if ($('dash-rev-avg'))    $('dash-rev-avg').textContent   = avg ? '₩'+avg.toLocaleString() : '₩0';
     if ($('dash-rev-mom'))   {
       $('dash-rev-mom').textContent = momLabel;
@@ -5777,18 +5956,18 @@ async function loadDashRevenue() {
         : '<div style="opacity:.6;">데이터가 없어요</div>';
     }
 
-    // 매출 이상 알림
+    // 매출 이상 알림 (어제 매출이 그제 대비 절반 이하 또는 3일 연속 0원)
     const alertEl = $('dash-sales-alert');
     if (alertEl) {
-      const yesterday = dateStr(new Date(Date.now()-86400000));
-      const ystdAmt = curRows.filter(r=>r.date===yesterday).reduce((s,r)=>s+(r.amount||0),0);
-      const zeroDays = [0,1,2].every(i => {
+      const dayBefore = dateStr(new Date(Date.now()-2*86400000));
+      const dbAmt = curRows.filter(r=>r.date===dayBefore).reduce((s,r)=>s+(r.amount||0),0);
+      const zeroDays = [1,2,3].every(i => {
         const d = dateStr(new Date(Date.now()-i*86400000));
         return curRows.filter(r=>r.date===d).reduce((s,r)=>s+(r.amount||0),0) === 0;
       });
-      if (ystdAmt > 0 && todayAmt < ystdAmt * 0.5 && todayAmt > 0) {
+      if (dbAmt > 0 && yesterdayAmt < dbAmt * 0.5 && yesterdayAmt > 0) {
         alertEl.style.display = '';
-        alertEl.textContent = `⚠ 오늘 매출이 전일 대비 ${Math.round((1-todayAmt/ystdAmt)*100)}% 감소`;
+        alertEl.textContent = `⚠ 어제 매출이 그제 대비 ${Math.round((1-yesterdayAmt/dbAmt)*100)}% 감소`;
       } else if (zeroDays) {
         alertEl.style.display = '';
         alertEl.textContent = '⚠ 최근 3일간 매출 데이터가 없어요 — 입력 확인 필요';
@@ -5806,40 +5985,124 @@ async function loadDashRevenue() {
 }
 
 function renderDashTrendChart(curRows, prevRows) {
-  const canvas = $('dash-trend-chart'); if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.clientWidth, H = canvas.clientHeight;
-  // 디바이스 픽셀 비 고려
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = W*dpr; canvas.height = H*dpr;
-  ctx.scale(dpr,dpr);
-  ctx.clearRect(0,0,W,H);
+  const svg = $('dash-trend-svg'); if (!svg) return;
+  const wrap = $('dash-trend-wrap');
+  const tooltip = $('dash-trend-tooltip');
 
   // 최근 14일 매출 합산
   const today = new Date(); today.setHours(0,0,0,0);
+  const allRows = curRows.concat(prevRows||[]);
   const days = [];
+  const DOW = ['일','월','화','수','목','금','토'];
   for (let i=13; i>=0; i--) {
     const d = new Date(today.getTime() - i*86400000);
     const dStr = dateStr(d);
-    const amt  = (curRows.concat(prevRows)).filter(r=>r.date===dStr).reduce((s,r)=>s+(r.amount||0),0);
-    days.push({ date:dStr, amt, day:d.getDate() });
+    const amt  = allRows.filter(r=>r.date===dStr).reduce((s,r)=>s+(r.amount||0),0);
+    days.push({ date:dStr, amt, day:d.getDate(), dow:DOW[d.getDay()], dateObj:new Date(d) });
   }
-  const max = Math.max(...days.map(x=>x.amt), 1);
-  const bw  = (W - 10) / days.length;
-  const padTop = 8;
 
-  days.forEach((d,i) => {
-    const h = max ? (d.amt / max) * (H - padTop - 18) : 0;
-    const x = 5 + i*bw;
-    const y = H - 18 - h;
-    ctx.fillStyle = i === days.length-1 ? '#1c1e26' : '#E4E1DC';
-    ctx.fillRect(x+1, y, Math.max(bw-3, 2), h);
+  const W = wrap.clientWidth || 400;
+  const H = 160;
+  const padL = 40, padR = 8, padT = 8, padB = 22;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+
+  const max = Math.max(...days.map(x=>x.amt), 1);
+  // 적절한 Y축 단위 (1.4M / 700k / 0 같이)
+  const niceMax = (() => {
+    if (max >= 1000000) return Math.ceil(max/100000) * 100000;
+    if (max >= 100000)  return Math.ceil(max/50000) * 50000;
+    if (max >= 10000)   return Math.ceil(max/10000) * 10000;
+    return Math.max(max, 10000);
+  })();
+  const avg = days.reduce((s,d)=>s+d.amt,0) / days.length;
+
+  const fmtY = v => {
+    if (v >= 1000000) return (v/1000000).toFixed(1).replace(/\.0$/,'') + 'M';
+    if (v >= 1000) return Math.round(v/1000) + 'k';
+    return String(v);
+  };
+  const fmtFull = v => '₩' + (v||0).toLocaleString();
+
+  let html = '';
+
+  // 가로 가이드 + Y축 라벨 (3단계: 0 / 중간 / 최대)
+  const yVals = [niceMax, niceMax/2, 0];
+  yVals.forEach((v,i) => {
+    const y = padT + (chartH * i / 2);
+    html += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#F0EDE8" stroke-width="0.5" stroke-dasharray="${i===2?'0':'2 3'}"/>`;
+    html += `<text x="${padL-6}" y="${y+3}" text-anchor="end" font-size="9" fill="#999" font-family="var(--font)">${fmtY(v)}</text>`;
   });
-  // x축 라벨 갱신
-  const xlbl = $('dash-trend-xlbl');
-  if (xlbl) {
-    xlbl.innerHTML = `<span>${days[0].day}일</span><span>${days[7].day}일</span><span>오늘</span>`;
+
+  // 평균선
+  if (avg > 0) {
+    const yAvg = padT + chartH - (avg / niceMax) * chartH;
+    html += `<line x1="${padL}" y1="${yAvg}" x2="${W-padR}" y2="${yAvg}" stroke="#C4A96A" stroke-width="1" stroke-dasharray="3 3"/>`;
+    html += `<text x="${W-padR-2}" y="${yAvg-3}" text-anchor="end" font-size="9" fill="#C4A96A" font-family="var(--font)">평균 ${fmtY(avg)}</text>`;
   }
+
+  // 막대
+  const bw = chartW / days.length;
+  days.forEach((d, i) => {
+    const x = padL + i*bw + 2;
+    const h = niceMax ? (d.amt / niceMax) * chartH : 0;
+    const y = padT + chartH - h;
+    const isToday = i === days.length - 1;
+    const fill = isToday ? '#1c1e26' : '#D5D2CD';
+    html += `<rect x="${x}" y="${y}" width="${bw-4}" height="${h}" fill="${fill}" rx="2" data-idx="${i}" class="trend-bar" style="cursor:pointer;transition:fill .15s;"/>`;
+    // 호버 영역 (전체 높이) - 막대가 0이어도 호버 가능
+    html += `<rect x="${padL + i*bw}" y="${padT}" width="${bw}" height="${chartH}" fill="transparent" data-idx="${i}" class="trend-hover" style="cursor:pointer;"/>`;
+  });
+
+  // X축 라벨 (5개 균등)
+  [0, 4, 8, 11, 13].forEach(i => {
+    const d = days[i];
+    if (!d) return;
+    const x = padL + i*bw + bw/2;
+    const lbl = i === 13 ? '오늘' : `${d.dateObj.getMonth()+1}/${d.day}`;
+    html += `<text x="${x}" y="${H-6}" text-anchor="middle" font-size="9" fill="#999" font-family="var(--font)">${lbl}</text>`;
+  });
+
+  svg.innerHTML = html;
+
+  // 호버 처리
+  const showTooltip = (idx, evt) => {
+    const d = days[idx];
+    if (!d) return;
+    const dateStr = `${d.dateObj.getFullYear()}-${String(d.dateObj.getMonth()+1).padStart(2,'0')}-${String(d.day).padStart(2,'0')} (${d.dow})`;
+    tooltip.innerHTML = `<div style="opacity:.7;font-size:10px;margin-bottom:2px;">${dateStr}</div><div style="font-weight:600;font-size:12px;">${fmtFull(d.amt)}</div>`;
+    tooltip.style.display = 'block';
+    const wrapRect = wrap.getBoundingClientRect();
+    const px = (padL + idx*bw + bw/2) * (wrapRect.width / W);
+    tooltip.style.left = Math.max(0, Math.min(wrapRect.width - tooltip.offsetWidth, px - tooltip.offsetWidth/2)) + 'px';
+    tooltip.style.top  = '0px';
+
+    // 막대 강조
+    svg.querySelectorAll('.trend-bar').forEach(b => {
+      const bi = +b.dataset.idx;
+      b.setAttribute('fill', bi === idx ? '#1c1e26' : (bi === days.length-1 ? '#1c1e26' : '#D5D2CD'));
+      b.setAttribute('opacity', bi === idx ? '1' : (bi === days.length-1 ? '1' : '.7'));
+    });
+  };
+  const hideTooltip = () => {
+    tooltip.style.display = 'none';
+    svg.querySelectorAll('.trend-bar').forEach(b => {
+      const bi = +b.dataset.idx;
+      b.setAttribute('fill', bi === days.length-1 ? '#1c1e26' : '#D5D2CD');
+      b.setAttribute('opacity', '1');
+    });
+  };
+  svg.querySelectorAll('.trend-hover, .trend-bar').forEach(el => {
+    el.addEventListener('mouseenter', e => showTooltip(+el.dataset.idx, e));
+    el.addEventListener('mouseleave', hideTooltip);
+  });
+
+  // 구버전 호환: dash-trend-xlbl이 있으면 비움 (SVG에 이미 그림)
+  const xlbl = $('dash-trend-xlbl');
+  if (xlbl) xlbl.innerHTML = '';
 }
 
 function loadDashDday() {
@@ -14879,17 +15142,368 @@ async function initContentPage() {
 
 function contentSetTab(tab, el) {
   document.querySelectorAll('#content-tabs .page-tab').forEach(t=>t.classList.remove('on'));
-  el.classList.add('on');
-  ['calendar','stats','season'].forEach(t=>{
+  // el이 null이면 (다른 탭에서 코드로 이동) 해당 탭 찾아서 on 처리
+  if (el) {
+    el.classList.add('on');
+  } else {
+    const tabIdx = ['calendar','remake','stats','season'].indexOf(tab);
+    const tabs = document.querySelectorAll('#content-tabs .page-tab');
+    if (tabs[tabIdx]) tabs[tabIdx].classList.add('on');
+  }
+  ['calendar','remake','stats','season'].forEach(t=>{
     const d = $(`content-tab-${t}`);
     if (d) d.style.display = t===tab ? '' : 'none';
   });
   const addBtn = $('content-add-btn');
   if (addBtn) addBtn.style.display = tab==='calendar' ? '' : 'none';
   if(tab==='calendar') loadContentCal();
+  if(tab==='remake')   loadRemakeBoard();
   if(tab==='stats')    loadContentStats();
   if(tab==='season')   loadContentSeason();
 }
+
+/* ─────────────────────────────────────
+   🎬 리메이크 보드 (워크플로우 칸반)
+   app_state.remake_cards: [{id, title, stage, url, views, likes, origin, memo, createdAt, updatedAt}]
+─────────────────────────────────────── */
+
+async function loadRemakeBoard() {
+  try {
+    const s = await getAppState();
+    const cards = s.remake_cards || [];
+    const STAGES = ['hit','wip','done'];
+    STAGES.forEach(stage => {
+      const list = cards.filter(c => c.stage === stage);
+      const col = $(`remake-col-${stage}`);
+      const cnt = $(`remake-cnt-${stage}`);
+      if (cnt) cnt.textContent = list.length;
+      if (!col) return;
+      col.innerHTML = list.length
+        ? list.map(c => remakeCardHtml(c)).join('')
+        : `<div style="padding:24px 8px;text-align:center;font-size:11px;color:var(--light);">${stage==='hit'?'+ 히트 콘텐츠 등록':stage==='wip'?'카드를 여기로 드래그':'발행 완료한 카드'}</div>`;
+    });
+    initRemakeBoardDrag();
+    loadRemakeSeasonSummary();
+    loadReelsIdeas();
+  } catch(e) { console.error('loadRemakeBoard', e); }
+}
+
+function remakeCardHtml(c) {
+  const isHit  = c.stage === 'hit';
+  const isWip  = c.stage === 'wip';
+  const isDone = c.stage === 'done';
+  const bg = isHit ? 'var(--surface)' : isWip ? '#FFFBF1' : '#F7FBEF';
+  const bd = isHit ? 'var(--border)' : isWip ? '#FDF3E0' : '#EAF3DE';
+  const viewsLikes = (c.views || c.likes)
+    ? `👁 ${c.views||'-'} · ❤ ${c.likes||'-'}`
+    : '';
+  const stageMeta = isWip ? (c.memo ? `📝 ${oneLine(c.memo).slice(0,30)}` : '🛠 작업중')
+                : isDone ? '✓ 발행 완료'
+                : '';
+  return `<div class="remake-card" draggable="true" data-card-id="${c.id}" data-stage="${c.stage}"
+    style="background:${bg};border:0.5px solid ${bd};border-radius:5px;padding:9px 11px;cursor:grab;user-select:none;"
+    onclick="openRemakeCardModal('${c.id}')">
+    <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.title||'(제목 없음)')}</div>
+    ${viewsLikes ? `<div style="font-size:10px;color:var(--light);margin-top:3px;">${viewsLikes}</div>` : ''}
+    ${c.origin ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">원본: ${escapeHtml(c.origin)}</div>` : ''}
+    ${stageMeta && !isHit ? `<div style="font-size:10px;color:${isWip?'#7A5C1E':'#27500A'};margin-top:3px;">${escapeHtml(stageMeta)}</div>` : ''}
+    ${c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#185FA5;margin-top:3px;display:inline-block;">원본 ↗</a>` : ''}
+  </div>`;
+}
+
+function initRemakeBoardDrag() {
+  let dragId = null;
+  document.querySelectorAll('.remake-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      dragId = card.dataset.cardId;
+      card.style.opacity = '.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.style.opacity = '';
+      dragId = null;
+    });
+  });
+  document.querySelectorAll('.remake-col').forEach(col => {
+    col.addEventListener('dragover', e => {
+      e.preventDefault();
+      col.style.background = 'rgba(0,0,0,.03)';
+    });
+    col.addEventListener('dragleave', () => { col.style.background = ''; });
+    col.addEventListener('drop', async e => {
+      e.preventDefault();
+      col.style.background = '';
+      if (!dragId) return;
+      const newStage = col.id.replace('remake-col-','');
+      await patchAppState(s => {
+        s.remake_cards = s.remake_cards || [];
+        const c = s.remake_cards.find(x=>x.id===dragId);
+        if (c) { c.stage = newStage; c.updatedAt = new Date().toISOString(); }
+        return s;
+      });
+      loadRemakeBoard();
+    });
+  });
+}
+
+let _remakeCardEditId = null;
+let _remakeCardStage  = 'hit';
+
+async function openRemakeCardModal(id, defaultStage='hit') {
+  _remakeCardEditId = id;
+  _remakeCardStage  = defaultStage;
+  $('remake-card-modal-kind').textContent = id ? '카드 편집' : '히트 콘텐츠 등록';
+  $('remake-card-del-btn').style.display = id ? 'flex' : 'none';
+  $('remake-card-title').value  = '';
+  $('remake-card-url').value    = '';
+  $('remake-card-views').value  = '';
+  $('remake-card-likes').value  = '';
+  $('remake-card-origin').value = '';
+  $('remake-card-memo').value   = '';
+  applyRemakeStagePills();
+
+  if (id) {
+    const s = await getAppState();
+    const c = (s.remake_cards||[]).find(x=>x.id===id);
+    if (c) {
+      $('remake-card-title').value  = c.title  || '';
+      $('remake-card-url').value    = c.url    || '';
+      $('remake-card-views').value  = c.views  || '';
+      $('remake-card-likes').value  = c.likes  || '';
+      $('remake-card-origin').value = c.origin || '';
+      $('remake-card-memo').value   = c.memo   || '';
+      _remakeCardStage = c.stage || 'hit';
+      applyRemakeStagePills();
+    }
+  }
+  $('remake-card-modal').classList.add('on');
+  setTimeout(()=>$('remake-card-title').focus(), 80);
+}
+
+function setRemakeStage(stage, el) {
+  _remakeCardStage = stage;
+  document.querySelectorAll('#remake-stage-pills .st-pill').forEach(p => p.classList.remove('on'));
+  if (el) el.classList.add('on');
+}
+function applyRemakeStagePills() {
+  document.querySelectorAll('#remake-stage-pills .st-pill').forEach(p => {
+    p.classList.toggle('on', p.dataset.stage === _remakeCardStage);
+  });
+}
+
+async function saveRemakeCard() {
+  const title = $('remake-card-title').value.trim();
+  if (!title) { toast('제목을 입력해주세요'); return; }
+  const data = {
+    title,
+    stage:  _remakeCardStage,
+    url:    $('remake-card-url').value.trim(),
+    views:  $('remake-card-views').value.trim(),
+    likes:  $('remake-card-likes').value.trim(),
+    origin: $('remake-card-origin').value.trim(),
+    memo:   $('remake-card-memo').value.trim(),
+    updatedAt: new Date().toISOString(),
+  };
+  await patchAppState(s => {
+    s.remake_cards = s.remake_cards || [];
+    if (_remakeCardEditId) {
+      const c = s.remake_cards.find(x=>x.id===_remakeCardEditId);
+      if (c) Object.assign(c, data);
+    } else {
+      s.remake_cards.push({ id: 'rmk_'+Date.now(), createdAt: new Date().toISOString(), ...data });
+    }
+    return s;
+  });
+  toast('저장됐어요 ✓');
+  closeModal('remake-card-modal');
+  loadRemakeBoard();
+}
+
+async function deleteRemakeCard() {
+  if (!_remakeCardEditId) return;
+  const ok = await customConfirm('이 카드를 삭제할까요?');
+  if (!ok) return;
+  await patchAppState(s => {
+    s.remake_cards = (s.remake_cards||[]).filter(x=>x.id!==_remakeCardEditId);
+    return s;
+  });
+  toast('삭제됐어요');
+  closeModal('remake-card-modal');
+  loadRemakeBoard();
+}
+
+/* ─────────────────────────────────────
+   💡 릴스 아이디어 (레퍼런스)
+   app_state.reels_ideas: [{id, title, ref, source, memo, createdAt}]
+─────────────────────────────────────── */
+let _reelsIdeaEditId = null;
+
+async function loadReelsIdeas() {
+  try {
+    const s = await getAppState();
+    const list = s.reels_ideas || [];
+    const el = $('reels-ideas-list'); if (!el) return;
+    el.innerHTML = list.length
+      ? list.slice().reverse().map(it => {
+          const refIsUrl = (it.ref||'').startsWith('http');
+          return `<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 0;border-bottom:0.5px solid var(--surface2);cursor:pointer;" onclick="openReelsIdeaModal('${it.id}')">
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(it.title||'')}</span>
+            ${it.source ? `<span style="font-size:10px;color:var(--light);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(it.source)}</span>` : ''}
+            ${refIsUrl ? `<a href="${escapeHtml(it.ref)}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#185FA5;">↗</a>` : ''}
+          </div>`;
+        }).join('')
+      : '<div style="padding:14px 0;text-align:center;font-size:11px;color:var(--light);">아직 아이디어가 없어요</div>';
+  } catch(e) { console.error('loadReelsIdeas', e); }
+}
+
+async function openReelsIdeaModal(id) {
+  _reelsIdeaEditId = id;
+  $('reels-idea-modal-kind').textContent = id ? '아이디어 편집' : '릴스 아이디어 등록';
+  $('reels-idea-del-btn').style.display = id ? 'flex' : 'none';
+  $('reels-idea-title').value  = '';
+  $('reels-idea-ref').value    = '';
+  $('reels-idea-source').value = '';
+  $('reels-idea-memo').value   = '';
+  if (id) {
+    const s = await getAppState();
+    const it = (s.reels_ideas||[]).find(x=>x.id===id);
+    if (it) {
+      $('reels-idea-title').value  = it.title  || '';
+      $('reels-idea-ref').value    = it.ref    || '';
+      $('reels-idea-source').value = it.source || '';
+      $('reels-idea-memo').value   = it.memo   || '';
+    }
+  }
+  $('reels-idea-modal').classList.add('on');
+  setTimeout(()=>$('reels-idea-title').focus(), 80);
+}
+
+async function saveReelsIdea() {
+  const title = $('reels-idea-title').value.trim();
+  if (!title) { toast('제목을 입력해주세요'); return; }
+  const data = {
+    title,
+    ref:    $('reels-idea-ref').value.trim(),
+    source: $('reels-idea-source').value.trim(),
+    memo:   $('reels-idea-memo').value.trim(),
+  };
+  await patchAppState(s => {
+    s.reels_ideas = s.reels_ideas || [];
+    if (_reelsIdeaEditId) {
+      const it = s.reels_ideas.find(x=>x.id===_reelsIdeaEditId);
+      if (it) Object.assign(it, data);
+    } else {
+      s.reels_ideas.push({ id: 'ridea_'+Date.now(), createdAt: new Date().toISOString(), ...data });
+    }
+    return s;
+  });
+  toast('저장됐어요 ✓');
+  closeModal('reels-idea-modal');
+  loadReelsIdeas();
+}
+
+async function deleteReelsIdea() {
+  if (!_reelsIdeaEditId) return;
+  const ok = await customConfirm('이 아이디어를 삭제할까요?');
+  if (!ok) return;
+  await patchAppState(s => {
+    s.reels_ideas = (s.reels_ideas||[]).filter(x=>x.id!==_reelsIdeaEditId);
+    return s;
+  });
+  toast('삭제됐어요');
+  closeModal('reels-idea-modal');
+  loadReelsIdeas();
+}
+
+/* ─────────────────────────────────────
+   💡 시즌 이벤트 아이디어
+   app_state.season_ideas: { '2026-06': [{id, title, memo}], '2026-07': [...] }
+─────────────────────────────────────── */
+let _seasonIdeaEditId = null;
+let _seasonIdeaTarget = 'current'; // 'current' or 'next'
+
+function getSeasonMonthKey(target) {
+  const n = new Date();
+  if (target === 'next') n.setMonth(n.getMonth()+1);
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+}
+
+async function openSeasonIdeaModal(id, target) {
+  _seasonIdeaEditId = id;
+  _seasonIdeaTarget = target || 'current';
+  $('season-idea-modal-kind').textContent = id ? '이벤트 아이디어 편집' : '이벤트 아이디어 등록';
+  $('season-idea-del-btn').style.display = id ? 'flex' : 'none';
+  $('season-idea-title').value = '';
+  $('season-idea-memo').value  = '';
+  if (id) {
+    const s = await getAppState();
+    const key = getSeasonMonthKey(_seasonIdeaTarget);
+    const list = (s.season_ideas||{})[key] || [];
+    const it = list.find(x=>x.id===id);
+    if (it) {
+      $('season-idea-title').value = it.title || '';
+      $('season-idea-memo').value  = it.memo  || '';
+    }
+  }
+  $('season-idea-modal').classList.add('on');
+  setTimeout(()=>$('season-idea-title').focus(), 80);
+}
+
+async function saveSeasonIdea() {
+  const title = $('season-idea-title').value.trim();
+  if (!title) { toast('제목을 입력해주세요'); return; }
+  const memo = $('season-idea-memo').value.trim();
+  const key  = getSeasonMonthKey(_seasonIdeaTarget);
+  await patchAppState(s => {
+    s.season_ideas = s.season_ideas || {};
+    s.season_ideas[key] = s.season_ideas[key] || [];
+    if (_seasonIdeaEditId) {
+      const it = s.season_ideas[key].find(x=>x.id===_seasonIdeaEditId);
+      if (it) { it.title = title; it.memo = memo; }
+    } else {
+      s.season_ideas[key].push({ id:'sidea_'+Date.now(), title, memo });
+    }
+    return s;
+  });
+  toast('저장됐어요 ✓');
+  closeModal('season-idea-modal');
+  loadContentSeason();
+}
+
+async function deleteSeasonIdea() {
+  if (!_seasonIdeaEditId) return;
+  const ok = await customConfirm('이 아이디어를 삭제할까요?');
+  if (!ok) return;
+  const key = getSeasonMonthKey(_seasonIdeaTarget);
+  await patchAppState(s => {
+    s.season_ideas = s.season_ideas || {};
+    s.season_ideas[key] = (s.season_ideas[key]||[]).filter(x=>x.id!==_seasonIdeaEditId);
+    return s;
+  });
+  toast('삭제됐어요');
+  closeModal('season-idea-modal');
+  loadContentSeason();
+}
+
+async function loadRemakeSeasonSummary() {
+  const el = $('remake-season-summary'); if (!el) return;
+  try {
+    const s = await getAppState();
+    const key = getSeasonMonthKey('current');
+    const ideas = (s.season_ideas||{})[key] || [];
+    // 기념일은 기존 시즌 데이터에서 (있다면)
+    const chips = [];
+    ideas.slice(0,6).forEach(it => {
+      chips.push(`<span style="font-size:11px;padding:3px 8px;border-radius:50px;background:#F5F0E8;color:#4A3D30;">💡 ${escapeHtml(it.title)}</span>`);
+    });
+    if (!chips.length) {
+      el.innerHTML = '<div style="font-size:11px;color:var(--light);padding:6px 0;">시즌 이슈 탭에서 이벤트 아이디어를 추가해주세요</div>';
+    } else {
+      el.innerHTML = chips.join('');
+    }
+  } catch(e) { console.error('loadRemakeSeasonSummary', e); }
+}
+
 
 /* ── 타입 범례 ── */
 /* ── 인스타 피드 뷰 ── */
@@ -16874,7 +17488,7 @@ async function loadContentStats() {
 }
 
 /* ── 시즌 이슈 ── */
-function loadContentSeason() {
+async function loadContentSeason() {
   const now   = new Date();
   const month = now.getMonth()+1;
   const next  = month===12 ? 1 : month+1;
@@ -16882,6 +17496,31 @@ function loadContentSeason() {
   $('content-season-next-title').textContent = `${next}월 시즌 이슈`;
   renderSeasonList('content-season-list', SEASON_DATA[month]||[]);
   renderSeasonList('content-season-next-list', SEASON_DATA[next]||[]);
+
+  // 이벤트 아이디어 로드
+  try {
+    const s = await getAppState();
+    const curKey  = getSeasonMonthKey('current');
+    const nextKey = getSeasonMonthKey('next');
+    const curIdeas  = (s.season_ideas||{})[curKey]  || [];
+    const nextIdeas = (s.season_ideas||{})[nextKey] || [];
+    renderSeasonIdeas('content-season-ideas',      curIdeas, 'current');
+    renderSeasonIdeas('content-season-next-ideas', nextIdeas, 'next');
+  } catch(e) { console.error('loadContentSeason ideas:', e); }
+}
+
+function renderSeasonIdeas(elId, ideas, target) {
+  const el = $(elId); if (!el) return;
+  if (!ideas.length) {
+    el.innerHTML = '<div style="padding:6px 0;font-size:11px;color:var(--faint);">+ 추가 버튼으로 등록</div>';
+    return;
+  }
+  el.innerHTML = ideas.map(it => `
+    <div style="background:#F5F0E8;border-radius:5px;padding:7px 10px;font-size:12px;line-height:1.5;cursor:pointer;" onclick="openSeasonIdeaModal('${it.id}','${target}')">
+      <div style="font-weight:500;color:#4A3D30;">${escapeHtml(it.title)}</div>
+      ${it.memo?`<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:pre-wrap;">${escapeHtml(it.memo)}</div>`:''}
+    </div>
+  `).join('');
 }
 
 function renderSeasonList(elId, items) {
