@@ -1541,9 +1541,10 @@ a { text-decoration:none; color:inherit; }
             </div>
           </div>
           <div class="page-tabs" id="content-tabs">
-            <div class="page-tab on" onclick="contentSetTab('season',this)">📅 시즌 이슈</div>
-            <div class="page-tab"   onclick="contentSetTab('remake',this)">🏆 잘된 콘텐츠</div>
+            <div class="page-tab on" onclick="contentSetTab('remake',this)">🏆 잘된 콘텐츠</div>
             <div class="page-tab"   onclick="contentSetTab('idea',this)">💡 릴스 아이디어</div>
+            <div class="page-tab"   onclick="contentSetTab('zzal',this)">🖼 짤 아이디어</div>
+            <div class="page-tab"   onclick="contentSetTab('season',this)">📅 시즌 이슈</div>
           </div>
         </div>
 
@@ -1766,6 +1767,30 @@ a { text-decoration:none; color:inherit; }
               <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 12px;" onclick="openReelsIdeaModal(null)">+ 아이디어 추가</button>
             </div>
             <div id="reels-ideas-full-list" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;"></div>
+          </div>
+        </div>
+
+        <!-- 🖼 짤 아이디어 탭 -->
+        <div id="content-tab-zzal" style="display:none;">
+          <div class="card">
+            <div class="card-head">
+              <div><div class="card-title">🖼 짤 아이디어 라이브러리</div><div class="card-sub">콘텐츠 제작에 쓸 짤·움짤·레퍼런스 이미지 모음</div></div>
+              <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;" onclick="openZzalModal(null)">+ 짤 등록</button>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+              <input type="text" id="zzal-search" placeholder="제목·태그·메모 검색..." style="width:200px;border:0.5px solid var(--border);border-radius:5px;padding:5px 10px;font-size:11px;outline:none;" oninput="loadZzalLibrary()">
+              <div style="display:flex;gap:5px;flex-wrap:wrap;" id="zzal-tag-pills">
+                <span class="inv-pill on" style="font-size:11px;padding:3px 9px;" onclick="zzalSetTag('all',this)">전체</span>
+              </div>
+              <div style="flex:1;"></div>
+              <span style="font-size:11px;color:var(--light);">정렬:</span>
+              <select id="zzal-sort" style="font-size:11px;padding:4px 8px;border-radius:5px;border:0.5px solid var(--border);outline:none;" onchange="loadZzalLibrary()">
+                <option value="recent">최근 등록순</option>
+                <option value="oldest">오래된 등록순</option>
+                <option value="title">제목 가나다순</option>
+              </select>
+            </div>
+            <div id="zzal-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;"></div>
           </div>
         </div>
 
@@ -3906,6 +3931,64 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ═══ 짤 아이디어 모달 ═══ -->
+<div class="modal-overlay" id="zzal-modal" onclick="if(event.target===this)closeModal('zzal-modal')">
+  <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind" id="zzal-modal-kind">짤 등록</div>
+      <div class="modal-bar-right">
+        <div class="mbtn" id="zzal-del-btn" onclick="deleteZzal()" style="display:none;">🗑</div>
+        <div class="mbtn" onclick="closeModal('zzal-modal')">✕</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input class="modal-title-inp" id="zzal-title" placeholder="짤 제목 (예: 놀란 고양이)">
+      <div class="modal-props" style="margin-top:14px;">
+        <div class="prop-row">
+          <div class="prop-icon">🖼</div><div class="prop-label">이미지 URL</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="zzal-image" placeholder="짤 이미지 URL (필수)" oninput="updateZzalPreview()"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🔗</div><div class="prop-label">출처 링크</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="zzal-source" placeholder="짤 원본 출처 URL (선택)"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🏷</div><div class="prop-label">태그</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="zzal-tag" placeholder="감정/상황/주제 (예: 놀람, 일상, 행복)"></div>
+        </div>
+      </div>
+      <div class="modal-memo-lbl" style="margin-top:14px;">메모 / 활용 아이디어</div>
+      <textarea class="modal-textarea" id="zzal-memo" placeholder="이 짤로 만들 수 있는 콘텐츠 메모"></textarea>
+      <!-- 미리보기 -->
+      <div id="zzal-preview-wrap" style="display:none;margin-top:14px;padding:10px;background:var(--surface);border-radius:6px;text-align:center;">
+        <div style="font-size:10px;color:var(--light);margin-bottom:6px;">미리보기</div>
+        <img id="zzal-preview" style="max-width:100%;max-height:200px;border-radius:5px;display:block;margin:0 auto;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="f-btn f-btn-cancel" onclick="closeModal('zzal-modal')">취소</button>
+      <button class="f-btn f-btn-save" onclick="saveZzal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 짤 큰 보기 모달 (썸네일 클릭 시 크게) ═══ -->
+<div class="modal-overlay" id="zzal-view-modal" onclick="if(event.target===this)closeModal('zzal-view-modal')">
+  <div class="modal" style="max-width:680px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind" id="zzal-view-title">짤 보기</div>
+      <div class="modal-bar-right">
+        <div class="mbtn" onclick="editZzalFromView()" title="편집">✏️</div>
+        <div class="mbtn" onclick="closeModal('zzal-view-modal')">✕</div>
+      </div>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <img id="zzal-view-img" style="max-width:100%;max-height:480px;border-radius:8px;display:block;margin:0 auto;">
+      <div id="zzal-view-meta" style="margin-top:14px;text-align:left;font-size:12px;color:var(--muted);"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 릴스 아이디어 모달 ═══ -->
 <div class="modal-overlay" id="reels-idea-modal" onclick="if(event.target===this)closeModal('reels-idea-modal')">
   <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
@@ -5157,7 +5240,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.6.9</div>
+<div id="version">v5.7.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -16016,15 +16099,15 @@ function contentCalAddPost(dateStr_) {
 }
 
 async function initContentPage() {
-  // 시즌 이슈 탭을 기본으로 (1안)
+  // 잘된 콘텐츠 탭을 기본으로 (새 순서)
   document.querySelectorAll('#content-tabs .page-tab').forEach((t,i)=>t.classList.toggle('on',i===0));
-  ['calendar','season','remake','idea','stats'].forEach(t=>{
+  ['calendar','season','remake','idea','zzal','stats'].forEach(t=>{
     const d = $(`content-tab-${t}`);
-    if (d) d.style.display = t==='season' ? '' : 'none';
+    if (d) d.style.display = t==='remake' ? '' : 'none';
   });
   const addBtn = $('content-add-btn');
   if (addBtn) addBtn.style.display = 'none';
-  await loadContentSeason();
+  await loadRemakeBoard();
 }
 
 function contentSetTab(tab, el) {
@@ -16034,12 +16117,12 @@ function contentSetTab(tab, el) {
   if (el) {
     el.classList.add('on');
   } else {
-    const tabIdx = ['season','remake','idea'].indexOf(tab);
+    const tabIdx = ['remake','idea','zzal','season'].indexOf(tab);
     const tabs = document.querySelectorAll('#content-tabs .page-tab');
     if (tabs[tabIdx]) tabs[tabIdx].classList.add('on');
   }
   // 모든 탭 숨김 (stats DOM은 있어도 항상 숨김 처리)
-  ['calendar','season','remake','idea','stats'].forEach(t=>{
+  ['calendar','season','remake','idea','zzal','stats'].forEach(t=>{
     const d = $(`content-tab-${t}`);
     if (d) d.style.display = t===tab ? '' : 'none';
   });
@@ -16050,6 +16133,7 @@ function contentSetTab(tab, el) {
   if(tab==='season')   loadContentSeason();
   if(tab==='remake')   loadRemakeBoard();
   if(tab==='idea')     loadReelsIdeasFull();
+  if(tab==='zzal')     loadZzalLibrary();
 }
 
 /* ─────────────────────────────────────
@@ -16289,6 +16373,194 @@ async function deleteRemakeCard() {
   toast('삭제됐어요');
   closeModal('remake-card-modal');
   loadRemakeBoard();
+}
+
+/* ─────────────────────────────────────
+   🖼 짤 아이디어 라이브러리
+   app_state.zzal_ideas: [{id, title, image, source, tag, memo, createdAt, updatedAt}]
+─────────────────────────────────────── */
+let _zzalEditId = null;
+let _zzalViewId = null;
+let _zzalTagFilter = 'all';
+
+function zzalSetTag(tag, el) {
+  _zzalTagFilter = tag;
+  document.querySelectorAll('#zzal-tag-pills .inv-pill').forEach(p=>p.classList.remove('on'));
+  if (el) el.classList.add('on');
+  loadZzalLibrary();
+}
+
+async function loadZzalLibrary() {
+  try {
+    const s = await getAppState();
+    const all = s.zzal_ideas || [];
+
+    // 태그 칩 갱신
+    const allTags = [...new Set(all.map(z => (z.tag||'').trim()).filter(Boolean))].sort();
+    const pillsEl = $('zzal-tag-pills');
+    if (pillsEl) {
+      const existing = ['all', ...allTags];
+      // 기존에 선택된 게 사라지면 'all'로
+      if (_zzalTagFilter !== 'all' && !allTags.includes(_zzalTagFilter)) _zzalTagFilter = 'all';
+      pillsEl.innerHTML = existing.map(t => {
+        const lbl = t === 'all' ? '전체' : t;
+        const on = (t === _zzalTagFilter) ? ' on' : '';
+        return `<span class="inv-pill${on}" style="font-size:11px;padding:3px 9px;" onclick="zzalSetTag('${escapeHtml(t).replace(/'/g,'&#39;')}',this)">${escapeHtml(lbl)}</span>`;
+      }).join('');
+    }
+
+    // 필터링
+    const qEl = $('zzal-search');
+    const q = qEl ? qEl.value.trim().toLowerCase() : '';
+    let filtered = all.filter(z => {
+      if (_zzalTagFilter !== 'all' && (z.tag||'') !== _zzalTagFilter) return false;
+      if (q && !(
+        (z.title||'').toLowerCase().includes(q) ||
+        (z.tag||'').toLowerCase().includes(q) ||
+        (z.memo||'').toLowerCase().includes(q)
+      )) return false;
+      return true;
+    });
+
+    // 정렬
+    const sortEl = $('zzal-sort');
+    const sortBy = sortEl ? sortEl.value : 'recent';
+    filtered.sort((a,b) => {
+      if (sortBy === 'recent') return (b.createdAt||'').localeCompare(a.createdAt||'');
+      if (sortBy === 'oldest') return (a.createdAt||'').localeCompare(b.createdAt||'');
+      if (sortBy === 'title')  return (a.title||'').localeCompare(b.title||'', 'ko');
+      return 0;
+    });
+
+    const grid = $('zzal-grid'); if (!grid) return;
+    if (!filtered.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;padding:32px 8px;text-align:center;font-size:12px;color:var(--faint);">${all.length ? '조건에 맞는 짤이 없어요' : '아직 등록된 짤이 없어요. 우측 상단 "+ 짤 등록" 버튼으로 추가해보세요.'}</div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(z => {
+      const img = z.image && z.image.trim()
+        ? `<img src="${escapeHtml(z.image)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex');" loading="lazy">
+           <div style="display:none;aspect-ratio:1/1;background:var(--surface2);align-items:center;justify-content:center;color:var(--faint);font-size:11px;">이미지 없음</div>`
+        : `<div style="aspect-ratio:1/1;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:11px;">이미지 URL 없음</div>`;
+      return `<div style="border:0.5px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;background:var(--surface);transition:transform .15s;" onclick="openZzalView('${z.id}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="position:relative;">
+          ${img}
+          ${z.tag ? `<span style="position:absolute;top:6px;left:6px;font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.6);color:#fff;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(z.tag)}</span>` : ''}
+          ${z.source ? `<span style="position:absolute;top:6px;right:6px;font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.6);color:#fff;">🔗</span>` : ''}
+        </div>
+        <div style="padding:8px 10px;">
+          <div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(z.title||'(제목 없음)')}</div>
+          ${z.memo ? `<div style="font-size:10px;color:var(--light);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(oneLine(z.memo).slice(0,40))}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error('loadZzalLibrary', e); }
+}
+
+function updateZzalPreview() {
+  const url = $('zzal-image').value.trim();
+  const wrap = $('zzal-preview-wrap');
+  const img = $('zzal-preview');
+  if (url) {
+    img.src = url;
+    img.onload = () => { wrap.style.display = 'block'; };
+    img.onerror = () => { wrap.style.display = 'none'; };
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+async function openZzalModal(id) {
+  _zzalEditId = id;
+  $('zzal-modal-kind').textContent = id ? '짤 편집' : '짤 등록';
+  $('zzal-del-btn').style.display = id ? 'flex' : 'none';
+  $('zzal-title').value  = '';
+  $('zzal-image').value  = '';
+  $('zzal-source').value = '';
+  $('zzal-tag').value    = '';
+  $('zzal-memo').value   = '';
+  $('zzal-preview-wrap').style.display = 'none';
+
+  if (id) {
+    const s = await getAppState();
+    const z = (s.zzal_ideas||[]).find(x=>x.id===id);
+    if (z) {
+      $('zzal-title').value  = z.title  || '';
+      $('zzal-image').value  = z.image  || '';
+      $('zzal-source').value = z.source || '';
+      $('zzal-tag').value    = z.tag    || '';
+      $('zzal-memo').value   = z.memo   || '';
+      updateZzalPreview();
+    }
+  }
+  $('zzal-modal').classList.add('on');
+  setTimeout(()=>$('zzal-title').focus(), 80);
+}
+
+async function saveZzal() {
+  const title = $('zzal-title').value.trim();
+  const image = $('zzal-image').value.trim();
+  if (!title) { toast('제목을 입력해주세요'); return; }
+  if (!image) { toast('이미지 URL을 입력해주세요'); return; }
+  const data = {
+    title,
+    image,
+    source: $('zzal-source').value.trim(),
+    tag:    $('zzal-tag').value.trim(),
+    memo:   $('zzal-memo').value.trim(),
+    updatedAt: new Date().toISOString(),
+  };
+  await patchAppState(s => {
+    s.zzal_ideas = s.zzal_ideas || [];
+    if (_zzalEditId) {
+      const z = s.zzal_ideas.find(x=>x.id===_zzalEditId);
+      if (z) Object.assign(z, data);
+    } else {
+      s.zzal_ideas.push({ id: 'zzal_'+Date.now(), createdAt: new Date().toISOString(), ...data });
+    }
+    return s;
+  });
+  toast('저장됐어요 ✓');
+  closeModal('zzal-modal');
+  _zzalEditId = null;
+  loadZzalLibrary();
+}
+
+async function deleteZzal() {
+  if (!_zzalEditId) return;
+  const ok = await customConfirm('이 짤을 삭제할까요?');
+  if (!ok) return;
+  await patchAppState(s => {
+    s.zzal_ideas = (s.zzal_ideas||[]).filter(x=>x.id!==_zzalEditId);
+    return s;
+  });
+  toast('삭제됐어요');
+  closeModal('zzal-modal');
+  _zzalEditId = null;
+  loadZzalLibrary();
+}
+
+// 짤 큰 보기 (썸네일 클릭 시)
+async function openZzalView(id) {
+  _zzalViewId = id;
+  const s = await getAppState();
+  const z = (s.zzal_ideas||[]).find(x=>x.id===id);
+  if (!z) return;
+  $('zzal-view-title').textContent = z.title || '짤 보기';
+  $('zzal-view-img').src = z.image || '';
+  const metaParts = [];
+  if (z.tag) metaParts.push(`<div><span style="color:var(--light);">🏷 태그:</span> ${escapeHtml(z.tag)}</div>`);
+  if (z.source) metaParts.push(`<div><span style="color:var(--light);">🔗 출처:</span> <a href="${escapeHtml(z.source)}" target="_blank" style="color:#185FA5;">${escapeHtml(z.source.length>60?z.source.slice(0,60)+'...':z.source)}</a></div>`);
+  if (z.memo) metaParts.push(`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--surface2);"><span style="color:var(--light);">📝 메모:</span><br>${escapeHtml(z.memo).replace(/\n/g,'<br>')}</div>`);
+  $('zzal-view-meta').innerHTML = metaParts.join('<div style="height:4px;"></div>');
+  $('zzal-view-modal').classList.add('on');
+}
+
+function editZzalFromView() {
+  if (!_zzalViewId) return;
+  closeModal('zzal-view-modal');
+  openZzalModal(_zzalViewId);
 }
 
 /* ─────────────────────────────────────
