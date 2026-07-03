@@ -3933,7 +3933,7 @@ a { text-decoration:none; color:inherit; }
 
 <!-- ═══ 짤 아이디어 모달 ═══ -->
 <div class="modal-overlay" id="zzal-modal" onclick="if(event.target===this)closeModal('zzal-modal')">
-  <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+  <div class="modal" style="max-width:520px;" onclick="event.stopPropagation()">
     <div class="modal-bar">
       <div class="modal-kind" id="zzal-modal-kind">짤 등록</div>
       <div class="modal-bar-right">
@@ -3943,14 +3943,32 @@ a { text-decoration:none; color:inherit; }
     </div>
     <div class="modal-body">
       <input class="modal-title-inp" id="zzal-title" placeholder="짤 제목 (예: 놀란 고양이)">
+
+      <!-- 이미지 드롭존 -->
+      <div id="zzal-dropzone" style="margin-top:14px;border:2px dashed var(--border2);border-radius:8px;padding:24px;text-align:center;cursor:pointer;background:var(--surface);transition:all .15s;" onclick="document.getElementById('zzal-file-input').click()">
+        <div id="zzal-dropzone-empty">
+          <div style="font-size:32px;line-height:1;margin-bottom:8px;">🖼</div>
+          <div style="font-size:13px;font-weight:500;margin-bottom:4px;">이미지를 여기에</div>
+          <div style="font-size:11px;color:var(--light);line-height:1.6;">
+            클릭해서 선택 · 드래그앤드롭 · <strong>붙여넣기(Ctrl+V)</strong> 모두 가능<br>
+            <span style="color:var(--faint);">인스타 스크린샷 떠서 바로 붙여넣으세요</span>
+          </div>
+        </div>
+        <div id="zzal-dropzone-preview" style="display:none;">
+          <img id="zzal-preview" style="max-width:100%;max-height:280px;border-radius:6px;display:block;margin:0 auto;">
+          <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;">
+            <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 12px;" onclick="event.stopPropagation();document.getElementById('zzal-file-input').click()">다른 이미지</button>
+            <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 12px;color:var(--red);" onclick="event.stopPropagation();clearZzalImage()">제거</button>
+          </div>
+        </div>
+        <input type="file" id="zzal-file-input" accept="image/*" style="display:none;" onchange="handleZzalFileSelect(event)">
+      </div>
+      <div id="zzal-upload-status" style="font-size:11px;color:var(--light);margin-top:6px;text-align:center;display:none;"></div>
+
       <div class="modal-props" style="margin-top:14px;">
         <div class="prop-row">
-          <div class="prop-icon">🖼</div><div class="prop-label">이미지 URL</div>
-          <div class="prop-val"><input type="text" class="prop-inp" id="zzal-image" placeholder="짤 이미지 URL (필수)" oninput="updateZzalPreview()"></div>
-        </div>
-        <div class="prop-row">
           <div class="prop-icon">🔗</div><div class="prop-label">출처 링크</div>
-          <div class="prop-val"><input type="text" class="prop-inp" id="zzal-source" placeholder="짤 원본 출처 URL (선택)"></div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="zzal-source" placeholder="인스타/원본 URL (선택)"></div>
         </div>
         <div class="prop-row">
           <div class="prop-icon">🏷</div><div class="prop-label">태그</div>
@@ -3959,11 +3977,6 @@ a { text-decoration:none; color:inherit; }
       </div>
       <div class="modal-memo-lbl" style="margin-top:14px;">메모 / 활용 아이디어</div>
       <textarea class="modal-textarea" id="zzal-memo" placeholder="이 짤로 만들 수 있는 콘텐츠 메모"></textarea>
-      <!-- 미리보기 -->
-      <div id="zzal-preview-wrap" style="display:none;margin-top:14px;padding:10px;background:var(--surface);border-radius:6px;text-align:center;">
-        <div style="font-size:10px;color:var(--light);margin-bottom:6px;">미리보기</div>
-        <img id="zzal-preview" style="max-width:100%;max-height:200px;border-radius:5px;display:block;margin:0 auto;">
-      </div>
     </div>
     <div class="modal-footer">
       <button class="f-btn f-btn-cancel" onclick="closeModal('zzal-modal')">취소</button>
@@ -5240,7 +5253,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.7.0</div>
+<div id="version">v5.7.3</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5397,6 +5410,87 @@ async function patchAppState(patchFn) {
   });
   if (error) throw error;
   return patched;
+}
+
+/* ─────────────────────────────────────
+   📦 재고 조정 유틸 (작업 기록 · 불량 등에서 공통 사용)
+   
+   재고 4값 관계:
+   - total_stock = pending_production + produced_stock
+   - produced_stock = available_stock + 채널배분합계
+─────────────────────────────────────── */
+
+// 작업 완료(생산완료) 시 재고 반영
+// 대기재고 → 상품화완료 이동. 대기 부족 시 자동으로 총재고 증가.
+// qty가 양수 = 생산완료 추가, 음수 = 롤백(취소)
+async function adjustInventoryForWorkLog(productId, qty) {
+  if (!productId || !qty) return { ok:true, note:'skip' };
+  try {
+    const { data: inv } = await db.from('inventory').select('*').eq('product_id', productId).maybeSingle();
+    if (!inv) {
+      // 재고 레코드가 없으면 생성 (qty > 0인 경우만)
+      if (qty > 0) {
+        await db.from('inventory').insert([{
+          id: `inv-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+          product_id: productId,
+          total_stock: qty,
+          pending_production: 0,
+          produced_stock: qty,
+          available_stock: qty,
+          updated_at: new Date().toISOString(),
+        }]);
+      }
+      return { ok:true, created:true };
+    }
+    // 기존 값
+    const pending  = inv.pending_production || 0;
+    const produced = inv.produced_stock || 0;
+    const avail    = inv.available_stock || 0;
+    const total    = inv.total_stock || 0;
+
+    let newPending, newProduced, newAvail, newTotal;
+
+    if (qty > 0) {
+      // 생산완료: 대기 -qty, 상품화 +qty, 가용 +qty
+      const takeFromPending = Math.min(pending, qty);   // 대기에서 뺄 수 있는 만큼
+      const extraNeeded = qty - takeFromPending;        // 대기 부족분 → 총재고 늘림
+      newPending  = pending - takeFromPending;
+      newProduced = produced + qty;
+      newAvail    = avail + qty;
+      newTotal    = total + extraNeeded;                // 대기 부족했다면 total 증가
+    } else {
+      // 롤백: 대기 +|qty|, 상품화 -|qty|, 가용 -|qty|
+      const roll = -qty;
+      newPending  = pending + roll;
+      newProduced = Math.max(0, produced - roll);
+      newAvail    = Math.max(0, avail - roll);
+      // total은 유지 (원래 생산완료 등록 시 total도 늘어난 경우도 있지만, 
+      // 롤백 시엔 대기를 다시 채우는 방향이 안전)
+      newTotal    = total;
+    }
+
+    await db.from('inventory').update({
+      total_stock:        newTotal,
+      pending_production: newPending,
+      produced_stock:     newProduced,
+      available_stock:    newAvail,
+      updated_at: new Date().toISOString(),
+    }).eq('product_id', productId);
+
+    return { ok:true };
+  } catch (e) {
+    console.error('adjustInventoryForWorkLog', e);
+    return { ok:false, error: e.message };
+  }
+}
+
+// 다른 화면(재고탭)이 열려있으면 자동 새로고침
+function refreshInventoryUI() {
+  try {
+    if (typeof loadInvList === 'function' && $('inv-list')) loadInvList();
+    // 생산 추천 탭도 재고 기반이니 갱신
+    if (typeof loadProdRecFull === 'function' && $('prod-rec-list')) loadProdRecFull();
+  } catch(e) { /* silent */ }
 }
 
 /* app_state의 기존 content_posts → content_posts 테이블로 마이그레이션 */
@@ -6160,28 +6254,29 @@ async function loadDashRevenue() {
       }
     }
 
-    // 14일 매출 추이 차트 렌더
-    renderDashTrendChart(curRows, prevData||[]);
+    // 14일 매출 추이 차트 렌더 — 월 경계 무관하게 정확히 14일치 별도 조회
+    const trendStart = dateStr(new Date(Date.now() - 13*86400000));
+    const { data: trendData } = await db.from('channel_sales_log').select('*').gte('date', trendStart).lte('date', today);
+    renderDashTrendChart(trendData || []);
   } catch(e) {
     console.error('loadDashRevenue:', e);
     if ($('dash-rev-val')) $('dash-rev-val').textContent='—';
   }
 }
 
-function renderDashTrendChart(curRows, prevRows) {
+function renderDashTrendChart(rows) {
   const svg = $('dash-trend-svg'); if (!svg) return;
   const wrap = $('dash-trend-wrap');
   const tooltip = $('dash-trend-tooltip');
 
   // 최근 14일 매출 합산
   const today = new Date(); today.setHours(0,0,0,0);
-  const allRows = curRows.concat(prevRows||[]);
   const days = [];
   const DOW = ['일','월','화','수','목','금','토'];
   for (let i=13; i>=0; i--) {
     const d = new Date(today.getTime() - i*86400000);
     const dStr = dateStr(d);
-    const amt  = allRows.filter(r=>r.date===dStr).reduce((s,r)=>s+(r.amount||0),0);
+    const amt  = (rows||[]).filter(r=>r.date===dStr).reduce((s,r)=>s+(r.amount||0),0);
     days.push({ date:dStr, amt, day:d.getDate(), dow:DOW[d.getDay()], dateObj:new Date(d) });
   }
 
@@ -8962,6 +9057,7 @@ async function completeReceipt(id) {
     toast('입고 완료 처리됐어요 ✓');
     loadReceiptSchedule();
     loadDashInventory();
+    refreshInventoryUI();
   } catch(e){ toast('오류: '+e.message); }
 }
 
@@ -10760,7 +10856,14 @@ async function addWorkLog() {
     });
     return s;
   });
-  toast('작업 기록이 추가됐어요 ✓');
+  // 재고 자동 반영 (대기 → 상품화/가용)
+  const invRes = await adjustInventoryForWorkLog(_workLogSelProdId, qty);
+  if (invRes.ok) {
+    toast(`✓ ${qty}개 생산완료 · 재고 반영됨`);
+  } else {
+    toast(`작업 기록은 저장됐지만 재고 반영 실패: ${invRes.error||''}`);
+  }
+  refreshInventoryUI();
   // 초기화
   _workLogSelProdId = null;
   _workLogSelLabel  = '';
@@ -10788,12 +10891,23 @@ async function saveWorkLogEdit() {
   if (!_workLogEditId) return;
   const newQty = parseInt($('work-log-edit-qty').value) || 0;
   if (!newQty || newQty < 1) { toast('수량을 입력해주세요 (1 이상)'); return; }
+  // 이전 값 조회 (재고 차이 계산용)
+  const sBefore = await getAppState();
+  const before = (sBefore.work_logs||[]).find(x=>x.id===_workLogEditId);
+  const oldQty = before ? (before.qty||0) : 0;
+  const productId = before ? before.product_id : null;
   await patchAppState(s => {
     const target = (s.work_logs||[]).find(x=>x.id===_workLogEditId);
     if (target) target.qty = newQty;
     return s;
   });
-  toast('수정됐어요 ✓');
+  // 재고 차이만큼 조정
+  const diff = newQty - oldQty;
+  if (productId && diff !== 0) {
+    await adjustInventoryForWorkLog(productId, diff);
+    refreshInventoryUI();
+  }
+  toast(`수정됐어요 ✓${diff!==0?` · 재고 ${diff>0?'+':''}${diff}`:''}`);
   closeModal('work-log-edit-modal');
   _workLogEditId = null;
   loadWorkLogList();
@@ -10801,13 +10915,23 @@ async function saveWorkLogEdit() {
 
 async function deleteWorkLog() {
   if (!_workLogEditId) return;
-  const ok = await customConfirm('이 작업 기록을 삭제할까요?');
+  const ok = await customConfirm('이 작업 기록을 삭제할까요?', '연동된 재고도 자동으로 되돌립니다');
   if (!ok) return;
+  // 삭제 전 정보 확보 (재고 롤백용)
+  const sBefore = await getAppState();
+  const target = (sBefore.work_logs||[]).find(x=>x.id===_workLogEditId);
+  const oldQty = target ? (target.qty||0) : 0;
+  const productId = target ? target.product_id : null;
   await patchAppState(s => {
     s.work_logs = (s.work_logs||[]).filter(x=>x.id!==_workLogEditId);
     return s;
   });
-  toast('삭제됐어요');
+  // 재고 롤백 (qty만큼 대기로 되돌림)
+  if (productId && oldQty > 0) {
+    await adjustInventoryForWorkLog(productId, -oldQty);
+    refreshInventoryUI();
+  }
+  toast('삭제됐어요 · 재고 -' + oldQty);
   closeModal('work-log-edit-modal');
   _workLogEditId = null;
   loadWorkLogList();
@@ -11237,14 +11361,17 @@ async function resolveDefect(defectId, status) {
           updated_at: new Date().toISOString(),
         }).eq('product_id', item.product_id);
       }
-    } else if (item.type === 'return' && item.channel) {
-      // 반품불량 복원: 채널재고 증가
-      const {data:chInv} = await db.from('channel_inventory').select('*')
-        .eq('product_id',item.product_id).eq('channel',item.channel).maybeSingle();
-      if (chInv) {
-        await db.from('channel_inventory').update({
-          stock: (chInv.stock||0) + qty,
-        }).eq('product_id',item.product_id).eq('channel',item.channel);
+    } else if (item.type === 'return') {
+      // 반품불량 복원: 총재고·상품화·가용 증가 (재사용 가능한 상품으로 다시 계상)
+      // 채널재고는 자동 반환하지 않음 (판매/배분은 별도 결정 필요)
+      const {data:inv} = await db.from('inventory').select('*').eq('product_id',item.product_id).maybeSingle();
+      if(inv){
+        await db.from('inventory').update({
+          total_stock:     (inv.total_stock||0)     + qty,
+          produced_stock:  (inv.produced_stock||0)  + qty,
+          available_stock: (inv.available_stock||0) + qty,
+          updated_at: new Date().toISOString(),
+        }).eq('product_id', item.product_id);
       }
     }
   }
@@ -11252,7 +11379,8 @@ async function resolveDefect(defectId, status) {
   item.status      = status;
   item.resolvedDate= dateStr();
   await setAppState(s);
-  toast(status==='restored' ? '복원 처리됐어요 ✓' : '폐기 처리됐어요');
+  toast(status==='restored' ? `복원 처리됐어요 · 재고 +${qty} ✓` : '폐기 처리됐어요');
+  refreshInventoryUI();
   loadProdDefect();
 }
 
@@ -16378,10 +16506,13 @@ async function deleteRemakeCard() {
 /* ─────────────────────────────────────
    🖼 짤 아이디어 라이브러리
    app_state.zzal_ideas: [{id, title, image, source, tag, memo, createdAt, updatedAt}]
+   image = Supabase Storage에 업로드된 public URL
 ─────────────────────────────────────── */
 let _zzalEditId = null;
 let _zzalViewId = null;
 let _zzalTagFilter = 'all';
+let _zzalCurrentImage = ''; // 현재 모달에 로드된 이미지 URL (업로드 전 임시 dataURL 또는 저장된 publicURL)
+let _zzalPendingFile = null; // 업로드 대기 중인 File 객체
 
 function zzalSetTag(tag, el) {
   _zzalTagFilter = tag;
@@ -16400,7 +16531,6 @@ async function loadZzalLibrary() {
     const pillsEl = $('zzal-tag-pills');
     if (pillsEl) {
       const existing = ['all', ...allTags];
-      // 기존에 선택된 게 사라지면 'all'로
       if (_zzalTagFilter !== 'all' && !allTags.includes(_zzalTagFilter)) _zzalTagFilter = 'all';
       pillsEl.innerHTML = existing.map(t => {
         const lbl = t === 'all' ? '전체' : t;
@@ -16442,7 +16572,7 @@ async function loadZzalLibrary() {
       const img = z.image && z.image.trim()
         ? `<img src="${escapeHtml(z.image)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex');" loading="lazy">
            <div style="display:none;aspect-ratio:1/1;background:var(--surface2);align-items:center;justify-content:center;color:var(--faint);font-size:11px;">이미지 없음</div>`
-        : `<div style="aspect-ratio:1/1;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:11px;">이미지 URL 없음</div>`;
+        : `<div style="aspect-ratio:1/1;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:11px;">이미지 없음</div>`;
       return `<div style="border:0.5px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;background:var(--surface);transition:transform .15s;" onclick="openZzalView('${z.id}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
         <div style="position:relative;">
           ${img}
@@ -16458,54 +16588,177 @@ async function loadZzalLibrary() {
   } catch(e) { console.error('loadZzalLibrary', e); }
 }
 
-function updateZzalPreview() {
-  const url = $('zzal-image').value.trim();
-  const wrap = $('zzal-preview-wrap');
-  const img = $('zzal-preview');
-  if (url) {
-    img.src = url;
-    img.onload = () => { wrap.style.display = 'block'; };
-    img.onerror = () => { wrap.style.display = 'none'; };
+// ── 이미지 처리 (파일/페이스트/드롭) ──
+function setZzalImagePreview(dataUrlOrUrl) {
+  _zzalCurrentImage = dataUrlOrUrl || '';
+  const emptyEl = $('zzal-dropzone-empty');
+  const previewEl = $('zzal-dropzone-preview');
+  const imgEl = $('zzal-preview');
+  if (dataUrlOrUrl) {
+    imgEl.src = dataUrlOrUrl;
+    emptyEl.style.display = 'none';
+    previewEl.style.display = 'block';
   } else {
-    wrap.style.display = 'none';
+    emptyEl.style.display = 'block';
+    previewEl.style.display = 'none';
+    imgEl.src = '';
   }
+}
+
+function clearZzalImage() {
+  _zzalPendingFile = null;
+  _zzalCurrentImage = '';
+  setZzalImagePreview('');
+  $('zzal-upload-status').style.display = 'none';
+}
+
+async function handleZzalFile(file) {
+  if (!file || !file.type || !file.type.startsWith('image/')) {
+    toast('이미지 파일만 업로드 가능해요');
+    return;
+  }
+  // 미리보기 즉시 (dataURL)
+  const reader = new FileReader();
+  reader.onload = e => setZzalImagePreview(e.target.result);
+  reader.readAsDataURL(file);
+  _zzalPendingFile = file;
+  $('zzal-upload-status').style.display = 'block';
+  $('zzal-upload-status').textContent = '✓ 이미지 준비됨 · 저장 시 업로드됩니다';
+}
+
+function handleZzalFileSelect(e) {
+  const file = e.target.files && e.target.files[0];
+  if (file) handleZzalFile(file);
+  e.target.value = ''; // 같은 파일 재선택 가능하게
+}
+
+function initZzalDropzone() {
+  const dz = $('zzal-dropzone'); if (!dz || dz._zzalInit) return;
+  dz._zzalInit = true;
+  // 드래그 앤 드롭
+  ['dragenter','dragover'].forEach(evt => {
+    dz.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.style.borderColor = 'var(--text)';
+      dz.style.background = 'var(--surface2)';
+    });
+  });
+  ['dragleave','drop'].forEach(evt => {
+    dz.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.style.borderColor = '';
+      dz.style.background = '';
+    });
+  });
+  dz.addEventListener('drop', e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleZzalFile(file);
+  });
+}
+
+// 모달 열렸을 때 페이스트 이벤트 등록
+function initZzalPaste() {
+  if (window._zzalPasteInit) return;
+  window._zzalPasteInit = true;
+  document.addEventListener('paste', e => {
+    const modal = $('zzal-modal');
+    if (!modal || !modal.classList.contains('on')) return;
+    // 텍스트 input/textarea에 포커스 있으면 거기에 붙이게 둠 (URL 같은 거 붙여넣을 수 있게)
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+      // 이미지가 클립보드에 있으면 텍스트 input에서도 이미지로 처리할지?
+      // → 텍스트 input이면 그대로 텍스트로 붙이게 둠 (사용자가 URL 입력 중일 수 있음)
+      const items = e.clipboardData && e.clipboardData.items;
+      let hasImage = false;
+      if (items) {
+        for (const item of items) if (item.type.startsWith('image/')) { hasImage = true; break; }
+      }
+      // 텍스트 input/textarea면서 이미지 + 텍스트 둘 다 있는 클립보드 → 텍스트 우선
+      if (!hasImage || e.clipboardData.getData('text')) return;
+    }
+    // 이미지 추출
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          handleZzalFile(file);
+          toast('붙여넣기 완료 ✓');
+          return;
+        }
+      }
+    }
+  });
+}
+
+// Supabase Storage에 업로드
+async function uploadZzalImageFile(file) {
+  const ext = (file.type.split('/')[1] || 'jpg').replace('jpeg','jpg');
+  const path = `zzal/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const { data, error } = await db.storage.from('content-images').upload(path, file, { upsert:true, contentType: file.type });
+  if (error) throw error;
+  const { data: urlData } = db.storage.from('content-images').getPublicUrl(path);
+  return urlData.publicUrl;
 }
 
 async function openZzalModal(id) {
   _zzalEditId = id;
+  _zzalPendingFile = null;
+  _zzalCurrentImage = '';
   $('zzal-modal-kind').textContent = id ? '짤 편집' : '짤 등록';
   $('zzal-del-btn').style.display = id ? 'flex' : 'none';
   $('zzal-title').value  = '';
-  $('zzal-image').value  = '';
   $('zzal-source').value = '';
   $('zzal-tag').value    = '';
   $('zzal-memo').value   = '';
-  $('zzal-preview-wrap').style.display = 'none';
+  $('zzal-upload-status').style.display = 'none';
+  setZzalImagePreview('');
 
   if (id) {
     const s = await getAppState();
     const z = (s.zzal_ideas||[]).find(x=>x.id===id);
     if (z) {
       $('zzal-title').value  = z.title  || '';
-      $('zzal-image').value  = z.image  || '';
       $('zzal-source').value = z.source || '';
       $('zzal-tag').value    = z.tag    || '';
       $('zzal-memo').value   = z.memo   || '';
-      updateZzalPreview();
+      if (z.image) setZzalImagePreview(z.image);
     }
   }
   $('zzal-modal').classList.add('on');
+  // 이벤트 초기화
+  initZzalDropzone();
+  initZzalPaste();
   setTimeout(()=>$('zzal-title').focus(), 80);
 }
 
 async function saveZzal() {
   const title = $('zzal-title').value.trim();
-  const image = $('zzal-image').value.trim();
   if (!title) { toast('제목을 입력해주세요'); return; }
-  if (!image) { toast('이미지 URL을 입력해주세요'); return; }
+  if (!_zzalCurrentImage && !_zzalPendingFile) { toast('이미지를 추가해주세요'); return; }
+
+  let imageUrl = _zzalCurrentImage;
+  // 새 파일이 있으면 업로드
+  if (_zzalPendingFile) {
+    try {
+      $('zzal-upload-status').textContent = '⏳ 업로드 중...';
+      $('zzal-upload-status').style.display = 'block';
+      imageUrl = await uploadZzalImageFile(_zzalPendingFile);
+    } catch (e) {
+      toast('이미지 업로드 실패: ' + (e.message||''));
+      console.error(e);
+      $('zzal-upload-status').textContent = '❌ 업로드 실패';
+      return;
+    }
+  }
+
   const data = {
     title,
-    image,
+    image: imageUrl,
     source: $('zzal-source').value.trim(),
     tag:    $('zzal-tag').value.trim(),
     memo:   $('zzal-memo').value.trim(),
@@ -16524,6 +16777,8 @@ async function saveZzal() {
   toast('저장됐어요 ✓');
   closeModal('zzal-modal');
   _zzalEditId = null;
+  _zzalPendingFile = null;
+  _zzalCurrentImage = '';
   loadZzalLibrary();
 }
 
