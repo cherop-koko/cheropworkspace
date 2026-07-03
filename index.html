@@ -888,7 +888,7 @@ a { text-decoration:none; color:inherit; }
               <div>
                 <div style="font-size:42px;font-weight:600;line-height:1;letter-spacing:-1px;color:#fff;" id="dash-rev-val">—</div>
                 <div style="display:flex;align-items:baseline;gap:18px;margin-top:12px;flex-wrap:wrap;">
-                  <div><div style="font-size:10px;color:#fff;opacity:.75;margin-bottom:2px;">전월 동기간 대비</div><div style="font-size:16px;font-weight:500;color:#fff;" id="dash-rev-mom">—</div></div>
+                  <div><div style="font-size:10px;color:#fff;opacity:.75;margin-bottom:2px;">전월 동기간 대비 <span style="opacity:.7;">(온라인)</span></div><div style="font-size:16px;font-weight:500;color:#fff;" id="dash-rev-mom">—</div></div>
                   <div><div style="font-size:10px;color:#fff;opacity:.75;margin-bottom:2px;">어제 매출</div><div style="font-size:16px;font-weight:500;color:#fff;" id="dash-rev-today">—</div></div>
                   <div><div style="font-size:10px;color:#fff;opacity:.75;margin-bottom:2px;">일평균</div><div style="font-size:16px;font-weight:500;color:#fff;" id="dash-rev-avg">—</div></div>
                 </div>
@@ -5253,7 +5253,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.7.3</div>
+<div id="version">v5.7.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -6202,14 +6202,17 @@ async function loadDashRevenue() {
     // 일평균 (오늘까지 일수 기준)
     const avg = todayDay > 0 ? Math.round(total / todayDay) : 0;
 
-    // 전월 동기간 대비 %
+    // 전월 동기간 대비 % — 온라인 매출만 비교 (팝업/라인프렌즈 납품 매출은 기간·규모 편차가 커서 왜곡됨)
+    const OFFLINE_CHANNELS = ['팝업','라인프렌즈'];
+    const onlineCur  = curRows.filter(r => !OFFLINE_CHANNELS.includes(r.channel)).reduce((s,r)=>s+(r.amount||0),0);
+    const onlinePrev = (prevData||[]).filter(r => !OFFLINE_CHANNELS.includes(r.channel)).reduce((s,r)=>s+(r.amount||0),0);
     let momLabel = '—';
     let momColor = '#A0D88B';
-    if (prevTotal > 0) {
-      const pct = Math.round((total - prevTotal) / prevTotal * 100);
+    if (onlinePrev > 0) {
+      const pct = Math.round((onlineCur - onlinePrev) / onlinePrev * 100);
       momLabel = pct >= 0 ? `+${pct}% ↑` : `${pct}% ↓`;
       momColor = pct >= 0 ? '#A0D88B' : '#FFB8B0';
-    } else if (total > 0) {
+    } else if (onlineCur > 0) {
       momLabel = '신규';
     }
 
