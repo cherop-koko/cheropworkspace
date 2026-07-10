@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>체로프 워크스페이스</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -746,6 +746,160 @@ a { text-decoration:none; color:inherit; }
 }
 .field-inp:focus { border-color:var(--text); background:var(--surface); }
 .field-inp::placeholder { color:var(--faint); }
+/* ═══════════════════════════════════════
+   📱 MOBILE RESPONSIVE (≤768px)
+═══════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── 전역 안전장치: 가로 넘침 방지 + 긴 문자열 줄바꿈 ── */
+  html, body { overflow-x:hidden; width:100%; }
+  * { -webkit-tap-highlight-color:transparent; }
+  .card, .modal, .modal-box, td, th { overflow-wrap:break-word; word-break:keep-all; }
+  a { overflow-wrap:anywhere; }
+
+  /* ── 로그인 ── */
+  .login-box { width:calc(100vw - 32px); max-width:420px; padding:32px 24px; }
+
+  /* ── 탑바 ── */
+  .topbar { padding:0 10px; height:52px; gap:6px; }
+  .tb-logo { font-size:0; gap:0; }
+  .tb-div { display:none; }
+  .tb-nav {
+    flex:1; min-width:0; overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .tb-nav::-webkit-scrollbar { display:none; }
+  .tb-nav-item { padding:7px 12px; font-size:12px; flex-shrink:0; }
+  .tb-date { display:none; }
+  .tb-right { gap:6px; margin-left:2px; flex-shrink:0; }
+  .tb-av { width:30px; height:30px; font-size:10px; }
+
+  /* ── 사이드바 → 하단 아이콘 바 ── */
+  .app-body { flex-direction:column; }
+  .main { order:1; }
+  .sidebar {
+    order:2; width:100%; height:auto; min-height:50px;
+    flex-direction:row; justify-content:space-around; align-items:center;
+    padding:4px 8px calc(4px + env(safe-area-inset-bottom));
+    border-right:none; border-top:0.5px solid var(--border);
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none; gap:2px; flex-shrink:0;
+  }
+  .sidebar::-webkit-scrollbar { display:none; }
+  .si { width:40px; height:40px; flex-shrink:0; }
+  .si-tip, .si-line, .si-gap { display:none; }
+
+  /* ── 메인 ── */
+  .main { padding:14px 12px 90px; }
+  .page-header { margin:-14px -12px 16px; padding:12px 0 0; }
+  .page-header-top { padding:0 14px 10px; flex-wrap:wrap; gap:8px; }
+  .page-header-title { font-size:16px; }
+  .page-header-sub { font-size:11px; }
+  .page-tabs {
+    padding:0 14px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .page-tabs::-webkit-scrollbar { display:none; }
+  .page-tab { margin-right:16px; white-space:nowrap; flex-shrink:0; font-size:12px; }
+
+  /* ── 카드 ── */
+  .card { padding:14px; border-radius:12px; }
+  #page-sales .card { padding:16px 14px; }
+  #page-sales #sales-metrics > div > div:nth-child(2) { font-size:19px !important; }
+  .card-head { flex-wrap:wrap; gap:8px; }
+  .card-title { font-size:13px; }
+
+  /* ── 레이아웃 그리드 → 1열 (인라인 style 오버라이드) ──
+     작은 유틸 그리드(입력행 80px 1fr, 달력 repeat(7), auto-fill, minmax(0,..))는 유지 */
+  div[style*="grid-template-columns:1fr 1fr"],
+  div[style*="grid-template-columns:1.4fr 1fr"],
+  div[style*="grid-template-columns:1.6fr 1.2fr 1fr"],
+  div[style*="grid-template-columns:repeat(3,1fr)"],
+  div[style*="grid-template-columns:repeat(2,1fr)"],
+  div[style*="grid-template-columns:2fr 1fr"],
+  div[style*="grid-template-columns:3fr 2fr"],
+  div[style*="grid-template-columns:1fr 280px"],
+  div[style*="grid-template-columns:380px 1fr"],
+  div[style*="grid-template-columns:220px 1fr"],
+  div[style*="grid-template-columns:210px 1fr"],
+  div[style*="grid-template-columns:200px 1fr"] {
+    grid-template-columns:1fr !important;
+  }
+  /* 4·5열 카드 그리드 → 2열 (이 규칙이 위 1fr 규칙보다 뒤에 있어 우선) */
+  div[style*="grid-template-columns:repeat(4,1fr)"],
+  div[style*="grid-template-columns:repeat(5,1fr)"],
+  div[style*="grid-template-columns:1fr 1fr 1fr 1fr"] {
+    grid-template-columns:repeat(2,1fr) !important;
+  }
+
+  /* ── 대시보드 히어로 ── */
+  #dash-rev-card { padding:18px 16px !important; }
+  #dash-rev-val { font-size:30px !important; }
+
+  /* ── 테이블: 카드 내부 가로 스크롤 ── */
+  .main .card:has(table) { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .main .card table { min-width:540px; }
+  /* 작업기록 카드 예외: 검색 드롭다운이 잘리면 안 됨 */
+  .main .card:has(#work-log-tbody) { overflow:visible; }
+  .main .card:has(#work-log-tbody) table { min-width:0; }
+  .inv-tbl th, .inv-tbl td { padding:8px 10px; font-size:11px; }
+
+  /* ── 모달 ── */
+  .modal-overlay { padding:14px 8px; }
+  .modal { max-width:100%; max-height:calc(100dvh - 28px); border-radius:14px; }
+  .modal-box { max-height:calc(100dvh - 28px); }
+  .modal-body { padding:20px 16px 16px; }
+  .modal-title-inp { font-size:20px; margin-bottom:18px; }
+  .modal-bar { padding:10px 14px; }
+  .prop-row { padding:10px 12px; flex-wrap:wrap; }
+  .prop-icon { margin-right:8px; }
+  .prop-label { width:70px; font-size:12px; }
+  .prop-val { min-width:0; }
+  .modal-props { margin-bottom:18px; }
+
+  /* ── 버전 태그 · 토스트: 하단 바 위로 ── */
+  #version { bottom:calc(60px + env(safe-area-inset-bottom)); right:10px; }
+  .toast { bottom:calc(66px + env(safe-area-inset-bottom)); max-width:calc(100vw - 32px); text-align:center; }
+
+  /* ── 필터 pills 줄바꿈 허용 ── */
+  .member-pills { flex-wrap:wrap; }
+  .st-pills { gap:4px; }
+  .inv-pill { font-size:11px !important; }
+
+  /* ── SVG 차트: 컨테이너 폭 안 넘게 ── */
+  svg { max-width:100%; }
+
+  /* ── 큰 보기 이미지 (짤 등) ── */
+  #zzal-view-img { max-height:60vh; }
+
+  /* ── 콘텐츠 라이브러리 그리드는 위의 repeat(4→2) 규칙으로 처리됨 ── */
+  /* 짤 그리드도 repeat(5→2) 규칙으로 처리됨 */
+
+  /* ── 프로젝트 페이지: 좌우 분할 → 세로 스택 ── */
+  #proj-cards + #proj-detail,
+  #proj-detail { width:100% !important; }
+  #page-project div[style*="display:flex;gap:16px;align-items:flex-start"] { flex-direction:column; }
+
+  /* ── 대시보드 상단 (인사 + 출결 + 날씨) ── */
+  .dash-top { flex-direction:column; gap:14px; margin-bottom:18px; }
+  .dash-h1 { font-size:20px; }
+  .att-row { flex-wrap:wrap; }
+  .weather-pill-wrap { flex-wrap:wrap; }
+  .wd { padding:8px 12px; }
+
+  /* ── 버튼 터치 영역 확보 ── */
+  .f-btn { min-height:34px; }
+  .mbtn { width:32px; height:32px; }
+}
+
+/* 초소형 화면 (≤400px): KPI 카드도 1열 */
+@media (max-width: 400px) {
+  div[style*="grid-template-columns:repeat(4,1fr)"] {
+    grid-template-columns:1fr 1fr !important;
+  }
+  .tb-nav-item { padding:6px 10px; font-size:11px; }
+  #dash-rev-val { font-size:26px !important; }
+}
 </style>
 </head>
 <body>
@@ -5253,7 +5407,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.7.5</div>
+<div id="version">v5.7.6</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5708,6 +5862,20 @@ window.addEventListener('hashchange', () => {
   sessionStorage.setItem('cherop_last_hash', location.hash);
   const {page, sub} = parseHash();
   renderPage(page, sub);
+});
+
+/* 📱 화면 회전/리사이즈 시 SVG 차트 재렌더 (모바일 대응) */
+let _respResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_respResizeTimer);
+  _respResizeTimer = setTimeout(() => {
+    try {
+      const dashOn = document.querySelector('#page-dashboard.page.on');
+      const planOn = document.querySelector('#page-plan.page.on');
+      if (dashOn && $('dash-trend-svg') && typeof loadDashRevenue === 'function') loadDashRevenue();
+      if (planOn && $('plan-trend-svg') && typeof loadPlanAnnual === 'function') loadPlanAnnual();
+    } catch(e) { /* silent */ }
+  }, 400);
 });
 
 /* ═══════════════════════════════════════
