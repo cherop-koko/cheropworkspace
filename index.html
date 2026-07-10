@@ -108,7 +108,7 @@ a { text-decoration:none; color:inherit; }
 /* ═══════════════════════════════════════
    APP SHELL
 ═══════════════════════════════════════ */
-#app { display:none; height:100vh; flex-direction:column; }
+#app { display:none; height:100vh; height:100dvh; flex-direction:column; }
 #app.on { display:flex; }
 
 /* TOPBAR */
@@ -836,13 +836,48 @@ a { text-decoration:none; color:inherit; }
   #dash-rev-card { padding:18px 16px !important; }
   #dash-rev-val { font-size:30px !important; }
 
-  /* ── 테이블: 카드 내부 가로 스크롤 ── */
-  .main .card:has(table) { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  /* ── 테이블: 카드 내부 가로 스크롤 ──
+     인라인 style="overflow:hidden" 카드도 강제로 가로 스크롤 허용 */
+  .main .card:has(table) { overflow-x:auto !important; overflow-y:hidden !important; -webkit-overflow-scrolling:touch; }
   .main .card table { min-width:540px; }
+  /* 열 많은 테이블은 더 넓게 (열 찌그러짐 방지) */
+  #inv-product-table { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  #inv-product-table table { min-width:900px !important; }
+  .main .card:has(#prod-defect-list) table { min-width:700px; }
+  .main .card:has(#prod-rec-list) table { min-width:640px; }
   /* 작업기록 카드 예외: 검색 드롭다운이 잘리면 안 됨 */
-  .main .card:has(#work-log-tbody) { overflow:visible; }
+  .main .card:has(#work-log-tbody) { overflow:visible !important; }
   .main .card:has(#work-log-tbody) table { min-width:0; }
   .inv-tbl th, .inv-tbl td { padding:8px 10px; font-size:11px; }
+
+  /* ── 버튼 텍스트 줄바꿈 방지 (재고 내보내기/출고 등록 등) ── */
+  .f-btn { white-space:nowrap; }
+
+  /* ── 그리드 아이템 최소폭 해제: 7열 캘린더 등이 화면 밖으로 밀려나는 것 방지 ── */
+  div[style*="display:grid"] > * { min-width:0; }
+  div[style*="grid-template-columns:repeat(7,1fr)"] > div { min-width:0; overflow:hidden; }
+
+  /* ── 운영 캘린더: 셀 축소 ── */
+  #ops-cal div[style*="min-height:64px"] { min-height:52px !important; padding:3px 3px !important; }
+
+  /* ── 작업기록: 입력 행을 세로 스택 카드로 재배치 ── */
+  #work-log-input-row { display:flex; flex-wrap:wrap; gap:8px; padding:12px; box-sizing:border-box; width:100%; }
+  #work-log-input-row td { display:block; padding:0 !important; border:none !important; }
+  #work-log-input-row td:nth-child(1) { display:none; }
+  #work-log-input-row td:nth-child(2) { flex:1 1 100%; position:relative; }
+  #work-log-input-row td:nth-child(2) input { font-size:14px !important; padding:10px 12px !important; }
+  #work-log-input-row td:nth-child(3) { flex:1 1 auto; min-width:90px; }
+  #work-log-input-row td:nth-child(3) input { width:100% !important; font-size:14px !important; padding:10px 12px !important; }
+  #work-log-input-row td:nth-child(4) { flex:0 0 auto; }
+  #work-log-input-row td:nth-child(4) button { height:100%; min-height:40px; padding:8px 18px !important; font-size:13px !important; }
+  /* 검색 드롭다운: 풀폭 + 터치 크기 확대 */
+  #work-log-dd { left:0 !important; right:0 !important; max-height:46vh !important; }
+  #work-log-dd > div { padding:11px 14px !important; font-size:13px !important; }
+  /* 작업기록 테이블 열 폭 조정 */
+  .main .card:has(#work-log-tbody) th:nth-child(1) { width:58px; }
+  .main .card:has(#work-log-tbody) th:nth-child(3) { width:60px; }
+  .main .card:has(#work-log-tbody) th:nth-child(4) { width:44px; }
+  .main .card:has(#work-log-tbody) td { padding:8px 6px; }
 
   /* ── 모달 ── */
   .modal-overlay { padding:14px 8px; }
@@ -1219,7 +1254,7 @@ a { text-decoration:none; color:inherit; }
             <div class="page-tab on" onclick="invSetTab('overview',this)">재고 현황</div>
             <div class="page-tab"   onclick="invSetTab('shiplog',this)">출고 내역</div>
             <div class="page-tab"   onclick="invSetTab('receipt',this)">입고 일정</div>
-            <div class="page-tab"   onclick="invSetTab('alert',this)" style="position:relative;">재고 알림<span id="inv-alert-badge" style="position:absolute;top:-4px;right:-14px;background:var(--red);color:#fff;font-size:10px;font-weight:500;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;"></span></div>
+            <div class="page-tab"   onclick="invSetTab('alert',this)">재고 알림<span id="inv-alert-badge" style="display:none;margin-left:5px;vertical-align:1px;background:var(--red);color:#fff;font-size:10px;font-weight:500;min-width:16px;height:16px;border-radius:8px;align-items:center;justify-content:center;padding:0 4px;"></span></div>
           </div>
         </div>
 
@@ -1549,11 +1584,11 @@ a { text-decoration:none; color:inherit; }
 
         <!-- 생산 추천 탭 -->
         <div id="prod-tab-recommend" style="display:none;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
             <div style="display:flex;gap:6px;flex-wrap:wrap;" id="prod-rec-cat-pills">
               <div class="inv-pill on" onclick="prodSetRecCat('전체',this)">전체</div>
             </div>
-            <div style="margin-left:auto;display:flex;gap:6px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
               <div class="inv-pill on" id="prod-rec-sort-expiry"  onclick="prodSetRecSort('expiry',this)">소진일 임박순</div>
               <div class="inv-pill"   id="prod-rec-sort-progress" onclick="prodSetRecSort('progress',this)">상품화 미완료순</div>
             </div>
@@ -5407,7 +5442,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.7.6</div>
+<div id="version">v5.7.7</div>
 
 <script>
 /* ═══════════════════════════════════════
