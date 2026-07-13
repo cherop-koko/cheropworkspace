@@ -910,6 +910,19 @@ a { text-decoration:none; color:inherit; }
   /* ── 콘텐츠 라이브러리 그리드는 위의 repeat(4→2) 규칙으로 처리됨 ── */
   /* 짤 그리드도 repeat(5→2) 규칙으로 처리됨 */
 
+  /* ── 업무 체크리스트: 4열 → 1열 ── */
+  .tasks-grid { grid-template-columns:1fr; }
+
+  /* ── 프로젝트: 전체/진행중/완료 필터 숨김 + 카드 풀폭(선택 시 전체화면처럼) ── */
+  #proj-tab-bar > .page-tab:nth-child(-n+3) { display:none; }
+  #proj-tab-bar > div[style*="width:0.5px"] { display:none; }
+  .proj-card { width:100%; min-width:0; }
+
+  /* ── 공지사항: 좌(목록)/우(내용) → 위(목록)/아래(내용) ── */
+  #page-notice div[style*="min-height:500px"] { flex-direction:column; min-height:0 !important; }
+  #notice-list { width:100% !important; max-height:40vh; border-right:none !important; border-bottom:0.5px solid var(--border); }
+  #notice-detail { padding:18px 16px !important; }
+
   /* ── 프로젝트 페이지: 좌우 분할 → 세로 스택 ── */
   #proj-cards + #proj-detail,
   #proj-detail { width:100% !important; }
@@ -5442,7 +5455,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.7.7</div>
+<div id="version">v5.7.8</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -9261,6 +9274,18 @@ async function completeReceipt(id) {
       }]);
     }
     toast('입고 완료 처리됐어요 ✓');
+    // 연동된 발주 상태도 '입고 완료'로 + 재고 중복반영 방지 플래그
+    try {
+      await patchAppState(s2 => {
+        const ord = (s2.ops_orders||[]).find(o => o.receipt_id === id);
+        if (ord) { ord.status = 'received'; ord.stockApplied = true; }
+        // 운영캘린더 이벤트도 완료 처리
+        const evt = (s2.ops_events||[]).find(e => e.receipt_id === id || e.id === `recv-${id}`);
+        if (evt) evt.status = 'done';
+        return s2;
+      });
+      if (typeof loadOpsOrderList === 'function' && $('ops-order-list')) loadOpsOrderList();
+    } catch(e2) { console.warn('발주/캘린더 동기화 실패:', e2); }
     loadReceiptSchedule();
     loadDashInventory();
     refreshInventoryUI();
@@ -14181,7 +14206,7 @@ async function saveOpsOrder() {
     return s;
   });
 
-  // 제품 발주 → stock_receipts 자동 동기화 (입고 일정에 자동 표시)
+  // 제품 발주 → stock_receipts + 재고 + 운영캘린더 자동 동기화
   if (_opsOrderKind === 'product' && productId) {
     try {
       // 입고예정일: 입력 없으면 발주일 + 7일 (기본값)
@@ -14192,61 +14217,93 @@ async function saveOpsOrder() {
         d.setDate(d.getDate() + 7);
         scheduled = dateStr(d);
       }
-      const receiptStatus = data.status === 'received' ? 'completed' : 'scheduled';
+      const isReceived    = data.status === 'received';
+      const receiptStatus = isReceived ? 'completed' : 'scheduled';
 
-      // 편집 모드: 기존 발주의 receipt_id로 갱신
+      // ① receipt 생성/갱신 → receiptId 확보
+      let receiptId = null;
+      let orderId   = opsOrderEditId;
+      const sNow = await getAppState();
       if (opsOrderEditId) {
-        // 최신 발주 데이터 조회 (방금 저장됨)
-        const sNow = await getAppState();
         const ord = (sNow.ops_orders||[]).find(o => o.id === opsOrderEditId);
-        if (ord && ord.receipt_id) {
-          await db.from('stock_receipts').update({
-            product_id: productId,
-            quantity: data.qty,
-            scheduled_date: scheduled,
-            status: receiptStatus,
-            note: `발주 자동 생성${data.memo ? ' · ' + data.memo : ''}`,
-          }).eq('id', ord.receipt_id);
-        } else {
-          // receipt_id 없는 기존 발주 → 신규 생성
-          const newReceiptId = 'rcpt-ord-' + Date.now();
-          await db.from('stock_receipts').insert([{
-            id: newReceiptId,
-            product_id: productId,
-            quantity: data.qty,
-            scheduled_date: scheduled,
-            receipt_date: null,
-            status: receiptStatus,
-            note: `발주 자동 생성${data.memo ? ' · ' + data.memo : ''}`,
-          }]);
-          // 발주에 receipt_id 저장
+        receiptId = ord ? ord.receipt_id : null;
+      } else {
+        // 신규 등록 — 방금 push한 발주 (마지막)
+        const latest = (sNow.ops_orders||[])[ (sNow.ops_orders||[]).length - 1 ];
+        orderId = latest ? latest.id : null;
+      }
+
+      const receiptFields = {
+        product_id: productId,
+        quantity: data.qty,
+        scheduled_date: scheduled,
+        status: receiptStatus,
+        note: `발주 자동 생성${data.memo ? ' · ' + data.memo : ''}`,
+      };
+      if (isReceived) receiptFields.receipt_date = dateStr();
+
+      if (receiptId) {
+        await db.from('stock_receipts').update(receiptFields).eq('id', receiptId);
+      } else {
+        receiptId = 'rcpt-ord-' + Date.now();
+        await db.from('stock_receipts').insert([{ id: receiptId, receipt_date: isReceived ? dateStr() : null, ...receiptFields }]);
+        if (orderId) {
           await patchAppState(s2 => {
-            const o2 = (s2.ops_orders||[]).find(o => o.id === opsOrderEditId);
-            if (o2) o2.receipt_id = newReceiptId;
+            const o2 = (s2.ops_orders||[]).find(o => o.id === orderId);
+            if (o2) o2.receipt_id = receiptId;
             return s2;
           });
         }
-      } else {
-        // 신규 등록 — 방금 push한 발주의 id를 찾아 receipt_id 매핑
-        const newReceiptId = 'rcpt-ord-' + Date.now();
-        await db.from('stock_receipts').insert([{
-          id: newReceiptId,
-          product_id: productId,
-          quantity: data.qty,
-          scheduled_date: scheduled,
-          receipt_date: null,
-          status: receiptStatus,
-          note: `발주 자동 생성${data.memo ? ' · ' + data.memo : ''}`,
-        }]);
-        await patchAppState(s2 => {
-          // 가장 최근 발주(방금 추가한 것)에 receipt_id 부여
-          if (s2.ops_orders && s2.ops_orders.length) {
-            const latest = s2.ops_orders[s2.ops_orders.length - 1];
-            latest.receipt_id = newReceiptId;
-          }
-          return s2;
-        });
       }
+
+      // ② 입고완료 → 재고 반영 (총재고 + 생산화대기 증가, 중복 방지 플래그)
+      if (isReceived && orderId) {
+        const sChk = await getAppState();
+        const ordChk = (sChk.ops_orders||[]).find(o => o.id === orderId);
+        if (ordChk && !ordChk.stockApplied) {
+          const {data:inv} = await db.from('inventory').select('*').eq('product_id', productId).maybeSingle();
+          if (inv) {
+            await db.from('inventory').update({
+              total_stock:        (inv.total_stock||0)        + data.qty,
+              pending_production: (inv.pending_production||0) + data.qty,
+              updated_at: new Date().toISOString(),
+            }).eq('product_id', productId);
+          } else {
+            await db.from('inventory').insert([{
+              id:`inv-${Date.now()}`, product_id:productId,
+              total_stock:data.qty, pending_production:data.qty,
+              produced_stock:0, available_stock:0, updated_at:new Date().toISOString(),
+            }]);
+          }
+          await patchAppState(s2 => {
+            const o2 = (s2.ops_orders||[]).find(o => o.id === orderId);
+            if (o2) o2.stockApplied = true;
+            return s2;
+          });
+          refreshInventoryUI();
+          toast(`입고 완료 · 재고 +${data.qty} 반영됨 ✓`);
+        }
+      }
+
+      // ③ 운영캘린더 이벤트 즉시 생성/갱신 (분류: 입고, 완료 시 상태 done)
+      await ensureIncomingCat();
+      const itemLabel = displayName || searchVal;
+      await patchAppState(s2 => {
+        s2.ops_events = s2.ops_events || [];
+        const evtId = `recv-${receiptId}`;
+        const evtData = {
+          id: evtId, receipt_id: receiptId,
+          title: `입고: ${itemLabel} ${data.qty}개`,
+          startDate: scheduled, endDate: scheduled,
+          cat: 'cat-incoming', type: 'receipt',
+          status: isReceived ? 'done' : 'planned',
+        };
+        const idx = s2.ops_events.findIndex(e => e.id===evtId || e.receipt_id===receiptId);
+        if (idx >= 0) s2.ops_events[idx] = { ...s2.ops_events[idx], ...evtData };
+        else s2.ops_events.push(evtData);
+        return s2;
+      });
+      if (opsTab==='calendar' && $('ops-cal')) loadOpsCal();
     } catch(err) { console.warn('입고일정 자동 동기화 실패:', err); toast('입고일정 동기화 실패: ' + (err.message||'')); }
   }
 
