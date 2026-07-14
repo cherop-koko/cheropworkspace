@@ -845,9 +845,6 @@ a { text-decoration:none; color:inherit; }
   #inv-product-table table { min-width:900px !important; }
   .main .card:has(#prod-defect-list) table { min-width:700px; }
   .main .card:has(#prod-rec-list) table { min-width:640px; }
-  /* 작업기록 카드 예외: 검색 드롭다운이 잘리면 안 됨 */
-  .main .card:has(#work-log-tbody) { overflow:visible !important; }
-  .main .card:has(#work-log-tbody) table { min-width:0; }
   .inv-tbl th, .inv-tbl td { padding:8px 10px; font-size:11px; }
 
   /* ── 버튼 텍스트 줄바꿈 방지 (재고 내보내기/출고 등록 등) ── */
@@ -860,24 +857,9 @@ a { text-decoration:none; color:inherit; }
   /* ── 운영 캘린더: 셀 축소 ── */
   #ops-cal div[style*="min-height:64px"] { min-height:52px !important; padding:3px 3px !important; }
 
-  /* ── 작업기록: 입력 행을 세로 스택 카드로 재배치 ── */
-  #work-log-input-row { display:flex; flex-wrap:wrap; gap:8px; padding:12px; box-sizing:border-box; width:100%; }
-  #work-log-input-row td { display:block; padding:0 !important; border:none !important; }
-  #work-log-input-row td:nth-child(1) { display:none; }
-  #work-log-input-row td:nth-child(2) { flex:1 1 100%; position:relative; }
-  #work-log-input-row td:nth-child(2) input { font-size:14px !important; padding:10px 12px !important; }
-  #work-log-input-row td:nth-child(3) { flex:1 1 auto; min-width:90px; }
-  #work-log-input-row td:nth-child(3) input { width:100% !important; font-size:14px !important; padding:10px 12px !important; }
-  #work-log-input-row td:nth-child(4) { flex:0 0 auto; }
-  #work-log-input-row td:nth-child(4) button { height:100%; min-height:40px; padding:8px 18px !important; font-size:13px !important; }
-  /* 검색 드롭다운: 풀폭 + 터치 크기 확대 */
-  #work-log-dd { left:0 !important; right:0 !important; max-height:46vh !important; }
-  #work-log-dd > div { padding:11px 14px !important; font-size:13px !important; }
-  /* 작업기록 테이블 열 폭 조정 */
-  .main .card:has(#work-log-tbody) th:nth-child(1) { width:58px; }
-  .main .card:has(#work-log-tbody) th:nth-child(3) { width:60px; }
-  .main .card:has(#work-log-tbody) th:nth-child(4) { width:44px; }
-  .main .card:has(#work-log-tbody) td { padding:8px 6px; }
+  /* ── 작업기록 퀵바: 수량/버튼 터치 크기 ── */
+  #work-log-qty { flex:1; min-width:70px; font-size:14px !important; }
+  #work-log-search { font-size:14px !important; }
 
   /* ── 모달 ── */
   .modal-overlay { padding:14px 8px; }
@@ -1118,14 +1100,6 @@ a { text-decoration:none; color:inherit; }
               <div style="font-size:22px;font-weight:600;line-height:1.1;" id="dash-kpi-ship-qty">—</div>
               <div style="font-size:11px;color:var(--light);margin-top:4px;" id="dash-kpi-ship-sub">—</div>
             </div>
-            <div class="card" style="padding:14px 16px;" id="dash-task-card">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                <div style="font-size:10px;color:var(--light);letter-spacing:.5px;margin-bottom:4px;">내 할일 (미완료)</div>
-                <div class="card-link" onclick="nav('tasks')" style="font-size:12px;">↗</div>
-              </div>
-              <div style="font-size:22px;font-weight:600;line-height:1.1;" id="dash-kpi-task">—</div>
-              <div style="font-size:11px;margin-top:4px;" id="dash-kpi-task-sub">—</div>
-            </div>
             <div class="card" style="padding:14px 16px;">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                 <div style="font-size:10px;color:var(--light);letter-spacing:.5px;margin-bottom:4px;">재고 부족 임박</div>
@@ -1133,6 +1107,13 @@ a { text-decoration:none; color:inherit; }
               </div>
               <div style="font-size:22px;font-weight:600;line-height:1.1;color:#C4736A;" id="dash-kpi-inv-low">—</div>
               <div style="font-size:11px;color:var(--light);margin-top:4px;" id="dash-kpi-inv-sub">—</div>
+            </div>
+            <div class="card" style="padding:14px 16px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-size:10px;color:var(--light);letter-spacing:.5px;margin-bottom:4px;">출결 · 오늘</div>
+                <div class="card-link" onclick="nav('attendance')" style="font-size:12px;">↗</div>
+              </div>
+              <div id="dash-att-block" style="margin-top:2px;"></div>
             </div>
           </div>
 
@@ -1160,10 +1141,10 @@ a { text-decoration:none; color:inherit; }
 
             <div class="card">
               <div class="card-head">
-                <div><div class="card-title">출결 · 오늘</div></div>
-                <div class="card-link" onclick="nav('attendance')">↗</div>
+                <div><div class="card-title">📅 3일 내 일정</div></div>
+                <div class="card-link" onclick="nav('operations','calendar')">↗</div>
               </div>
-              <div id="dash-att-block" style="margin-top:8px;"></div>
+              <div id="dash-upcoming-list" style="margin-top:4px;"></div>
             </div>
           </div>
 
@@ -1521,10 +1502,10 @@ a { text-decoration:none; color:inherit; }
             </div>
             <div id="prod-rsv-list" style="display:flex;flex-direction:column;gap:4px;"></div>
           </div>
-          <!-- 상단 풀폭: 작업 기록 (위로 이동) -->
+          <!-- 상단 풀폭: 작업 기록 (퀵바 + 타임라인) -->
           <div class="card" style="margin-bottom:14px;">
-            <div class="card-head">
-              <div><div class="card-title">✏️ 작업 기록</div><div class="card-sub">날짜별 작업 내역 · ··· 으로 수정/삭제</div></div>
+            <div class="card-head" style="margin-bottom:10px;">
+              <div><div class="card-title">✏️ 작업 기록</div><div class="card-sub">··· 으로 수정/삭제</div></div>
               <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
                 <div style="font-size:11px;color:var(--light);">최근</div>
                 <div class="inv-pill on" id="work-log-period-7"  style="font-size:11px;padding:3px 9px;" onclick="workLogSetPeriod(7,this)">7일</div>
@@ -1532,19 +1513,30 @@ a { text-decoration:none; color:inherit; }
                 <div class="inv-pill"    id="work-log-period-30" style="font-size:11px;padding:3px 9px;" onclick="workLogSetPeriod(30,this)">30일</div>
               </div>
             </div>
-            <div style="padding:0;border:0.5px solid var(--border);border-radius:var(--r);">
-              <table class="inv-tbl" style="margin:0;">
-                <thead>
-                  <tr style="background:#FBF0EF;">
-                    <th style="width:100px;color:#A3534C;">날짜</th>
-                    <th style="color:#A3534C;">상품명</th>
-                    <th style="width:90px;text-align:right;color:#A3534C;">수량</th>
-                    <th style="width:110px;text-align:right;"></th>
-                  </tr>
-                </thead>
-                <tbody id="work-log-tbody"></tbody>
-              </table>
+            <!-- 퀵 입력 바 -->
+            <div style="padding:12px 14px;background:var(--surface3);border:0.5px solid var(--border);border-radius:10px;margin-bottom:6px;">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <div style="flex:1;min-width:180px;position:relative;">
+                  <input type="text" id="work-log-search" placeholder="상품명 검색..." autocomplete="off"
+                    style="width:100%;box-sizing:border-box;border:0.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;background:var(--surface);"
+                    oninput="workLogSearch(this.value)"
+                    onfocus="if(window.innerWidth<=768){this.blur();openWorkLogSheet();}else{workLogSearch(this.value)}"
+                    onblur="setTimeout(()=>{const d=document.getElementById('work-log-dd');if(d)d.style.display='none';},200)">
+                  <div id="work-log-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:0.5px solid var(--border);border-radius:8px;margin-top:3px;max-height:260px;overflow-y:auto;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.08);"></div>
+                  <div id="work-log-sel-lbl" style="display:none;"></div>
+                </div>
+                <input type="number" id="work-log-qty" placeholder="수량" min="1"
+                  style="width:72px;box-sizing:border-box;border:0.5px solid var(--border);border-radius:8px;padding:9px 10px;font-size:13px;text-align:center;outline:none;background:var(--surface);"
+                  onkeypress="if(event.key==='Enter')addWorkLog()">
+                <button class="f-btn f-btn-save" style="font-size:12px;padding:9px 18px;white-space:nowrap;" onclick="addWorkLog()">추가</button>
+              </div>
+              <div id="work-log-recent-row" style="display:none;gap:5px;flex-wrap:wrap;align-items:center;margin-top:9px;">
+                <span style="font-size:10px;color:var(--light);">최근</span>
+                <span id="work-log-recent-chips" style="display:contents;"></span>
+              </div>
             </div>
+            <!-- 날짜 타임라인 -->
+            <div id="work-log-timeline"></div>
           </div>
 
           <!-- 하단 풀폭: 오늘 출고 내역 (아래로 이동) -->
@@ -5462,7 +5454,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.7.9</div>
+<div id="version">v5.8.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -6117,7 +6109,7 @@ async function loadDashboard() {
   await getAppState(); // 캐시 프리로드 → qlGetLinks가 정확한 데이터 반환
   initMemberColors(); // 담당자 색상 적용
   loadDashQuickLinks();
-  await Promise.all([loadDashTasks(), loadDashNotices(), loadDashAtt(), loadDashRevenue(), loadDashInventory(), loadDashTodayShip()]);
+  await Promise.all([loadDashTasks(), loadDashNotices(), loadDashAtt(), loadDashRevenue(), loadDashInventory(), loadDashTodayShip(), loadDashUpcoming()]);
   loadDashDday();
 }
 
@@ -6318,6 +6310,40 @@ async function loadDashNotices() {
       ? list.map(n=>`<div class="dnotice"><div class="dnotice-title"><span class="nbadge ${n.category==='공지'?'nbadge-dark':'nbadge-gray'}">${n.category||'공지'}</span>${n.title}</div><div class="dnotice-meta">${n.date||''} · ${n.author||''}</div></div>`).join('')
       : '<div style="padding:12px 0;font-size:13px;color:var(--light);">공지사항이 없어요</div>';
   } catch(e) { $('dash-notice-list').innerHTML='<div style="padding:12px 0;font-size:13px;color:var(--light);">불러오기 실패</div>'; }
+}
+
+/* 3일 내 일정 (운영캘린더 연동) */
+async function loadDashUpcoming() {
+  const el = $('dash-upcoming-list'); if (!el) return;
+  try {
+    const s = await getAppState();
+    const today = dateStr();
+    const limit = dateStr(new Date(Date.now() + 3*86400000));
+    const events = (s.ops_events||[])
+      .filter(e => e.status !== 'cancelled')
+      .filter(e => {
+        const st = e.startDate || '';
+        const en = e.endDate || e.startDate || '';
+        return st <= limit && en >= today; // 3일 내 시작하거나 진행 중
+      })
+      .sort((a,b) => (a.startDate||'').localeCompare(b.startDate||''))
+      .slice(0, 6);
+    if (!events.length) {
+      el.innerHTML = '<div style="padding:12px 0;font-size:13px;color:var(--light);">3일 내 일정이 없어요</div>';
+      return;
+    }
+    el.innerHTML = events.map(e => {
+      const cat = opsCatOf(e.cat);
+      const isToday = (e.startDate||'') <= today && (e.endDate||e.startDate||'') >= today;
+      const dLbl = isToday ? '오늘' : (e.startDate||'').slice(5).replace('-','/');
+      const done = e.status === 'done';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--surface2);cursor:pointer;" onclick="nav('operations','calendar')">
+        <span style="width:8px;height:8px;border-radius:50%;background:${cat.color};flex-shrink:0;"></span>
+        <span style="flex:1;font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${done?'text-decoration:line-through;color:var(--faint);':''}">${escapeHtml(e.title||'')}</span>
+        <span style="font-size:10px;color:${isToday&&!done?'var(--red)':'var(--light)'};font-weight:${isToday&&!done?600:400};flex-shrink:0;">${dLbl}</span>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error('loadDashUpcoming', e); }
 }
 
 async function loadDashAtt() {
@@ -7290,46 +7316,31 @@ async function cyclePtaskStatus(id, current) {
   } catch(e) { toast('상태 변경 실패: '+e.message); }
 }
 
-/* 비고 — 포스트잇 카드 (인라인 편집 + 색상) */
-const MEMO_COLORS = {
-  yellow: { bg:'#FEF9E0', border:'#F0E6B8', text:'#5C4E1E', meta:'#B8A560' },
-  blue:   { bg:'#E8F4FD', border:'#C2E0F5', text:'#1E4A6B', meta:'#7BA8C9' },
-  pink:   { bg:'#FDEDF3', border:'#F5CDDD', text:'#6B2543', meta:'#C98BA6' },
-  green:  { bg:'#EAF6E4', border:'#CCE8BE', text:'#2F5418', meta:'#8FBA75' },
-  purple: { bg:'#F0EDFB', border:'#D8D0F2', text:'#3C3070', meta:'#9C90C9' },
-};
-
+/* 비고 — 라인형 메모 (인라인 편집, 줄바꿈 가능, 구분선) */
 async function loadMemoList() {
   try {
     const s=await getAppState();
     const list=(s.memos||[]).filter(m=>m.author===tasksWho).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     $('memo-count').textContent=`${list.length}건`;
-    $('memo-list').innerHTML=list.length
-      ? list.map(m=>renderMemoCard(m)).join('')
-      : '<div style="padding:14px 6px;font-size:12px;color:var(--faint);text-align:center;">메모가 없어요<br><span style="font-size:11px;">아래 + 메모 추가를 눌러보세요</span></div>';
+    const items = list.map(m=>renderMemoLine(m)).join('');
+    // 맨 아래 새 메모 입력줄
+    const newLine = `<div onclick="addMemoCard()" style="display:flex;align-items:flex-start;gap:8px;padding:10px 4px;cursor:text;">
+      <span style="flex:1;font-size:13px;color:var(--faint);">메모 입력...</span>
+    </div>`;
+    $('memo-list').innerHTML = items + newLine;
   } catch(e) { console.error('loadMemoList',e); }
 }
 
-function renderMemoCard(m) {
-  const c = MEMO_COLORS[m.color] || MEMO_COLORS.yellow;
+function renderMemoLine(m) {
   const text = (m.title ? m.title + '\n' : '') + (m.content||'');
-  const dateLbl = m.date ? m.date.slice(5).replace('-','/') : '오늘';
-  const dots = Object.keys(MEMO_COLORS).map(k=>{
-    const cc = MEMO_COLORS[k];
-    const sel = (m.color||'yellow')===k;
-    return `<span onclick="memoSetColor('${m.id}','${k}')" title="${k}"
-      style="width:13px;height:13px;border-radius:50%;background:${cc.bg};border:1.5px solid ${sel?cc.text:cc.border};cursor:pointer;flex-shrink:0;display:inline-block;"></span>`;
-  }).join('');
-  return `<div id="memo-card-${m.id}" style="background:${c.bg};border:0.5px solid ${c.border};border-radius:8px;padding:10px 12px 8px;position:relative;margin-bottom:8px;">
-    <div onclick="event.stopPropagation();deleteMemoCard('${m.id}')" style="position:absolute;top:7px;right:9px;font-size:11px;color:${c.meta};cursor:pointer;padding:2px 4px;">✕</div>
+  const dateLbl = m.date ? m.date.slice(5).replace('-','/') : '';
+  return `<div id="memo-card-${m.id}" style="display:flex;align-items:flex-start;gap:8px;padding:9px 4px;border-bottom:0.5px solid var(--surface2);">
     <div contenteditable="plaintext-only" id="memo-txt-${m.id}"
       onblur="memoBlurSave('${m.id}',this)"
       onkeydown="if(event.key==='Escape')this.blur()"
-      style="font-size:13px;line-height:1.6;color:${c.text};outline:none;white-space:pre-wrap;word-break:break-word;padding-right:16px;min-height:20px;cursor:text;">${escapeHtml(text)}</div>
-    <div style="display:flex;align-items:center;gap:5px;margin-top:8px;">
-      ${dots}
-      <span style="margin-left:auto;font-size:9px;color:${c.meta};">${dateLbl}</span>
-    </div>
+      style="flex:1;font-size:13px;line-height:1.6;color:var(--text);outline:none;white-space:pre-wrap;word-break:break-word;min-height:20px;cursor:text;min-width:0;">${escapeHtml(text)}</div>
+    <span style="font-size:9px;color:var(--faint);flex-shrink:0;margin-top:3px;">${dateLbl}</span>
+    <span onclick="deleteMemoCard('${m.id}')" style="font-size:11px;color:var(--faint);cursor:pointer;padding:2px 4px;flex-shrink:0;">✕</span>
   </div>`;
 }
 
@@ -7337,7 +7348,7 @@ async function addMemoCard() {
   const id = `memo-${Date.now()}`;
   await patchAppState(s => {
     s.memos = s.memos||[];
-    s.memos.push({ id, author:tasksWho, title:null, date:dateStr(), content:'', color:'yellow' });
+    s.memos.push({ id, author:tasksWho, title:null, date:dateStr(), content:'' });
     return s;
   });
   await loadMemoList();
@@ -7350,7 +7361,6 @@ async function memoBlurSave(id, el) {
   await patchAppState(s => {
     s.memos = s.memos||[];
     if (!text) {
-      // 빈 메모는 자동 삭제
       s.memos = s.memos.filter(x=>x.id!==id);
     } else {
       const m = s.memos.find(x=>x.id===id);
@@ -7365,21 +7375,8 @@ async function memoBlurSave(id, el) {
   }
 }
 
-async function memoSetColor(id, color) {
-  await patchAppState(s => {
-    const m = (s.memos||[]).find(x=>x.id===id);
-    if (m) m.color = color;
-    return s;
-  });
-  // 카드만 다시 그리기 (편집 중 다른 카드 방해 없이)
-  const s = await getAppState();
-  const m = (s.memos||[]).find(x=>x.id===id);
-  const card = $(`memo-card-${id}`);
-  if (m && card) card.outerHTML = renderMemoCard(m);
-}
-
 async function deleteMemoCard(id) {
-  const ok = await customConfirm('이 메모를 삭제할까요?','', '삭제');
+  const ok = await customConfirm('이 메모를 삭제할까요?');
   if(!ok) return;
   await patchAppState(s => {
     s.memos = (s.memos||[]).filter(x=>x.id!==id);
@@ -7388,278 +7385,6 @@ async function deleteMemoCard(id) {
   loadMemoList();
 }
 
-/* ═══════════════════════════════════════
-   CUSTOM CONFIRM
-═══════════════════════════════════════ */
-let confirmResolve = ()=>{};
-function customConfirm(msg, sub='이 작업은 되돌릴 수 없어요.', yesLabel='삭제') {
-  return new Promise(resolve => {
-    $('confirm-msg').textContent = msg;
-    $('confirm-sub').textContent = sub;
-    const yesBtn = document.querySelector('#confirm-overlay .confirm-yes');
-    if (yesBtn) yesBtn.textContent = yesLabel;
-    $('confirm-overlay').classList.add('on');
-    confirmResolve = (v) => {
-      $('confirm-overlay').classList.remove('on');
-      resolve(v);
-    };
-  });
-}
-
-let promptResolve = ()=>{};
-function customPrompt(msg, placeholder='', initial='') {
-  return new Promise(resolve => {
-    $('prompt-msg').textContent = msg;
-    const inp = $('prompt-input');
-    inp.placeholder = placeholder;
-    inp.value = initial;
-    $('prompt-overlay').classList.add('on');
-    setTimeout(()=>{ inp.focus(); inp.select(); }, 50);
-    promptResolve = (v) => {
-      $('prompt-overlay').classList.remove('on');
-      resolve(v);
-    };
-  });
-}
-function closeModal(id) {
-  $(id).classList.remove('on');
-  // 업로드 모달 위에서 상품 모달 닫을 때 z-index만 복원 (key 초기화는 saveProduct에서)
-  if(id==='inv-product-modal') {
-    $('inv-upload-modal').style.zIndex = '';
-    $('inv-product-modal').style.zIndex = '';
-  }
-}
-
-function cancelProductModal() {
-  // 취소/✕ 로 닫을 때 — 상품 추가 안 한 것이므로 key 초기화
-  window._invPendingMatchKey = null;
-  closeModal('inv-product-modal');
-}
-
-function openTaskModal(id) {
-  taskIsNew=!id; taskId=id||null; taskSt='todo'; taskUrgent=false; taskStarred=false;
-  $('task-modal-kind').textContent=id?'할일 수정':'할일 추가';
-  $('task-del-btn').style.display=id?'flex':'none';
-  $('task-title').value=''; $('task-note').value=''; $('task-due').value=''; $('task-memo').value='';
-  $('task-assignee').textContent=tasksWho;
-  // 속성 영역 기본 접힘
-  $('task-props-expanded').style.display = 'none';
-  $('task-props-toggle-lbl').textContent = '▾ 속성 펼치기';
-  applyTaskSt(); applyUrgent(); applyStarred();
-  renderTaskPropsSummary();
-  if(id) {
-    db.from('tasks').select('*').eq('id',id).single().then(({data:t})=>{
-      if(!t)return;
-      $('task-title').value=t.title||''; $('task-note').value=t.note||'';
-      $('task-due').value=t.due_date||''; $('task-memo').value=t.memo||'';
-      taskSt=t.status||'todo'; taskUrgent=!!t.is_urgent; taskStarred=!!t.is_starred;
-      applyTaskSt(); applyUrgent(); applyStarred();
-      renderTaskPropsSummary();
-    });
-  }
-  $('task-modal').classList.add('on');
-  setTimeout(()=>$('task-title').focus(),80);
-}
-
-function toggleTaskProps() {
-  const exp = $('task-props-expanded');
-  const isOpen = exp.style.display !== 'none';
-  exp.style.display = isOpen ? 'none' : '';
-  $('task-props-toggle-lbl').textContent = isOpen ? '▾ 속성 펼치기' : '▴ 속성 접기';
-}
-
-function renderTaskPropsSummary() {
-  // 마감일
-  const due = $('task-due').value;
-  let dueLbl = '📅 마감일 미정';
-  if (due) {
-    const [y,m,d] = due.split('-');
-    const dt = new Date(due+'T00:00:00');
-    const dayLbl = ['일','월','화','수','목','금','토'][dt.getDay()] || '';
-    dueLbl = `📅 ${m}.${d}${dayLbl?' ('+dayLbl+')':''}`;
-  }
-  $('task-sum-due').textContent = dueLbl;
-
-  // 중요
-  const urgentEl = $('task-sum-urgent');
-  if (taskUrgent) {
-    urgentEl.textContent = '⚑ 중요';
-    urgentEl.style.color = 'var(--red)';
-    urgentEl.style.fontWeight = '500';
-  } else {
-    urgentEl.textContent = '⚑ 일반';
-    urgentEl.style.color = 'var(--light)';
-    urgentEl.style.fontWeight = '';
-  }
-
-  // 담당자
-  $('task-sum-assignee').textContent = '👤 ' + (tasksWho || '—');
-
-  // 상단 헤더의 상태 칩
-  const stChip = $('task-st-chip');
-  if (stChip) {
-    const STATE = {
-      todo: { label:'시작 전', bg:'var(--surface2)', col:'var(--muted)' },
-      ing:  { label:'진행 중', bg:'var(--green-bg)', col:'var(--green-tx)' },
-      hold: { label:'보류',   bg:'var(--amber-bg)', col:'var(--amber)' },
-      done: { label:'완료',   bg:'var(--surface2)', col:'var(--faint)' },
-    };
-    const s = STATE[taskSt] || STATE.todo;
-    stChip.textContent = s.label;
-    stChip.style.background = s.bg;
-    stChip.style.color = s.col;
-  }
-}
-
-function applyTaskSt() {
-  document.querySelectorAll('#task-st-pills .st-pill').forEach(el=>el.classList.toggle('on',el.classList.contains(taskSt)));
-  renderTaskPropsSummary();
-}
-function setTaskSt(st,el) { taskSt=st; document.querySelectorAll('#task-st-pills .st-pill').forEach(e=>e.classList.remove('on')); el.classList.add('on'); renderTaskPropsSummary(); }
-function applyUrgent() {
-  $('urgent-track').classList.toggle('on',taskUrgent);
-  $('urgent-lbl').textContent = taskUrgent ? '중요 항목으로 표시됩니다' : '표시 안 함';
-  $('urgent-lbl').classList.toggle('on',taskUrgent);
-  $('task-title').classList.toggle('urgent',taskUrgent);
-  renderTaskPropsSummary();
-}
-function toggleUrgent() { taskUrgent=!taskUrgent; applyUrgent(); }
-function applyStarred() { const b=$('task-star-btn'); b.textContent=taskStarred?'★':'☆'; b.classList.toggle('starred',taskStarred); }
-function toggleStar() { taskStarred=!taskStarred; applyStarred(); }
-
-async function saveTask() {
-  const title=$('task-title').value.trim();
-  if(!title){ toast('제목을 입력해주세요'); $('task-title').focus(); return; }
-  const row={title,note:$('task-note').value.trim()||null,assignee:tasksWho,status:taskSt,is_urgent:taskUrgent,is_starred:taskStarred,due_date:$('task-due').value||null,memo:$('task-memo').value.trim()||null};
-  try {
-    if(taskIsNew) {
-      const {error}=await db.from('tasks').insert([row]);
-      if(error) {
-        // note 컬럼 없으면 없이 재시도
-        if(error.message.includes('note')) {
-          const {note,...rowNoNote}=row;
-          const {error:e2}=await db.from('tasks').insert([rowNoNote]);
-          if(e2) throw e2;
-        } else throw error;
-      }
-      toast('할일이 추가됐어요 ✓');
-    } else {
-      const {error}=await db.from('tasks').update(row).eq('id',taskId);
-      if(error) {
-        if(error.message.includes('note')) {
-          const {note,...rowNoNote}=row;
-          const {error:e2}=await db.from('tasks').update(rowNoNote).eq('id',taskId);
-          if(e2) throw e2;
-        } else throw error;
-      }
-      toast('수정됐어요 ✓');
-    }
-    closeModal('task-modal'); loadTaskList(); loadDashTasks();
-  } catch(e) { toast('저장 실패: '+e.message); console.error(e); }
-}
-
-async function deleteTask() {
-  const ok = await customConfirm('할일을 삭제할까요?');
-  if(!ok) return;
-  try {
-    await db.from('tasks').delete().eq('id',taskId);
-    closeModal('task-modal'); loadTaskList(); loadDashTasks(); toast('삭제됐어요');
-  } catch(e) { toast('삭제 실패: '+e.message); }
-}
-
-/* 프로젝트 업무 모달 */
-let ptaskAssignee = null;
-
-function renderPtaskAssigneePills() {
-  const wrap = $('ptask-assignee-pills');
-  if (!wrap) return;
-  wrap.innerHTML = MEMBERS.map(m => {
-    const isOn = ptaskAssignee === m.name;
-    return `<div style="
-      display:inline-flex;align-items:center;padding:5px 13px;border-radius:50px;
-      font-size:12px;cursor:pointer;transition:all .12s;
-      background:${isOn ? 'var(--text)' : 'var(--surface2)'};
-      color:${isOn ? '#fff' : 'var(--muted)'};
-      border:0.5px solid ${isOn ? 'var(--text)' : 'var(--border)'};
-      font-family:var(--font);
-    " onclick="ptaskAssignee='${m.name}';renderPtaskAssigneePills()">${m.name}</div>`;
-  }).join('');
-}
-
-async function openPtaskModal(id) {
-  ptaskIsNew=!id; ptaskId=id||null; ptaskSt='todo';
-  ptaskAssignee = user?.name || null;
-  $('ptask-modal-kind').textContent=id?'프로젝트 업무 수정':'프로젝트 업무 추가';
-  $('ptask-del-btn').style.display=id?'flex':'none';
-  $('ptask-title').value=''; $('ptask-note').value=''; $('ptask-due').value=''; $('ptask-memo').value='';
-  const s=await getAppState();
-  const projs=s.projects||[];
-  $('ptask-projid').innerHTML='<option value="">프로젝트 선택</option>'+projs.map(p=>`<option value="${p.id}">${p.title}</option>`).join('');
-  applyPtaskSt();
-  renderPtaskAssigneePills();
-  if(id) {
-    const t=(s.proj_tasks||[]).find(x=>x.id===id);
-    if(t){
-      $('ptask-title').value=t.title||'';
-      $('ptask-note').value=t.note||'';
-      $('ptask-due').value=t.due_date||'';
-      $('ptask-memo').value=t.memo||'';
-      ptaskSt=t.status||'todo';
-      ptaskAssignee=t.assignee||user?.name;
-      if(t.proj_id) $('ptask-projid').value=t.proj_id;
-      applyPtaskSt();
-      renderPtaskAssigneePills();
-    }
-  }
-  $('ptask-modal').classList.add('on');
-  setTimeout(()=>$('ptask-title').focus(),80);
-}
-
-function applyPtaskSt() { document.querySelectorAll('#ptask-st-pills .st-pill').forEach(el=>el.classList.toggle('on',el.classList.contains(ptaskSt))); }
-function setPtaskSt(st,el) { ptaskSt=st; document.querySelectorAll('#ptask-st-pills .st-pill').forEach(e=>e.classList.remove('on')); el.classList.add('on'); }
-
-async function savePtask() {
-  const title=$('ptask-title').value.trim();
-  if(!title){ toast('내용을 입력해주세요'); $('ptask-title').focus(); return; }
-  try {
-    const s=await getAppState();
-    s.proj_tasks=s.proj_tasks||[];
-    const task={
-      id:       ptaskId||`pt-${Date.now()}`,
-      title,
-      note:     $('ptask-note').value.trim()||null,
-      assignee: ptaskAssignee||user?.name||tasksWho,
-      proj_id:  $('ptask-projid').value||null,
-      status:   ptaskSt,
-      due_date: $('ptask-due').value||null,
-      memo:     $('ptask-memo').value.trim()||null,
-    };
-    if(ptaskIsNew){ s.proj_tasks.push(task); }
-    else { const i=s.proj_tasks.findIndex(x=>x.id===ptaskId); if(i>=0)s.proj_tasks[i]=task; else s.proj_tasks.push(task); }
-    // 진행률 자동 재계산
-    if(task.proj_id) {
-      const proj=(s.projects||[]).find(x=>x.id===task.proj_id);
-      if(proj) {
-        const tasks=(s.proj_tasks||[]).filter(x=>x.proj_id===task.proj_id);
-        proj.progress=tasks.length?Math.round((tasks.filter(x=>x.status==='done').length/tasks.length)*100):0;
-      }
-    }
-    await setAppState(s);
-    toast(ptaskIsNew?'프로젝트 업무가 추가됐어요 ✓':'수정됐어요 ✓');
-    closeModal('ptask-modal'); loadPtaskList(); loadProjects();
-  } catch(e) { toast('저장 실패: '+e.message); console.error(e); }
-}
-
-async function deletePtask() {
-  const ok = await customConfirm('프로젝트 업무를 삭제할까요?');
-  if(!ok) return;
-  try {
-    const s=await getAppState(); s.proj_tasks=(s.proj_tasks||[]).filter(x=>x.id!==ptaskId);
-    await setAppState(s); closeModal('ptask-modal'); loadPtaskList(); toast('삭제됐어요');
-  } catch(e) { toast('삭제 실패: '+e.message); }
-}
-
-/* 비고 모달 */
 function openMemoModal(id) {
   memoIsNew=!id; memoId=id||null;
   $('memo-modal-kind').textContent=id?'메모 수정':'메모 추가';
@@ -8224,8 +7949,15 @@ async function loadInvOverviewBanner() {
     const prods    = (await db.from('products').select('*').eq('is_discontinued',false)).data||[];
     const invRows  = (await db.from('inventory').select('*')).data||[];
     const salesRows= (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    // 단종예정 + 이미 발주 등록된 상품 제외 (발주 알림 탭과 동일 기준)
+    const sBan = await getAppState();
+    const orderedPidsBan = new Set((sBan.ops_orders||[])
+      .filter(o => o.status !== 'received' && o.status !== 'cancelled' && o.product_id)
+      .map(o => o.product_id));
+    const hiddenAlertSet = new Set(sBan.inv_alert_hidden || []);
     let alertCount = 0;
     for(const p of prods){
+      if (p.disc_status === 'planned' || orderedPidsBan.has(p.id) || hiddenAlertSet.has(p.id)) continue;
       const inv = invRows.find(x=>x.product_id===p.id)||{};
       const total = (inv.produced_stock||0)+(inv.available_stock||0);
       const velAll = CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
@@ -8378,6 +8110,24 @@ async function loadInvList() {
     const salesRows = (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
     const sState    = await getAppState();
     const reservations = sState.ch_reservations || [];
+
+    // 단종예정 + 총재고 0 → 자동 단종 전환
+    const autoDiscList = prods.filter(p => {
+      if (p.is_discontinued || p.disc_status !== 'planned') return false;
+      const inv = invRows.find(x=>x.product_id===p.id);
+      return (inv?.total_stock||0) === 0;
+    });
+    if (autoDiscList.length) {
+      await Promise.all(autoDiscList.map(p =>
+        db.from('products').update({ is_discontinued: true, disc_status: null }).eq('id', p.id)
+      ));
+      autoDiscList.forEach(p => { p.is_discontinued = true; p.disc_status = null; });
+      const names = autoDiscList.map(p=>p.option_name?`${p.name}·${p.option_name}`:p.name).slice(0,3).join(', ');
+      toast(`재고 소진 → 단종 처리: ${names}${autoDiscList.length>3?` 외 ${autoDiscList.length-3}개`:''}`);
+      // 활성 필터에서는 방금 단종된 상품 제외
+      if (invCurrentFilter === 'all') prods = prods.filter(p => !autoDiscList.find(a=>a.id===p.id));
+    }
+
     if(!prods.length){
       $('inv-product-table').innerHTML='<div style="padding:20px;font-size:13px;color:var(--faint);text-align:center;">상품이 없어요</div>';
       return;
@@ -8538,6 +8288,26 @@ async function populateInlineCat(sel) {
   sel.innerHTML = '<option value="">—</option>' +
     cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
   sel.dataset.cur = cur;
+}
+
+/* 인라인 카테고리 변경 저장 (재고탭 ↔ 생산탭 연동) */
+async function saveInlineCat(sel) {
+  const pid = sel.dataset.pid;
+  const val = sel.value || null;
+  if (!pid) return;
+  try {
+    const { error } = await db.from('products').update({ category: val }).eq('id', pid);
+    if (error) throw error;
+    sel.dataset.cur = val || '';
+    toast(`카테고리 변경됨 → ${val || '미분류'} ✓`);
+    _workLogProdList = []; // 작업기록 검색 캐시 갱신
+    loadInvList();
+    // 생산탭 열려있으면 즉시 반영
+    if ($('prod-rec-list') && document.querySelector('#page-production.page.on')) loadProdRecFull();
+  } catch(e) {
+    toast('카테고리 변경 실패: ' + e.message);
+    console.error('saveInlineCat', e);
+  }
 }
 
 async function saveInlineStock(input) {
@@ -9192,31 +8962,56 @@ async function saveInvOrder() {
     const visibleIds = [...($('inv-product-table')?.querySelectorAll('tr[data-pid]')||[])].map(r => r.dataset.pid);
     if (!visibleIds.length) return;
 
+    // 전체 상품을 "카테고리 pills 순서 → 그룹 내 순서" 기준으로 완전 재번호
+    const sState = await getAppState();
+    const catOrder = sState.inv_categories || [];
+    const catIdx = c => { const i = catOrder.indexOf(c||''); return i < 0 ? 999 : i; };
+
+    const allProds = (await db.from('products')
+      .select('id,category,sort_order')
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .order('name')
+    ).data || [];
+
+    // 현재 DB 순서를 화면의 새 순서로 덮어쓰기
+    const visSet = new Set(visibleIds);
+    // 카테고리별 그룹으로 분해 (DB 기존 순서 유지)
+    const byCat = {};
+    allProds.forEach(p => { (byCat[p.category||''] = byCat[p.category||''] || []).push(p.id); });
+    // 화면에 보이는 상품들: 화면 순서를 해당 카테고리 그룹에 반영
     if (invCurrentCat === '전체') {
-      // 전체 탭: 보이는 순서 그대로 sort_order 부여
-      await Promise.all(visibleIds.map((id, i) => db.from('products').update({ sort_order: i }).eq('id', id)));
+      // 전체 보기: 화면 순서 자체가 카테고리 그룹 순서 → 카테고리별로 분해해서 대입
+      const screenByCat = {};
+      const rowEls = [...($('inv-product-table')?.querySelectorAll('tr[data-pid]')||[])];
+      rowEls.forEach(r => { (screenByCat[r.dataset.cat||''] = screenByCat[r.dataset.cat||''] || []).push(r.dataset.pid); });
+      Object.keys(screenByCat).forEach(cat => {
+        const screenIds = screenByCat[cat];
+        const rest = (byCat[cat]||[]).filter(id => !visSet.has(id)); // 필터로 안 보이는 것들 (단종 등)
+        byCat[cat] = [...screenIds, ...rest];
+      });
     } else {
-      // 카테고리 탭: 전체 목록에서 해당 카테고리 슬롯 위치를 유지하면서 내부 순서만 교체
-      const allProds = (await db.from('products')
-        .select('id,category,sort_order')
-        .order('sort_order', { ascending: true, nullsFirst: false })
-        .order('name')
-      ).data || [];
-
-      // 이 카테고리가 전체 목록에서 차지하는 sort_order 값들 추출
-      const catEntries = allProds
-        .filter(p => p.category === invCurrentCat)
-        .map((p, i) => ({ id: p.id, slotOrder: p.sort_order ?? (allProds.length + i) }));
-
-      // 기존 슬롯 sort_order 값을 visibleIds 새 순서에 맞게 재배정
-      const sortedSlots = catEntries.map(e => e.slotOrder).sort((a, b) => a - b);
-      const updates = visibleIds.map((id, i) => ({
-        id,
-        sort_order: sortedSlots[i] !== undefined ? sortedSlots[i] : catEntries.length + i
-      }));
-      await Promise.all(updates.map(u => db.from('products').update({ sort_order: u.sort_order }).eq('id', u.id)));
+      // 카테고리 보기: 해당 카테고리 그룹만 화면 순서로
+      const rest = (byCat[invCurrentCat]||[]).filter(id => !visSet.has(id));
+      byCat[invCurrentCat] = [...visibleIds, ...rest];
     }
-  } catch(e) { console.error('순서 저장 실패', e); }
+
+    // 카테고리 순서대로 이어붙여 0..N 재번호
+    const sortedCats = Object.keys(byCat).sort((a,b) => catIdx(a) - catIdx(b));
+    const finalOrder = sortedCats.flatMap(c => byCat[c]);
+    const results = await Promise.all(finalOrder.map((id, i) =>
+      db.from('products').update({ sort_order: i }).eq('id', id)
+    ));
+    const failed = results.filter(r => r.error);
+    if (failed.length) {
+      toast(`순서 저장 일부 실패 (${failed.length}건): ${failed[0].error.message}`);
+      console.error('saveInvOrder 실패:', failed[0].error);
+    } else {
+      toast('순서가 저장됐어요 ✓');
+    }
+  } catch(e) {
+    toast('순서 저장 실패: ' + e.message);
+    console.error('순서 저장 실패', e);
+  }
 }
 
 /* ═══ 채널별 재고 탭 ═══ */
@@ -9520,10 +9315,17 @@ async function completeReceipt(id) {
 /* ═══ 발주 알림 탭 ═══ */
 async function loadOrderAlerts() {
   try {
-    const prods    = (await db.from('products').select('*').eq('is_discontinued',false)).data||[];
+    // 단종 제외 + 단종예정 제외
+    const prodsAll = (await db.from('products').select('*').eq('is_discontinued',false)).data||[];
+    const prods    = prodsAll.filter(p => p.disc_status !== 'planned');
     const invRows  = (await db.from('inventory').select('*')).data||[];
     const chInvRows= (await db.from('channel_inventory').select('*')).data||[];
     const salesRows= (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    // 이미 발주 등록된 상품 (미완료 발주 존재) → 발주 필요에서 제외
+    const sOrd = await getAppState();
+    const orderedPids = new Set((sOrd.ops_orders||[])
+      .filter(o => o.kind !== 'material' && o.status !== 'received' && o.status !== 'cancelled' && o.product_id)
+      .map(o => o.product_id));
 
     const allocAlerts = []; // 채널 배분 필요 (D+3 이내 + 가용재고 있음)
     const orderAlerts = []; // 발주 필요 (전체 D+45 이내)
@@ -9543,10 +9345,10 @@ async function loadOrderAlerts() {
         }
       }
 
-      // 전체 D+45 이내 → 발주 필요
+      // 전체 D+45 이내 → 발주 필요 (이미 발주 등록된 상품은 제외)
       const total  = (inv.produced_stock||0)+(inv.available_stock||0);
       const velAll = CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
-      if(velAll>0 && total/velAll<=45){
+      if(velAll>0 && total/velAll<=45 && !orderedPids.has(p.id)){
         const days = Math.ceil(total/velAll);
         orderAlerts.push({label,days,urgency:days<=12?'danger':'warn',productId:p.id});
       }
@@ -11159,9 +10961,9 @@ function workLogSetPeriod(days, el) {
 }
 
 async function loadWorkLogList() {
-  const tbody = $('work-log-tbody'); if (!tbody) return;
+  const box = $('work-log-timeline'); if (!box) return;
   try {
-    // 상품 리스트 캐시 (검색용)
+    // 상품 리스트 캐시 (검색용, 생산탭 숨김 제외)
     if (!_workLogProdList.length) {
       const r = await db.from('products').select('id,name,option_name,category').eq('is_discontinued', false).order('name');
       const sH = await getAppState();
@@ -11181,60 +10983,69 @@ async function loadWorkLogList() {
       return (b.createdAt||'').localeCompare(a.createdAt||'');
     });
 
-    // 인라인 입력 행 (첫 행, 항상 표시)
-    const inputRow = `<tr id="work-log-input-row" style="background:#FFFBF1;">
-      <td style="color:var(--light);font-size:11px;">오늘<br><span style="font-size:10px;">${today.slice(5).replace('-','.')}</span></td>
-      <td style="position:relative;">
-        <input type="text" id="work-log-search" placeholder="상품명 검색..." class="prop-inp" style="width:100%;font-size:12px;padding:5px 8px;" autocomplete="off"
-          oninput="workLogSearch(this.value)" onfocus="if(window.innerWidth<=768){this.blur();openWorkLogSheet();}else{workLogSearch(this.value)}" onblur="setTimeout(()=>{const d=document.getElementById('work-log-dd');if(d)d.style.display='none';},200)">
-        <div id="work-log-dd" style="display:none;position:absolute;top:100%;left:8px;right:8px;background:#fff;border:0.5px solid var(--border);border-radius:6px;margin-top:2px;max-height:240px;overflow-y:auto;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.08);"></div>
-        <div id="work-log-sel-lbl" style="display:none;font-size:11px;color:#27500A;margin-top:3px;"></div>
-      </td>
-      <td style="text-align:right;">
-        <input type="number" id="work-log-qty" placeholder="0" min="1" class="prop-inp" style="width:65px;font-size:13px;padding:5px 8px;text-align:right;" onkeypress="if(event.key==='Enter')addWorkLog()">
-      </td>
-      <td style="text-align:right;white-space:nowrap;">
-        <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 16px;white-space:nowrap;" onclick="addWorkLog()">+ 추가</button>
-      </td>
-    </tr>`;
+    // 최근 작업 상품 칩 (유니크 4개)
+    const seen = new Set(); const recent = [];
+    for (const w of (s.work_logs||[]).slice().reverse()) {
+      if (!w.product_id || seen.has(w.product_id) || !pMap[w.product_id]) continue;
+      seen.add(w.product_id); recent.push(w.product_id);
+      if (recent.length >= 4) break;
+    }
+    const chipsEl = $('work-log-recent-chips');
+    const rowEl = $('work-log-recent-row');
+    if (chipsEl && rowEl) {
+      if (recent.length) {
+        chipsEl.innerHTML = recent.map(pid =>
+          `<span onclick="workLogPickChip('${pid}')" style="font-size:11px;padding:5px 11px;border-radius:50px;background:#E6F1FB;color:#185FA5;font-weight:500;cursor:pointer;">${escapeHtml(pMap[pid])}</span>`
+        ).join('');
+        rowEl.style.display = 'flex';
+      } else rowEl.style.display = 'none';
+    }
 
     if (!all.length) {
-      tbody.innerHTML = inputRow + `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--faint);font-size:12px;">아직 등록된 작업 기록이 없어요. 위에서 추가해주세요.</td></tr>`;
+      box.innerHTML = `<div style="text-align:center;padding:26px 8px;color:var(--faint);font-size:12px;">아직 등록된 작업 기록이 없어요. 위에서 추가해주세요.</div>`;
       return;
     }
 
     // 날짜별 그룹화
-    let lastDate = null;
-    const rows = all.map(w => {
-      const showDate = w.date !== lastDate;
-      lastDate = w.date;
-      const dateLbl = (() => {
-        if (!showDate) return '';
-        const dObj = new Date(w.date + 'T00:00:00');
-        const today2 = dateStr();
-        const yest = dateStr(new Date(Date.now()-86400000));
-        const DOW = ['일','월','화','수','목','금','토'];
-        let prefix = '';
-        if (w.date === today2) prefix = '오늘 · ';
-        else if (w.date === yest) prefix = '어제 · ';
-        return `${prefix}${w.date.slice(5).replace('-','.')}<br><span style="font-size:10px;color:var(--faint);">(${DOW[dObj.getDay()]})</span>`;
-      })();
-      const label = w.label || pMap[w.product_id] || '(삭제된 상품)';
-      const isToday = w.date === today;
-      const bg = isToday ? '' : 'background:#FAFAF8;';
-      const textColor = isToday ? '' : 'color:var(--light);';
-      return `<tr style="${bg}border-top:0.5px solid var(--surface2);">
-        <td style="color:var(--light);font-size:11px;${textColor}">${dateLbl}</td>
-        <td style="${textColor}font-weight:${isToday?500:400};">${escapeHtml(label)}</td>
-        <td style="text-align:right;font-weight:${isToday?600:400};${textColor}">${w.qty}개</td>
-        <td style="text-align:right;">
-          <span style="color:var(--light);cursor:pointer;font-size:14px;padding:4px 8px;" onclick="openWorkLogEdit('${w.id}')">···</span>
-        </td>
-      </tr>`;
-    });
+    const groups = {};
+    all.forEach(w => { (groups[w.date] = groups[w.date] || []).push(w); });
+    const DOW = ['일','월','화','수','목','금','토'];
+    const yest = dateStr(new Date(Date.now()-86400000));
 
-    tbody.innerHTML = inputRow + rows.join('');
+    box.innerHTML = Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(d => {
+      const items = groups[d];
+      const totalQty = items.reduce((s2,w)=>s2+(w.qty||0),0);
+      const dObj = new Date(d + 'T00:00:00');
+      const isToday = d === today;
+      let lbl = `${d.slice(5).replace('-','/')} ${DOW[dObj.getDay()]}`;
+      if (isToday) lbl = `오늘 · ${lbl}`;
+      else if (d === yest) lbl = `어제 · ${lbl}`;
+      const headColor = isToday ? '#185FA5' : 'var(--muted)';
+      const rows = items.map(w => {
+        const label = w.label || pMap[w.product_id] || '(삭제된 상품)';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 2px;">
+          <span style="flex:1;font-size:13px;font-weight:${isToday?500:400};${isToday?'':'color:var(--muted);'}min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(label)}</span>
+          <span style="font-size:13px;font-weight:${isToday?600:400};${isToday?'':'color:var(--muted);'}white-space:nowrap;">${w.qty}개</span>
+          <span style="color:var(--light);cursor:pointer;font-size:14px;padding:2px 6px;flex-shrink:0;" onclick="openWorkLogEdit('${w.id}')">···</span>
+        </div>`;
+      }).join('');
+      return `<div style="padding:2px 2px 6px;">
+        <div style="display:flex;align-items:center;gap:8px;padding:11px 2px 4px;">
+          <span style="font-size:11px;font-weight:600;color:${headColor};white-space:nowrap;">${lbl}</span>
+          <span style="flex:1;height:0.5px;background:var(--border);"></span>
+          <span style="font-size:10px;color:var(--faint);white-space:nowrap;">${items.length}건 · ${totalQty.toLocaleString()}개</span>
+        </div>
+        ${rows}
+      </div>`;
+    }).join('');
   } catch(e) { console.error('loadWorkLogList', e); }
+}
+
+function workLogPickChip(pid) {
+  workLogPick(pid);
+  const inp = $('work-log-search');
+  if (inp) inp.value = _workLogSelLabel;
+  setTimeout(()=>$('work-log-qty')?.focus(), 60);
 }
 
 function workLogSearch(q) {
@@ -11488,9 +11299,11 @@ async function loadProdRecFull() {
     const s    = await getAppState();
     const cats = s.inv_categories||[];
     const pillEl = $('prod-rec-cat-pills');
-    if(pillEl && pillEl.children.length <= 1 && cats.length){
-      pillEl.innerHTML = ['전체',...cats].map((c,i)=>
-        `<div class="inv-pill${i===0&&prodRecCat==='전체'?' on':c===prodRecCat?' on':''}" onclick="prodSetRecCat('${c}',this)">${c}</div>`
+    if(pillEl && cats.length){
+      // 항상 재렌더 (재고탭에서 카테고리 변경 시 즉시 반영)
+      if (prodRecCat !== '전체' && !cats.includes(prodRecCat)) prodRecCat = '전체';
+      pillEl.innerHTML = ['전체',...cats].map(c=>
+        `<div class="inv-pill${c===prodRecCat?' on':''}" onclick="prodSetRecCat('${c}',this)">${c}</div>`
       ).join('');
     }
 
