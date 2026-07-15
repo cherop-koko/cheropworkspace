@@ -5457,7 +5457,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.8.2</div>
+<div id="version">v5.8.3</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -13614,7 +13614,10 @@ async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
     if (max >= 10000)    return Math.ceil(max/10000) * 10000;
     return Math.max(max, 10000);
   })();
-  const avg = buckets.reduce((s,d)=>s+d.amt,0) / (buckets.length || 1);
+  // 평균: 아직 오지 않은 미래 날짜는 제외하고 계산 (진행 중인 달 왜곡 방지)
+  const _todayStr = dateStr();
+  const pastBuckets = buckets.filter(b => b.isMonth ? b.date <= _todayStr.slice(0,7) : b.date <= _todayStr);
+  const avg = pastBuckets.reduce((s,d)=>s+d.amt,0) / (pastBuckets.length || 1);
 
   const fmtY = v => {
     if (v >= 1000000) return (v/1000000).toFixed(1).replace(/\.0$/,'') + 'M';
