@@ -894,6 +894,9 @@ a { text-decoration:none; color:inherit; }
 
   /* ── 업무 체크리스트: 4열 → 1열 ── */
   .tasks-grid { grid-template-columns:1fr; }
+  /* 모바일에서 term 드래그로 스크롤 막히는 문제 → 드래그 끄고 세로 스크롤 우선 */
+  .trow { touch-action:pan-y !important; -webkit-user-drag:none; }
+  .trow[draggable] { -webkit-user-drag:none; }
 
   /* ── 프로젝트: 전체/진행중/완료 필터 숨김 + 카드 풀폭(선택 시 전체화면처럼) ── */
   #proj-tab-bar > .page-tab:nth-child(-n+3) { display:none; }
@@ -5454,7 +5457,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.8.0</div>
+<div id="version">v5.8.1</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5513,6 +5516,11 @@ let toastTimer;
 function toast(msg, dur=2400) {
   const el=$('toast'); el.textContent=msg; el.classList.add('on');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('on'), dur);
+}
+
+function closeModal(id) {
+  const el = $(id);
+  if (el) el.classList.remove('on');
 }
 
 let _appStateCache = null;
@@ -7121,7 +7129,7 @@ function renderTaskRow(t) {
   const st=stMap[t.status]||stMap.todo;
   const due=t.due_date, dueStr=due?due.slice(5).replace('-','/')+' 마감':'';
   const over=due&&!done&&due<dateStr();
-  return `<div class="trow" draggable="true" data-id="${t.id}" onclick="openTaskModal(${t.id})">
+  return `<div class="trow" ${window.innerWidth>768?'draggable="true"':''} data-id="${t.id}" onclick="openTaskModal(${t.id})">
     <div class="trow-check${done?' on':''}"></div>
     <div class="trow-info" style="flex:1;min-width:0;">
       <div class="trow-title${done?' done':''}${urgent?' urgent':''}">${t.title}${t.is_starred&&!done?' <span style="color:var(--pink);font-size:12px;font-weight:400;">★</span>':''}</div>
