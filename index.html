@@ -5457,7 +5457,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.8.1</div>
+<div id="version">v5.8.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5488,9 +5488,261 @@ let projFilter  = 'all';
 
 // 모달 상태
 let taskId = null, taskIsNew = false, taskSt = 'todo', taskUrgent = false, taskStarred = false;
-let ptaskId = null, ptaskIsNew = false, ptaskSt = 'todo';
+let ptaskId = null, ptaskIsNew = false, ptaskSt = 'todo', ptaskAssignee = null;
 let memoId = null, memoIsNew = false;
 let projId = null, projIsNew = false, projSt = 'todo';
+
+/* ═══════════════════════════════════════
+   🔧 복원: 공용 confirm / prompt / 상품모달 취소
+═══════════════════════════════════════ */
+let confirmResolve = ()=>{};
+function customConfirm(msg, sub='이 작업은 되돌릴 수 없어요.', yesLabel='삭제') {
+  return new Promise(resolve => {
+    $('confirm-msg').textContent = msg;
+    $('confirm-sub').textContent = sub || '';
+    const yesBtn = document.querySelector('#confirm-overlay .confirm-yes');
+    if (yesBtn) yesBtn.textContent = yesLabel || '확인';
+    $('confirm-overlay').classList.add('on');
+    confirmResolve = (v) => {
+      $('confirm-overlay').classList.remove('on');
+      resolve(v);
+    };
+  });
+}
+
+let promptResolve = ()=>{};
+function customPrompt(msg, placeholder='', defVal='') {
+  return new Promise(resolve => {
+    $('prompt-msg').textContent = msg;
+    const inp = $('prompt-input');
+    inp.placeholder = placeholder || '';
+    inp.value = defVal || '';
+    $('prompt-overlay').classList.add('on');
+    promptResolve = (v) => {
+      $('prompt-overlay').classList.remove('on');
+      resolve(v === null ? null : String(v).trim() || null);
+    };
+    setTimeout(()=>inp.focus(), 80);
+  });
+}
+
+function cancelProductModal() {
+  // 취소/✕ 로 닫을 때 — 상품 추가 안 한 것이므로 key 초기화
+  window._invPendingMatchKey = null;
+  closeModal('inv-product-modal');
+}
+
+/* ═══════════════════════════════════════
+   🔧 복원: 할일(Task) 모달 함수 (현재 속성요약 UI 대응)
+═══════════════════════════════════════ */
+const TASK_ST_LBL = { todo:'시작 전', ing:'진행 중', hold:'보류', done:'완료' };
+
+function toggleTaskProps() {
+  const ex = $('task-props-expanded'); if (!ex) return;
+  const isOpen = ex.style.display !== 'none';
+  ex.style.display = isOpen ? 'none' : '';
+  const lbl = $('task-props-toggle-lbl');
+  if (lbl) lbl.textContent = isOpen ? '▾ 속성 펼치기' : '▴ 접기';
+}
+
+function renderTaskPropsSummary() {
+  const due = $('task-due')?.value;
+  const sd = $('task-sum-due');
+  if (sd) sd.textContent = due ? `📅 ${due.slice(5).replace('-','/')} 마감` : '📅 마감일 미정';
+  const su = $('task-sum-urgent');
+  if (su) { su.textContent = taskUrgent ? '⚑ 중요' : '⚑ 일반'; su.style.color = taskUrgent ? 'var(--red)' : 'var(--light)'; }
+  const sa = $('task-sum-assignee');
+  if (sa) sa.textContent = `👤 ${tasksWho || '—'}`;
+}
+
+function applyTaskSt() {
+  document.querySelectorAll('#task-st-pills .st-pill').forEach(el=>el.classList.toggle('on',el.classList.contains(taskSt)));
+  const chip = $('task-st-chip');
+  if (chip) chip.textContent = TASK_ST_LBL[taskSt] || '시작 전';
+}
+function setTaskSt(st,el) { taskSt=st; applyTaskSt(); }
+
+function applyUrgent() {
+  $('urgent-track')?.classList.toggle('on', taskUrgent);
+  const l = $('urgent-lbl'); if (l) l.textContent = taskUrgent ? '중요 표시' : '표시 안 함';
+  renderTaskPropsSummary();
+}
+function toggleUrgent() { taskUrgent=!taskUrgent; applyUrgent(); }
+
+function applyStarred() {
+  const b = $('task-star-btn');
+  if (b) { b.textContent = taskStarred ? '★' : '☆'; b.style.color = taskStarred ? 'var(--pink)' : ''; }
+}
+function toggleStar() { taskStarred=!taskStarred; applyStarred(); }
+
+function openTaskModal(id) {
+  taskIsNew=!id; taskId=id||null; taskSt='todo'; taskUrgent=false; taskStarred=false;
+  $('task-modal-kind').textContent=id?'할일 수정':'할일 추가';
+  $('task-del-btn').style.display=id?'flex':'none';
+  $('task-title').value=''; $('task-note').value=''; $('task-due').value=''; $('task-memo').value='';
+  const asg = $('task-assignee'); if (asg) asg.textContent = tasksWho || '—';
+  // 속성 접힌 상태로 초기화
+  const ex = $('task-props-expanded'); if (ex) ex.style.display='none';
+  const tl = $('task-props-toggle-lbl'); if (tl) tl.textContent='▾ 속성 펼치기';
+  applyTaskSt(); applyUrgent(); applyStarred(); renderTaskPropsSummary();
+  if(id) {
+    db.from('tasks').select('*').eq('id',id).single().then(({data:t})=>{
+      if(!t)return;
+      $('task-title').value=t.title||''; $('task-note').value=t.note||'';
+      $('task-due').value=t.due_date||''; $('task-memo').value=t.memo||'';
+      taskSt=t.status||'todo'; taskUrgent=!!t.is_urgent; taskStarred=!!t.is_starred;
+      applyTaskSt(); applyUrgent(); applyStarred(); renderTaskPropsSummary();
+    });
+  }
+  $('task-modal').classList.add('on');
+  setTimeout(()=>$('task-title').focus(),80);
+}
+
+async function saveTask() {
+  const title=$('task-title').value.trim();
+  if(!title){ toast('제목을 입력해주세요'); $('task-title').focus(); return; }
+  const row={title,note:$('task-note').value.trim()||null,assignee:tasksWho,status:taskSt,is_urgent:taskUrgent,is_starred:taskStarred,due_date:$('task-due').value||null,memo:$('task-memo').value.trim()||null};
+  try {
+    if(taskIsNew) {
+      const {error}=await db.from('tasks').insert([row]);
+      if(error) {
+        if(error.message.includes('note')) {
+          const {note,...rowNoNote}=row;
+          const {error:e2}=await db.from('tasks').insert([rowNoNote]);
+          if(e2) throw e2;
+        } else throw error;
+      }
+      toast('할일이 추가됐어요 ✓');
+    } else {
+      const {error}=await db.from('tasks').update(row).eq('id',taskId);
+      if(error) {
+        if(error.message.includes('note')) {
+          const {note,...rowNoNote}=row;
+          const {error:e2}=await db.from('tasks').update(rowNoNote).eq('id',taskId);
+          if(e2) throw e2;
+        } else throw error;
+      }
+      toast('수정됐어요 ✓');
+    }
+    closeModal('task-modal'); loadTaskList(); loadDashTasks();
+  } catch(e) { toast('저장 실패: '+e.message); console.error(e); }
+}
+
+async function deleteTask() {
+  const ok = await customConfirm('할일을 삭제할까요?');
+  if(!ok) return;
+  try {
+    const {error}=await db.from('tasks').delete().eq('id',taskId);
+    if(error) throw error;
+    closeModal('task-modal'); loadTaskList(); loadDashTasks(); toast('삭제됐어요');
+  } catch(e) { toast('삭제 실패: '+e.message); }
+}
+
+/* ═══════════════════════════════════════
+   🔧 복원: 프로젝트 업무(Ptask) 모달 함수
+═══════════════════════════════════════ */
+function renderPtaskAssigneePills() {
+  const wrap = $('ptask-assignee-pills');
+  if (!wrap) return;
+  wrap.innerHTML = MEMBERS.map(m => {
+    const isOn = ptaskAssignee === m.name;
+    return `<div style="
+      display:inline-flex;align-items:center;padding:5px 13px;border-radius:50px;
+      font-size:12px;cursor:pointer;transition:all .12s;
+      background:${isOn ? 'var(--text)' : 'var(--surface2)'};
+      color:${isOn ? '#fff' : 'var(--muted)'};
+      border:0.5px solid ${isOn ? 'var(--text)' : 'var(--border)'};
+      font-family:var(--font);
+    " onclick="ptaskAssignee='${m.name}';renderPtaskAssigneePills()">${m.name}</div>`;
+  }).join('');
+}
+
+async function openPtaskModal(id) {
+  ptaskIsNew=!id; ptaskId=id||null; ptaskSt='todo';
+  ptaskAssignee = user?.name || null;
+  $('ptask-modal-kind').textContent=id?'프로젝트 업무 수정':'프로젝트 업무 추가';
+  $('ptask-del-btn').style.display=id?'flex':'none';
+  $('ptask-title').value=''; $('ptask-note').value=''; $('ptask-due').value=''; $('ptask-memo').value='';
+  const s=await getAppState();
+  const projs=s.projects||[];
+  $('ptask-projid').innerHTML='<option value="">프로젝트 선택</option>'+projs.map(p=>`<option value="${p.id}">${p.title}</option>`).join('');
+  applyPtaskSt();
+  renderPtaskAssigneePills();
+  if(id) {
+    const t=(s.proj_tasks||[]).find(x=>x.id===id);
+    if(t){
+      $('ptask-title').value=t.title||'';
+      $('ptask-note').value=t.note||'';
+      $('ptask-due').value=t.due_date||'';
+      $('ptask-memo').value=t.memo||'';
+      ptaskSt=t.status||'todo';
+      ptaskAssignee=t.assignee||user?.name;
+      if(t.proj_id) $('ptask-projid').value=t.proj_id;
+      applyPtaskSt();
+      renderPtaskAssigneePills();
+    }
+  }
+  $('ptask-modal').classList.add('on');
+  setTimeout(()=>$('ptask-title').focus(),80);
+}
+
+function applyPtaskSt() { document.querySelectorAll('#ptask-st-pills .st-pill').forEach(el=>el.classList.toggle('on',el.classList.contains(ptaskSt))); }
+function setPtaskSt(st,el) { ptaskSt=st; document.querySelectorAll('#ptask-st-pills .st-pill').forEach(e=>e.classList.remove('on')); el.classList.add('on'); }
+
+async function savePtask() {
+  const title=$('ptask-title').value.trim();
+  if(!title){ toast('내용을 입력해주세요'); $('ptask-title').focus(); return; }
+  try {
+    const s=await getAppState();
+    s.proj_tasks=s.proj_tasks||[];
+    const task={
+      id:       ptaskId||`pt-${Date.now()}`,
+      title,
+      note:     $('ptask-note').value.trim()||null,
+      assignee: ptaskAssignee||user?.name||tasksWho,
+      proj_id:  $('ptask-projid').value||null,
+      status:   ptaskSt,
+      due_date: $('ptask-due').value||null,
+      memo:     $('ptask-memo').value.trim()||null,
+    };
+    if(ptaskIsNew){ s.proj_tasks.push(task); }
+    else { const i=s.proj_tasks.findIndex(x=>x.id===ptaskId); if(i>=0)s.proj_tasks[i]=task; else s.proj_tasks.push(task); }
+    // 진행률 자동 재계산
+    if(task.proj_id) {
+      const proj=(s.projects||[]).find(x=>x.id===task.proj_id);
+      if(proj) {
+        const tasks=(s.proj_tasks||[]).filter(x=>x.proj_id===task.proj_id);
+        proj.progress=tasks.length?Math.round((tasks.filter(x=>x.status==='done').length/tasks.length)*100):0;
+      }
+    }
+    await setAppState(s);
+    toast(ptaskIsNew?'프로젝트 업무가 추가됐어요 ✓':'수정됐어요 ✓');
+    closeModal('ptask-modal'); loadPtaskList(); loadProjects();
+  } catch(e) { toast('저장 실패: '+e.message); console.error(e); }
+}
+
+async function deletePtask() {
+  const ok = await customConfirm('프로젝트 업무를 삭제할까요?');
+  if(!ok) return;
+  try {
+    const s=await getAppState(); s.proj_tasks=(s.proj_tasks||[]).filter(x=>x.id!==ptaskId);
+    await setAppState(s); closeModal('ptask-modal'); loadPtaskList(); toast('삭제됐어요');
+  } catch(e) { toast('삭제 실패: '+e.message); }
+}
+
+/* ═══════════════════════════════════════
+   🔧 복원: 재고 업로드 건너뜀 복구 / 경영계획 저장
+═══════════════════════════════════════ */
+function invUnskip(enc) {
+  const matchKey = decodeURIComponent(enc);
+  (window._invUploadSkipped || new Set()).delete(matchKey);
+  renderMatchList(Object.keys(window._invUploadAgg || {}));
+  updateUploadProgress();
+}
+
+async function setPlanData(s) {
+  await setAppState(s);
+}
 
 /* ═══════════════════════════════════════
    UTIL
@@ -10507,7 +10759,7 @@ async function loadAttEmpLeave() {
 function attEmpLogMoveMonth(dir) {
   attEmpLogMonthVal += dir;
   updateAttEmpLogMonthLabel();
-  loadEmpLog();
+  loadAttEmpLog(attEmpLogMonthVal);
 }
 
 function updateAttEmpLogMonthLabel() {
@@ -18232,7 +18484,7 @@ async function deletePostFromDetail(id) {
   (s.instaBoards||[]).forEach(b => { b.feedOrder = (b.feedOrder||[]).filter(x => x !== id); });
   await setAppState(s);
   toast('삭제됐어요 ✓');
-  await renderInstaBoard(currentBoardId);
+  await switchBoard(currentBoardId);
 }
 
 function openContentEditModal(id) {
