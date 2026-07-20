@@ -2548,7 +2548,7 @@ a { text-decoration:none; color:inherit; }
             <div class="card">
               <div class="card-head">
                 <div class="card-title">매출 내역</div>
-                <div class="card-sub">채널 자동 집계</div>
+                <div class="card-sub">매출장(입금) 자동 연동</div>
               </div>
               <div id="tax-revenue-list"></div>
             </div>
@@ -2658,6 +2658,8 @@ a { text-decoration:none; color:inherit; }
                     <div style="font-size:13px;font-weight:500;" id="tax-rev-table-title">매출 내역</div>
                     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
                       <input type="text" id="tax-rev-search" class="inv-search-inp" placeholder="내용·비고 검색..." style="width:160px;padding:5px 10px;font-size:12px;" oninput="taxRevSetSearch(this.value)">
+                      <input type="file" id="tax-rev-xlsx-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleLedgerXlsx(event,'rev')">
+                      <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 13px;" onclick="document.getElementById('tax-rev-xlsx-input').click()">📄 엑셀 업로드</button>
                       <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openTaxRevModal()">+ 매출 추가</button>
                     </div>
                   </div>
@@ -2668,9 +2670,10 @@ a { text-decoration:none; color:inherit; }
                       <option value="own">자사몰</option>
                       <option value="kakao">카카오선물하기</option>
                       <option value="smart">스마트스토어</option>
-                      <option value="hyundai">더현대</option>
+                      <option value="hyundai">더현대HI</option>
                       <option value="popup">팝업·행사</option>
                       <option value="emoticon">카카오톡이모티콘</option>
+                      <option value="line">라인프렌즈</option>
                       <option value="etc">기타</option>
                     </select>
                     <button class="f-btn" style="font-size:11px;padding:4px 11px;" onclick="taxRevBulkCat()">적용</button>
@@ -2703,6 +2706,8 @@ a { text-decoration:none; color:inherit; }
                     <div style="font-size:13px;font-weight:500;" id="tax-costs-table-title">비용 내역</div>
                     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
                       <input type="text" id="tax-costs-search" class="inv-search-inp" placeholder="내용·비고 검색..." style="width:160px;padding:5px 10px;font-size:12px;" oninput="taxCostsSetSearch(this.value)">
+                      <input type="file" id="tax-cost-xlsx-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleLedgerXlsx(event,'cost')">
+                      <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 13px;" onclick="document.getElementById('tax-cost-xlsx-input').click()">📄 엑셀 업로드</button>
                       <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;" onclick="openTaxCostModal()">+ 비용 추가</button>
                     </div>
                   </div>
@@ -4492,9 +4497,10 @@ a { text-decoration:none; color:inherit; }
               <option value="own">자사몰</option>
               <option value="kakao">카카오선물하기</option>
               <option value="smart">스마트스토어</option>
-              <option value="hyundai">더현대</option>
+              <option value="hyundai">더현대HI</option>
               <option value="popup">팝업·행사</option>
               <option value="emoticon">카카오톡이모티콘</option>
+              <option value="line">라인프렌즈</option>
               <option value="etc">기타</option>
             </select>
           </div>
@@ -5457,7 +5463,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.8.3</div>
+<div id="version">v5.8.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5777,41 +5783,56 @@ function closeModal(id) {
 
 let _appStateCache = null;
 let _appStateSaving = false;
+let _appStateCacheAt = 0;
+let _appStateSnapshot = null; // 마지막 DB 읽기 시점의 깊은 복사본 (변경 감지용)
+const APP_STATE_TTL = 5000;   // 캐시 수명 5초 — 낡은 상태로 저장하는 사고 방지
+
+function _snapshotAppState(obj) {
+  try { _appStateSnapshot = structuredClone(obj); }
+  catch(e) { try { _appStateSnapshot = JSON.parse(JSON.stringify(obj)); } catch(e2) { _appStateSnapshot = null; } }
+}
 
 async function getAppState() {
-  if (_appStateCache) return _appStateCache;
+  const now = Date.now();
+  if (_appStateCache && (now - _appStateCacheAt) < APP_STATE_TTL) return _appStateCache;
   const { data, error } = await db.from('app_state').select('data').eq('id','cherop_main').single();
   if (error) throw error;
   _appStateCache = data?.data || {};
+  _appStateCacheAt = now;
+  _snapshotAppState(_appStateCache);
   return _appStateCache;
 }
 
 async function setAppState(state) {
-  // DB 최신값과 merge — DB에 있는 키는 무조건 보존, state로 덮어씀
-  // 단, state의 배열이 비어있고 DB 배열에 데이터가 있으면 DB값 우선
+  // 안전 병합 저장:
+  // 1) DB 최신본(fresh)을 base로 사용
+  // 2) 마지막 읽은 시점 스냅샷과 비교해 "실제로 바뀐 키"만 fresh 위에 반영
+  //    → 이 세션에서 건드리지 않은 데이터(예: 다른 기기에서 등록한 작업기록)는 절대 덮이지 않음
   try {
     const { data: cur } = await db.from('app_state').select('data').eq('id','cherop_main').single();
-    if (cur?.data) {
-      const merged = { ...cur.data }; // DB값을 base로
-      for (const key of Object.keys(state)) {
-        const sv = state[key];
-        const dv = cur.data[key];
-        // 빈 배열이면 DB값 보존
-        if (Array.isArray(sv) && sv.length === 0 && Array.isArray(dv) && dv.length > 0) {
-          merged[key] = dv;
-        }
-        // null/undefined면 DB값 보존
-        else if (sv === null || sv === undefined) {
-          // merged[key] 이미 DB값
-        }
-        else {
-          merged[key] = sv;
-        }
+    const fresh = cur?.data || {};
+    const snap  = _appStateSnapshot;
+    const merged = { ...fresh };
+    for (const key of Object.keys(state)) {
+      const sv = state[key];
+      if (snap && Object.prototype.hasOwnProperty.call(snap, key)) {
+        // 이 세션에서 실제로 수정한 키만 반영, 나머지는 DB 최신값 유지
+        let changed = true;
+        try { changed = JSON.stringify(sv) !== JSON.stringify(snap[key]); } catch(e) {}
+        if (changed) merged[key] = sv;
+      } else {
+        // 스냅샷에 없던 새 키 — 보수 규칙 (빈 배열/null로 기존 데이터 덮기 금지)
+        const dv = fresh[key];
+        if (Array.isArray(sv) && sv.length === 0 && Array.isArray(dv) && dv.length > 0) continue;
+        if (sv === null || sv === undefined) continue;
+        merged[key] = sv;
       }
-      state = merged;
     }
+    state = merged;
   } catch(e) { console.warn('setAppState merge error:', e); }
   _appStateCache = state;
+  _appStateCacheAt = Date.now();
+  _snapshotAppState(state);
   const { error } = await db.from('app_state').upsert({
     id: 'cherop_main',
     data: state,
@@ -5864,6 +5885,8 @@ async function patchAppState(patchFn) {
   const fresh = data?.data || {};
   const patched = patchFn(fresh);
   _appStateCache = patched;
+  _appStateCacheAt = Date.now();
+  _snapshotAppState(patched);
   const { error } = await db.from('app_state').upsert({
     id: 'cherop_main',
     data: patched,
@@ -8709,8 +8732,11 @@ async function saveSalesLogEdit() {
   const amount  = parseInt($('slog-edit-amount').value) || 0;
   const note    = $('slog-edit-note').value.trim();
   if (!date || !amount) { toast('날짜와 금액을 입력해주세요'); return; }
+  const { data: oldRow } = await db.from('channel_sales_log').select('date,channel').eq('id', id).maybeSingle();
   const { error } = await db.from('channel_sales_log').update({ date, channel, amount, note }).eq('id', id);
   if (error) { toast('수정 실패: '+error.message); return; }
+  if (oldRow && (oldRow.date !== date || oldRow.channel !== channel)) await syncSalesToTaxLedger(oldRow.date, oldRow.channel);
+  await syncSalesToTaxLedger(date, channel);
   toast('수정됐어요 ✓');
   closeModal('sales-log-edit-modal');
   loadSalesLogList();
@@ -8721,8 +8747,10 @@ async function saveSalesLogEdit() {
 async function deleteSalesLog() {
   const id = $('slog-edit-id').value;
   const ok = await customConfirm('이 매출 내역을 삭제할까요?'); if (!ok) return;
+  const { data: oldRow } = await db.from('channel_sales_log').select('date,channel').eq('id', id).maybeSingle();
   const { error } = await db.from('channel_sales_log').delete().eq('id', id);
   if (error) { toast('삭제 실패: '+error.message); return; }
+  if (oldRow) await syncSalesToTaxLedger(oldRow.date, oldRow.channel);
   toast('삭제됐어요');
   closeModal('sales-log-edit-modal');
   loadSalesLogList();
@@ -8737,6 +8765,36 @@ function openSalesRevenueModal() {
   $('srev-note').value    = '';
   $('sales-revenue-modal').classList.add('on');
   setTimeout(() => $('srev-amount')?.focus(), 80);
+}
+
+/* ═══ 판매탭 채널 매출 → 세무관리 매출장 자동 연동 ═══
+   날짜+채널 단위로 channel_sales_log 합계를 다시 계산해
+   tax_revenues의 자동 항목(srcKey)을 갱신/생성/삭제한다. */
+const SALES_TO_TAX_CAT = {
+  '자사몰':'own', '카카오선물하기':'kakao', '스마트스토어':'smart',
+  '더현대':'hyundai', '팝업':'popup', '이모티콘':'emoticon',
+};
+async function syncSalesToTaxLedger(date, channel) {
+  if (!date || !channel) return;
+  try {
+    const { data } = await db.from('channel_sales_log').select('amount').eq('date', date).eq('channel', channel);
+    const total = (data||[]).reduce((s,r)=>s+(r.amount||0),0);
+    const [y,m,d] = date.split('-').map(Number);
+    const cat = SALES_TO_TAX_CAT[channel] || 'etc';
+    const srcKey = `sales|${date}|${channel}`;
+    await patchAppState(s => {
+      s.tax_revenues = s.tax_revenues || [];
+      const idx = s.tax_revenues.findIndex(r => r.srcKey === srcKey);
+      if (total > 0) {
+        const item = { year:y, month:m, day:d, cat, desc:`${channel} 매출 (판매탭 연동)`, amount:total, hasTax:true, src:'sales', srcKey };
+        if (idx >= 0) s.tax_revenues[idx] = { ...s.tax_revenues[idx], ...item };
+        else s.tax_revenues.push({ id:`tr-sync-${Date.now()}-${Math.random().toString(36).slice(2,5)}`, ...item });
+      } else if (idx >= 0) {
+        s.tax_revenues.splice(idx, 1);
+      }
+      return s;
+    });
+  } catch(e) { console.warn('syncSalesToTaxLedger', e); }
 }
 
 async function saveSalesRevenue() {
@@ -8756,7 +8814,8 @@ async function saveSalesRevenue() {
       amount,
       note:    note || '직접 입력',
     }], { onConflict: 'id' });
-    toast('매출이 등록됐어요 ✓');
+    await syncSalesToTaxLedger(date, channel);
+    toast('매출이 등록됐어요 ✓ (세무 매출장 연동)');
     closeModal('sales-revenue-modal');
     loadSalesData();
   } catch(e) {
@@ -10398,6 +10457,7 @@ async function processUpload() {
       .filter(([k]) => mappings[k])
       .reduce((s, [, d]) => s + d.rows.length, 0);
     let doneRows = 0;
+    const _syncDates = new Set(); // 세무 매출장 연동용 날짜 수집
 
     for (const [matchKey, data] of Object.entries(agg)) {
       const productId = mappings[matchKey];
@@ -10459,7 +10519,13 @@ async function processUpload() {
           amount:  amt,
           note:    data.pname,
         }], { onConflict: 'id' });
+        _syncDates.add(saleDate);
       }
+    }
+
+    // 세무 매출장 자동 연동 (업로드된 날짜들 재계산)
+    for (const sd of _syncDates) {
+      await syncSalesToTaxLedger(sd, invUploadChannel);
     }
 
     // 채널 매핑 신규 저장 (기존에 없는 것만)
@@ -20938,11 +21004,11 @@ const TAX_CAT_COLOR = {
 };
 const TAX_REV_LABEL = {
   own:'자사몰', kakao:'카카오선물하기', smart:'스마트스토어',
-  hyundai:'더현대', popup:'팝업·행사', emoticon:'카카오톡이모티콘', etc:'기타'
+  hyundai:'더현대HI', popup:'팝업·행사', emoticon:'카카오톡이모티콘', line:'라인프렌즈', etc:'기타'
 };
 const TAX_REV_COLOR = {
   own:'#378ADD', kakao:'#D4537E', smart:'#639922',
-  hyundai:'#BA7517', popup:'#C4A96A', emoticon:'#E24B4A', etc:'#bbb'
+  hyundai:'#BA7517', popup:'#C4A96A', emoticon:'#E24B4A', line:'#06C755', etc:'#bbb'
 };
 const SALARY_MAP = { 고예흰:0, 김효민:2800000, 정현진:2400000, 박영아:2400000, 김성애:2200000 };
 const TAX_SCHEDULE = [
@@ -21079,7 +21145,7 @@ async function getTaxRevenue(year, month=null, qtr=null) {
     else if (qtr) periodRev = revenues.filter(r => Math.ceil(Number(r.month)/3) === qtr);
 
     // 구분(cat)을 channel로 매핑해서 반환
-    const REV_CH = { own:'자사몰', kakao:'카카오선물하기', smart:'스마트스토어', hyundai:'더현대', popup:'팝업·행사', emoticon:'카카오톡이모티콘', etc:'기타' };
+    const REV_CH = { own:'자사몰', kakao:'카카오선물하기', smart:'스마트스토어', hyundai:'더현대HI', popup:'팝업·행사', emoticon:'카카오톡이모티콘', line:'라인프렌즈', etc:'기타' };
     const byCh = {};
     periodRev.forEach(r => {
       const ch = REV_CH[r.cat] || r.cat || '기타';
@@ -21113,7 +21179,7 @@ async function loadTaxMonthly() {
 
   // 요약 카드
   $('tax-summary-cards').innerHTML = [
-    { l:'총 매출',    v:fmtWonExact(totalRevenue), s:'채널 자동 집계',                color:'var(--text)' },
+    { l:'총 매출',    v:fmtWonExact(totalRevenue), s:'매출장(입금) 기준',                color:'var(--text)' },
     { l:'총 비용',    v:fmtWonExact(totalCost),    s:`매출 대비 ${totalRevenue?Math.round(totalCost/totalRevenue*100):0}%`, color:'var(--text)' },
     { l:'순수익',     v:fmtWonExact(netProfit),    s:`이익률 ${totalRevenue?Math.round(netProfit/totalRevenue*100):0}%`, color: netProfit>=0?'#3B6D11':'#A32D2D' },
     { l:'부가세 예상', v:fmtWonExact(vatDue),       s:'매출세 - 매입세',               color:'#854F0B' },
@@ -21124,11 +21190,11 @@ async function loadTaxMonthly() {
     <div style="font-size:10px;color:var(--light);margin-top:2px;">${c.s}</div>
   </div>`).join('');
 
-  // 매출 내역
-  const CH_COLORS = {'자사몰':'#1C1E26','카카오선물하기':'#FAE100','스마트스토어':'#03C75A'};
-  const maxSale = Math.max(...Object.values(chSales),1);
-  $('tax-revenue-list').innerHTML = CHANNELS.map(ch=>{
-    const amt = chSales[ch]||0;
+  // 매출 내역 — 매출장(입금)의 실제 구분 기준으로 렌더 (금액 큰 순)
+  const CH_COLORS = {'자사몰':'#1C1E26','카카오선물하기':'#FAE100','스마트스토어':'#03C75A','더현대HI':'#4A7A5E','팝업·행사':'#D4537E','카카오톡이모티콘':'#B8860B','라인프렌즈':'#06C755','기타':'#888'};
+  const chEntries = Object.entries(chSales).filter(([,amt])=>amt>0).sort((a,b)=>b[1]-a[1]);
+  const maxSale = Math.max(...chEntries.map(([,amt])=>amt),1);
+  $('tax-revenue-list').innerHTML = (chEntries.length ? chEntries.map(([ch,amt])=>{
     const pct = Math.round(amt/maxSale*100);
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
       <div style="font-size:12px;font-weight:500;flex:1;">${ch}</div>
@@ -21138,7 +21204,7 @@ async function loadTaxMonthly() {
       <div style="font-size:12px;font-weight:500;min-width:72px;text-align:right;">${fmtWonExact(amt)}</div>
       <div style="font-size:10px;color:var(--light);min-width:28px;text-align:right;">${totalRevenue?Math.round(amt/totalRevenue*100):0}%</div>
     </div>`;
-  }).join('') + `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12px;">
+  }).join('') : '<div style="font-size:13px;color:var(--faint);padding:8px 0;">이번 달 매출장(입금) 내역이 없어요 · 비용 관리 → 매출장에서 입력</div>') + `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12px;">
     <span style="color:var(--light);">합계</span><span style="font-weight:500;">${fmtWonExact(totalRevenue)}</span>
   </div>`;
 
@@ -21740,6 +21806,134 @@ async function openTaxRevModal(id='') {
   }
   $('tax-rev-modal').classList.add('on');
   setTimeout(()=>$('tr-desc').focus(), 80);
+}
+
+/* ═══ 매출장/매입장 엑셀 업로드 ═══
+   컬럼 자동 인식: 날짜(날짜/입금일/일자/거래일), 구분/분류, 금액(금액/입금액/공급대가), 내용(내용/비고/적요), 세금계산서(Y/N)
+   매출장: tax_revenues / 매입장: tax_costs 에 추가 */
+function _parseLedgerDate(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') { // 엑셀 시리얼 날짜
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    if (isNaN(d)) return null;
+    return [d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate()];
+  }
+  const s = String(v).trim().replace(/[.\u00B7\/]/g, '-').replace(/-+/g,'-').replace(/-$/,'');
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return [+m[1], +m[2], +m[3]];
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/); // MM-DD-YYYY
+  if (m) return [+m[3], +m[1], +m[2]];
+  m = s.match(/^(\d{2})-(\d{1,2})-(\d{1,2})$/); // YY-MM-DD
+  if (m) return [2000 + +m[1], +m[2], +m[3]];
+  const d = new Date(s);
+  if (!isNaN(d)) return [d.getFullYear(), d.getMonth()+1, d.getDate()];
+  return null;
+}
+function _parseLedgerAmount(v) {
+  if (v == null || v === '') return NaN;
+  if (typeof v === 'number') return Math.round(v);
+  const n = parseFloat(String(v).replace(/[,원\s₩]/g, ''));
+  return isNaN(n) ? NaN : Math.round(n);
+}
+function _ledgerRevCat(label) {
+  const t = String(label||'').trim();
+  if (!t) return 'etc';
+  const map = [
+    [/자사/, 'own'], [/카카오선물|카카오\b|선물하기/, 'kakao'], [/스마트/, 'smart'],
+    [/더현대|현대/i, 'hyundai'], [/팝업|행사/, 'popup'], [/이모티콘/, 'emoticon'],
+    [/라인/, 'line'], [/기타/, 'etc'],
+  ];
+  for (const [re, code] of map) if (re.test(t)) return code;
+  return 'etc';
+}
+function _ledgerCostCat(label) {
+  const t = String(label||'').trim();
+  if (!t) return 'etc';
+  const map = [
+    [/마케팅|광고/, 'ad'], [/생산|원자재|자재|제작/, 'prod'], [/인건|급여|월급/, 'salary'],
+    [/수수료|플랫폼/, 'fee'], [/물류|배송|택배|운송/, 'logistics'], [/고정|임차|월세|임대/, 'fixed'],
+    [/식대|식비/, 'meal'], [/차량|주유|유류/, 'car'], [/비품|소모품/, 'supply'], [/기타/, 'etc'],
+  ];
+  for (const [re, code] of map) if (re.test(t)) return code;
+  return 'etc';
+}
+async function handleLedgerXlsx(e, kind) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' });
+    if (!rows.length) { toast('빈 파일이에요'); return; }
+
+    // 헤더 행 찾기 (첫 5행 중 '날짜/일자/입금일/거래일'과 '금액' 계열이 함께 있는 행)
+    const findCol = (hdr, res) => hdr.findIndex(h => res.some(re => re.test(String(h||''))));
+    let headerIdx = -1, col = {};
+    for (let i = 0; i < Math.min(5, rows.length); i++) {
+      const hdr = rows[i];
+      const dateC = findCol(hdr, [/날짜|일자|입금일|거래일|지출일/]);
+      const amtC  = findCol(hdr, [/금액|입금액|공급대가|지출액/]);
+      if (dateC >= 0 && amtC >= 0) {
+        headerIdx = i;
+        col = {
+          date: dateC, amt: amtC,
+          cat:  findCol(hdr, [/구분|분류|채널|카테고리/]),
+          desc: findCol(hdr, [/내용|비고|적요|메모|상세/]),
+          tax:  findCol(hdr, [/세금계산서|계산서|증빙/]),
+        };
+        break;
+      }
+    }
+    if (headerIdx < 0) { toast('헤더를 찾지 못했어요 · 첫 행에 "날짜, 구분, 금액, 내용" 컬럼이 필요해요'); return; }
+
+    const items = [];
+    let skipped = 0;
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.every(c => c === '' || c == null)) continue;
+      const ymd = _parseLedgerDate(r[col.date]);
+      const amount = _parseLedgerAmount(r[col.amt]);
+      if (!ymd || isNaN(amount) || amount === 0) { skipped++; continue; }
+      const catRaw = col.cat >= 0 ? r[col.cat] : '';
+      const desc   = col.desc >= 0 ? String(r[col.desc]||'').trim() : '';
+      const taxRaw = col.tax >= 0 ? String(r[col.tax]||'').trim() : '';
+      const hasTax = taxRaw ? /^(y|yes|o|유|발행|1|true|예)$/i.test(taxRaw) : (kind === 'rev');
+      items.push({
+        year: ymd[0], month: ymd[1], day: ymd[2],
+        cat: kind === 'rev' ? _ledgerRevCat(catRaw) : _ledgerCostCat(catRaw),
+        desc, amount, hasTax,
+      });
+    }
+    if (!items.length) { toast(`추가할 수 있는 행이 없어요${skipped?` (${skipped}건 형식 오류)`:''}`); return; }
+
+    const total = items.reduce((s,x)=>s+x.amount,0);
+    const dates = items.map(x=>`${x.year}-${String(x.month).padStart(2,'0')}-${String(x.day).padStart(2,'0')}`).sort();
+    const ok = await customConfirm(
+      `${kind==='rev'?'매출장':'매입장'}에 ${items.length}건을 추가할까요?`,
+      `기간 ${dates[0]} ~ ${dates[dates.length-1]} · 합계 ₩${total.toLocaleString()}${skipped?` · ${skipped}건 형식 오류로 제외`:''}`,
+      '추가'
+    );
+    if (!ok) return;
+
+    const listKey = kind === 'rev' ? 'tax_revenues' : 'tax_costs';
+    const prefix  = kind === 'rev' ? 'tr' : 'tc';
+    await patchAppState(s => {
+      s[listKey] = s[listKey] || [];
+      items.forEach((it, idx) => s[listKey].push({ id:`${prefix}-xl-${Date.now()}-${idx}`, ...it }));
+      return s;
+    });
+    toast(`${items.length}건 추가됐어요 ✓`);
+    if (kind === 'rev') loadTaxRev(); else loadTaxCosts();
+    if (taxTab==='monthly') loadTaxMonthly();
+    if (taxTab==='quarter') loadTaxQuarter();
+    if (taxTab==='annual')  loadTaxAnnual();
+    if (taxTab==='vat')     loadTaxVat();
+  } catch(err) {
+    console.error('handleLedgerXlsx', err);
+    toast('엑셀 읽기 실패: ' + (err.message||''));
+  }
 }
 
 async function saveTaxRev() {
