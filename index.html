@@ -1745,7 +1745,8 @@ a { text-decoration:none; color:inherit; }
             </div>
           </div>
           <div class="page-tabs" id="content-tabs">
-            <div class="page-tab on" onclick="contentSetTab('remake',this)">🏆 잘된 콘텐츠</div>
+            <div class="page-tab on" onclick="contentSetTab('plan',this)">🗓 콘텐츠 기획</div>
+            <div class="page-tab"   onclick="contentSetTab('remake',this)">🏆 잘된 콘텐츠</div>
             <div class="page-tab"   onclick="contentSetTab('idea',this)">💡 릴스 아이디어</div>
             <div class="page-tab"   onclick="contentSetTab('zzal',this)">🖼 짤 아이디어</div>
             <div class="page-tab"   onclick="contentSetTab('season',this)">📅 시즌 이슈</div>
@@ -1927,6 +1928,36 @@ a { text-decoration:none; color:inherit; }
         </div>
 
         <!-- 🏆 잘된 콘텐츠 라이브러리 (C1+C2 결합) -->
+        <!-- 🗓 콘텐츠 기획 탭 (팝업 콘텐츠 캘린더) -->
+        <div id="content-tab-plan" style="display:none;">
+          <div class="card" style="padding:0;overflow:hidden;">
+            <!-- 헤더: 캠페인 + D-day + 추가 -->
+            <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
+              <select id="cplan-campaign-sel" style="font-size:13px;font-weight:500;border:none;outline:none;background:transparent;cursor:pointer;font-family:var(--font);max-width:200px;" onchange="cplanCampaignChanged(this)"></select>
+              <span id="cplan-dday" style="font-size:11px;padding:3px 10px;border-radius:20px;background:#FCEBEB;color:#A32D2D;font-weight:500;display:none;"></span>
+              <span id="cplan-count" style="font-size:12px;color:var(--light);"></span>
+              <div style="margin-left:auto;display:flex;gap:6px;">
+                <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;" onclick="cplanEditCampaign()">캠페인 설정</button>
+                <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;" onclick="openCplanModal(null)">+ 콘텐츠 추가</button>
+              </div>
+            </div>
+            <!-- 필터: 보기 모드 + 채널 -->
+            <div style="display:flex;align-items:center;gap:6px;padding:10px 18px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
+              <div class="inv-pill on" id="cplan-view-list" onclick="cplanSetView('list',this)">목록</div>
+              <div class="inv-pill"    id="cplan-view-week" onclick="cplanSetView('week',this)">주차별</div>
+              <div style="width:0.5px;height:16px;background:var(--border);margin:0 4px;"></div>
+              <div class="inv-pill on" onclick="cplanSetCh('all',this)">전체</div>
+              <div class="inv-pill" style="color:#3C3489;" onclick="cplanSetCh('reels',this)">릴스</div>
+              <div class="inv-pill" style="color:#72243E;" onclick="cplanSetCh('feed',this)">피드</div>
+              <div class="inv-pill" style="color:#0C447C;" onclick="cplanSetCh('story',this)">스토리</div>
+            </div>
+            <!-- 리스트 -->
+            <div id="cplan-list" style="padding:2px 18px 8px;"></div>
+            <!-- 진행률 -->
+            <div id="cplan-progress" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-top:0.5px solid var(--surface2);"></div>
+          </div>
+        </div>
+
         <div id="content-tab-remake" style="display:none;">
           <!-- 상단 인사이트 요약 -->
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;" id="content-lib-summary"></div>
@@ -4140,6 +4171,58 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ═══ 콘텐츠 기획 모달 ═══ -->
+<div class="modal-overlay" id="cplan-modal" onclick="if(event.target===this)closeModal('cplan-modal')">
+  <div class="modal" style="max-width:500px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind" id="cplan-modal-kind">콘텐츠 추가</div>
+      <div class="modal-bar-right">
+        <div class="mbtn" id="cplan-del-btn" onclick="deleteCplan()" style="display:none;">🗑</div>
+        <div class="mbtn" onclick="closeModal('cplan-modal')">✕</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input class="modal-title-inp" id="cplan-title" placeholder="콘텐츠 제목 (예: 립밤키링 티저)">
+      <div class="modal-props" style="margin-top:14px;">
+        <div class="prop-row">
+          <div class="prop-icon">📅</div><div class="prop-label">발행일</div>
+          <div class="prop-val"><input type="date" class="prop-inp" id="cplan-date"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">📱</div><div class="prop-label">채널</div>
+          <div class="prop-val" style="display:flex;gap:5px;" id="cplan-ch-pills">
+            <div class="inv-pill on" data-ch="reels" onclick="cplanModalSetCh('reels')">릴스</div>
+            <div class="inv-pill" data-ch="feed" onclick="cplanModalSetCh('feed')">피드</div>
+            <div class="inv-pill" data-ch="story" onclick="cplanModalSetCh('story')">스토리</div>
+          </div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">⚡</div><div class="prop-label">상태</div>
+          <div class="prop-val" style="display:flex;gap:5px;" id="cplan-st-pills">
+            <div class="inv-pill on" data-st="idea" onclick="cplanModalSetSt('idea')">기획중</div>
+            <div class="inv-pill" data-st="making" onclick="cplanModalSetSt('making')">제작중</div>
+            <div class="inv-pill" data-st="done" onclick="cplanModalSetSt('done')">발행완료</div>
+          </div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">👤</div><div class="prop-label">담당</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="cplan-assignee" placeholder="담당자 (선택)"></div>
+        </div>
+        <div class="prop-row">
+          <div class="prop-icon">🔗</div><div class="prop-label">레퍼런스</div>
+          <div class="prop-val"><input type="text" class="prop-inp" id="cplan-ref" placeholder="참고 링크 (선택)"></div>
+        </div>
+      </div>
+      <div class="modal-memo-lbl" style="margin-top:14px;">캡션 초안 / 메모</div>
+      <textarea class="modal-textarea" id="cplan-memo" placeholder="캡션 초안, 촬영 아이디어, 준비물 등"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="f-btn f-btn-cancel" onclick="closeModal('cplan-modal')">취소</button>
+      <button class="f-btn f-btn-save" onclick="saveCplan()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 작업기록 상품 선택 바텀시트 (모바일) ═══ -->
 <div id="wl-sheet-overlay" style="display:none;position:fixed;inset:0;background:rgba(28,30,38,.4);z-index:600;" onclick="closeWorkLogSheet()">
   <div id="wl-sheet" style="position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:16px 16px 0 0;max-height:78dvh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);" onclick="event.stopPropagation()">
@@ -5463,7 +5546,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.8.5</div>
+<div id="version">v5.8.8</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -9854,8 +9937,17 @@ async function saveProduct() {
       is_discontinued: discStatus === 'disc',
       disc_status:     discStatus,
       disc_date:       discDate};
-    if(invProdIsNew) await db.from('products').insert([row]);
-    else await db.from('products').update(row).eq('id',id);
+    // 저장 (disc_status/disc_date 컬럼이 DB에 없으면 해당 컬럼 빼고 자동 재시도)
+    const trySave = async (r) => invProdIsNew
+      ? await db.from('products').insert([r])
+      : await db.from('products').update(r).eq('id',id);
+    let res = await trySave(row);
+    if (res.error && /disc_status|disc_date|column/i.test(res.error.message||'')) {
+      const { disc_status, disc_date, ...rowSlim } = row;
+      res = await trySave(rowSlim);
+      if (!res.error) console.warn('[saveProduct] disc_status/disc_date 컬럼 없음 — 해당 필드 제외하고 저장됨. Supabase에 컬럼 추가 필요.');
+    }
+    if (res.error) throw res.error;
     // 채널 매핑
     const chMap={'자사몰':'inv-p-map-own','카카오선물하기':'inv-p-map-kakao','스마트스토어':'inv-p-map-smart'};
     for(const [ch,eid] of Object.entries(chMap)){
@@ -16930,15 +17022,15 @@ function contentCalAddPost(dateStr_) {
 }
 
 async function initContentPage() {
-  // 잘된 콘텐츠 탭을 기본으로 (새 순서)
+  // 콘텐츠 기획 탭을 기본으로
   document.querySelectorAll('#content-tabs .page-tab').forEach((t,i)=>t.classList.toggle('on',i===0));
-  ['calendar','season','remake','idea','zzal','stats'].forEach(t=>{
+  ['calendar','season','remake','idea','zzal','stats','plan'].forEach(t=>{
     const d = $(`content-tab-${t}`);
-    if (d) d.style.display = t==='remake' ? '' : 'none';
+    if (d) d.style.display = t==='plan' ? '' : 'none';
   });
   const addBtn = $('content-add-btn');
   if (addBtn) addBtn.style.display = 'none';
-  await loadRemakeBoard();
+  await loadCplan();
 }
 
 function contentSetTab(tab, el) {
@@ -16948,12 +17040,12 @@ function contentSetTab(tab, el) {
   if (el) {
     el.classList.add('on');
   } else {
-    const tabIdx = ['remake','idea','zzal','season'].indexOf(tab);
+    const tabIdx = ['plan','remake','idea','zzal','season'].indexOf(tab);
     const tabs = document.querySelectorAll('#content-tabs .page-tab');
     if (tabs[tabIdx]) tabs[tabIdx].classList.add('on');
   }
   // 모든 탭 숨김 (stats DOM은 있어도 항상 숨김 처리)
-  ['calendar','season','remake','idea','zzal','stats'].forEach(t=>{
+  ['calendar','season','remake','idea','zzal','stats','plan'].forEach(t=>{
     const d = $(`content-tab-${t}`);
     if (d) d.style.display = t===tab ? '' : 'none';
   });
@@ -16965,6 +17057,7 @@ function contentSetTab(tab, el) {
   if(tab==='remake')   loadRemakeBoard();
   if(tab==='idea')     loadReelsIdeasFull();
   if(tab==='zzal')     loadZzalLibrary();
+  if(tab==='plan')     loadCplan();
 }
 
 /* ─────────────────────────────────────
@@ -17204,6 +17297,288 @@ async function deleteRemakeCard() {
   toast('삭제됐어요');
   closeModal('remake-card-modal');
   loadRemakeBoard();
+}
+
+/* ─────────────────────────────────────
+   🗓 콘텐츠 기획 (팝업 콘텐츠 캘린더)
+   app_state.cplan_campaigns: [{id, name, targetDate}]
+   app_state.content_plans:   [{id, campaign, title, date, channel, status, assignee, ref, memo, createdAt}]
+   channel: reels|feed|story · status: idea|making|done
+─────────────────────────────────────── */
+let _cplanView = 'list';
+let _cplanCh = 'all';
+let _cplanCampaignId = null;
+let _cplanEditId = null;
+let _cplanExpandedId = null;
+let _cplanModalCh = 'reels';
+let _cplanModalSt = 'idea';
+
+const CPLAN_CH = {
+  reels: { label:'릴스',   bg:'#EEEDFE', fg:'#3C3489', bar:'#7F77DD' },
+  feed:  { label:'피드',   bg:'#FBEAF0', fg:'#72243E', bar:'#D4537E' },
+  story: { label:'스토리', bg:'#E6F1FB', fg:'#0C447C', bar:'#378ADD' },
+};
+const CPLAN_ST = {
+  idea:   { label:'기획중',   bg:'var(--surface2)', fg:'var(--muted)' },
+  making: { label:'제작중',   bg:'#FAEEDA', fg:'#854F0B' },
+  done:   { label:'발행완료', bg:'#EAF3DE', fg:'#3B6D11' },
+};
+
+async function _cplanEnsureCampaign(s) {
+  s.cplan_campaigns = s.cplan_campaigns || [];
+  if (!s.cplan_campaigns.length) {
+    s.cplan_campaigns.push({ id:'camp-hyundai', name:'더현대 팝업', targetDate:'2026-08-06' });
+  }
+  if (!_cplanCampaignId || !s.cplan_campaigns.find(c=>c.id===_cplanCampaignId)) {
+    _cplanCampaignId = s.cplan_campaigns[0].id;
+  }
+  return s.cplan_campaigns;
+}
+
+function cplanSetView(v, el) {
+  _cplanView = v;
+  $('cplan-view-list').classList.toggle('on', v==='list');
+  $('cplan-view-week').classList.toggle('on', v==='week');
+  renderCplanList();
+}
+function cplanSetCh(ch, el) {
+  _cplanCh = ch;
+  const pills = el.parentElement.querySelectorAll('.inv-pill');
+  pills.forEach(p => { if (p.id!=='cplan-view-list' && p.id!=='cplan-view-week') p.classList.remove('on'); });
+  el.classList.add('on');
+  renderCplanList();
+}
+function cplanCampaignChanged(sel) {
+  if (sel.value === '__new__') { cplanNewCampaign(); return; }
+  _cplanCampaignId = sel.value;
+  loadCplan();
+}
+async function cplanNewCampaign() {
+  const name = await customPrompt('새 캠페인 이름', '예: 추석 시즌');
+  if (!name) { loadCplan(); return; }
+  const date = await customPrompt('목표일 (D-day 기준, YYYY-MM-DD)', '2026-09-01');
+  const id = 'camp-' + Date.now();
+  await patchAppState(s => {
+    s.cplan_campaigns = s.cplan_campaigns || [];
+    s.cplan_campaigns.push({ id, name, targetDate: (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) ? date : null });
+    return s;
+  });
+  _cplanCampaignId = id;
+  loadCplan();
+}
+async function cplanEditCampaign() {
+  const s = await getAppState();
+  const camp = (s.cplan_campaigns||[]).find(c=>c.id===_cplanCampaignId);
+  if (!camp) return;
+  const name = await customPrompt('캠페인 이름', '', camp.name);
+  if (!name) return;
+  const date = await customPrompt('목표일 (D-day 기준, YYYY-MM-DD, 비우면 없음)', '', camp.targetDate||'');
+  await patchAppState(s2 => {
+    const c = (s2.cplan_campaigns||[]).find(x=>x.id===_cplanCampaignId);
+    if (c) { c.name = name; c.targetDate = (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) ? date : null; }
+    return s2;
+  });
+  loadCplan();
+}
+
+let _cplanCache = [];
+async function loadCplan() {
+  try {
+    const s = await getAppState();
+    const camps = await _cplanEnsureCampaign(s);
+    const sel = $('cplan-campaign-sel');
+    if (sel) {
+      sel.innerHTML = camps.map(c=>`<option value="${c.id}"${c.id===_cplanCampaignId?' selected':''}>🗓 ${escapeHtml(c.name)}</option>`).join('')
+        + '<option value="__new__">＋ 새 캠페인...</option>';
+    }
+    const camp = camps.find(c=>c.id===_cplanCampaignId);
+    const ddayEl = $('cplan-dday');
+    if (ddayEl) {
+      if (camp?.targetDate) {
+        const diff = Math.ceil((new Date(camp.targetDate+'T00:00:00') - new Date(dateStr()+'T00:00:00')) / 86400000);
+        ddayEl.textContent = diff > 0 ? `D-${diff}` : diff === 0 ? 'D-DAY' : `D+${-diff}`;
+        ddayEl.style.display = '';
+        ddayEl.style.background = diff <= 7 ? '#FCEBEB' : '#FAEEDA';
+        ddayEl.style.color = diff <= 7 ? '#A32D2D' : '#854F0B';
+      } else ddayEl.style.display = 'none';
+    }
+    _cplanCache = (s.content_plans||[]).filter(p=>p.campaign===_cplanCampaignId);
+    renderCplanList();
+  } catch(e) { console.error('loadCplan', e); }
+}
+
+function _cplanRow(p, today) {
+  const ch = CPLAN_CH[p.channel] || CPLAN_CH.reels;
+  const st = CPLAN_ST[p.status] || CPLAN_ST.idea;
+  const overdue = p.status!=='done' && p.date && p.date < today;
+  const d = p.date ? new Date(p.date+'T00:00:00') : null;
+  const DOW = ['일','월','화','수','목','금','토'];
+  const dateLbl = d ? `${d.getMonth()+1}/${d.getDate()} ${DOW[d.getDay()]}` : '날짜 미정';
+  const expanded = _cplanExpandedId === p.id;
+  let detail = '';
+  if (expanded) {
+    const parts = [];
+    if (p.assignee) parts.push(`<span style="color:var(--light);">👤</span> ${escapeHtml(p.assignee)}`);
+    if (p.ref) parts.push(`<span style="color:var(--light);">🔗</span> <a href="${escapeHtml(p.ref)}" target="_blank" onclick="event.stopPropagation()" style="color:#185FA5;">${escapeHtml(p.ref.length>44?p.ref.slice(0,44)+'...':p.ref)}</a>`);
+    const memoHtml = p.memo ? `<div style="margin-top:5px;white-space:pre-wrap;">${escapeHtml(p.memo)}</div>` : '';
+    detail = `<div style="padding:2px 0 10px 58px;font-size:12px;color:var(--muted);line-height:1.6;">
+      ${parts.length?`<div>${parts.join(' &nbsp; ')}</div>`:''}${memoHtml}
+      <div style="margin-top:6px;"><span class="card-link" onclick="event.stopPropagation();openCplanModal('${p.id}')" style="font-size:11px;">✏️ 편집</span></div>
+    </div>`;
+  }
+  return `<div style="border-bottom:0.5px solid var(--surface2);cursor:pointer;" onclick="cplanToggleExpand('${p.id}')">
+    <div style="display:flex;align-items:center;gap:10px;padding:11px 0;">
+      <span style="font-size:11px;color:${overdue?'var(--red)':'var(--light)'};width:48px;flex-shrink:0;${overdue?'font-weight:600;':''}">${dateLbl}</span>
+      <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:${ch.bg};color:${ch.fg};font-weight:500;flex-shrink:0;">${ch.label}</span>
+      <span style="flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${p.status==='done'?'color:var(--light);':''}">${escapeHtml(p.title)}</span>
+      <span onclick="event.stopPropagation();cplanCycleStatus('${p.id}')" style="font-size:11px;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.fg};font-weight:500;flex-shrink:0;cursor:pointer;" title="탭하면 상태 변경">${st.label}</span>
+    </div>${detail}
+  </div>`;
+}
+
+function renderCplanList() {
+  const listEl = $('cplan-list'); if (!listEl) return;
+  const today = dateStr();
+  let items = _cplanCache.filter(p => _cplanCh==='all' || p.channel===_cplanCh);
+  items.sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+
+  $('cplan-count').textContent = items.length ? `${items.filter(p=>p.status==='done').length}/${items.length} 완료` : '';
+
+  if (!items.length) {
+    listEl.innerHTML = '<div style="padding:28px 8px;text-align:center;font-size:12px;color:var(--faint);">아직 기획된 콘텐츠가 없어요.<br>우측 상단 "+ 콘텐츠 추가"로 시작해보세요.</div>';
+    $('cplan-progress').innerHTML = '';
+    return;
+  }
+
+  if (_cplanView === 'list') {
+    listEl.innerHTML = items.map(p=>_cplanRow(p, today)).join('');
+  } else {
+    const weekKey = ds => {
+      if (!ds) return '9999-99-99';
+      const d = new Date(ds+'T00:00:00');
+      const day = (d.getDay()+6)%7;
+      d.setDate(d.getDate()-day);
+      return dateStr(d);
+    };
+    const groups = {};
+    items.forEach(p => { const k = weekKey(p.date); (groups[k]=groups[k]||[]).push(p); });
+    const thisWeek = weekKey(today);
+    listEl.innerHTML = Object.keys(groups).sort().map(k => {
+      const g = groups[k];
+      const done = g.filter(p=>p.status==='done').length;
+      let label = '날짜 미정';
+      if (k !== '9999-99-99') {
+        const st = new Date(k+'T00:00:00');
+        const en = new Date(st); en.setDate(en.getDate()+6);
+        label = `${st.getMonth()+1}/${st.getDate()} ~ ${en.getMonth()+1}/${en.getDate()}`;
+      }
+      const isThis = k === thisWeek;
+      return `<div style="margin:10px 0;border:${isThis?'1.5px solid #378ADD':'0.5px solid var(--border)'};border-radius:8px;padding:10px 14px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+          <span style="font-size:12px;font-weight:500;color:${isThis?'#185FA5':'var(--text)'};">${label}${isThis?' · 이번 주':''}</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--light);">${done}/${g.length} 완료</span>
+        </div>
+        ${g.map(p=>_cplanRow(p, today)).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  const done = items.filter(p=>p.status==='done').length;
+  const pct = Math.round(done/items.length*100);
+  $('cplan-progress').innerHTML = `
+    <div style="flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:var(--green);border-radius:3px;"></div></div>
+    <span style="font-size:11px;color:var(--light);">진행률 ${pct}%</span>`;
+}
+
+function cplanToggleExpand(id) {
+  _cplanExpandedId = _cplanExpandedId === id ? null : id;
+  renderCplanList();
+}
+
+async function cplanCycleStatus(id) {
+  const order = ['idea','making','done'];
+  await patchAppState(s => {
+    const p = (s.content_plans||[]).find(x=>x.id===id);
+    if (p) p.status = order[(order.indexOf(p.status)+1) % order.length];
+    return s;
+  });
+  const s = await getAppState();
+  _cplanCache = (s.content_plans||[]).filter(p=>p.campaign===_cplanCampaignId);
+  renderCplanList();
+}
+
+function cplanModalSetCh(ch) {
+  _cplanModalCh = ch;
+  document.querySelectorAll('#cplan-ch-pills .inv-pill').forEach(p=>p.classList.toggle('on', p.dataset.ch===ch));
+}
+function cplanModalSetSt(st) {
+  _cplanModalSt = st;
+  document.querySelectorAll('#cplan-st-pills .inv-pill').forEach(p=>p.classList.toggle('on', p.dataset.st===st));
+}
+
+async function openCplanModal(id) {
+  _cplanEditId = id;
+  $('cplan-modal-kind').textContent = id ? '콘텐츠 편집' : '콘텐츠 추가';
+  $('cplan-del-btn').style.display = id ? 'flex' : 'none';
+  $('cplan-title').value = ''; $('cplan-date').value = '';
+  $('cplan-assignee').value = ''; $('cplan-ref').value = ''; $('cplan-memo').value = '';
+  cplanModalSetCh('reels'); cplanModalSetSt('idea');
+  if (id) {
+    const p = _cplanCache.find(x=>x.id===id);
+    if (p) {
+      $('cplan-title').value = p.title||'';
+      $('cplan-date').value = p.date||'';
+      $('cplan-assignee').value = p.assignee||'';
+      $('cplan-ref').value = p.ref||'';
+      $('cplan-memo').value = p.memo||'';
+      cplanModalSetCh(p.channel||'reels'); cplanModalSetSt(p.status||'idea');
+    }
+  }
+  $('cplan-modal').classList.add('on');
+  setTimeout(()=>$('cplan-title').focus(), 80);
+}
+
+async function saveCplan() {
+  const title = $('cplan-title').value.trim();
+  if (!title) { toast('제목을 입력해주세요'); return; }
+  const data = {
+    title,
+    date: $('cplan-date').value || null,
+    channel: _cplanModalCh,
+    status: _cplanModalSt,
+    assignee: $('cplan-assignee').value.trim(),
+    ref: $('cplan-ref').value.trim(),
+    memo: $('cplan-memo').value.trim(),
+    campaign: _cplanCampaignId,
+  };
+  await patchAppState(s => {
+    s.content_plans = s.content_plans || [];
+    if (_cplanEditId) {
+      const p = s.content_plans.find(x=>x.id===_cplanEditId);
+      if (p) Object.assign(p, data);
+    } else {
+      s.content_plans.push({ id:'cp-'+Date.now(), createdAt:new Date().toISOString(), ...data });
+    }
+    return s;
+  });
+  toast('저장됐어요 ✓');
+  closeModal('cplan-modal');
+  _cplanEditId = null;
+  loadCplan();
+}
+
+async function deleteCplan() {
+  if (!_cplanEditId) return;
+  const ok = await customConfirm('이 콘텐츠 기획을 삭제할까요?');
+  if (!ok) return;
+  await patchAppState(s => {
+    s.content_plans = (s.content_plans||[]).filter(x=>x.id!==_cplanEditId);
+    return s;
+  });
+  toast('삭제됐어요');
+  closeModal('cplan-modal');
+  _cplanEditId = null;
+  loadCplan();
 }
 
 /* ─────────────────────────────────────
@@ -21880,13 +22255,14 @@ async function handleLedgerXlsx(e, kind) {
         col = {
           date: dateC, amt: amtC,
           cat:  findCol(hdr, [/구분|분류|채널|카테고리/]),
-          desc: findCol(hdr, [/내용|비고|적요|메모|상세/]),
+          desc: findCol(hdr, [/내용|적요|상세|품목/]),
+          note: findCol(hdr, [/비고|메모/]),
           tax:  findCol(hdr, [/세금계산서|계산서|증빙/]),
         };
         break;
       }
     }
-    if (headerIdx < 0) { toast('헤더를 찾지 못했어요 · 첫 행에 "날짜, 구분, 금액, 내용" 컬럼이 필요해요'); return; }
+    if (headerIdx < 0) { toast('헤더를 찾지 못했어요 · 첫 행에 "날짜, 내용, 금액, 비고" 컬럼이 필요해요'); return; }
 
     const items = [];
     let skipped = 0;
@@ -21896,15 +22272,20 @@ async function handleLedgerXlsx(e, kind) {
       const ymd = _parseLedgerDate(r[col.date]);
       const amount = _parseLedgerAmount(r[col.amt]);
       if (!ymd || isNaN(amount) || amount === 0) { skipped++; continue; }
-      const catRaw = col.cat >= 0 ? r[col.cat] : '';
       const desc   = col.desc >= 0 ? String(r[col.desc]||'').trim() : '';
+      const note   = col.note >= 0 ? String(r[col.note]||'').trim() : '';
+      // 구분 컬럼이 있으면 그 값으로, 없으면 내용+비고 텍스트에서 자동 추정
+      const catRaw = col.cat >= 0 ? r[col.cat] : `${desc} ${note}`;
       const taxRaw = col.tax >= 0 ? String(r[col.tax]||'').trim() : '';
-      const hasTax = taxRaw ? /^(y|yes|o|유|발행|1|true|예)$/i.test(taxRaw) : (kind === 'rev');
-      items.push({
+      // 세금계산서: O(또는 ○, Y, 발행)만 발행으로 인정 · 빈칸/X는 미발행
+      const hasTax = /^(o|○|◯|y|yes|유|발행|1|true|예)$/i.test(taxRaw);
+      const item = {
         year: ymd[0], month: ymd[1], day: ymd[2],
         cat: kind === 'rev' ? _ledgerRevCat(catRaw) : _ledgerCostCat(catRaw),
         desc, amount, hasTax,
-      });
+      };
+      if (note) item.note = note;
+      items.push(item);
     }
     if (!items.length) { toast(`추가할 수 있는 행이 없어요${skipped?` (${skipped}건 형식 오류)`:''}`); return; }
 
