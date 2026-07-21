@@ -1828,20 +1828,6 @@ a { text-decoration:none; color:inherit; }
         </div>
         <!-- 실적 탭 -->
         <!-- 기획보드 탭 -->
-        <div id="content-tab-plan" style="display:none;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-            <!-- 유형 필터 -->
-            <div style="display:flex;gap:5px;flex-wrap:wrap;" id="plan-board-type-pills">
-              <div class="inv-pill on" style="font-size:11px;padding:3px 9px;" onclick="planBoardSetType('',this)">전체</div>
-              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#1C1E2615;border-color:#1C1E2640;" onclick="planBoardSetType('visual',this)">◼ 비주얼보드</div>
-              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#FDF3E0;border-color:#C4A96A40;" onclick="planBoardSetType('mongmozzal',this)">✦ 몽모짤</div>
-              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#FAEAE4;border-color:#C4736A40;" onclick="planBoardSetType('reels',this)">▶ 릴스</div>
-              <div class="inv-pill" style="font-size:11px;padding:3px 9px;background:#EAF3DE;border-color:#6B9E7A40;" onclick="planBoardSetType('etc',this)">◎ 매거진</div>
-            </div>
-            <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;" onclick="openPlanBoardModal()">+ 기획 추가</button>
-          </div>
-          <div id="plan-board-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;"></div>
-        </div>
 
         <div id="content-tab-stats" style="display:none;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
@@ -5546,7 +5532,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.8.9</div>
+<div id="version">v5.9.0</div>
 
 <script>
 /* ═══════════════════════════════════════
