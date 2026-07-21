@@ -5546,7 +5546,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.8.8</div>
+<div id="version">v5.8.9</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -17382,8 +17382,39 @@ async function cplanEditCampaign() {
 }
 
 let _cplanCache = [];
+let _cplanTargetDate = null;
+
+/* 더현대 팝업 기본 콘텐츠 캘린더 (최초 1회 자동 입력) */
+async function _cplanSeedHyundai() {
+  const s = await getAppState();
+  if (s.cplan_seeded_hyundai) return;
+  const existing = (s.content_plans||[]).filter(p=>p.campaign==='camp-hyundai');
+  if (existing.length) { await patchAppState(x=>{ x.cplan_seeded_hyundai = true; return x; }); return; }
+  const SEED = [
+    { date:'2026-07-21', title:'양 인형 (앵커 · 최대 문의 제품) ※릴스 병행', memo:'"8/6 더현대에서 첫 출시, 예비 양띠맘 주목"' },
+    { date:'2026-07-23', title:'몽달이 립밤키링 (주력) ※릴스 병행', memo:'' },
+    { date:'2026-07-25', title:'코끼리몽모', memo:'' },
+    { date:'2026-07-28', title:'다람쥐몽모 & 도토리 키링', memo:'' },
+    { date:'2026-07-30', title:'돼지몽모', memo:'"D-7" 카운트 시작' },
+    { date:'2026-08-01', title:'몽모 립밤키링 (주력) ※릴스 병행', memo:'주말 노출' },
+    { date:'2026-08-03', title:'쥐몽모', memo:'' },
+    { date:'2026-08-04', title:'사자몽모 (미리보기 라인 마무리)', memo:'' },
+    { date:'2026-08-05', title:'엠디리스트 팝업공지', memo:'전체 라인업·GWP·위치·시간·휴무 총정리' },
+  ];
+  await patchAppState(x => {
+    x.content_plans = x.content_plans || [];
+    SEED.forEach((it, i) => x.content_plans.push({
+      id:`cp-seed-${i}`, campaign:'camp-hyundai', channel:'feed', status:'idea',
+      assignee:'', ref:'', createdAt:new Date().toISOString(), ...it,
+    }));
+    x.cplan_seeded_hyundai = true;
+    return x;
+  });
+}
+
 async function loadCplan() {
   try {
+    await _cplanSeedHyundai();
     const s = await getAppState();
     const camps = await _cplanEnsureCampaign(s);
     const sel = $('cplan-campaign-sel');
@@ -17392,6 +17423,7 @@ async function loadCplan() {
         + '<option value="__new__">＋ 새 캠페인...</option>';
     }
     const camp = camps.find(c=>c.id===_cplanCampaignId);
+    _cplanTargetDate = camp?.targetDate || null;
     const ddayEl = $('cplan-dday');
     if (ddayEl) {
       if (camp?.targetDate) {
@@ -17414,6 +17446,12 @@ function _cplanRow(p, today) {
   const d = p.date ? new Date(p.date+'T00:00:00') : null;
   const DOW = ['일','월','화','수','목','금','토'];
   const dateLbl = d ? `${d.getMonth()+1}/${d.getDate()} ${DOW[d.getDay()]}` : '날짜 미정';
+  // 캠페인 목표일 기준 D-day (목업 1안)
+  let ddayLbl = '';
+  if (p.date && _cplanTargetDate) {
+    const diff = Math.round((new Date(_cplanTargetDate+'T00:00:00') - new Date(p.date+'T00:00:00')) / 86400000);
+    ddayLbl = diff > 0 ? `D-${diff}` : diff === 0 ? 'D-DAY' : `D+${-diff}`;
+  }
   const expanded = _cplanExpandedId === p.id;
   let detail = '';
   if (expanded) {
@@ -17429,6 +17467,7 @@ function _cplanRow(p, today) {
   return `<div style="border-bottom:0.5px solid var(--surface2);cursor:pointer;" onclick="cplanToggleExpand('${p.id}')">
     <div style="display:flex;align-items:center;gap:10px;padding:11px 0;">
       <span style="font-size:11px;color:${overdue?'var(--red)':'var(--light)'};width:48px;flex-shrink:0;${overdue?'font-weight:600;':''}">${dateLbl}</span>
+      ${ddayLbl?`<span style="font-size:10px;font-weight:600;color:${overdue?'var(--red)':'var(--muted)'};width:38px;flex-shrink:0;">${ddayLbl}</span>`:''}
       <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:${ch.bg};color:${ch.fg};font-weight:500;flex-shrink:0;">${ch.label}</span>
       <span style="flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${p.status==='done'?'color:var(--light);':''}">${escapeHtml(p.title)}</span>
       <span onclick="event.stopPropagation();cplanCycleStatus('${p.id}')" style="font-size:11px;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.fg};font-weight:500;flex-shrink:0;cursor:pointer;" title="탭하면 상태 변경">${st.label}</span>
