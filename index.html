@@ -2,12 +2,17 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>체로프 워크스페이스</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="this.dataset.failed=1"></script>
+<script>
+/* supabase CDN 실패 시 unpkg로 1회 폴백 (동기 로드) */
+if (typeof supabase === 'undefined') {
+  document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');
+}
+</script>
 <style>
 /* ═══════════════════════════════════════
    TOKENS
@@ -786,8 +791,22 @@ a { text-decoration:none; color:inherit; }
     scrollbar-width:none; gap:2px; flex-shrink:0;
   }
   .sidebar::-webkit-scrollbar { display:none; }
-  .si { width:40px; height:40px; flex-shrink:0; }
-  .si-tip, .si-line, .si-gap { display:none; }
+  /* ── 하단 내비: 아이콘 아래 라벨 표시 ──
+     예전엔 si-tip이 hover 툴팁이라 모바일에서 display:none 이었고,
+     결과적으로 설명 없는 아이콘 7개만 나열돼 무슨 메뉴인지 알 수 없었음 */
+  .si {
+    width:auto; min-width:52px; height:auto; min-height:44px; flex-shrink:0;
+    flex-direction:column; gap:2px; padding:4px 6px; border-radius:10px;
+  }
+  .si svg { width:19px; height:19px; }
+  .si-tip {
+    display:block; position:static; opacity:1; transform:none; pointer-events:none;
+    background:none; color:var(--light); box-shadow:none; padding:0; white-space:nowrap;
+    font-size:9px; line-height:1.2; letter-spacing:-0.2px; max-width:56px;
+    overflow:hidden; text-overflow:ellipsis;
+  }
+  .si.on .si-tip { color:var(--text); font-weight:500; }
+  .si-line, .si-gap { display:none; }
 
   /* ── 메인 ── */
   .main { padding:14px 12px 90px; }
@@ -822,8 +841,14 @@ a { text-decoration:none; color:inherit; }
   div[style*="grid-template-columns:380px 1fr"],
   div[style*="grid-template-columns:220px 1fr"],
   div[style*="grid-template-columns:210px 1fr"],
-  div[style*="grid-template-columns:200px 1fr"] {
+  div[style*="grid-template-columns:200px 1fr"],
+  div[style*="grid-template-columns:1fr 1.3fr 1fr"] {
     grid-template-columns:1fr !important;
+  }
+  /* 출결 월간 요약 (60px + 4열) → 2열. 이 그리드는 table이 아니라 div라
+     테이블 가로스크롤 규칙도 안 걸려서 360px에서 글자가 3줄씩 접혔음 */
+  div[style*="grid-template-columns:60px 1fr 1fr 1fr 1fr"] {
+    grid-template-columns:repeat(2,1fr) !important;
   }
   /* 4·5열 카드 그리드 → 2열 (이 규칙이 위 1fr 규칙보다 뒤에 있어 우선) */
   div[style*="grid-template-columns:repeat(4,1fr)"],
@@ -894,6 +919,19 @@ a { text-decoration:none; color:inherit; }
 
   /* ── 콘텐츠 기획: 펼침 들여쓰기 축소 ── */
   .cplan-detail { padding-left:12px !important; }
+  /* ── 콘텐츠 기획 행: 모바일 2줄 배치 ──
+     360px에서 날짜48+Dday38+채널배지가 ~180px를 먹어 제목에 100px대만 남았음.
+     제목을 윗줄로 올리고 메타 정보를 아랫줄로 내림 */
+  .cplan-row { flex-wrap:wrap !important; gap:6px !important; padding:12px 0 !important; }
+  .cplan-row .cplan-title {
+    order:1; flex:0 0 100% !important; white-space:normal !important;
+    line-height:1.45; max-height:2.9em; overflow:hidden;
+  }
+  .cplan-row .cplan-date { order:2; width:auto !important; }
+  .cplan-row .cplan-dd   { order:3; width:auto !important; }
+  .cplan-row .cplan-ch   { order:4; }
+  .cplan-row .cplan-st   { order:5; margin-left:auto; padding:7px 14px !important; min-height:32px; display:inline-flex; align-items:center; }
+  .cplan-detail { padding-left:12px !important; }
 
   /* ── 업무 체크리스트: 4열 → 1열 ── */
   .tasks-grid { grid-template-columns:1fr; }
@@ -925,8 +963,18 @@ a { text-decoration:none; color:inherit; }
   .wd { padding:8px 12px; }
 
   /* ── 버튼 터치 영역 확보 ── */
-  .f-btn { min-height:34px; }
-  .mbtn { width:32px; height:32px; }
+  .f-btn { min-height:44px; }
+  /* ── 터치 타깃 (WCAG 최소 44px) ──
+     예전엔 mbtn 32px / f-btn 34px / proj-detail-close 26px 라
+     ✏와 ✕가 붙어 있는 곳에서 오터치로 삭제되는 사고가 가능했음 */
+  .mbtn { width:40px; height:40px; }
+  .mbtn::before { content:''; position:absolute; inset:-4px; }
+  .mbtn { position:relative; }
+  .proj-detail-close { width:40px; height:40px; }
+  /* 입력 글자 16px — iOS가 16px 미만 입력에 자동 확대를 걸기 때문.
+     이걸 막으려고 예전엔 user-scalable=no를 썼는데, 그 탓에
+     900px 재고표를 11px로 보면서 핀치 확대도 못 하는 상태였음 */
+  input, select, textarea, .prop-inp { font-size:16px !important; }
 }
 
 /* 초소형 화면 (≤400px): KPI 카드도 1열 */
@@ -978,7 +1026,6 @@ a { text-decoration:none; color:inherit; }
       <div class="tb-nav-item" data-page="production">생산</div>
       <div class="tb-nav-item" data-page="ops">운영</div>
       <div class="tb-nav-item" data-page="content">콘텐츠</div>
-      <div class="tb-nav-item" data-page="marketing" style="display:none;">마케팅</div>
       <div class="tb-nav-item" data-page="lineup">라인업</div>
     </nav>
     <div class="tb-right">
@@ -1254,6 +1301,7 @@ a { text-decoration:none; color:inherit; }
           <div class="page-tabs" id="inv-tabs">
             <div class="page-tab on" onclick="invSetTab('overview',this)">재고 현황</div>
             <div class="page-tab"   onclick="invSetTab('shiplog',this)">출고 내역</div>
+            <div class="page-tab"   onclick="invSetTab('channel',this)">채널별 재고</div>
             <div class="page-tab"   onclick="invSetTab('receipt',this)">입고 일정</div>
             <div class="page-tab"   onclick="invSetTab('alert',this)">재고 알림<span id="inv-alert-badge" style="display:none;margin-left:5px;vertical-align:1px;background:var(--red);color:#fff;font-size:10px;font-weight:500;min-width:16px;height:16px;border-radius:8px;align-items:center;justify-content:center;padding:0 4px;"></span></div>
           </div>
@@ -1726,7 +1774,6 @@ a { text-decoration:none; color:inherit; }
                 <th>발주일</th>
                 <th>입고 예정일</th>
                 <th style="text-align:center;">상태</th>
-                <th>메모</th>
                 <th></th>
               </tr></thead>
               <tbody id="ops-order-list"></tbody>
@@ -2061,153 +2108,6 @@ a { text-decoration:none; color:inherit; }
         <div id="lineup-content"></div>
       </div>
 
-      <div class="page" id="page-marketing">
-        <div class="page-header">
-          <div class="page-header-top">
-            <div><div class="page-header-title">마케팅</div></div>
-            <button class="f-btn f-btn-save" style="font-size:12px;padding:7px 16px;" onclick="openMktDataModal()">+ 데이터 입력</button>
-          </div>
-          <div class="page-tabs" id="mkt-tabs">
-            <div class="page-tab on" onclick="mktSetTab('today',this)">오늘 현황</div>
-            <div class="page-tab"   onclick="mktSetTab('perf',this)">퍼포먼스</div>
-            <div class="page-tab"   onclick="mktSetTab('apptest',this)">소구 테스트</div>
-            <div class="page-tab"   onclick="mktSetTab('crm',this)">CRM</div>
-            <div class="page-tab"   onclick="mktSetTab('adbrief',this)">광고 소재 기획</div>
-          </div>
-        </div>
-
-        <!-- 오늘 현황 탭 -->
-        <div id="mkt-tab-today">
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;" id="mkt-today-cards"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-            <div class="card">
-              <div class="card-head">
-                <div class="card-title">목표 대비 실적</div>
-                <div class="card-sub" id="mkt-goal-sub">이번 달</div>
-              </div>
-              <div id="mkt-goal-list"></div>
-            </div>
-            <div class="card">
-              <div class="card-head">
-                <div class="card-title">액션 필요 항목</div>
-                <div class="card-sub">기준선 대비</div>
-              </div>
-              <div id="mkt-action-list"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 퍼포먼스 탭 -->
-        <div id="mkt-tab-perf" style="display:none;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <div style="display:flex;gap:6px;" id="mkt-ch-pills">
-              <div class="inv-pill on" onclick="mktSetCh('meta',this)">메타</div>
-              <div class="inv-pill"   onclick="mktSetCh('naver',this)">네이버</div>
-            </div>
-            <div style="display:flex;gap:5px;" id="mkt-period-pills">
-              <div class="inv-pill on" onclick="mktSetPeriod('daily',this)">일별</div>
-              <div class="inv-pill"   onclick="mktSetPeriod('weekly',this)">주별</div>
-              <div class="inv-pill"   onclick="mktSetPeriod('monthly',this)">월별</div>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;" id="mkt-perf-cards"></div>
-          <div id="mkt-perf-contrib" style="border-radius:var(--r);padding:10px 14px;margin-bottom:14px;display:none;font-size:12px;"></div>
-          <div class="card" style="padding:0;overflow:hidden;">
-            <table class="inv-tbl">
-              <thead id="mkt-perf-thead"></thead>
-              <tbody id="mkt-perf-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- 소구 테스트 탭 -->
-        <div id="mkt-tab-apptest" style="display:none;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <div style="display:flex;gap:5px;" id="mkt-apptest-filter">
-              <div class="inv-pill on" onclick="mktApptestSetFilter('all',this)">전체</div>
-              <div class="inv-pill"   onclick="mktApptestSetFilter('ongoing',this)">진행중</div>
-              <div class="inv-pill"   onclick="mktApptestSetFilter('done',this)">완료</div>
-              <div class="inv-pill"   onclick="mktApptestSetFilter('pending',this)">진행 전</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-              <button class="f-btn f-btn-cancel" style="font-size:12px;padding:6px 12px;" onclick="openMktSettings()">⚙ 지표 기준 설정</button>
-              <button class="f-btn f-btn-save"   style="font-size:12px;padding:6px 14px;" onclick="openMktApptestModal()">+ 항목 추가</button>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;" id="mkt-apptest-summary"></div>
-          <div class="card" style="padding:0;overflow:hidden;">
-            <table class="inv-tbl">
-              <thead><tr>
-                <th>1차</th><th>2차</th><th>세부내용</th>
-                <th style="text-align:center;">진행</th>
-                <th style="text-align:center;">등급</th>
-                <th style="text-align:right;">ROAS</th>
-                <th style="text-align:right;">구매수</th>
-                <th style="text-align:center;">디벨롭</th>
-                <th style="text-align:left;">행동 지침</th>
-                <th></th>
-              </tr></thead>
-              <tbody id="mkt-apptest-list"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- CRM 탭 -->
-        <div id="mkt-tab-crm" style="display:none;">
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;" id="mkt-crm-summary"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-            <div class="card">
-              <div class="card-head">
-                <div class="card-title">알림톡 발송 이력</div>
-                <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openMktCrmModal('alimtalk')">+ 발송 기록</button>
-              </div>
-              <div id="mkt-crm-alimtalk"></div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:14px;">
-              <div class="card">
-                <div class="card-head">
-                  <div class="card-title">회원 현황</div>
-                  <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openMktCrmModal('member')">+ 입력</button>
-                </div>
-                <div id="mkt-crm-member"></div>
-              </div>
-              <div class="card">
-                <div class="card-head"><div class="card-title">고객 등급 분포</div></div>
-                <div id="mkt-crm-grade"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ━━━ 광고 소재 기획 탭 ━━━ -->
-        <div id="mkt-tab-adbrief" style="display:none;">
-          <div style="display:grid;grid-template-columns:380px 1fr;gap:14px;align-items:start;min-height:560px;">
-            <!-- 좌측: 리스트 -->
-            <div class="card" style="padding:0;overflow:hidden;">
-              <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
-                <div style="display:flex;gap:5px;flex-wrap:wrap;" id="adbrief-status-pills">
-                  <div class="inv-pill on" onclick="adBriefSetFilter('all',this)">전체</div>
-                  <div class="inv-pill"   onclick="adBriefSetFilter('idea',this)">아이디어</div>
-                  <div class="inv-pill"   onclick="adBriefSetFilter('plan',this)">기획중</div>
-                  <div class="inv-pill"   onclick="adBriefSetFilter('shot',this)">촬영완료</div>
-                  <div class="inv-pill"   onclick="adBriefSetFilter('edit',this)">편집중</div>
-                  <div class="inv-pill"   onclick="adBriefSetFilter('live',this)">집행중</div>
-                </div>
-                <button class="f-btn f-btn-save" style="font-size:11px;padding:5px 13px;margin-left:auto;" onclick="openAdBriefModal()">+ 소재 추가</button>
-              </div>
-              <div id="adbrief-list"></div>
-            </div>
-
-            <!-- 우측: 상세 패널 -->
-            <div class="card" id="adbrief-detail" style="min-height:540px;">
-              <div id="adbrief-detail-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:480px;color:var(--faint);font-size:13px;line-height:1.7;text-align:center;">
-                소재를 선택하면<br>상세 내용이 표시돼요
-              </div>
-              <div id="adbrief-detail-body" style="display:none;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
       <div class="page" id="page-notice">
         <div class="page-header">
           <div class="page-header-top">
@@ -2859,7 +2759,7 @@ a { text-decoration:none; color:inherit; }
         </div>
         <div class="prop-row">
           <div class="prop-icon">👤</div><div class="prop-label">담당자</div>
-          <div class="prop-val" id="task-assignee">—</div>
+          <div class="prop-val" style="display:flex;gap:5px;flex-wrap:wrap;" id="task-assignee-pills"></div>
         </div>
       </div>
 
@@ -3635,7 +3535,10 @@ a { text-decoration:none; color:inherit; }
             <div class="inv-pill on" style="font-size:11px;padding:4px 10px;" onclick="shipSetChannel('자사몰',this)">자사몰</div>
             <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="shipSetChannel('카카오선물하기',this)">카카오</div>
             <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="shipSetChannel('스마트스토어',this)">스마트</div>
-            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="shipSetChannel('기타',this)">기타</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="shipSetChannel('더현대',this)">더현대</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="shipSetChannel('이모티콘',this)">이모티콘</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="shipSetChannel('팝업',this)">팝업</div>
+            <div class="inv-pill" style="font-size:11px;padding:4px 10px;" onclick="shipSetChannel('라인프렌즈',this)">라인프렌즈</div>
           </div>
           <input type="hidden" id="shipment-channel" value="자사몰">
         </div>
@@ -4911,314 +4814,6 @@ a { text-decoration:none; color:inherit; }
 
 
 <!-- ═══ 마케팅: 데이터 입력 모달 ═══ -->
-<div class="modal-overlay" id="mkt-data-modal" onclick="if(event.target===this)closeModal('mkt-data-modal')">
-  <div class="modal" style="max-width:520px;" onclick="event.stopPropagation()">
-    <div class="modal-bar">
-      <div class="modal-kind" id="mkt-data-modal-kind">마케팅 데이터 입력</div>
-      <div class="modal-bar-right">
-        <div class="mbtn" id="mkt-data-del-btn" onclick="deleteMktData()" style="display:none;">🗑</div>
-        <div class="mbtn" onclick="closeModal('mkt-data-modal')">✕</div>
-      </div>
-    </div>
-    <div class="modal-body">
-      <div class="modal-props">
-        <div class="prop-row">
-          <div class="prop-icon">📅</div><div class="prop-label">기준 월</div>
-          <div class="prop-val"><input type="month" class="prop-inp" id="mkt-data-month"></div>
-        </div>
-        <div class="prop-row">
-          <div class="prop-icon">📡</div><div class="prop-label">채널</div>
-          <div class="prop-val">
-            <div style="display:flex;gap:6px;" id="mkt-data-ch-pills">
-              <div class="inv-pill on" onclick="mktDataSetCh('meta',this)">메타</div>
-              <div class="inv-pill"   onclick="mktDataSetCh('naver',this)">네이버</div>
-              <div class="inv-pill"   onclick="mktDataSetCh('etc',this)">기타</div>
-            </div>
-          </div>
-        </div>
-        <div class="prop-row">
-          <div class="prop-icon">💸</div><div class="prop-label">지출 금액</div>
-          <div class="prop-val"><input type="number" class="prop-inp" id="mkt-data-spend" placeholder="원 단위"></div>
-        </div>
-        <div id="mkt-data-meta-fields">
-          <div class="prop-row">
-            <div class="prop-icon">🔄</div><div class="prop-label">ROAS (%)</div>
-            <div class="prop-val"><input type="number" class="prop-inp" id="mkt-data-roas" placeholder="예: 385"></div>
-          </div>
-          <div class="prop-row">
-            <div class="prop-icon">🛒</div><div class="prop-label">전환수</div>
-            <div class="prop-val"><input type="number" class="prop-inp" id="mkt-data-conv" placeholder="건수"></div>
-          </div>
-          <div class="prop-row">
-            <div class="prop-icon">💰</div><div class="prop-label">전환 금액</div>
-            <div class="prop-val"><input type="number" class="prop-inp" id="mkt-data-conv-amt" placeholder="원 단위"></div>
-          </div>
-          <div class="prop-row" id="mkt-data-ctr-row">
-            <div class="prop-icon">👆</div><div class="prop-label">CTR (%)</div>
-            <div class="prop-val"><input type="number" class="prop-inp" id="mkt-data-ctr" placeholder="예: 2.84" step="0.01"></div>
-          </div>
-        </div>
-        <div id="mkt-data-naver-fields" style="display:none;">
-          <div class="prop-row">
-            <div class="prop-icon">👁</div><div class="prop-label">노출수</div>
-            <div class="prop-val"><input type="number" class="prop-inp" id="mkt-data-impressions" placeholder="회"></div>
-          </div>
-          <div class="prop-row">
-            <div class="prop-icon">👆</div><div class="prop-label">클릭수</div>
-            <div class="prop-val"><input type="number" class="prop-inp" id="mkt-data-clicks" placeholder="회"></div>
-          </div>
-          <div class="prop-row">
-            <div class="prop-icon">🛒</div><div class="prop-label">전환수</div>
-            <div class="prop-val"><input type="number" class="prop-inp" id="mkt-data-nav-conv" placeholder="건수"></div>
-          </div>
-          <div class="prop-row">
-            <div class="prop-icon">💰</div><div class="prop-label">전환 금액</div>
-            <div class="prop-val"><input type="number" class="prop-inp" id="mkt-data-nav-conv-amt" placeholder="원 단위"></div>
-          </div>
-        </div>
-        <div class="prop-row">
-          <div class="prop-icon">🎯</div><div class="prop-label">목표 ROAS</div>
-          <div class="prop-val">
-            <input type="number" class="prop-inp" id="mkt-data-target-roas" placeholder="예: 300 (기준선)">
-            <div style="font-size:11px;color:var(--light);margin-top:3px;">이 기준 이하면 액션 필요 알림</div>
-          </div>
-        </div>
-        <div class="prop-row">
-          <div class="prop-icon">📝</div><div class="prop-label">메모</div>
-          <div class="prop-val"><input type="text" class="prop-inp" id="mkt-data-memo" placeholder="특이사항, 캠페인명 등"></div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="f-btn f-btn-cancel" onclick="closeModal('mkt-data-modal')">취소</button>
-      <button class="f-btn f-btn-save" onclick="saveMktData()">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ 마케팅: 소구 테스트 모달 (큰 모달) ═══ -->
-<div class="modal-overlay" id="mkt-apptest-modal" onclick="if(event.target===this)closeModal('mkt-apptest-modal')">
-  <div class="modal" style="max-width:780px;width:95vw;" onclick="event.stopPropagation()">
-    <div class="modal-bar">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div class="modal-kind" id="mkt-apptest-modal-kind">소구 테스트 추가</div>
-        <div id="mkt-at-grade-badge" style="display:none;"></div>
-      </div>
-      <div class="modal-bar-right">
-        <div class="mbtn" id="mkt-apptest-del-btn" onclick="deleteMktApptest()" style="display:none;">🗑</div>
-        <div class="mbtn" onclick="closeModal('mkt-apptest-modal')">✕</div>
-      </div>
-    </div>
-    <div class="modal-body" style="padding:0;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;">
-        <!-- 왼쪽: 기본 정보 -->
-        <div style="padding:20px;border-right:0.5px solid var(--surface2);">
-          <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:10px;">소구 정보</div>
-          <div class="modal-props" style="margin-bottom:0;">
-            <div class="prop-row">
-              <div class="prop-icon">📁</div><div class="prop-label">1차</div>
-              <div class="prop-val"><input type="text" class="prop-inp" id="mkt-at-cat1" placeholder="예: 애착인형"></div>
-            </div>
-            <div class="prop-row">
-              <div class="prop-icon">📂</div><div class="prop-label">2차</div>
-              <div class="prop-val"><input type="text" class="prop-inp" id="mkt-at-cat2" placeholder="예: 선물"></div>
-            </div>
-            <div class="prop-row">
-              <div class="prop-icon">✏</div><div class="prop-label">소구 내용</div>
-              <div class="prop-val"><textarea class="prop-inp" id="mkt-at-detail" rows="2" style="resize:none;" placeholder="소구 메시지, 키워드 등"></textarea></div>
-            </div>
-            <div class="prop-row">
-              <div class="prop-icon">⚑</div><div class="prop-label">진행 여부</div>
-              <div class="prop-val">
-                <select class="prop-inp" id="mkt-at-status">
-                  <option value="pending">진행 전</option>
-                  <option value="ongoing">진행중</option>
-                  <option value="done">완료</option>
-                </select>
-              </div>
-            </div>
-            <div class="prop-row">
-              <div class="prop-icon">🔧</div><div class="prop-label">디벨롭</div>
-              <div class="prop-val">
-                <select class="prop-inp" id="mkt-at-devel">
-                  <option value="">—</option>
-                  <option value="ongoing">진행중</option>
-                  <option value="done">완료</option>
-                  <option value="pending">대기</option>
-                </select>
-              </div>
-            </div>
-            <div class="prop-row">
-              <div class="prop-icon">📝</div><div class="prop-label">비고</div>
-              <div class="prop-val"><input type="text" class="prop-inp" id="mkt-at-note" placeholder="특이사항, 참고 내용"></div>
-            </div>
-          </div>
-          <div style="margin-top:14px;">
-            <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:8px;">소재 이미지</div>
-            <div id="mkt-at-img-preview" style="width:100%;aspect-ratio:16/9;border-radius:8px;border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;background:var(--surface2);" onclick="$('mkt-at-img-file').click()">
-              <div style="font-size:12px;color:var(--muted);">클릭하여 소재 이미지 첨부</div>
-              <div style="font-size:11px;color:var(--faint);">BEST/WORST 소재 캡처 등</div>
-            </div>
-            <input type="file" id="mkt-at-img-file" accept="image/*" style="display:none;" onchange="mktAtImgChange(this)">
-          </div>
-        </div>
-        <!-- 오른쪽: 성과 지표 입력 + 자동 분석 -->
-        <div style="padding:20px;background:var(--surface2);">
-          <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:10px;">성과 지표 입력</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-            <div style="background:var(--surface);border-radius:8px;padding:10px 12px;">
-              <div style="font-size:10px;color:var(--light);margin-bottom:4px;">ROAS (%)</div>
-              <input type="number" id="mkt-at-roas" placeholder="예: 314" style="width:100%;border:none;background:transparent;font-size:18px;font-weight:500;font-family:var(--font);color:var(--text);" oninput="mktAtCalcGrade()">
-            </div>
-            <div style="background:var(--surface);border-radius:8px;padding:10px 12px;">
-              <div style="font-size:10px;color:var(--light);margin-bottom:4px;">구매수 (건)</div>
-              <input type="number" id="mkt-at-conv" placeholder="예: 48" style="width:100%;border:none;background:transparent;font-size:18px;font-weight:500;font-family:var(--font);color:var(--text);" oninput="mktAtCalcGrade()">
-            </div>
-            <div style="background:var(--surface);border-radius:8px;padding:10px 12px;">
-              <div style="font-size:10px;color:var(--light);margin-bottom:4px;">CPS / 구매당 비용</div>
-              <input type="number" id="mkt-at-cps" placeholder="예: 9060" style="width:100%;border:none;background:transparent;font-size:18px;font-weight:500;font-family:var(--font);color:var(--text);" oninput="mktAtCalcGrade()">
-            </div>
-            <div style="background:var(--surface);border-radius:8px;padding:10px 12px;">
-              <div style="font-size:10px;color:var(--light);margin-bottom:4px;">CTR (%)</div>
-              <input type="number" id="mkt-at-ctr" placeholder="예: 1.90" step="0.01" style="width:100%;border:none;background:transparent;font-size:18px;font-weight:500;font-family:var(--font);color:var(--text);" oninput="mktAtCalcGrade()">
-            </div>
-          </div>
-
-          <!-- 자동 분석 결과 -->
-          <div id="mkt-at-analysis" style="background:var(--surface);border-radius:10px;padding:14px;display:none;">
-            <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:10px;">자동 분석</div>
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-              <div style="font-size:11px;color:var(--muted);">소재 등급</div>
-              <div id="mkt-at-grade-display" style="font-size:20px;font-weight:500;"></div>
-            </div>
-            <div id="mkt-at-action-text" style="border-radius:6px;padding:8px 12px;font-size:12px;"></div>
-            <div id="mkt-at-warnings" style="margin-top:8px;"></div>
-          </div>
-
-          <div style="margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <div style="font-size:11px;color:var(--light);">등급 기준 (설정에서 변경 가능)</div>
-              <div class="card-link" onclick="closeModal('mkt-apptest-modal');openMktSettings()" style="font-size:11px;">⚙ 기준 설정</div>
-            </div>
-            <div id="mkt-at-criteria-preview" style="font-size:11px;color:var(--faint);line-height:1.7;"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="f-btn f-btn-cancel" onclick="closeModal('mkt-apptest-modal')">취소</button>
-      <button class="f-btn f-btn-save" onclick="saveMktApptest()">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ 마케팅: 행동지표 설정 모달 ═══ -->
-<div class="modal-overlay" id="mkt-settings-modal" onclick="if(event.target===this)closeModal('mkt-settings-modal')">
-  <div class="modal" style="max-width:640px;width:95vw;" onclick="event.stopPropagation()">
-    <div class="modal-bar">
-      <div class="modal-kind">광고 지표 기준 설정</div>
-      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('mkt-settings-modal')">✕</div></div>
-    </div>
-    <div class="modal-body">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">이 기준값에 따라 소재 등급과 행동 지침이 자동으로 결정돼요.</div>
-
-      <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:10px;">등급 기준값</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;" id="mkt-settings-grades"></div>
-
-      <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:10px;">기타 지표 기준</div>
-      <div class="modal-props" style="margin-bottom:16px;">
-        <div class="prop-row">
-          <div class="prop-icon">👆</div><div class="prop-label">CTR 경고</div>
-          <div class="prop-val" style="display:flex;align-items:center;gap:6px;">
-            <input type="number" class="prop-inp" id="mkt-set-ctr" style="width:80px;" step="0.1">
-            <span style="font-size:12px;color:var(--muted);">% 미만이면 소재 교체 검토 알림</span>
-          </div>
-        </div>
-        <div class="prop-row">
-          <div class="prop-icon">💸</div><div class="prop-label">CPS 경고</div>
-          <div class="prop-val" style="display:flex;align-items:center;gap:6px;">
-            <input type="number" class="prop-inp" id="mkt-set-cps" style="width:80px;">
-            <span style="font-size:12px;color:var(--muted);">원 초과 시 효율 점검 알림</span>
-          </div>
-        </div>
-      </div>
-
-      <div style="font-size:11px;font-weight:500;color:var(--light);margin-bottom:10px;">등급별 행동 지침</div>
-      <div id="mkt-settings-actions"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="f-btn f-btn-cancel" onclick="resetMktSettings()">기본값으로 초기화</button>
-      <button class="f-btn f-btn-save" onclick="saveMktSettings()">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ 마케팅: CRM 입력 모달 ═══ -->
-<div class="modal-overlay" id="mkt-crm-modal" onclick="if(event.target===this)closeModal('mkt-crm-modal')">
-  <div class="modal" style="max-width:460px;" onclick="event.stopPropagation()">
-    <div class="modal-bar">
-      <div class="modal-kind" id="mkt-crm-modal-kind">CRM 데이터 입력</div>
-      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('mkt-crm-modal')">✕</div></div>
-    </div>
-    <div class="modal-body">
-      <div id="mkt-crm-modal-body"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="f-btn f-btn-cancel" onclick="closeModal('mkt-crm-modal')">취소</button>
-      <button class="f-btn f-btn-save" onclick="saveMktCrm()">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ 마케팅: 광고 소재 기획 모달 ═══ -->
-<div class="modal-overlay" id="adbrief-modal" onclick="if(event.target===this)closeModal('adbrief-modal')">
-  <div class="modal" style="max-width:600px;" onclick="event.stopPropagation()">
-    <div class="modal-bar">
-      <div style="display:flex;gap:5px;flex-wrap:wrap;" id="adbrief-modal-status-pills">
-        <div class="inv-pill on" data-st="idea" onclick="adBriefModalSetStatus('idea',this)">아이디어</div>
-        <div class="inv-pill"   data-st="plan" onclick="adBriefModalSetStatus('plan',this)">기획중</div>
-        <div class="inv-pill"   data-st="shot" onclick="adBriefModalSetStatus('shot',this)">촬영완료</div>
-        <div class="inv-pill"   data-st="edit" onclick="adBriefModalSetStatus('edit',this)">편집중</div>
-        <div class="inv-pill"   data-st="live" onclick="adBriefModalSetStatus('live',this)">집행중</div>
-      </div>
-      <div class="modal-bar-right">
-        <div class="mbtn" id="adbrief-del-btn" onclick="deleteAdBrief()" style="display:none;color:var(--red);">삭제</div>
-        <div class="mbtn" onclick="closeModal('adbrief-modal')">✕</div>
-      </div>
-    </div>
-    <div class="modal-body">
-      <input type="text" class="prop-inp" id="adbrief-title" placeholder="소재 제목을 입력하세요" style="font-size:20px;font-weight:600;border:none;padding:8px 0;margin-bottom:16px;border-bottom:0.5px solid var(--border);border-radius:0;">
-      <div class="modal-props">
-        <div class="prop-row">
-          <div class="prop-icon">📦</div><div class="prop-label">필요 제품</div>
-          <div class="prop-val"><input type="text" class="prop-inp" id="adbrief-product" placeholder="입력하세요"></div>
-        </div>
-        <div class="prop-row">
-          <div class="prop-icon">📍</div><div class="prop-label">촬영 장소</div>
-          <div class="prop-val"><input type="text" class="prop-inp" id="adbrief-place" placeholder="입력하세요"></div>
-        </div>
-        <div class="prop-row">
-          <div class="prop-icon">📅</div><div class="prop-label">촬영 일정</div>
-          <div class="prop-val"><input type="date" class="prop-inp" id="adbrief-date"></div>
-        </div>
-      </div>
-      <div style="margin-top:16px;">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">🎤 멘트 / 스크립트</div>
-        <textarea class="prop-inp" id="adbrief-script" placeholder="광고에 사용할 멘트나 스크립트를 입력하세요..." style="width:100%;min-height:110px;resize:vertical;font-family:inherit;line-height:1.6;"></textarea>
-      </div>
-      <div style="margin-top:14px;">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">💡 아이디어 메모</div>
-        <textarea class="prop-inp" id="adbrief-note" placeholder="레퍼런스, 톤앤매너, 촬영 방향 등 자유롭게..." style="width:100%;min-height:110px;resize:vertical;font-family:inherit;line-height:1.6;"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="f-btn f-btn-cancel" onclick="closeModal('adbrief-modal')">취소</button>
-      <button class="f-btn f-btn-save" onclick="saveAdBrief()">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ 세무: 카드 이용내역 입력 모달 ═══ -->
 <div class="modal-overlay" id="card-usage-modal" onclick="if(event.target===this)closeModal('card-usage-modal')">
   <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
     <div class="modal-bar">
@@ -5536,7 +5131,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.9.2</div>
+<div id="version">v5.9.3</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5544,7 +5139,29 @@ a { text-decoration:none; color:inherit; }
 ═══════════════════════════════════════ */
 const SB_URL = 'https://pmgntojnfglppjtypwzq.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtZ250b2puZmdscHBqdHlwd3pxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjkzOTUsImV4cCI6MjA5MTYwNTM5NX0.GyJdXYGbkzPHESJHp3HeZihnBV_2fSCvlIV44D78So8';
+/* CDN 실패 대비 가드 — supabase가 없으면 안내 화면으로 전환하고 중단.
+   이게 없으면 ReferenceError로 스크립트 전체가 죽어 무한 로딩 화면에 갇힘 */
+if (typeof supabase === 'undefined' || !supabase.createClient) {
+  document.addEventListener('DOMContentLoaded', function(){
+    var el = document.getElementById('loading');
+    if (el) el.innerHTML =
+      '<div style="text-align:center;padding:24px;font-family:sans-serif;">' +
+      '<div style="font-size:15px;font-weight:500;margin-bottom:8px;">연결에 실패했어요</div>' +
+      '<div style="font-size:12px;color:#888;line-height:1.7;margin-bottom:16px;">' +
+      '인터넷 연결을 확인해 주세요.<br>공용 와이파이라면 로그인이 필요한지 확인해 보세요.</div>' +
+      '<button onclick="location.reload()" style="padding:10px 20px;border:0;border-radius:8px;' +
+      'background:#1C1E26;color:#fff;font-size:13px;cursor:pointer;min-height:44px;">다시 시도</button></div>';
+  });
+  throw new Error('supabase-js 로드 실패');
+}
+
 const db = supabase.createClient(SB_URL, SB_KEY);
+
+/* 처리되지 않은 오류를 사용자에게 알림 (조용한 실패 방지) */
+window.addEventListener('unhandledrejection', function(ev){
+  console.error('unhandled:', ev.reason);
+  if (typeof toast === 'function') toast('처리 중 문제가 생겼어요. 다시 시도해 주세요');
+});
 
 const MEMBERS = [
   { id:'ceo',     name:'고예흰', label:'대표님',   av:'고예', role:'대표',   pin:'960923', admin:true  },
@@ -5648,7 +5265,7 @@ function renderTaskPropsSummary() {
   const su = $('task-sum-urgent');
   if (su) { su.textContent = taskUrgent ? '⚑ 중요' : '⚑ 일반'; su.style.color = taskUrgent ? 'var(--red)' : 'var(--light)'; }
   const sa = $('task-sum-assignee');
-  if (sa) sa.textContent = `👤 ${tasksWho || '—'}`;
+  if (sa) sa.textContent = `👤 ${taskAssignee || tasksWho || '—'}`;
 }
 
 function applyTaskSt() {
@@ -5676,7 +5293,8 @@ function openTaskModal(id) {
   $('task-modal-kind').textContent=id?'할일 수정':'할일 추가';
   $('task-del-btn').style.display=id?'flex':'none';
   $('task-title').value=''; $('task-note').value=''; $('task-due').value=''; $('task-memo').value='';
-  const asg = $('task-assignee'); if (asg) asg.textContent = tasksWho || '—';
+  taskAssignee = tasksWho || (user?.name) || (MEMBERS[0]?.name);
+  renderTaskAssigneePills();
   // 속성 접힌 상태로 초기화
   const ex = $('task-props-expanded'); if (ex) ex.style.display='none';
   const tl = $('task-props-toggle-lbl'); if (tl) tl.textContent='▾ 속성 펼치기';
@@ -5687,6 +5305,8 @@ function openTaskModal(id) {
       $('task-title').value=t.title||''; $('task-note').value=t.note||'';
       $('task-due').value=t.due_date||''; $('task-memo').value=t.memo||'';
       taskSt=t.status||'todo'; taskUrgent=!!t.is_urgent; taskStarred=!!t.is_starred;
+      taskAssignee = t.assignee || tasksWho;
+      renderTaskAssigneePills();
       applyTaskSt(); applyUrgent(); applyStarred(); renderTaskPropsSummary();
     });
   }
@@ -5697,7 +5317,7 @@ function openTaskModal(id) {
 async function saveTask() {
   const title=$('task-title').value.trim();
   if(!title){ toast('제목을 입력해주세요'); $('task-title').focus(); return; }
-  const row={title,note:$('task-note').value.trim()||null,assignee:tasksWho,status:taskSt,is_urgent:taskUrgent,is_starred:taskStarred,due_date:$('task-due').value||null,memo:$('task-memo').value.trim()||null};
+  const row={title,note:$('task-note').value.trim()||null,assignee:(taskAssignee||tasksWho),status:taskSt,is_urgent:taskUrgent,is_starred:taskStarred,due_date:$('task-due').value||null,memo:$('task-memo').value.trim()||null};
   try {
     if(taskIsNew) {
       const {error}=await db.from('tasks').insert([row]);
@@ -5737,6 +5357,26 @@ async function deleteTask() {
 /* ═══════════════════════════════════════
    🔧 복원: 프로젝트 업무(Ptask) 모달 함수
 ═══════════════════════════════════════ */
+/* 할일 담당자 선택 — 예전에는 읽기 전용 표시라 저장 시 무조건 현재 보고 있는
+   멤버로 들어갔음. 대표님이 위임하려면 멤버 탭을 먼저 옮겨야 했고,
+   그때마다 전체 재조회가 돌았음. (프로젝트 업무 모달에는 이미 있던 패턴) */
+let taskAssignee = null;
+function renderTaskAssigneePills() {
+  const wrap = $('task-assignee-pills');
+  if (!wrap) return;
+  wrap.innerHTML = MEMBERS.map(m => {
+    const isOn = taskAssignee === m.name;
+    return `<div style="
+      display:inline-flex;align-items:center;padding:5px 13px;border-radius:50px;
+      font-size:12px;cursor:pointer;transition:all .12s;
+      background:${isOn ? 'var(--text)' : 'var(--surface2)'};
+      color:${isOn ? '#fff' : 'var(--muted)'};
+      border:0.5px solid ${isOn ? 'var(--text)' : 'var(--border)'};
+      font-family:var(--font);
+    " onclick="taskAssignee='${m.name}';renderTaskAssigneePills();renderTaskPropsSummary()">${m.name}</div>`;
+  }).join('');
+}
+
 function renderPtaskAssigneePills() {
   const wrap = $('ptask-assignee-pills');
   if (!wrap) return;
@@ -5919,7 +5559,13 @@ async function setAppState(state) {
       }
     }
     state = merged;
-  } catch(e) { console.warn('setAppState merge error:', e); }
+  } catch(e) {
+    // 병합에 실패하면 절대 그냥 진행하면 안 됨 —
+    // 병합 안 된 state를 그대로 저장하면 다른 기기가 방금 넣은 데이터를 통째로 덮어씀.
+    console.error('setAppState merge error:', e);
+    if (typeof toast === 'function') toast('저장 실패 — 다른 기기의 데이터를 지킬 수 없어 중단했어요. 새로고침 후 다시 시도해 주세요');
+    throw new Error('app_state 병합 실패: ' + (e.message || e));
+  }
   _appStateCache = state;
   _appStateCacheAt = Date.now();
   _snapshotAppState(state);
@@ -6051,12 +5697,36 @@ async function adjustInventoryForWorkLog(productId, qty) {
       updated_at: new Date().toISOString(),
     }).eq('product_id', productId);
 
+    // 소모품 자동 차감 — "제품별 소모품 연동" 설정을 실제로 적용.
+    // 예전에는 이 차감이 completeProd()에만 있었는데 그 경로가 UI에서 끊겨 있어서,
+    // 설정 화면은 있는데 한 번도 차감이 일어나지 않았음 (소모품 재고가 수기 관리로 방치)
+    let supplyWarn = null;
+    try {
+      const st = await getAppState();
+      const links = (st.prod_supply_links || {})[productId] || [];
+      if (links.length) {
+        const low = [];
+        await patchAppState(x => {
+          x.prod_supplies = x.prod_supplies || [];
+          for (const lk of links) {
+            const sup = x.prod_supplies.find(v => v.id === lk.id);
+            if (!sup) continue;
+            const used = qty * (lk.qty || 0);           // qty<0(롤백)이면 자동으로 되돌아감
+            sup.stock = Math.max(0, (sup.stock || 0) - used);
+            if (sup.alert != null && sup.stock <= sup.alert) low.push(`${sup.name} ${sup.stock}${sup.unit || ''}`);
+          }
+          return x;
+        });
+        if (low.length) supplyWarn = low.join(', ');
+      }
+    } catch(e) { console.error('소모품 차감 실패:', e); }
+
     // 생산완료(+qty)로 가용재고가 생기면 → 예약 배분 자동 전환
     if (qty > 0) {
       try { await applyChReservations(productId); } catch(e){ console.warn('예약 전환 실패:', e); }
     }
 
-    return { ok:true };
+    return { ok:true, supplyWarn };
   } catch (e) {
     console.error('adjustInventoryForWorkLog', e);
     return { ok:false, error: e.message };
@@ -6352,7 +6022,6 @@ function renderPage(page, sub='') {
   if(page==='ops')        initOpsPage();
   if(page==='content')    initContentPage();
   // 마케팅 탭은 제거됨
-  // if(page==='marketing')  initMktPage();
   window.currentPage = page;
   if(page==='lineup')     initLineupPage();
   if(page==='assets')     initAssetsPage();
@@ -6465,13 +6134,40 @@ async function boot() {
 /* ═══════════════════════════════════════
    WEATHER
 ═══════════════════════════════════════ */
-function loadWeather() {
-  const m=new Date().getMonth()+1;
-  const sp=m>=3&&m<=5, su=m>=6&&m<=8, wi=m<=2||m>=12;
-  const td = sp?{i:'⛅',t:'13°',d:'구름 많음'}:su?{i:'🌤',t:'28°',d:'맑음'}:wi?{i:'❄️',t:'-2°',d:'눈 가능'}:{i:'🍂',t:'12°',d:'맑음'};
-  const tm = sp?{i:'🌤',t:'17°',d:'맑음'}:su?{i:'⛅',t:'29°',d:'흐림'}:wi?{i:'☁️',t:'1°',d:'흐림'}:{i:'🌧',t:'10°',d:'비 예보'};
-  $('w-today-icon').textContent=td.i; $('w-today-temp').textContent=td.t; $('w-today-desc').textContent=td.d;
-  $('w-tom-icon').textContent=tm.i;   $('w-tom-temp').textContent=tm.t;   $('w-tom-desc').textContent=tm.d;
+/* 날씨 — 기상청 단기예보 대신 공개 API(Open-Meteo, 키 불필요) 사용.
+   예전에는 API 없이 '월(月)만 보고' 28°·맑음 같은 값을 지어내 표시했음.
+   직원이 실제 예보로 믿고 팝업 준비를 판단할 수 있어 위험했음.
+   불러오지 못하면 값을 지어내지 않고 '—'로 둠. */
+async function loadWeather() {
+  const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+  const WMO = c =>
+    c === 0 ? {i:'☀️', d:'맑음'} :
+    c <= 2  ? {i:'🌤', d:'구름 조금'} :
+    c === 3 ? {i:'☁️', d:'흐림'} :
+    c <= 48 ? {i:'🌫', d:'안개'} :
+    c <= 57 ? {i:'🌦', d:'이슬비'} :
+    c <= 67 ? {i:'🌧', d:'비'} :
+    c <= 77 ? {i:'❄️', d:'눈'} :
+    c <= 82 ? {i:'🌧', d:'소나기'} :
+    c <= 86 ? {i:'🌨', d:'소낙눈'} :
+              {i:'⛈', d:'뇌우'};
+  try {
+    // 서울 기준
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780'
+              + '&daily=weather_code,temperature_2m_max&timezone=Asia%2FSeoul&forecast_days=2';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    const codes = j?.daily?.weather_code || [];
+    const temps = j?.daily?.temperature_2m_max || [];
+    if (codes.length < 2) throw new Error('예보 데이터 부족');
+    const td = WMO(codes[0]), tm = WMO(codes[1]);
+    set('w-today-icon', td.i); set('w-today-temp', Math.round(temps[0]) + '°'); set('w-today-desc', td.d);
+    set('w-tom-icon',   tm.i); set('w-tom-temp',   Math.round(temps[1]) + '°'); set('w-tom-desc',   tm.d);
+  } catch(e) {
+    console.error('날씨 불러오기 실패:', e);
+    ['w-today-icon','w-today-temp','w-today-desc','w-tom-icon','w-tom-temp','w-tom-desc'].forEach(id => set(id, '—'));
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -6680,7 +6376,10 @@ async function loadDashNotices() {
     const s = await getAppState();
     const list = (s.notices||[]).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,3);
     $('dash-notice-list').innerHTML = list.length
-      ? list.map(n=>`<div class="dnotice"><div class="dnotice-title"><span class="nbadge ${n.category==='공지'?'nbadge-dark':'nbadge-gray'}">${n.category||'공지'}</span>${n.title}</div><div class="dnotice-meta">${n.date||''} · ${n.author||''}</div></div>`).join('')
+      ? list.map(n=>{
+          const unread = !(n.readBy||[]).includes(user?.name);
+          return `<div class="dnotice" style="cursor:pointer;" onclick="selectedNotice='${n.id}';nav('notice')"><div class="dnotice-title">${unread?`<span title="아직 확인하지 않은 공지" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:1px;"></span>`:''}<span class="nbadge ${n.category==='공지'?'nbadge-dark':'nbadge-gray'}">${n.category||'공지'}</span>${escapeHtml(n.title||'')}</div><div class="dnotice-meta">${n.date||''} · ${n.author||''}${unread?' · <span style="color:var(--red);">미확인</span>':''}</div></div>`;
+        }).join('')
       : '<div style="padding:12px 0;font-size:13px;color:var(--light);">공지사항이 없어요</div>';
   } catch(e) { $('dash-notice-list').innerHTML='<div style="padding:12px 0;font-size:13px;color:var(--light);">불러오기 실패</div>'; }
 }
@@ -6843,9 +6542,9 @@ async function loadDashInventory() {
     let lowCount=0;
     for(const p of prods){
       if(p.disc_status === 'planned') continue;
-      const velAll=CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
+      const velAll=calcVelocity(salesRows, p.id);
       const inv=invRows.find(x=>x.product_id===p.id)||{};
-      const total=(inv.produced_stock||0)+(inv.available_stock||0);
+      const total=sellableStock(inv);
       if(velAll>0 && total/velAll <= 45) lowCount++;
     }
     const pendProd = invRows.reduce((s,r)=>s+(r.pending_production||0),0);
@@ -7081,9 +6780,13 @@ function renderDashTrendChart(rows) {
       b.setAttribute('opacity', '1');
     });
   };
+  // 모바일에서도 막대 금액을 볼 수 있게 터치 이벤트 추가.
+  // 예전엔 mouseenter/leave만 있어 휴대폰에서는 추이 카드가 장식이었음
   svg.querySelectorAll('.trend-hover, .trend-bar').forEach(el => {
     el.addEventListener('mouseenter', e => showTooltip(+el.dataset.idx, e));
     el.addEventListener('mouseleave', hideTooltip);
+    el.addEventListener('touchstart', e => showTooltip(+el.dataset.idx, e.touches[0]), { passive:true });
+    el.addEventListener('touchend', () => setTimeout(hideTooltip, 2000), { passive:true });
   });
 
   // 구버전 호환: dash-trend-xlbl이 있으면 비움 (SVG에 이미 그림)
@@ -7303,6 +7006,7 @@ function getFavicon(url) {
 
 async function qlRemove(ownerName, containerId, idx) {
   const links = qlGetLinks(ownerName);
+  if (!await customConfirm(`'${links[idx]?.label || links[idx]?.url || '이 링크'}'를 삭제할까요?`)) return;
   links.splice(idx, 1);
   await qlSetLinksAsync(ownerName, links);
   qlRenderInto('dash-quick-links',  qlGetLinks(user.name), user.name, true);
@@ -8018,6 +7722,47 @@ async function openPtaskForProj(projId) {
    INVENTORY PAGE
 ════════════════════════════════ */
 const CHANNELS = ['자사몰','카카오선물하기','스마트스토어','더현대','이모티콘','팝업','라인프렌즈'];
+
+/* ── 재고 계산 단일 기준 ──────────────────────────────────
+   구조: total_stock = pending_production + produced_stock
+         produced_stock = available_stock + 채널배분 합
+   즉 available은 produced에 "이미 포함"되어 있음.
+   예전 코드가 produced + available 로 더해서 미배분 재고를 두 번 세는 바람에
+   품절예상일(D+)이 부풀려지고 발주 경고가 늦게 떴음. 아래 헬퍼로 통일. */
+
+// 지금 팔 수 있는 재고 (상품화 완료분 전체 = 가용 + 채널배분)
+function sellableStock(inv) {
+  return (inv?.produced_stock || 0);
+}
+// 발주 판단용 재고 (상품화 대기분까지 포함 = 공장에 더 시킬지 볼 때)
+function orderableStock(inv) {
+  return (inv?.produced_stock || 0) + (inv?.pending_production || 0);
+}
+
+/* ── 목표 금액 문자열 → 원 단위 숫자 ──────────────────────
+   예전에는 "억"만 처리하고 나머지는 숫자만 뽑아써서
+   "3,000만" → 3000원, "5억 5천" → 5억 으로 잘못 읽었음.
+   그래도 그럴듯한 달성률 %가 떠서 틀린 걸 알아챌 수 없었음. */
+function parseGoalAmount(raw) {
+  if (!raw) return 0;
+  let s = String(raw).replace(/[,\s]/g, '');
+  if (!s) return 0;
+  if (/^\d+$/.test(s)) return parseInt(s, 10);   // 순수 숫자 = 원 단위
+
+  let total = 0, matched = false;
+  const eok = s.match(/([\d.]+)억/);
+  if (eok) { total += parseFloat(eok[1]) * 100000000; s = s.replace(eok[0], ''); matched = true; }
+  const cheonman = s.match(/([\d.]+)천만/);
+  if (cheonman) { total += parseFloat(cheonman[1]) * 10000000; s = s.replace(cheonman[0], ''); matched = true; }
+  const man = s.match(/([\d.]+)만/);
+  if (man) { total += parseFloat(man[1]) * 10000; s = s.replace(man[0], ''); matched = true; }
+  const cheon = s.match(/([\d.]+)천/);
+  // 앞에 억/만이 있었으면 "5천" = 5000만, 아니면 그냥 5천원
+  if (cheon) { total += parseFloat(cheon[1]) * (matched ? 10000000 : 1000); matched = true; }
+
+  if (matched) return Math.round(total);
+  return parseInt(String(raw).replace(/[^0-9]/g, ''), 10) || 0;
+}
 let invCurrentTab    = 'overview';
 let invCurrentFilter = 'all';
 let invCurrentChannel= '자사몰';
@@ -8035,7 +7780,7 @@ let invReceiptEditId = null;
 async function initInventory() {
   invCurrentTab = 'overview';
   document.querySelectorAll('#inv-tabs .page-tab').forEach((t,i) => t.classList.toggle('on', i===0));
-  ['overview','receipt','alert'].forEach(t => {
+  ['overview','shiplog','channel','receipt','alert'].forEach(t => {
     const el=$(`inv-tab-${t}`); if(el) el.style.display = t==='overview' ? '' : 'none';
   });
   // 재고 가져오기 — 전체 직원 표시
@@ -8249,11 +7994,12 @@ function invSetTab(tab, el) {
   invCurrentTab = tab;
   document.querySelectorAll('#inv-tabs .page-tab').forEach(t=>t.classList.remove('on'));
   if(el) el.classList.add('on');
-  ['overview','shiplog','receipt','alert'].forEach(t=>{
+  ['overview','shiplog','channel','receipt','alert'].forEach(t=>{
     const d=$(`inv-tab-${t}`); if(d) d.style.display=t===tab?'':'none';
   });
   if(tab==='overview') loadInvOverview();
   if(tab==='shiplog')  loadShipLog();
+  if(tab==='channel')  loadChannelInv();
   if(tab==='receipt')  loadReceiptSchedule();
   if(tab==='alert')    loadOrderAlerts();
   // 소모품 탭과 연동 — 재고탭 탭 전환 시 supply-link 갱신
@@ -8333,8 +8079,8 @@ async function loadInvOverviewBanner() {
     for(const p of prods){
       if (p.disc_status === 'planned' || orderedPidsBan.has(p.id) || hiddenAlertSet.has(p.id)) continue;
       const inv = invRows.find(x=>x.product_id===p.id)||{};
-      const total = (inv.produced_stock||0)+(inv.available_stock||0);
-      const velAll = CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
+      const total = sellableStock(inv);
+      const velAll = calcVelocity(salesRows, p.id);
       if(velAll>0 && total/velAll<=45) alertCount++;
     }
     const badge = $('inv-alert-badge');
@@ -8344,7 +8090,7 @@ async function loadInvOverviewBanner() {
       banner.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:11px 16px;background:#FEF8EC;border:0.5px solid var(--amber);border-radius:10px;">
         <span style="font-size:14px;">⚠️</span>
         <div style="font-size:13px;flex:1;color:#7A5020;"><strong>발주 필요 ${alertCount}건</strong> — D+45 이내 품절 예상 상품이 있어요</div>
-        <div class="inv-pill" style="font-size:11px;" onclick="invSetTab('alert',document.querySelector('#inv-tabs .page-tab:nth-child(3)'))">재고 알림 보기</div>
+        <div class="inv-pill" style="font-size:11px;" onclick="invSetTab('alert',document.querySelector('#inv-tabs .page-tab:last-child'))">재고 알림 보기</div>
       </div>`;
     } else { banner.innerHTML=''; }
   } catch(e){ console.error(e); }
@@ -8450,6 +8196,9 @@ async function addCategory() {
 }
 
 async function deleteCategory(cat) {
+  // 되돌릴 수 없는 삭제인데 확인이 없어서, 좁은 모바일 화면에서 ✏ 대신 ✕를 눌러
+  // 카테고리가 사라지는 사고가 가능했음
+  if (!await customConfirm(`'${cat}' 카테고리를 삭제할까요?\n이 카테고리로 지정된 상품은 '미분류'가 됩니다.`)) return;
   const s = await getAppState();
   s.inv_categories = (s.inv_categories || []).filter(c => c !== cat);
   await setAppState(s);
@@ -8542,8 +8291,8 @@ async function loadInvList() {
           groupHeader = `<tr class="inv-cat-header" data-nodrag="1"><td colspan="11" style="background:var(--surface2);padding:6px 16px;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.03em;">${curCat || '미분류'}</td></tr>`;
         }
       }
-      const velAll=CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
-      const totalProd=(inv.produced_stock||0)+(inv.available_stock||0);
+      const velAll=calcVelocity(salesRows, p.id);
+      const totalProd=sellableStock(inv);
       const daysAll=velAll>0?Math.ceil(totalProd/velAll):null;
       const isPlanned = p.disc_status === 'planned';
       const badge=p.is_discontinued?`<span class="sbadge" style="background:var(--surface2);color:var(--faint);">단종</span>`
@@ -8863,7 +8612,7 @@ function openSalesRevenueModal() {
    tax_revenues의 자동 항목(srcKey)을 갱신/생성/삭제한다. */
 const SALES_TO_TAX_CAT = {
   '자사몰':'own', '카카오선물하기':'kakao', '스마트스토어':'smart',
-  '더현대':'hyundai', '팝업':'popup', '이모티콘':'emoticon',
+  '더현대':'hyundai', '팝업':'popup', '이모티콘':'emoticon', '라인프렌즈':'line',
 };
 async function syncSalesToTaxLedger(date, channel) {
   if (!date || !channel) return;
@@ -9756,8 +9505,8 @@ async function loadOrderAlerts() {
       }
 
       // 전체 D+45 이내 → 발주 필요 (이미 발주 등록된 상품은 제외)
-      const total  = (inv.produced_stock||0)+(inv.available_stock||0);
-      const velAll = CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
+      const total  = sellableStock(inv);
+      const velAll = calcVelocity(salesRows, p.id);
       if(velAll>0 && total/velAll<=45 && !orderedPids.has(p.id)){
         const days = Math.ceil(total/velAll);
         orderAlerts.push({label,days,urgency:days<=12?'danger':'warn',productId:p.id});
@@ -10788,9 +10537,16 @@ async function saveNotice() {
   if (!content) { toast('내용을 입력해주세요'); $('notice-content').focus(); return; }
   try {
     const s = await getAppState(); s.notices = s.notices || [];
-    const notice = { id: noticeId||`notice-${Date.now()}`, title, content, category:noticeCat, author:user.name, date:$('notice-date').value||dateStr() };
-    if (noticeIsNew) { s.notices.push(notice); }
-    else { const i=s.notices.findIndex(x=>x.id===noticeId); if(i>=0) s.notices[i]=notice; else s.notices.push(notice); }
+    // ⚠️ 수정 시 객체를 새로 만들어 통째로 교체하면 readBy(읽음 확인)가 날아감.
+    //    오타 하나만 고쳐도 전원 '확인했어요' 기록이 0/4로 돌아가던 문제 → 기존 값 위에 병합.
+    const patch = { id: noticeId||`notice-${Date.now()}`, title, content, category:noticeCat, author:user.name, date:$('notice-date').value||dateStr() };
+    let notice;
+    if (noticeIsNew) { notice = patch; s.notices.push(notice); }
+    else {
+      const i = s.notices.findIndex(x=>x.id===noticeId);
+      if (i>=0) { notice = { ...s.notices[i], ...patch }; s.notices[i] = notice; }
+      else { notice = patch; s.notices.push(notice); }
+    }
     await setAppState(s);
     selectedNotice = notice.id;
     toast(noticeIsNew ? '공지가 등록됐어요 ✓' : '수정됐어요 ✓');
@@ -10995,7 +10751,7 @@ async function loadAttToday() {
       const typeBg=l.type==='annual'?'background:#FAECEB;color:#C4736A;':'background:#FEF8EC;color:#B87D2A;';
       const mem=MEMBERS.find(x=>x.name===l.member);
       const ds=l.start_date===l.end_date?l.start_date.slice(5).replace('-','/'):l.start_date.slice(5).replace('-','/')+'–'+l.end_date.slice(5).replace('-','/');
-      return `<div class="att-leave-row"><div style="width:32px;height:32px;border-radius:50%;background:var(--text);color:#fff;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${mem?mem.av:l.member.slice(0,2)}</div><div style="flex:1;"><div style="font-size:13px;font-weight:500;">${l.member} <span class="sbadge" style="font-size:10px;${typeBg}">${typeLabel}</span></div><div style="font-size:11px;color:var(--light);margin-top:2px;">${ds}${l.reason?` · "${l.reason}"`:''}></div></div><div style="display:flex;gap:6px;"><button style="padding:5px 13px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;background:#EBF4EE;color:#3B7A52;border:0.5px solid #B8DAC4;font-family:var(--font);" onclick="handleLeaveAction('${l.id}','approved')">승인</button><button style="padding:5px 13px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;background:#FAECEB;color:#C4736A;border:0.5px solid #F0C4C0;font-family:var(--font);" onclick="handleLeaveAction('${l.id}','rejected')">거절</button></div></div>`;
+      return `<div class="att-leave-row"><div style="width:32px;height:32px;border-radius:50%;background:var(--text);color:#fff;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${mem?mem.av:l.member.slice(0,2)}</div><div style="flex:1;"><div style="font-size:13px;font-weight:500;">${l.member} <span class="sbadge" style="font-size:10px;${typeBg}">${typeLabel}</span></div><div style="font-size:11px;color:var(--light);margin-top:2px;">${ds}${l.reason?` · "${escapeHtml(l.reason)}"`:''}</div></div><div style="display:flex;gap:6px;"><button style="padding:5px 13px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;background:#EBF4EE;color:#3B7A52;border:0.5px solid #B8DAC4;font-family:var(--font);" onclick="handleLeaveAction('${l.id}','approved')">승인</button><button style="padding:5px 13px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;background:#FAECEB;color:#C4736A;border:0.5px solid #F0C4C0;font-family:var(--font);" onclick="handleLeaveAction('${l.id}','rejected')">거절</button></div></div>`;
     }).join('');
   } catch(e) { console.error(e); }
 }
@@ -11608,6 +11364,22 @@ async function addWorkLog() {
   if (!_workLogSelProdId) { toast('상품을 선택해주세요'); $('work-log-search').focus(); return; }
   if (!qty || qty < 1) { toast('수량을 입력해주세요'); $('work-log-qty').focus(); return; }
 
+  // 상품화 대기재고보다 많이 입력하면 총재고가 늘어남 → 그냥 조용히 늘리지 않고 한 번 확인.
+  // (예전에는 500을 잘못 치면 없던 재고 450개가 말없이 생기고, 기록을 지워도 되돌아오지 않았음)
+  try {
+    const { data: invChk } = await db.from('inventory').select('pending_production')
+      .eq('product_id', _workLogSelProdId).maybeSingle();
+    const pend = invChk?.pending_production || 0;
+    if (qty > pend) {
+      const extra = qty - pend;
+      const go = await customConfirm(
+        `상품화 대기재고는 ${pend}개인데 ${qty}개를 등록하려고 해요.\n` +
+        `모자란 ${extra}개만큼 총재고가 늘어납니다.\n\n이대로 진행할까요?`
+      );
+      if (!go) { $('work-log-qty').focus(); return; }
+    }
+  } catch(e) { console.error('대기재고 확인 실패:', e); }
+
   await patchAppState(s => {
     s.work_logs = s.work_logs || [];
     s.work_logs.push({
@@ -11623,7 +11395,9 @@ async function addWorkLog() {
   // 재고 자동 반영 (대기 → 상품화/가용)
   const invRes = await adjustInventoryForWorkLog(_workLogSelProdId, qty);
   if (invRes.ok) {
-    toast(`✓ ${qty}개 생산완료 · 재고 반영됨`);
+    toast(invRes.supplyWarn
+      ? `✓ ${qty}개 생산완료 · 재고 반영됨 ⚠️ 소모품 부족: ${invRes.supplyWarn}`
+      : `✓ ${qty}개 생산완료 · 재고 반영됨`);
   } else {
     toast(`작업 기록은 저장됐지만 재고 반영 실패: ${invRes.error||''}`);
   }
@@ -11742,7 +11516,7 @@ async function loadProdRecFull() {
       const total   = inv.total_stock||0;
       const produced= inv.produced_stock||0;
       const pending = inv.pending_production||0;
-      const velAll  = CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
+      const velAll  = calcVelocity(salesRows, p.id);
       const days    = velAll>0 ? Math.ceil(produced/velAll) : null;
       const pct     = total>0 ? Math.round(produced/total*100) : 0;
       return { p, total, produced, pending, velAll, days, pct };
@@ -12273,7 +12047,7 @@ async function loadProdRecommend() {
     const items = prods.map(p=>{
       const inv = invRows.find(x=>x.product_id===p.id)||{};
       const produced = inv.produced_stock||0;
-      const velAll = CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
+      const velAll = calcVelocity(salesRows, p.id);
       const days   = velAll>0 ? Math.ceil(produced/velAll) : null;
       return { p, produced, velAll, days };
     })
@@ -12433,15 +12207,6 @@ async function loadProdShipCard() {
 }
 
 /* ── 생산 예약 ── */
-async function openProdReserveModal() {
-  // 날짜 선택 후 기존 생산 추가 모달을 미래 날짜로 열기
-  const d = prompt('예약 날짜를 입력해주세요 (예: 2026-05-06)');
-  if (!d || !d.match(/^\d{4}-\d{2}-\d{2}$/)) { if(d!==null) toast('날짜 형식이 맞지 않아요'); return; }
-  // openProdModal에 날짜 파라미터 전달
-  window._prodReserveDate = d;
-  openProdModal('schedule');
-}
-
 async function loadProdReserveList() {
   const el = $('prod-reserve-list'); if (!el) return;
   const s = await getAppState();
@@ -12612,6 +12377,7 @@ async function updateProdQty(itemId, qty) {
 }
 
 async function removeProdToday(itemId) {
+  if (!await customConfirm('이 생산 일정을 목록에서 뺄까요?')) return;
   const s = await getAppState();
   s.prod_today = (s.prod_today||[]).filter(x=>x.id!==itemId);
   await setAppState(s); loadProdTodayList();
@@ -12834,7 +12600,9 @@ async function deleteProdSupply() {
 }
 
 async function addSupplyStock(id) {
-  const qtyStr = prompt('입고 수량을 입력하세요');
+  // 네이티브 prompt는 일부 모바일 인앱 브라우저에서 차단·억제돼
+  // 현장에서 입고 수량 입력이 아예 안 되는 경우가 있어 customPrompt로 교체
+  const qtyStr = await customPrompt('입고 수량', '예: 100');
   const qty = parseInt(qtyStr);
   if(!qty || qty <= 0) return;
   const s = await getAppState();
@@ -13860,6 +13628,8 @@ async function loadSalesTrend(rows, label, chLogRows=[], chMonthMap={}) {
   svg.querySelectorAll('.strend-hover, .strend-bar').forEach(el => {
     el.addEventListener('mouseenter', () => showTooltip(+el.dataset.idx));
     el.addEventListener('mouseleave', hideTooltip);
+    el.addEventListener('touchstart', () => showTooltip(+el.dataset.idx), { passive:true });
+    el.addEventListener('touchend', () => setTimeout(hideTooltip, 2000), { passive:true });
   });
 }
 
@@ -14400,7 +14170,7 @@ async function loadOpsOrderAlert() {
     const alerts   = prods.map(p=>{
       const inv     = invRows.find(x=>x.product_id===p.id)||{};
       const produced= inv.produced_stock||0;
-      const velAll  = CHANNELS.reduce((s,ch)=>s+calcVelocity(salesRows,p.id,ch),0);
+      const velAll  = calcVelocity(salesRows, p.id);
       const days    = velAll>0 ? Math.ceil(produced/velAll) : null;
       return { p, days };
     }).filter(x=>x.days!==null && x.days<=14).sort((a,b)=>a.days-b.days).slice(0,5);
@@ -14447,7 +14217,7 @@ async function loadOpsOrderList() {
 
   const el = $('ops-order-list');
   if(!filtered.length){
-    el.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--faint);">등록된 발주가 없어요</td></tr>`;
+    el.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--faint);">등록된 발주가 없어요</td></tr>`;
     return;
   }
   el.innerHTML = [...filtered].sort((a,b)=>b.orderDate?.localeCompare(a.orderDate)||0).map(o=>{
@@ -15143,14 +14913,6 @@ async function deleteAssetCat(id) {
   await setAppState(s);
   renderAssetCatList(); renderAssetCatPills(); renderAssets();
 }
-let mktTab        = 'today';
-let mktCh         = 'meta';
-let mktPeriod     = 'monthly';
-let mktDataCh     = 'meta';
-let mktDataEditId = null;
-let mktAtEditId   = null;
-let mktAtFilter   = 'all';
-let mktCrmType    = 'alimtalk';
 
 const MKT_CH_COLORS = { meta:'#1877F2', naver:'#03C75A', etc:'#888' };
 const MKT_CH_LABELS = { meta:'메타', naver:'네이버', etc:'기타' };
@@ -15251,7 +15013,8 @@ async function loadLineupProducts() {
   const allProds = s.plan?.[_lineupYear]?.products || [];
 
   // 카테고리 pill 동적 생성
-  const cats   = [...new Set(allProds.map(p=>p.category).filter(Boolean))];
+  const catOf  = p => p.cat || p.category || '';   // 저장은 cat, 예전 데이터는 category
+  const cats   = [...new Set(allProds.map(catOf).filter(Boolean))];
   const catEl  = $('lineup-cat-pills');
   if (catEl) {
     catEl.innerHTML = cats.map(c=>`<div class="inv-pill${_lineupCat===c?' on':''}" style="font-size:11px;padding:3px 9px;" onclick="lineupSetCat('${c}',this)">${c}</div>`).join('');
@@ -15263,15 +15026,25 @@ async function loadLineupProducts() {
     const m = parseInt(p.month)||0;
     return m === _lineupMonth || m === 0;
   });
-  if (_lineupCat) prods = prods.filter(p => p.category === _lineupCat);
+  if (_lineupCat) prods = prods.filter(p => catOf(p) === _lineupCat);
 
   if (!prods.length) {
     el.innerHTML = '<div style="padding:40px 0;text-align:center;font-size:13px;color:var(--faint);">해당 조건의 제품이 없어요</div>';
     return;
   }
 
-  const STATUS_LBL = {active:'판매중', new:'신규', planned:'출시예정', discontinued:'단종'};
-  const STATUS_COLOR = {active:'#EAF3DE;color:#27500A', new:'#E6F1FB;color:#0C447C', planned:'#FDF3E0;color:#7A5C1E', discontinued:'var(--surface2);color:var(--muted)'};
+  // 제품 모달의 실제 상태 값과 맞춤 (예전 맵은 active/new/planned/discontinued라
+  // sample·making·launched가 영문 그대로 찍히고 전부 초록 배지로 보였음)
+  const STATUS_LBL = {
+    sample:'샘플 제작중', making:'제품 제작중', ready:'출시 대기', launched:'출시 완료',
+    active:'판매중', new:'신규', planned:'출시예정', discontinued:'단종'
+  };
+  const STATUS_COLOR = {
+    sample:'#F1EDF7;color:#4A3A6B', making:'#FDF3E0;color:#7A5C1E',
+    ready:'#E6F1FB;color:#0C447C',  launched:'#EAF3DE;color:#27500A',
+    active:'#EAF3DE;color:#27500A', new:'#E6F1FB;color:#0C447C',
+    planned:'#FDF3E0;color:#7A5C1E', discontinued:'var(--surface2);color:var(--muted)'
+  };
 
   // 드래그 활성화 여부 — 전체 탭(월·카테고리 필터 둘 다 없을 때)에서만 가능
   const dragEnabled = !_lineupMonth && !_lineupCat;
@@ -15280,15 +15053,15 @@ async function loadLineupProducts() {
 
   el.innerHTML = `<div id="lineup-grid-inner" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">` +
     prods.map((p,idx)=>{
-      const st   = p.status||'active';
-      const sc   = STATUS_COLOR[st]||STATUS_COLOR.active;
+      const st   = p.status||'sample';
+      const sc   = STATUS_COLOR[st]||STATUS_COLOR.sample;
       const dim  = st==='discontinued' ? 'opacity:.45;' : '';
       const monthLabel = p.month ? `${p.month}월` : '';
       const dragAttr = dragEnabled
         ? `draggable="true" data-lineup-idx="${idx}" class="lineup-card-draggable"`
         : '';
       return `<div ${dragAttr} style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:${dragEnabled?'grab':'pointer'};${dim}" onclick="if(!this.classList.contains('lineup-dragging'))openPlanProductModal('${p.id}')">
-        <div style="aspect-ratio:1;background:${p.color||'var(--surface2)'};display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        <div style="aspect-ratio:1;background:${p.colors?.[0]?.hex||'var(--surface2)'};display:flex;align-items:center;justify-content:center;overflow:hidden;">
           ${(p.imgs?.front||p.imgUrl)?`<img src="${p.imgs?.front||p.imgUrl}" style="width:100%;height:100%;object-fit:cover;" draggable="false">`:
             `<span style="font-size:28px;">${p.emoji||'📦'}</span>`}
         </div>
@@ -15375,900 +15148,6 @@ async function reorderLineup(fromIdx, toIdx) {
 
 function openLineupProductModal() { openPlanProductModal(); }
 function lineupSetView(view, el) {}
-
-async function initMktPage() {
-  mktTab = 'today';
-  document.querySelectorAll('#mkt-tabs .page-tab').forEach((t,i)=>t.classList.toggle('on',i===0));
-  ['perf','apptest','crm'].forEach(t=>{ const d=$(`mkt-tab-${t}`); if(d) d.style.display='none'; });
-  $('mkt-tab-today').style.display = '';
-  await loadMktToday();
-}
-
-function mktSetTab(tab, el) {
-  mktTab = tab;
-  document.querySelectorAll('#mkt-tabs .page-tab').forEach(t=>t.classList.remove('on'));
-  el.classList.add('on');
-  ['today','perf','apptest','crm','adbrief'].forEach(t=>{
-    const d=$(`mkt-tab-${t}`); if(d) d.style.display=(t===tab)?'':'none';
-  });
-  if(tab==='today')   loadMktToday();
-  if(tab==='perf')    loadMktPerf();
-  if(tab==='apptest') loadMktApptest();
-  if(tab==='crm')     loadMktCrm();
-  if(tab==='adbrief') loadAdBrief();
-}
-
-/* ── 오늘 현황 ── */
-async function loadMktToday() {
-  const s    = await getAppState();
-  const data = s.mkt_data||[];
-  const now  = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-
-  const thisData = data.filter(d=>d.month===thisMonth);
-  const prevMonth= `${now.getFullYear()}-${String(now.getMonth()).padStart(2,'0')}`;
-  const prevData = data.filter(d=>d.month===prevMonth);
-
-  const totalSpend    = thisData.reduce((s,d)=>s+(d.spend||0),0);
-  const prevSpend     = prevData.reduce((s,d)=>s+(d.spend||0),0);
-  const totalConv     = thisData.reduce((s,d)=>s+(d.conv||0)+(d.navConv||0),0);
-  const totalConvAmt  = thisData.reduce((s,d)=>s+(d.convAmt||0)+(d.navConvAmt||0),0);
-  const overallRoas   = totalSpend>0 ? Math.round(totalConvAmt/totalSpend*100) : 0;
-  const prevRoas      = prevData.reduce((s,d)=>s+(d.spend||0),0)>0
-    ? Math.round(prevData.reduce((s,d)=>s+(d.convAmt||0)+(d.navConvAmt||0),0)/prevData.reduce((s,d)=>s+(d.spend||0),0)*100) : 0;
-
-  const diff = (cur,prev) => {
-    if(!prev) return '';
-    const pct=Math.round((cur-prev)/prev*100);
-    return pct>=0?`<span style="color:var(--green);font-size:11px;">▲${pct}%</span>`:`<span style="color:var(--red);font-size:11px;">▼${Math.abs(pct)}%</span>`;
-  };
-
-  $('mkt-today-cards').innerHTML=[
-    {label:'총 마케팅 비용', val:fmtWon(totalSpend),    sub:diff(totalSpend,prevSpend)},
-    {label:'전체 ROAS',      val:`${overallRoas}%`,      sub:diff(overallRoas,prevRoas), green:overallRoas>=300},
-    {label:'총 전환금액',    val:fmtWon(totalConvAmt),   sub:`전환수 ${totalConv.toLocaleString()}건`},
-  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px;">
-    <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.label}</div>
-    <div style="font-size:22px;font-weight:500;${c.green?'color:var(--green);':''}">${c.val||'—'}</div>
-    <div style="margin-top:3px;">${c.sub||''}</div>
-  </div>`).join('');
-
-  // 목표 대비 실적
-  const n = now.getMonth()+1;
-  $('mkt-goal-sub').textContent = `${n}월`;
-  const channels = ['meta','naver'];
-  $('mkt-goal-list').innerHTML = channels.map(ch=>{
-    const d = thisData.find(x=>x.channel===ch)||{};
-    const roas = d.roas||0;
-    const target = d.targetRoas||300;
-    const pct = target>0 ? Math.min(Math.round(roas/target*100),200) : 0;
-    const isOk = roas>=target;
-    const barW = Math.min(pct,100);
-    return `<div style="margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-        <div style="font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;">
-          <div style="width:7px;height:7px;border-radius:50%;background:${MKT_CH_COLORS[ch]};"></div>
-          ${MKT_CH_LABELS[ch]} ROAS
-        </div>
-        <div style="font-size:12px;font-weight:500;color:${isOk?'var(--green)':'var(--red)'};">${roas||'—'}% <span style="font-size:10px;color:var(--light);">/ 목표 ${target}%</span></div>
-      </div>
-      <div style="height:7px;background:var(--surface2);border-radius:3px;overflow:hidden;">
-        <div style="width:${barW}%;height:100%;background:${isOk?MKT_CH_COLORS[ch]:'var(--red)'};border-radius:3px;transition:width .4s;"></div>
-      </div>
-      ${roas>0?`<div style="font-size:10px;color:${isOk?'var(--green)':'var(--red)'};margin-top:3px;">목표 대비 ${pct}% ${isOk?'✓':'— 점검 필요'}</div>`:'<div style="font-size:10px;color:var(--faint);margin-top:3px;">데이터 없음</div>'}
-    </div>`;
-  }).join('');
-
-  // 예산 소진율
-  $('mkt-goal-list').innerHTML += `<div style="padding-top:12px;border-top:0.5px solid var(--surface2);">
-    <div style="font-size:11px;color:var(--light);margin-bottom:6px;">이번 달 예산 소진</div>
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
-      <span>현재 지출</span><span style="font-weight:500;">${fmtWon(totalSpend)}</span>
-    </div>
-    <div style="font-size:11px;color:var(--muted);">월 ${now.getDate()}일 기준 · 전월 동기 대비 ${diff(totalSpend,prevSpend)}</div>
-  </div>`;
-
-  // 액션 필요 항목 (설정된 기준 반영)
-  const settings = await getMktSettings();
-  const actions  = [];
-
-  thisData.forEach(d=>{
-    const roas   = d.roas||0;
-    const conv   = d.conv||d.navConv||0;
-    const ctr    = d.ctr||0;
-    const cps    = d.spend>0&&conv>0 ? Math.round(d.spend/conv) : 0;
-    const chName = MKT_CH_LABELS[d.channel]||d.channel;
-    const grade  = roas>0 ? calcMktGrade(roas, conv, settings) : null;
-    const gc     = grade ? settings.grades[grade] : null;
-    const action = grade ? settings.actions[grade] : '';
-
-    if(grade==='C' && roas>0)
-      actions.push({level:'red',   msg:`${chName} C급 — ROAS ${roas}%. ${action}`});
-    else if(grade==='B')
-      actions.push({level:'amber', msg:`${chName} B급 — ROAS ${roas}%. ${action}`});
-    else if(grade==='SS'||grade==='S')
-      actions.push({level:'green', msg:`${chName} ${grade}급 — ROAS ${roas}%. ${action}`});
-
-    if(ctr>0 && ctr<settings.ctrWarn)
-      actions.push({level:'amber', msg:`${chName} CTR ${ctr}% — 기준(${settings.ctrWarn}%) 미달. 소재 교체 검토`});
-    if(cps>0 && cps>settings.cpsWarn)
-      actions.push({level:'amber', msg:`${chName} CPS ₩${cps.toLocaleString()} — 기준 초과. 효율 점검`});
-  });
-
-  // 소구 테스트 중 C급 다수면 별도 알림
-  const apptests = s.mkt_apptest||[];
-  const cGradeCount = apptests.filter(x=>x.roas>0&&calcMktGrade(x.roas,x.conv,settings)==='C').length;
-  if(cGradeCount>=3)
-    actions.push({level:'red', msg:`C급 소구 ${cGradeCount}개 — 중단 및 교체 검토 필요`});
-
-  const crm = (s.mkt_crm||[]).slice(-1)[0];
-  if(crm?.repurchaseRate && crm.repurchaseRate<30)
-    actions.push({level:'amber', msg:`재구매율 ${crm.repurchaseRate}% — 30% 미달. 리텐션 알림톡 발송 검토`});
-  if(crm?.avgDays && crm.avgDays>0)
-    actions.push({level:'blue', msg:`평균 구매 주기 ${crm.avgDays}일 — D-${Math.round(crm.avgDays*0.7)}일 시점 알림톡 권장`});
-  if(crm?.dormantMembers && crm.members && crm.dormantMembers/crm.members>0.1)
-    actions.push({level:'amber', msg:`휴면 회원 ${crm.dormantMembers.toLocaleString()}명 (${Math.round(crm.dormantMembers/crm.members*100)}%) — 재활성 캠페인 검토`});
-
-  $('mkt-action-list').innerHTML = actions.length
-    ? actions.map(a=>{
-        const colors={
-          red:  'background:#FCEBEB;color:#A32D2D;',
-          green:'background:#EAF3DE;color:#3B6D11;',
-          amber:'background:#FAEEDA;color:#854F0B;',
-          blue: 'background:#E6F1FB;color:#185FA5;',
-        };
-        return `<div style="${colors[a.level]||colors.blue}border-radius:var(--r);padding:8px 12px;margin-bottom:7px;font-size:12px;line-height:1.5;">${a.msg}</div>`;
-      }).join('')
-    : '<div style="padding:14px 0;font-size:13px;color:var(--faint);">액션 필요 항목 없음 🎉<br><span style="font-size:11px;">모든 지표가 목표 이상이에요</span></div>';
-}
-
-/* ── 퍼포먼스 ── */
-function mktSetCh(ch, el) {
-  mktCh = ch;
-  document.querySelectorAll('#mkt-ch-pills .inv-pill').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
-  loadMktPerf();
-}
-
-function mktSetPeriod(p, el) {
-  mktPeriod = p;
-  document.querySelectorAll('#mkt-period-pills .inv-pill').forEach(x=>x.classList.remove('on'));
-  el.classList.add('on');
-  loadMktPerf();
-}
-
-async function loadMktPerf() {
-  const s    = await getAppState();
-  const data = (s.mkt_data||[]).filter(d=>d.channel===mktCh).sort((a,b)=>b.month.localeCompare(a.month));
-  const latest = data[0]||{};
-  const prev   = data[1]||{};
-  const isMeta = mktCh==='meta';
-
-  const diff=(cur,prev)=>{
-    if(!prev||!cur) return '';
-    const p=Math.round((cur-prev)/prev*100);
-    return p>=0?`<span style="color:var(--green);font-size:10px;">▲${p}%</span>`:`<span style="color:var(--red);font-size:10px;">▼${Math.abs(p)}%</span>`;
-  };
-
-  // 요약 카드
-  if(isMeta){
-    $('mkt-perf-cards').innerHTML=[
-      {l:'ROAS',     v:`${latest.roas||'—'}%`,          d:diff(latest.roas,prev.roas), g:latest.roas>=(latest.targetRoas||300)},
-      {l:'지출 금액', v:fmtWon(latest.spend),             d:diff(latest.spend,prev.spend)},
-      {l:'전환수',    v:`${(latest.conv||0).toLocaleString()}건`, d:diff(latest.conv,prev.conv)},
-      {l:'전환 금액', v:fmtWon(latest.convAmt),            d:diff(latest.convAmt,prev.convAmt)},
-      {l:'CTR',       v:`${latest.ctr||'—'}%`,            d:diff(latest.ctr,prev.ctr)},
-    ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;">
-      <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
-      <div style="font-size:17px;font-weight:500;${c.g?'color:var(--green);':''}">${c.v||'—'}</div>
-      <div>${c.d}</div>
-    </div>`).join('');
-    // 자사몰 기여
-    if(latest.convAmt){
-      $('mkt-perf-contrib').style.display='';
-      $('mkt-perf-contrib').style.background='#E6F1FB';
-      $('mkt-perf-contrib').style.color='#185FA5';
-      $('mkt-perf-contrib').innerHTML=`자사몰 매출 대비 메타 기여 — 전환금액 ${fmtWon(latest.convAmt)} <span style="font-size:11px;opacity:.7;">(직접 전환 기준)</span>`;
-    } else { $('mkt-perf-contrib').style.display='none'; }
-    $('mkt-perf-thead').innerHTML=`<tr><th>기준 월</th><th style="text-align:right;">지출</th><th style="text-align:right;">전환수</th><th style="text-align:right;">전환금액</th><th style="text-align:right;">ROAS</th><th style="text-align:right;">CTR</th><th>메모</th></tr>`;
-    $('mkt-perf-tbody').innerHTML = data.slice(0,12).map((d,i)=>`<tr style="${i===0?'background:var(--surface2);':''}">
-      <td style="font-weight:${i===0?500:400};">${d.month}</td>
-      <td class="inv-num">${fmtWon(d.spend)}</td>
-      <td class="inv-num">${(d.conv||0).toLocaleString()}</td>
-      <td class="inv-num">${fmtWon(d.convAmt)}</td>
-      <td class="inv-num" style="color:${d.roas>=(d.targetRoas||300)?'var(--green)':'var(--red)'};">${d.roas||'—'}%</td>
-      <td class="inv-num">${d.ctr||'—'}%</td>
-      <td style="font-size:11px;color:var(--muted);">${d.memo||''}</td>
-    </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--faint);">데이터를 입력해주세요</td></tr>`;
-  } else {
-    $('mkt-perf-cards').innerHTML=[
-      {l:'지출 금액',  v:fmtWon(latest.spend),            d:diff(latest.spend,prev.spend)},
-      {l:'노출수',     v:`${(latest.impressions||0).toLocaleString()}회`, d:''},
-      {l:'클릭수',     v:`${(latest.clicks||0).toLocaleString()}회`,      d:''},
-      {l:'전환수',     v:`${(latest.navConv||0).toLocaleString()}건`,     d:diff(latest.navConv,prev.navConv)},
-      {l:'전환 금액',  v:fmtWon(latest.navConvAmt),        d:diff(latest.navConvAmt,prev.navConvAmt)},
-    ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;">
-      <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
-      <div style="font-size:17px;font-weight:500;">${c.v||'—'}</div>
-      <div>${c.d}</div>
-    </div>`).join('');
-    $('mkt-perf-contrib').style.display='none';
-    $('mkt-perf-thead').innerHTML=`<tr><th>기준 월</th><th style="text-align:right;">지출</th><th style="text-align:right;">노출수</th><th style="text-align:right;">클릭수</th><th style="text-align:right;">전환수</th><th style="text-align:right;">전환금액</th><th>메모</th></tr>`;
-    $('mkt-perf-tbody').innerHTML = data.slice(0,12).map((d,i)=>`<tr style="${i===0?'background:var(--surface2);':''}">
-      <td style="font-weight:${i===0?500:400};">${d.month}</td>
-      <td class="inv-num">${fmtWon(d.spend)}</td>
-      <td class="inv-num">${(d.impressions||0).toLocaleString()}</td>
-      <td class="inv-num">${(d.clicks||0).toLocaleString()}</td>
-      <td class="inv-num">${(d.navConv||0).toLocaleString()}</td>
-      <td class="inv-num">${fmtWon(d.navConvAmt)}</td>
-      <td style="font-size:11px;color:var(--muted);">${d.memo||''}</td>
-    </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--faint);">데이터를 입력해주세요</td></tr>`;
-  }
-}
-
-/* ── 데이터 입력 모달 ── */
-function mktDataSetCh(ch, el) {
-  mktDataCh = ch;
-  document.querySelectorAll('#mkt-data-ch-pills .inv-pill').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
-  $('mkt-data-meta-fields').style.display  = (ch==='meta'||ch==='etc') ? '' : 'none';
-  $('mkt-data-naver-fields').style.display = ch==='naver' ? '' : 'none';
-  $('mkt-data-ctr-row').style.display      = ch==='meta'  ? '' : 'none';
-}
-
-async function openMktDataModal(id='') {
-  mktDataEditId = id||null;
-  mktDataCh     = 'meta';
-  $('mkt-data-modal-kind').textContent = id ? '데이터 편집' : '마케팅 데이터 입력';
-  $('mkt-data-del-btn').style.display  = id ? 'flex' : 'none';
-  document.querySelectorAll('#mkt-data-ch-pills .inv-pill').forEach((p,i)=>p.classList.toggle('on',i===0));
-  $('mkt-data-meta-fields').style.display=''; $('mkt-data-naver-fields').style.display='none'; $('mkt-data-ctr-row').style.display='';
-  const now=new Date();
-  $('mkt-data-month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  ['mkt-data-spend','mkt-data-roas','mkt-data-conv','mkt-data-conv-amt','mkt-data-ctr',
-   'mkt-data-impressions','mkt-data-clicks','mkt-data-nav-conv','mkt-data-nav-conv-amt',
-   'mkt-data-target-roas','mkt-data-memo'].forEach(i=>$(i)&&($(i).value=''));
-  if(id){
-    const s = await getAppState();
-    const d = (s.mkt_data||[]).find(x=>x.id===id); if(!d) return;
-    $('mkt-data-month').value = d.month||'';
-    mktDataSetCh(d.channel, document.querySelectorAll('#mkt-data-ch-pills .inv-pill')[['meta','naver','etc'].indexOf(d.channel)]);
-    $('mkt-data-spend').value=d.spend||''; $('mkt-data-roas').value=d.roas||'';
-    $('mkt-data-conv').value=d.conv||''; $('mkt-data-conv-amt').value=d.convAmt||'';
-    $('mkt-data-ctr').value=d.ctr||''; $('mkt-data-target-roas').value=d.targetRoas||'';
-    $('mkt-data-impressions').value=d.impressions||''; $('mkt-data-clicks').value=d.clicks||'';
-    $('mkt-data-nav-conv').value=d.navConv||''; $('mkt-data-nav-conv-amt').value=d.navConvAmt||'';
-    $('mkt-data-memo').value=d.memo||'';
-  }
-  $('mkt-data-modal').classList.add('on');
-  setTimeout(()=>$('mkt-data-month').focus(),80);
-}
-
-async function saveMktData() {
-  const month = $('mkt-data-month').value;
-  if(!month){ toast('기준 월을 선택해주세요'); return; }
-  const s = await getAppState();
-  s.mkt_data = s.mkt_data||[];
-  const data = {
-    month, channel: mktDataCh,
-    spend:       parseInt($('mkt-data-spend').value)||0,
-    roas:        parseInt($('mkt-data-roas').value)||0,
-    conv:        parseInt($('mkt-data-conv').value)||0,
-    convAmt:     parseInt($('mkt-data-conv-amt').value)||0,
-    ctr:         parseFloat($('mkt-data-ctr').value)||0,
-    targetRoas:  parseInt($('mkt-data-target-roas').value)||300,
-    impressions: parseInt($('mkt-data-impressions').value)||0,
-    clicks:      parseInt($('mkt-data-clicks').value)||0,
-    navConv:     parseInt($('mkt-data-nav-conv').value)||0,
-    navConvAmt:  parseInt($('mkt-data-nav-conv-amt').value)||0,
-    memo:        $('mkt-data-memo').value.trim(),
-  };
-  if(mktDataEditId){
-    const idx=s.mkt_data.findIndex(d=>d.id===mktDataEditId);
-    if(idx>=0) s.mkt_data[idx]={...s.mkt_data[idx],...data};
-  } else {
-    s.mkt_data.push({id:`mkt-${Date.now()}`,...data});
-  }
-  await setAppState(s);
-  toast('저장됐어요 ✓'); closeModal('mkt-data-modal');
-  if(mktTab==='today') loadMktToday();
-  if(mktTab==='perf')  loadMktPerf();
-}
-
-async function deleteMktData() {
-  if(!mktDataEditId) return;
-  const ok=await customConfirm('데이터를 삭제할까요?'); if(!ok) return;
-  const s=await getAppState();
-  s.mkt_data=(s.mkt_data||[]).filter(d=>d.id!==mktDataEditId);
-  await setAppState(s); toast('삭제됐어요'); closeModal('mkt-data-modal'); loadMktPerf();
-}
-
-/* ── 소구 테스트 ── */
-function mktApptestSetFilter(f, el) {
-  mktAtFilter = f;
-  document.querySelectorAll('#mkt-apptest-filter .inv-pill').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
-  loadMktApptest();
-}
-
-/* ── 행동지표 기준 (기본값) ── */
-const MKT_DEFAULT_SETTINGS = {
-  grades: {
-    SS: { roasMin:500, convMin:10,  label:'SS', color:'#C4A96A' },
-    S:  { roasMin:400, convMin:5,   label:'S',  color:'#6B9E7A' },
-    A:  { roasMin:300, convMin:1,   label:'A',  color:'#185FA5' },
-    B:  { roasMin:250, convMin:1,   label:'B',  color:'#854F0B' },
-    C:  { roasMin:0,   convMin:0,   label:'C',  color:'#A32D2D' },
-  },
-  actions: {
-    SS: '예산 50%+ 증액. 동일 구조 신규 소재 복제 진행',
-    S:  '예산 20~30% 증액. 유사 타겟 확장 테스트',
-    A:  '현상 유지. CTR 낮으면 썸네일 교체 검토',
-    B:  '소재 디벨롭 또는 타겟 변경 후 재테스트',
-    C:  '3일 내 미전환 시 즉시 중단. 예산 회수',
-  },
-  ctrWarn: 1.5,
-  cpsWarn: 15000,
-};
-
-async function getMktSettings() {
-  const s = await getAppState();
-  return s.mkt_settings || JSON.parse(JSON.stringify(MKT_DEFAULT_SETTINGS));
-}
-
-function calcMktGrade(roas, conv, settings) {
-  const g = settings.grades;
-  if(!roas && !conv) return null;
-  if(roas >= g.SS.roasMin && conv >= g.SS.convMin) return 'SS';
-  if(roas >= g.S.roasMin  && conv >= g.S.convMin)  return 'S';
-  if(roas >= g.A.roasMin  && conv >= g.A.convMin)  return 'A';
-  if(roas >= g.B.roasMin  && conv >= g.B.convMin)  return 'B';
-  return 'C';
-}
-
-async function mktAtCalcGrade() {
-  const roas = parseFloat($('mkt-at-roas')?.value)||0;
-  const conv = parseInt($('mkt-at-conv')?.value)||0;
-  const ctr  = parseFloat($('mkt-at-ctr')?.value)||0;
-  const cps  = parseInt($('mkt-at-cps')?.value)||0;
-  const analysisEl = $('mkt-at-analysis');
-  if(!roas && !conv){ if(analysisEl) analysisEl.style.display='none'; return; }
-
-  const settings = await getMktSettings();
-  const grade    = calcMktGrade(roas, conv, settings);
-  const gc       = settings.grades[grade]||{color:'var(--muted)'};
-  const action   = settings.actions[grade]||'';
-
-  if(analysisEl) analysisEl.style.display='';
-  const gradeEl = $('mkt-at-grade-display');
-  if(gradeEl){ gradeEl.textContent=grade||'—'; gradeEl.style.color=gc.color; }
-  const badge = $('mkt-at-grade-badge');
-  if(badge){ badge.style.display=''; badge.innerHTML=`<span class="sbadge" style="background:${gc.color}22;color:${gc.color};">${grade}급</span>`; }
-
-  const actionEl = $('mkt-at-action-text');
-  if(actionEl){
-    actionEl.style.background = gc.color+'18';
-    actionEl.style.color      = gc.color;
-    actionEl.textContent      = action;
-  }
-
-  // 경고
-  const warns = [];
-  if(ctr>0 && ctr<settings.ctrWarn) warns.push(`CTR ${ctr}% — ${settings.ctrWarn}% 미달. 소재 교체 검토`);
-  if(cps>0 && cps>settings.cpsWarn) warns.push(`CPS ₩${cps.toLocaleString()} — 기준(₩${settings.cpsWarn.toLocaleString()}) 초과. 효율 점검`);
-  const warnEl = $('mkt-at-warnings');
-  if(warnEl) warnEl.innerHTML = warns.map(w=>`<div style="background:var(--amber-bg);color:var(--amber);border-radius:5px;padding:5px 10px;font-size:11px;margin-top:5px;">${w}</div>`).join('');
-
-  // 기준 미리보기
-  const preEl = $('mkt-at-criteria-preview');
-  if(preEl) preEl.innerHTML = Object.entries(settings.grades).map(([k,v])=>
-    `<span style="color:${v.color};font-weight:500;">${k}</span> ROAS ${v.roasMin}%+ / 구매 ${v.convMin}건+　`
-  ).join('');
-}
-
-async function loadMktApptest() {
-  const s        = await getAppState();
-  const settings = await getMktSettings();
-  const list     = s.mkt_apptest||[];
-  const filtered = mktAtFilter==='all' ? list : list.filter(x=>x.status===mktAtFilter);
-  const total    = list.length;
-  const ongoing  = list.filter(x=>x.status==='ongoing').length;
-  const ssS      = list.filter(x=>{ const g=calcMktGrade(x.roas,x.conv,settings); return g==='SS'||g==='S'; }).length;
-  const cStop    = list.filter(x=>calcMktGrade(x.roas,x.conv,settings)==='C' && x.roas>0).length;
-
-  $('mkt-apptest-summary').innerHTML=[
-    {l:'전체 항목',   v:`${total}개`},
-    {l:'진행중',      v:`${ongoing}개`, c:'#185FA5'},
-    {l:'SS+S 우수',   v:`${ssS}개`,     c:'var(--green)'},
-    {l:'C급 중단검토', v:`${cStop}개`,   c:'var(--red)'},
-  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
-    <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.l}</div>
-    <div style="font-size:18px;font-weight:500;${c.c?'color:'+c.c:''}">${c.v}</div>
-  </div>`).join('');
-
-  const STATUS_BADGES = {
-    pending:`<span class="sbadge" style="background:var(--surface2);color:var(--muted);">진행 전</span>`,
-    ongoing:`<span class="sbadge" style="background:#E6F1FB;color:#185FA5;">진행중</span>`,
-    done:   `<span class="sbadge sbadge-ing">완료</span>`,
-  };
-  const DEVEL_BADGES = {
-    '':      `<span style="color:var(--faint);">—</span>`,
-    ongoing: `<span class="sbadge" style="background:#E6F1FB;color:#185FA5;">진행중</span>`,
-    done:    `<span class="sbadge sbadge-ing">완료</span>`,
-    pending: `<span class="sbadge" style="background:var(--surface2);color:var(--muted);">대기</span>`,
-  };
-
-  $('mkt-apptest-list').innerHTML = filtered.length
-    ? filtered.map(item=>{
-        const grade   = calcMktGrade(item.roas, item.conv, settings);
-        const gc      = grade ? settings.grades[grade] : null;
-        const action  = grade ? settings.actions[grade] : '';
-        const gradeBadge = gc
-          ? `<span class="sbadge" style="background:${gc.color}22;color:${gc.color};font-weight:500;">${grade}급</span>`
-          : `<span style="color:var(--faint);">—</span>`;
-        const warns = [];
-        if(item.ctr>0 && item.ctr<settings.ctrWarn) warns.push('CTR↓');
-        if(item.cps>0 && item.cps>settings.cpsWarn)  warns.push('CPS↑');
-        return `<tr>
-          <td style="font-size:11px;color:var(--muted);">${item.cat1||''}</td>
-          <td style="font-weight:500;">${item.cat2||''}</td>
-          <td style="font-size:12px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.detail||''}">${item.detail||''}</td>
-          <td style="text-align:center;">${STATUS_BADGES[item.status]||STATUS_BADGES.pending}</td>
-          <td style="text-align:center;">${gradeBadge}${warns.map(w=>`<span style="font-size:9px;color:var(--amber);margin-left:3px;">${w}</span>`).join('')}</td>
-          <td class="inv-num" style="color:${gc?gc.color:'var(--faint)'};">${item.roas?item.roas+'%':'—'}</td>
-          <td class="inv-num">${item.conv||'—'}</td>
-          <td style="text-align:center;">${DEVEL_BADGES[item.devel||'']}</td>
-          <td style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${action}">${action||item.note||''}</td>
-          <td style="text-align:right;"><div class="card-link" onclick="openMktApptestModal('${item.id}')">···</div></td>
-        </tr>`;
-      }).join('')
-    : `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--faint);">항목을 추가해주세요</td></tr>`;
-}
-
-let mktAtImgData = null;
-function mktAtImgChange(input) {
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    mktAtImgData=e.target.result;
-    $('mkt-at-img-preview').innerHTML=`<img src="${mktAtImgData}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="">`;
-  };
-  reader.readAsDataURL(file);
-}
-
-async function openMktApptestModal(id='') {
-  mktAtEditId  = id||null;
-  mktAtImgData = null;
-  $('mkt-apptest-modal-kind').textContent = id ? '소구 테스트 편집' : '소구 테스트 추가';
-  $('mkt-apptest-del-btn').style.display  = id ? 'flex' : 'none';
-  $('mkt-at-grade-badge').style.display   = 'none';
-  $('mkt-at-analysis').style.display      = 'none';
-  ['mkt-at-cat1','mkt-at-cat2','mkt-at-detail','mkt-at-note',
-   'mkt-at-roas','mkt-at-conv','mkt-at-cps','mkt-at-ctr'].forEach(i=>$(i)&&($(i).value=''));
-  $('mkt-at-status').value='pending'; $('mkt-at-devel').value='';
-  $('mkt-at-img-preview').innerHTML=`<div style="font-size:12px;color:var(--muted);">클릭하여 소재 이미지 첨부</div><div style="font-size:11px;color:var(--faint);">BEST/WORST 소재 캡처 등</div>`;
-  if(id){
-    const s=await getAppState();
-    const item=(s.mkt_apptest||[]).find(x=>x.id===id); if(!item) return;
-    $('mkt-at-cat1').value=item.cat1||''; $('mkt-at-cat2').value=item.cat2||'';
-    $('mkt-at-detail').value=item.detail||''; $('mkt-at-status').value=item.status||'pending';
-    $('mkt-at-devel').value=item.devel||''; $('mkt-at-note').value=item.note||'';
-    $('mkt-at-roas').value=item.roas||''; $('mkt-at-conv').value=item.conv||'';
-    $('mkt-at-cps').value=item.cps||''; $('mkt-at-ctr').value=item.ctr||'';
-    if(item.imgData){ mktAtImgData=item.imgData; $('mkt-at-img-preview').innerHTML=`<img src="${item.imgData}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="">`; }
-    mktAtCalcGrade();
-  }
-  // 기준 미리보기 초기 렌더
-  const settings=await getMktSettings();
-  const preEl=$('mkt-at-criteria-preview');
-  if(preEl) preEl.innerHTML=Object.entries(settings.grades).map(([k,v])=>
-    `<span style="color:${v.color};font-weight:500;">${k}</span> ${v.roasMin}%+ / ${v.convMin}건+　`
-  ).join('');
-  $('mkt-apptest-modal').classList.add('on');
-  setTimeout(()=>$('mkt-at-cat1').focus(),80);
-}
-
-async function saveMktApptest() {
-  const s=await getAppState();
-  s.mkt_apptest=s.mkt_apptest||[];
-  const data={
-    cat1:$('mkt-at-cat1').value.trim(), cat2:$('mkt-at-cat2').value.trim(),
-    detail:$('mkt-at-detail').value.trim(), status:$('mkt-at-status').value,
-    devel:$('mkt-at-devel').value, note:$('mkt-at-note').value.trim(),
-    roas:parseFloat($('mkt-at-roas').value)||0, conv:parseInt($('mkt-at-conv').value)||0,
-    cps:parseInt($('mkt-at-cps').value)||0, ctr:parseFloat($('mkt-at-ctr').value)||0,
-    imgData:mktAtImgData,
-  };
-  if(mktAtEditId){const idx=s.mkt_apptest.findIndex(x=>x.id===mktAtEditId);if(idx>=0)s.mkt_apptest[idx]={...s.mkt_apptest[idx],...data};}
-  else s.mkt_apptest.push({id:`at-${Date.now()}`,...data});
-  await setAppState(s); toast('저장됐어요 ✓'); closeModal('mkt-apptest-modal'); loadMktApptest();
-}
-
-async function deleteMktApptest() {
-  if(!mktAtEditId) return;
-  const ok=await customConfirm('항목을 삭제할까요?'); if(!ok) return;
-  const s=await getAppState();
-  s.mkt_apptest=(s.mkt_apptest||[]).filter(x=>x.id!==mktAtEditId);
-  await setAppState(s); toast('삭제됐어요'); closeModal('mkt-apptest-modal'); loadMktApptest();
-}
-
-/* ── 행동지표 설정 ── */
-async function openMktSettings() {
-  const settings = await getMktSettings();
-  // 등급 기준값 카드
-  $('mkt-settings-grades').innerHTML = Object.entries(settings.grades).map(([k,v])=>`
-    <div style="background:${v.color}18;border:0.5px solid ${v.color}44;border-radius:var(--r);padding:10px;">
-      <div style="font-size:13px;font-weight:500;color:${v.color};margin-bottom:6px;">${k}급</div>
-      <div style="font-size:10px;color:var(--light);margin-bottom:2px;">ROAS 이상 (%)</div>
-      <input type="number" id="mkt-set-roas-${k}" value="${v.roasMin}" style="width:100%;border:0.5px solid var(--border);border-radius:5px;padding:4px 6px;font-size:13px;background:var(--surface);color:var(--text);">
-      <div style="font-size:10px;color:var(--light);margin-top:5px;margin-bottom:2px;">구매수 이상</div>
-      <input type="number" id="mkt-set-conv-${k}" value="${v.convMin}" style="width:100%;border:0.5px solid var(--border);border-radius:5px;padding:4px 6px;font-size:13px;background:var(--surface);color:var(--text);">
-    </div>`).join('');
-  // 기타 지표
-  $('mkt-set-ctr').value = settings.ctrWarn;
-  $('mkt-set-cps').value = settings.cpsWarn;
-  // 행동 지침
-  $('mkt-settings-actions').innerHTML = Object.entries(settings.actions).map(([k,v])=>{
-    const gc = settings.grades[k]||{color:'var(--muted)'};
-    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <span style="font-size:12px;font-weight:500;color:${gc.color};min-width:24px;">${k}급</span>
-      <input type="text" id="mkt-set-action-${k}" value="${v}" style="flex:1;border:0.5px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;background:var(--surface);color:var(--text);">
-    </div>`;
-  }).join('');
-  $('mkt-settings-modal').classList.add('on');
-}
-
-async function saveMktSettings() {
-  const s = await getAppState();
-  const grades = {};
-  const actions = {};
-  ['SS','S','A','B','C'].forEach(k=>{
-    const def = MKT_DEFAULT_SETTINGS.grades[k];
-    grades[k] = {
-      ...def,
-      roasMin: parseInt($(`mkt-set-roas-${k}`)?.value)||0,
-      convMin: parseInt($(`mkt-set-conv-${k}`)?.value)||0,
-    };
-    actions[k] = $(`mkt-set-action-${k}`)?.value.trim() || MKT_DEFAULT_SETTINGS.actions[k];
-  });
-  s.mkt_settings = {
-    grades, actions,
-    ctrWarn: parseFloat($('mkt-set-ctr')?.value)||1.5,
-    cpsWarn: parseInt($('mkt-set-cps')?.value)||15000,
-  };
-  await setAppState(s);
-  toast('기준이 저장됐어요 ✓');
-  closeModal('mkt-settings-modal');
-  if(mktTab==='apptest') loadMktApptest();
-  if(mktTab==='today')   loadMktToday();
-}
-
-async function resetMktSettings() {
-  const ok=await customConfirm('기본값으로 초기화할까요?'); if(!ok) return;
-  const s=await getAppState();
-  delete s.mkt_settings;
-  await setAppState(s);
-  toast('기본값으로 초기화됐어요'); closeModal('mkt-settings-modal');
-  if(mktTab==='apptest') loadMktApptest();
-}
-
-/* ── CRM ── */
-async function loadMktCrm() {
-  const s    = await getAppState();
-  const crm  = (s.mkt_crm||[]).slice(-1)[0]||{};
-  const talks = s.mkt_alimtalk||[];
-
-  $('mkt-crm-summary').innerHTML=[
-    {l:'전체 회원수',    v:crm.members?crm.members.toLocaleString()+'명':'—', s:`신규 +${crm.newMembers||0}`},
-    {l:'재구매율',       v:crm.repurchaseRate?crm.repurchaseRate+'%':'—', g:crm.repurchaseRate>=30},
-    {l:'평균 구매 주기', v:crm.avgDays?crm.avgDays+'일':'—', s:crm.avgDays?`D-${Math.round(crm.avgDays*0.7)} 알림톡 권장`:''},
-    {l:'쿠폰 사용률',    v:crm.couponRate?crm.couponRate+'%':'—'},
-  ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
-    <div style="font-size:11px;color:var(--light);margin-bottom:4px;">${c.l}</div>
-    <div style="font-size:18px;font-weight:500;${c.g?'color:var(--green);':''}">${c.v}</div>
-    ${c.s?`<div style="font-size:11px;color:var(--light);margin-top:2px;">${c.s}</div>`:''}
-  </div>`).join('');
-
-  // 알림톡 이력
-  const el=$('mkt-crm-alimtalk');
-  el.innerHTML = talks.length
-    ? talks.slice(-8).reverse().map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
-        <div style="font-size:11px;color:var(--muted);min-width:50px;">${t.date||''}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:12px;font-weight:500;">${t.title||''}</div>
-          <div style="font-size:11px;color:var(--light);">발송 ${(t.sent||0).toLocaleString()}건 · 클릭률 ${t.ctr||0}% · 전환율 ${t.cvr||0}%</div>
-        </div>
-        <div style="text-align:right;min-width:50px;">
-          <div style="font-size:12px;font-weight:500;">${fmtWon(t.revenue)}</div>
-          <div style="font-size:10px;color:var(--light);">전환금액</div>
-        </div>
-      </div>`).join('')
-    : '<div style="padding:14px 0;font-size:13px;color:var(--faint);">발송 기록을 추가해주세요</div>';
-
-  // 회원 현황
-  const memberEl=$('mkt-crm-member');
-  memberEl.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div style="background:var(--green-bg,#EAF3DE);border-radius:8px;padding:8px 10px;text-align:center;">
-        <div style="font-size:10px;color:var(--green);margin-bottom:2px;">신규</div>
-        <div style="font-size:16px;font-weight:500;color:var(--green);">+${crm.newMembers||0}</div>
-      </div>
-      <div style="background:var(--amber-bg);border-radius:8px;padding:8px 10px;text-align:center;">
-        <div style="font-size:10px;color:var(--amber);margin-bottom:2px;">휴면</div>
-        <div style="font-size:16px;font-weight:500;color:var(--amber);">${(crm.dormantMembers||0).toLocaleString()}</div>
-      </div>
-      <div style="background:var(--red-bg);border-radius:8px;padding:8px 10px;text-align:center;">
-        <div style="font-size:10px;color:var(--red);margin-bottom:2px;">이탈</div>
-        <div style="font-size:16px;font-weight:500;color:var(--red);">-${crm.churnMembers||0}</div>
-      </div>
-    </div>`;
-
-  // 고객 등급
-  const gradeEl=$('mkt-crm-grade');
-  const grades=[
-    {l:'VIP',  pct:crm.gradeVip||3,  c:'#C4A96A'},
-    {l:'골드',  pct:crm.gradeGold||12, c:'#6B9E7A'},
-    {l:'실버',  pct:crm.gradeSilver||28, c:'#B8BBCC'},
-    {l:'일반',  pct:100-(crm.gradeVip||3)-(crm.gradeGold||12)-(crm.gradeSilver||28), c:'#ECEEF2'},
-  ];
-  gradeEl.innerHTML=`
-    <div style="display:flex;gap:3px;border-radius:4px;overflow:hidden;height:10px;margin-bottom:8px;">
-      ${grades.map(g=>`<div style="flex:${g.pct};background:${g.c};"></div>`).join('')}
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      ${grades.map(g=>`<span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:3px;">
-        <span style="width:8px;height:8px;border-radius:2px;background:${g.c};display:inline-block;"></span>${g.l} ${g.pct}%
-      </span>`).join('')}
-    </div>`;
-}
-
-async function openMktCrmModal(type) {
-  mktCrmType = type;
-  if(type==='alimtalk'){
-    $('mkt-crm-modal-kind').textContent='알림톡 발송 기록';
-    $('mkt-crm-modal-body').innerHTML=`<div class="modal-props">
-      <div class="prop-row"><div class="prop-icon">📅</div><div class="prop-label">발송일</div><div class="prop-val"><input type="date" class="prop-inp" id="mkt-crm-date" value="${dateStr()}"></div></div>
-      <div class="prop-row"><div class="prop-icon">✏</div><div class="prop-label">발송명</div><div class="prop-val"><input type="text" class="prop-inp" id="mkt-crm-title" placeholder="예: 4월 신상품 알림"></div></div>
-      <div class="prop-row"><div class="prop-icon">📨</div><div class="prop-label">발송 건수</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-sent" placeholder="건수"></div></div>
-      <div class="prop-row"><div class="prop-icon">👆</div><div class="prop-label">클릭률 (%)</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-ctr" placeholder="예: 18.7" step="0.1"></div></div>
-      <div class="prop-row"><div class="prop-icon">🛒</div><div class="prop-label">전환율 (%)</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-cvr" placeholder="예: 6.4" step="0.1"></div></div>
-      <div class="prop-row"><div class="prop-icon">💰</div><div class="prop-label">전환 금액</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-rev" placeholder="원 단위"></div></div>
-    </div>`;
-  } else {
-    $('mkt-crm-modal-kind').textContent='회원 현황 입력';
-    const s=await getAppState(); const crm=(s.mkt_crm||[]).slice(-1)[0]||{};
-    $('mkt-crm-modal-body').innerHTML=`<div class="modal-props">
-      <div class="prop-row"><div class="prop-icon">👥</div><div class="prop-label">전체 회원수</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-members" value="${crm.members||''}"></div></div>
-      <div class="prop-row"><div class="prop-icon">🆕</div><div class="prop-label">신규 회원</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-new" value="${crm.newMembers||''}"></div></div>
-      <div class="prop-row"><div class="prop-icon">😴</div><div class="prop-label">휴면 회원</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-dormant" value="${crm.dormantMembers||''}"></div></div>
-      <div class="prop-row"><div class="prop-icon">👋</div><div class="prop-label">이탈 회원</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-churn" value="${crm.churnMembers||''}"></div></div>
-      <div class="prop-row"><div class="prop-icon">🔄</div><div class="prop-label">재구매율 (%)</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-repurchase" value="${crm.repurchaseRate||''}" step="0.1"></div></div>
-      <div class="prop-row"><div class="prop-icon">📅</div><div class="prop-label">평균 구매 주기</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-avgdays" value="${crm.avgDays||''}" placeholder="일"></div></div>
-      <div class="prop-row"><div class="prop-icon">🎫</div><div class="prop-label">쿠폰 사용률 (%)</div><div class="prop-val"><input type="number" class="prop-inp" id="mkt-crm-coupon" value="${crm.couponRate||''}" step="0.1"></div></div>
-    </div>`;
-  }
-  $('mkt-crm-modal').classList.add('on');
-}
-
-async function saveMktCrm() {
-  const s=await getAppState();
-  if(mktCrmType==='alimtalk'){
-    s.mkt_alimtalk=s.mkt_alimtalk||[];
-    s.mkt_alimtalk.push({id:`talk-${Date.now()}`,date:$('mkt-crm-date').value,title:$('mkt-crm-title').value.trim(),
-      sent:parseInt($('mkt-crm-sent').value)||0,ctr:parseFloat($('mkt-crm-ctr').value)||0,
-      cvr:parseFloat($('mkt-crm-cvr').value)||0,revenue:parseInt($('mkt-crm-rev').value)||0});
-  } else {
-    s.mkt_crm=s.mkt_crm||[];
-    s.mkt_crm.push({id:`crm-${Date.now()}`,month:dateStr().slice(0,7),
-      members:parseInt($('mkt-crm-members')?.value)||0,newMembers:parseInt($('mkt-crm-new')?.value)||0,
-      dormantMembers:parseInt($('mkt-crm-dormant')?.value)||0,churnMembers:parseInt($('mkt-crm-churn')?.value)||0,
-      repurchaseRate:parseFloat($('mkt-crm-repurchase')?.value)||0,avgDays:parseInt($('mkt-crm-avgdays')?.value)||0,
-      couponRate:parseFloat($('mkt-crm-coupon')?.value)||0});
-  }
-  await setAppState(s); toast('저장됐어요 ✓'); closeModal('mkt-crm-modal'); loadMktCrm();
-}
-
-/* ══════════════════════════════
-   광고 소재 기획 (Ad Brief)
-══════════════════════════════ */
-const AD_BRIEF_STATUS = {
-  idea: { label:'아이디어',   color:'#94928D' },
-  plan: { label:'기획중',     color:'#C4A96A' },
-  shot: { label:'촬영완료',   color:'#6B9E7A' },
-  edit: { label:'편집중',     color:'#7B68C8' },
-  live: { label:'집행중',     color:'#378ADD' },
-};
-let adBriefFilter = 'all';
-let adBriefSelectedId = null;
-let adBriefEditId = null;
-let adBriefModalStatus = 'idea';
-
-async function loadAdBrief() {
-  const s = await getAppState();
-  const all = s.ad_briefs || [];
-
-  // 사이드바 카운트 업데이트
-  const pills = document.querySelectorAll('#adbrief-status-pills .inv-pill');
-  pills.forEach(p => p.classList.remove('on'));
-  const onPill = Array.from(pills).find(p => {
-    const oc = p.getAttribute('onclick')||'';
-    const m = oc.match(/adBriefSetFilter\('([^']+)'/);
-    return m && m[1] === adBriefFilter;
-  });
-  if (onPill) onPill.classList.add('on');
-
-  // 필터링
-  const filtered = adBriefFilter==='all' ? all : all.filter(b => b.status === adBriefFilter);
-  // 최신순 정렬
-  filtered.sort((a,b) => (b.updated_at||0) - (a.updated_at||0));
-
-  // 리스트 렌더
-  if (!filtered.length) {
-    $('adbrief-list').innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--faint);font-size:13px;">
-      ${adBriefFilter==='all' ? '아직 등록된 소재가 없어요' : '이 상태의 소재가 없어요'}
-    </div>`;
-  } else {
-    $('adbrief-list').innerHTML = filtered.map(b => {
-      const st = AD_BRIEF_STATUS[b.status] || AD_BRIEF_STATUS.idea;
-      const isSel = b.id === adBriefSelectedId;
-      return `<div onclick="adBriefSelect('${b.id}')"
-        style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:0.5px solid var(--surface2);cursor:pointer;${isSel?'background:var(--surface2);border-left:3px solid var(--text);padding-left:13px;':''}">
-        <span style="width:8px;height:8px;border-radius:50%;background:${st.color};flex-shrink:0;"></span>
-        <div style="flex:1;font-size:13px;font-weight:${isSel?'600':'500'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.title||'(제목 없음)')}</div>
-        <span style="font-size:10px;color:var(--muted);background:${st.color}22;color:${st.color};padding:2px 8px;border-radius:50px;white-space:nowrap;">${st.label}</span>
-      </div>`;
-    }).join('');
-  }
-
-  // 상세 패널
-  const sel = adBriefSelectedId ? all.find(b => b.id === adBriefSelectedId) : null;
-  if (sel) {
-    const st = AD_BRIEF_STATUS[sel.status] || AD_BRIEF_STATUS.idea;
-    $('adbrief-detail-empty').style.display = 'none';
-    $('adbrief-detail-body').style.display = '';
-    const fmtDate = d => d ? d.replace(/-/g,'.') : '미정';
-    $('adbrief-detail-body').innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:14px;border-bottom:0.5px solid var(--surface2);">
-        <div>
-          <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
-            <span style="width:9px;height:9px;border-radius:50%;background:${st.color};"></span>
-            <span style="font-size:12px;color:${st.color};font-weight:600;">${st.label}</span>
-          </div>
-          <div style="font-size:20px;font-weight:600;">${escapeHtml(sel.title||'(제목 없음)')}</div>
-        </div>
-        <button class="f-btn" style="font-size:11px;padding:5px 13px;" onclick="openAdBriefModal('${sel.id}')">편집</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;">
-        <div>
-          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">📦 필요 제품</div>
-          <div style="font-size:13px;line-height:1.6;">${escapeHtml(sel.product)||'<span style="color:var(--faint);">미입력</span>'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">📍 촬영 장소</div>
-          <div style="font-size:13px;line-height:1.6;">${escapeHtml(sel.place)||'<span style="color:var(--faint);">미입력</span>'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--light);margin-bottom:5px;">📅 촬영 일정</div>
-          <div style="font-size:13px;line-height:1.6;">${fmtDate(sel.date)}</div>
-        </div>
-      </div>
-      <div style="margin-bottom:16px;">
-        <div style="font-size:11px;color:var(--light);margin-bottom:6px;">🎤 멘트 / 스크립트</div>
-        <div style="font-size:13px;line-height:1.7;background:var(--surface2);border-radius:var(--r);padding:12px 14px;white-space:pre-wrap;">${escapeHtml(sel.script)||'<span style="color:var(--faint);">미입력</span>'}</div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:var(--light);margin-bottom:6px;">💡 아이디어 메모</div>
-        <div style="font-size:13px;line-height:1.7;background:var(--surface2);border-radius:var(--r);padding:12px 14px;white-space:pre-wrap;color:var(--muted);">${escapeHtml(sel.note)||'<span style="color:var(--faint);">미입력</span>'}</div>
-      </div>
-    `;
-  } else {
-    $('adbrief-detail-empty').style.display = '';
-    $('adbrief-detail-body').style.display = 'none';
-  }
-}
-
-function adBriefSetFilter(f, el) {
-  adBriefFilter = f;
-  // 필터 바뀌면 선택 유지하되, 안 보이면 해제됨 (loadAdBrief에서 자동)
-  loadAdBrief();
-}
-
-function adBriefSelect(id) {
-  adBriefSelectedId = id;
-  loadAdBrief();
-}
-
-function openAdBriefModal(id) {
-  adBriefEditId = id || null;
-  const pills = document.querySelectorAll('#adbrief-modal-status-pills .inv-pill');
-
-  if (id) {
-    // 편집 모드
-    getAppState().then(s => {
-      const b = (s.ad_briefs||[]).find(x => x.id === id);
-      if (!b) return;
-      adBriefModalStatus = b.status || 'idea';
-      $('adbrief-title').value   = b.title   || '';
-      $('adbrief-product').value = b.product || '';
-      $('adbrief-place').value   = b.place   || '';
-      $('adbrief-date').value    = b.date    || '';
-      $('adbrief-script').value  = b.script  || '';
-      $('adbrief-note').value    = b.note    || '';
-      pills.forEach(p => p.classList.toggle('on', p.dataset.st === adBriefModalStatus));
-      $('adbrief-del-btn').style.display = '';
-      $('adbrief-modal').classList.add('on');
-    });
-  } else {
-    // 신규
-    adBriefModalStatus = 'idea';
-    $('adbrief-title').value   = '';
-    $('adbrief-product').value = '';
-    $('adbrief-place').value   = '';
-    $('adbrief-date').value    = '';
-    $('adbrief-script').value  = '';
-    $('adbrief-note').value    = '';
-    pills.forEach(p => p.classList.toggle('on', p.dataset.st === 'idea'));
-    $('adbrief-del-btn').style.display = 'none';
-    $('adbrief-modal').classList.add('on');
-  }
-}
-
-function adBriefModalSetStatus(st, el) {
-  adBriefModalStatus = st;
-  document.querySelectorAll('#adbrief-modal-status-pills .inv-pill').forEach(p => p.classList.remove('on'));
-  if (el) el.classList.add('on');
-}
-
-async function saveAdBrief() {
-  const title = $('adbrief-title').value.trim();
-  if (!title) { toast('소재 제목을 입력해주세요'); return; }
-
-  const data = {
-    title,
-    status:  adBriefModalStatus,
-    product: $('adbrief-product').value.trim(),
-    place:   $('adbrief-place').value.trim(),
-    date:    $('adbrief-date').value || '',
-    script:  $('adbrief-script').value.trim(),
-    note:    $('adbrief-note').value.trim(),
-    updated_at: Date.now(),
-  };
-
-  try {
-    await patchAppState(s => {
-      s.ad_briefs = s.ad_briefs || [];
-      if (adBriefEditId) {
-        const i = s.ad_briefs.findIndex(b => b.id === adBriefEditId);
-        if (i >= 0) s.ad_briefs[i] = { ...s.ad_briefs[i], ...data };
-      } else {
-        const newId = `brief_${Date.now()}`;
-        s.ad_briefs.push({ id: newId, created_at: Date.now(), ...data });
-        adBriefSelectedId = newId;  // 새로 만든 거 자동 선택
-      }
-      return s;
-    });
-    toast(adBriefEditId ? '수정됐어요 ✓' : '추가됐어요 ✓');
-    closeModal('adbrief-modal');
-    loadAdBrief();
-  } catch(e) {
-    toast('저장 실패: ' + e.message);
-  }
-}
-
-async function deleteAdBrief() {
-  if (!adBriefEditId) return;
-  const ok = await customConfirm('이 소재를 삭제할까요?', '되돌릴 수 없어요.');
-  if (!ok) return;
-  const delId = adBriefEditId;
-  await patchAppState(s => {
-    s.ad_briefs = (s.ad_briefs||[]).filter(b => b.id !== delId);
-    return s;
-  });
-  if (adBriefSelectedId === delId) adBriefSelectedId = null;
-  toast('삭제됐어요');
-  closeModal('adbrief-modal');
-  loadAdBrief();
-}
 
 /* ══════════════════════════════
    세무: 카드 이용내역
@@ -17332,14 +16211,57 @@ const CPLAN_ST = {
   done:   { label:'발행완료', bg:'#EAF3DE', fg:'#3B6D11' },
 };
 
+/* 팝업 일정(POPUPS)에서 콘텐츠 캠페인을 자동 생성/동기화.
+   예전에는 더현대 캠페인만 코드에 따로 박혀 있어서, 대시보드는 부산 팝업을 보는데
+   콘텐츠 탭은 끝난 더현대를 기본으로 띄우는 불일치가 있었음. */
+function _campIdFor(popup) {
+  return 'camp-' + String(popup.start.toISOString().slice(0,10));
+}
+
 async function _cplanEnsureCampaign(s) {
   s.cplan_campaigns = s.cplan_campaigns || [];
-  if (!s.cplan_campaigns.find(c=>c.id==='camp-hyundai')) {
-    s.cplan_campaigns.unshift({ id:'camp-hyundai', name:'더현대 팝업', targetDate:'2026-08-06' });
-    await patchAppState(x => { x.cplan_campaigns = s.cplan_campaigns; return x; });
+  const today = new Date(); today.setHours(0,0,0,0);
+  let dirty = false;
+
+  // 기존 더현대 캠페인은 id를 유지한 채 종료 표시만 (기록·기존 콘텐츠 보존)
+  const legacy = s.cplan_campaigns.find(c=>c.id==='camp-hyundai');
+  if (legacy && !legacy.archived) { legacy.archived = true; dirty = true; }
+
+  // POPUPS에 있는 팝업마다 캠페인 보장
+  for (const pop of (typeof POPUPS !== 'undefined' ? POPUPS : [])) {
+    const id  = _campIdFor(pop);
+    const end = new Date(pop.end); end.setHours(0,0,0,0);
+    const name = String(pop.title).replace(/\n/g, ' ');
+    let c = s.cplan_campaigns.find(x=>x.id===id);
+    if (!c) {
+      // 더현대 서울은 legacy 캠페인이 이미 담당하므로 새로 만들지 않음
+      if (legacy && pop.start.toISOString().slice(0,10) === '2026-08-06') continue;
+      c = { id, name, targetDate: pop.start.toISOString().slice(0,10) };
+      s.cplan_campaigns.push(c);
+      dirty = true;
+    }
+    const shouldArchive = end < today;
+    if (!!c.archived !== shouldArchive) { c.archived = shouldArchive; dirty = true; }
+  }
+
+  if (dirty) await patchAppState(x => { x.cplan_campaigns = s.cplan_campaigns; return x; });
+
+  // 진행 중/예정 캠페인을 앞으로, 종료된 것은 뒤로
+  s.cplan_campaigns.sort((a,b) => {
+    if (!!a.archived !== !!b.archived) return a.archived ? 1 : -1;
+    return String(a.targetDate||'').localeCompare(String(b.targetDate||''));
+  });
+
+  // 기본 선택: 마지막에 보던 캠페인 → 없으면 종료되지 않은 것 중 가장 가까운 것
+  if (!_cplanCampaignId) {
+    try {
+      const saved = localStorage.getItem('cplan_last_campaign');
+      if (saved && s.cplan_campaigns.find(c=>c.id===saved)) _cplanCampaignId = saved;
+    } catch(e) {}
   }
   if (!_cplanCampaignId || !s.cplan_campaigns.find(c=>c.id===_cplanCampaignId)) {
-    _cplanCampaignId = s.cplan_campaigns[0].id;
+    const live = s.cplan_campaigns.find(c=>!c.archived);
+    _cplanCampaignId = (live || s.cplan_campaigns[0])?.id || null;
   }
   return s.cplan_campaigns;
 }
@@ -17359,6 +16281,7 @@ function cplanSetCh(ch, el) {
 }
 function cplanCampaignChanged(sel) {
   _cplanCampaignId = sel.value;
+  try { localStorage.setItem('cplan_last_campaign', sel.value); } catch(e) {}
   loadCplan();
 }
 async function cplanNewCampaign() {
@@ -17396,9 +16319,13 @@ let _cplanTargetDate = null;
 async function _cplanSeedHyundai() {
   const s = await getAppState();
   const existing = (s.content_plans||[]).filter(p=>p.campaign==='camp-hyundai');
-  // r2: 더현대 캠페인이 비어 있으면 1회 복원 (캠페인 전환 사고 대비)
-  if (s.cplan_seeded_hyundai && (existing.length || s.cplan_seeded_hyundai_r2)) return;
-  if (existing.length) { await patchAppState(x=>{ x.cplan_seeded_hyundai = true; x.cplan_seeded_hyundai_r2 = true; return x; }); return; }
+  // ⚠️ 한 번 시드했으면 두 번 다시 넣지 않음.
+  //    예전 r2 조건은 실제 운영 상태(seeded=true, r2=false, 항목 있음)에서
+  //    첫 줄에서 곧바로 return돼 r2가 영원히 false로 남았고,
+  //    그 뒤 끝난 더현대 콘텐츠를 정리해 목록이 비는 순간 9건이 되살아났음.
+  //    (캠페인 이름만 부산으로 바꿨다면 부산 캠페인에 7~8월 콘텐츠가 섞여 들어감)
+  if (s.cplan_seeded_hyundai) return;
+  if (existing.length) { await patchAppState(x=>{ x.cplan_seeded_hyundai = true; return x; }); return; }
   const SEED = [
     { date:'2026-07-21', title:'양 인형 (앵커 · 최대 문의 제품) ※릴스 병행', memo:'"8/6 더현대에서 첫 출시, 예비 양띠맘 주목"' },
     { date:'2026-07-23', title:'몽달이 립밤키링 (주력) ※릴스 병행', memo:'' },
@@ -17429,7 +16356,7 @@ async function loadCplan() {
     const camps = await _cplanEnsureCampaign(s);
     const sel = $('cplan-campaign-sel');
     if (sel) {
-      sel.innerHTML = camps.map(c=>`<option value="${c.id}"${c.id===_cplanCampaignId?' selected':''}>${escapeHtml(c.name)}</option>`).join('');
+      sel.innerHTML = camps.map(c=>`<option value="${c.id}"${c.id===_cplanCampaignId?' selected':''}>${escapeHtml(c.name)}${c.archived?' (종료)':''}</option>`).join('');
     }
     const camp = camps.find(c=>c.id===_cplanCampaignId);
     _cplanTargetDate = camp?.targetDate || null;
@@ -17437,10 +16364,13 @@ async function loadCplan() {
     if (ddayEl) {
       if (camp?.targetDate) {
         const diff = Math.ceil((new Date(camp.targetDate+'T00:00:00') - new Date(dateStr()+'T00:00:00')) / 86400000);
-        ddayEl.textContent = diff > 0 ? `D-${diff}` : diff === 0 ? 'D-DAY' : `D+${-diff}`;
+        // 목표일이 지난 캠페인은 회색 '종료' — 예전엔 음수 D+도 빨간 경고색이라
+        // 경고가 상시화되면서 진짜 지연 신호가 묻혔음
+        const done = camp.archived || diff < 0;
+        ddayEl.textContent = done ? '종료' : (diff === 0 ? 'D-DAY' : `D-${diff}`);
         ddayEl.style.display = '';
-        ddayEl.style.background = diff <= 7 ? '#FCEBEB' : '#FAEEDA';
-        ddayEl.style.color = diff <= 7 ? '#A32D2D' : '#854F0B';
+        ddayEl.style.background = done ? 'var(--surface2)' : (diff <= 7 ? '#FCEBEB' : '#FAEEDA');
+        ddayEl.style.color      = done ? 'var(--muted)'   : (diff <= 7 ? '#A32D2D' : '#854F0B');
       } else ddayEl.style.display = 'none';
     }
     _cplanCache = (s.content_plans||[]).filter(p=>p.campaign===_cplanCampaignId);
@@ -17474,12 +16404,12 @@ function _cplanRow(p, today) {
     </div>`;
   }
   return `<div style="border-bottom:0.5px solid var(--surface2);cursor:pointer;" onclick="cplanToggleExpand('${p.id}')">
-    <div style="display:flex;align-items:center;gap:10px;padding:11px 0;">
-      <span style="font-size:11px;color:${overdue?'var(--red)':'var(--light)'};width:48px;flex-shrink:0;${overdue?'font-weight:600;':''}">${dateLbl}</span>
-      ${ddayLbl?`<span style="font-size:10px;font-weight:600;color:${overdue?'var(--red)':'var(--muted)'};width:38px;flex-shrink:0;">${ddayLbl}</span>`:''}
-      <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:${ch.bg};color:${ch.fg};font-weight:500;flex-shrink:0;">${ch.label}</span>
-      <span style="flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${p.status==='done'?'color:var(--light);':''}">${escapeHtml(p.title)}</span>
-      <span onclick="event.stopPropagation();cplanCycleStatus('${p.id}')" style="font-size:11px;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.fg};font-weight:500;flex-shrink:0;cursor:pointer;" title="탭하면 상태 변경">${st.label}</span>
+    <div class="cplan-row" style="display:flex;align-items:center;gap:10px;padding:11px 0;">
+      <span class="cplan-date" style="font-size:11px;color:${overdue?'var(--red)':'var(--light)'};width:48px;flex-shrink:0;${overdue?'font-weight:600;':''}">${dateLbl}</span>
+      ${ddayLbl?`<span class="cplan-dd" style="font-size:10px;font-weight:600;color:${overdue?'var(--red)':'var(--muted)'};width:38px;flex-shrink:0;">${ddayLbl}</span>`:''}
+      <span class="cplan-ch" style="font-size:10px;padding:2px 8px;border-radius:4px;background:${ch.bg};color:${ch.fg};font-weight:500;flex-shrink:0;">${ch.label}</span>
+      <span class="cplan-title" style="flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${p.status==='done'?'color:var(--light);':''}">${escapeHtml(p.title)}</span>
+      <span class="cplan-st" onclick="event.stopPropagation();cplanCycleStatus('${p.id}')" style="font-size:11px;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.fg};font-weight:500;flex-shrink:0;cursor:pointer;" title="탭하면 상태 변경">${st.label}</span>
     </div>${detail}
   </div>`;
 }
@@ -20298,9 +19228,10 @@ async function loadPlanAnnual() {
     const yearTotal = rows.reduce((sum,r)=>sum+(r.amount||0),0);
     const yearGoalObj = goals.find(g=>g.label?.includes('매출'));
     const yearGoalRaw = yearGoalObj?.target||'';
-    const yearGoalNum = yearGoalRaw.includes('억')
-      ? parseFloat(yearGoalRaw)*100000000
-      : (parseInt(yearGoalRaw.replace(/[^0-9]/g,''))||0);
+    // targetNum(숫자 전용 필드)이 있으면 그걸 우선 사용. 없으면 문자열에서 추정.
+    const yearGoalNum = (typeof yearGoalObj?.targetNum === 'number' && yearGoalObj.targetNum > 0)
+      ? yearGoalObj.targetNum
+      : parseGoalAmount(yearGoalRaw);
     const pct = yearGoalNum ? Math.min(100, Math.round(yearTotal/yearGoalNum*100)) : 0;
 
     // 월별 매출 집계
@@ -20565,6 +19496,8 @@ function renderPlanTrendChart(monthly, actualByMonth, curMonth) {
   svg.querySelectorAll('.trend-pt').forEach(el => {
     el.addEventListener('mouseenter', () => showTooltip(+el.dataset.idx, el.dataset.kind));
     el.addEventListener('mouseleave', hideTooltip);
+    el.addEventListener('touchstart', () => showTooltip(+el.dataset.idx, el.dataset.kind), { passive:true });
+    el.addEventListener('touchend', () => setTimeout(hideTooltip, 2000), { passive:true });
   });
 
   // 하단 진단 카드
@@ -20686,7 +19619,7 @@ async function openQtrTimelineModal(q) {
   p.quarters = p.quarters || [];
   let qData = p.quarters.find(x=>x.q===q);
   if (!qData) { qData = {q, items:[]}; p.quarters.push(qData); }
-  const text = prompt(`Q${q} 계획 항목 추가`);
+  const text = await customPrompt(`Q${q} 계획 항목 추가`, '항목 내용을 입력하세요');
   if (!text) return;
   qData.items.push({ id: `qt-${Date.now()}`, text, done: false });
   await setPlanData(s);
@@ -21010,7 +19943,12 @@ async function loadPlanBudget() {
   const totalMonthly = budgetItems.reduce((s,x)=>s+(x.amount||0),0);
   const maxAmt = Math.max(...budgetItems.map(x=>x.amount||0),1);
 
-  $('plan-budget-summary').innerHTML = [
+  // ⚠️ 예전에는 존재하지 않는 id($('plan-budget-summary'))를 가드 없이 참조해
+  //    여기서 TypeError가 나면서 아래 '연간 예산 목표' 목록과 시즌 예산이
+  //    통째로 렌더되지 않았음. 이제 없으면 건너뛰고 나머지를 정상 렌더.
+  //    (plan-budget-kpi는 위에서 매출/지출 실적용으로 이미 쓰고 있으므로 덮어쓰면 안 됨)
+  const budgetSumEl = $('plan-budget-summary');
+  if (budgetSumEl) budgetSumEl.innerHTML = [
     {l:'월 총예산', v:fmtWonExact(totalMonthly)},
     {l:'연간 예산', v:fmtWonExact(totalMonthly*12)},
     {l:'올해 집행률', v:(budget.execRate||0)+'%'},
@@ -21019,7 +19957,8 @@ async function loadPlanBudget() {
     <div style="font-size:16px;font-weight:500;">${c.v}</div>
   </div>`).join('');
 
-  $('plan-budget-list').innerHTML = budgetItems.map(item=>{
+  const listEl = $('plan-budget-list');
+  if (listEl) listEl.innerHTML = budgetItems.map(item=>{
     const pct = Math.round(item.amount/maxAmt*100);
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
       <div style="font-size:12px;min-width:100px;">${item.label}</div>
@@ -21031,7 +19970,7 @@ async function loadPlanBudget() {
   }).join('');
 
   const seasonEl = $('plan-season-budget-list');
-  seasonEl.innerHTML = items.length
+  if (seasonEl) seasonEl.innerHTML = items.length
     ? items.map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 10px;background:var(--surface2);border-radius:6px;margin-bottom:6px;">
         <span>${x.title}</span>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -21102,7 +20041,7 @@ async function openPlanMonthlyModal() {
   const monthly = s.plan[planYear].memos?.monthly
     ? JSON.parse(s.plan[planYear].memos.monthly) : {};
   $('plan-monthly-modal-kind').textContent = `${planYear}년 월별 매출 목표 · 실적`;
-  $('plan-monthly-modal-sub').textContent  = '단위: 만원';
+  $('plan-monthly-modal-sub').textContent  = '단위: 원 (예: 5000000 = 500만원)';
   renderPlanMonthlyInputs(monthly);
   $('plan-monthly-modal').classList.add('on');
 }
@@ -21557,6 +20496,31 @@ async function getTaxCosts(year, month=null, qtr=null) {
   return costs;
 }
 
+/* 과세 매출(세금계산서 발행분)만 합산 — 부가세 매출세액 계산용.
+   예전에는 매입만 hasTax로 거르고 매출은 전액을 과세로 잡아 납부세액이 과대 계상됐음.
+   매출장에 hasTax 필드가 있고 표에 ✓/—로 표시까지 하는데 세액 계산에만 안 쓰이고 있었음. */
+async function getTaxableRevenue(year, month=null, qtr=null) {
+  try {
+    const appState = await getAppState();
+    let rows = (appState.tax_revenues || []).filter(r => Number(r.year) === Number(year));
+    if (month)    rows = rows.filter(r => Number(r.month) === Number(month));
+    else if (qtr) rows = rows.filter(r => Math.ceil(Number(r.month)/3) === qtr);
+    const taxable = rows.filter(r => r.hasTax).reduce((a,r)=>a+(r.amount||0),0);
+    const exempt  = rows.filter(r => !r.hasTax).reduce((a,r)=>a+(r.amount||0),0);
+    return { taxable, exempt, total: taxable + exempt };
+  } catch(e) {
+    console.error('getTaxableRevenue:', e);
+    return { taxable: 0, exempt: 0, total: 0 };
+  }
+}
+
+/* 여러 달을 한 번에 (부가세 기간별 집계용) */
+async function getTaxableRevenueMonths(year, months) {
+  const parts = await Promise.all(months.map(m => getTaxableRevenue(year, m)));
+  return parts.reduce((a,p)=>({ taxable:a.taxable+p.taxable, exempt:a.exempt+p.exempt, total:a.total+p.total }),
+                      { taxable:0, exempt:0, total:0 });
+}
+
 async function getTaxRevenue(year, month=null, qtr=null) {
   // 세무관리 총매출은 매출장(app_state.tax_revenues)만 사용 — 입금 기준.
   // 매출장이 비어있으면 0 (판매탭 데이터는 사용하지 않음)
@@ -21595,7 +20559,9 @@ async function loadTaxMonthly() {
   const totalRevenue = Object.values(chSales).reduce((a,b)=>a+b,0);
   const totalCost    = costs.reduce((a,c)=>a+(c.amount||0),0);
   const netProfit    = totalRevenue - totalCost;
-  const vatSales     = Math.round(totalRevenue / 11); // 매출세액 (공급가액×10% = 공급대가÷11)
+  // 매출세액은 세금계산서 발행분(과세매출)만 대상
+  const revSplit     = await getTaxableRevenue(taxYear, taxMonth);
+  const vatSales     = Math.round(revSplit.taxable / 11); // 공급대가 ÷ 11
   const vatInput     = costs.filter(c=>c.hasTax).reduce((a,c)=>a+Math.round((c.amount||0)/11),0);
   const vatDue       = Math.max(0, vatSales - vatInput);
   const withholdDue  = Object.values(SALARY_MAP).reduce((a,b)=>a+b,0) * 0.033;
@@ -21670,13 +20636,18 @@ async function loadTaxMonthly() {
   }
 
   // 부가세 계산
+  // 이 카드의 값은 "선택한 한 달"치임. 예전 라벨이 '1기 누적'이라 분기 누적으로 오해를 샀음.
   const period = taxMonth <= 6 ? '1기' : '2기';
-  $('tax-vat-period-label').textContent = `${period} (${taxMonth<=6?'1~6월':'7~12월'}) 누적`;
+  $('tax-vat-period-label').textContent = `${taxMonth}월분 (${period} 귀속)`;
   $('tax-vat-calc').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
-      <div style="font-size:12px;color:var(--muted);">매출 세액 (공급대가 ÷ 11)</div>
+      <div style="font-size:12px;color:var(--muted);">매출 세액 (과세매출 ÷ 11)</div>
       <div style="font-size:12px;font-weight:500;">${fmtWonExact(vatSales)}</div>
     </div>
+    ${revSplit.exempt > 0 ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
+      <div style="font-size:12px;color:var(--light);">세금계산서 미발행 매출 <span style="color:var(--faint);">(세액 제외)</span></div>
+      <div style="font-size:12px;color:var(--light);">${fmtWonExact(revSplit.exempt)}</div>
+    </div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--surface2);">
       <div style="font-size:12px;color:var(--muted);">매입 세액 공제</div>
       <div style="font-size:12px;font-weight:500;color:#3B6D11;">- ${fmtWonExact(vatInput)}</div>
@@ -21779,13 +20750,20 @@ async function loadTaxAnnual() {
   const totalRev  = monthData.reduce((a,d)=>a+d.rev,0);
   const totalCost = monthData.reduce((a,d)=>a+d.cost,0);
   const totalNet  = totalRev - totalCost;
-  const avgNet    = Math.round(totalNet/12);
+  // 진행 중인 해에는 경과 월수로 나눠야 함. 12로 고정하면 8월에 실제의 2/3로 표시됨.
+  const nowY = new Date().getFullYear(), nowM = new Date().getMonth() + 1;
+  const elapsedM = (Number(taxYear) < nowY) ? 12
+                 : (Number(taxYear) > nowY) ? 0
+                 : nowM;
+  const divM   = Math.max(1, elapsedM);
+  const avgNet = Math.round(totalNet / divM);
+  const periodLbl = elapsedM >= 12 ? '12개월 합계' : `1~${elapsedM}월 합계 (진행 중)`;
 
   $('tax-annual-cards').innerHTML = [
-    { l:'연 매출',  v:fmtWonExact(totalRev),  s:'12개월 합계' },
+    { l:'연 매출',  v:fmtWonExact(totalRev),  s:periodLbl },
     { l:'연 비용',  v:fmtWonExact(totalCost), s:`매출 대비 ${totalRev?Math.round(totalCost/totalRev*100):0}%` },
     { l:'연 순수익',v:fmtWonExact(totalNet),  s:`이익률 ${totalRev?Math.round(totalNet/totalRev*100):0}%`, c: totalNet>=0?'#3B6D11':'#A32D2D' },
-    { l:'월 평균 순수익',v:fmtWonExact(avgNet),s:'12개월 평균' },
+    { l:'월 평균 순수익',v:fmtWonExact(avgNet),s:`${divM}개월 평균` },
   ].map(c=>`<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:var(--light);margin-bottom:3px;">${c.l}</div>
     <div style="font-size:18px;font-weight:500;${c.c?'color:'+c.c:''}">${c.v}</div>
@@ -21822,13 +20800,20 @@ async function loadTaxAnnual() {
   }).join('') || '<div style="font-size:13px;color:var(--faint);padding:8px 0;">비용 데이터가 없어요</div>';
 
   // 세금 예상 요약
-  const vatSales = Math.round(totalRev/11);
-  const vatInput = allCosts.filter(c=>c.hasTax).reduce((a,c)=>a+Math.round((c.amount||0)/11),0);
-  const vatDue   = Math.max(0, vatSales-vatInput);
+  // 1기(1~6월) / 2기(7~12월)를 각각 실제 집계 — 예전에는 연간 총액을 그냥 절반으로 나눴음
+  const h1 = await getTaxableRevenueMonths(taxYear, [1,2,3,4,5,6]);
+  const h2 = await getTaxableRevenueMonths(taxYear, [7,8,9,10,11,12]);
+  const costH1 = allCosts.filter(c=>c.hasTax && Number(c.month)<=6).reduce((a,c)=>a+Math.round((c.amount||0)/11),0);
+  const costH2 = allCosts.filter(c=>c.hasTax && Number(c.month)>=7).reduce((a,c)=>a+Math.round((c.amount||0)/11),0);
+  const vatDueH1 = Math.max(0, Math.round(h1.taxable/11) - costH1);
+  const vatDueH2 = Math.max(0, Math.round(h2.taxable/11) - costH2);
+  const vatSales = Math.round((h1.taxable + h2.taxable)/11);
+  const vatInput = costH1 + costH2;
+  const vatDue   = vatDueH1 + vatDueH2;
   const withhold = Object.values(SALARY_MAP).reduce((a,b)=>a+b,0)*0.033*12;
   $('tax-annual-tax-summary').innerHTML = [
-    { l:'부가세 1기 예상', v:fmtWonExact(Math.round(vatDue/2)), s:'7월 25일 납부', c:'#854F0B', bg:'#FAEEDA' },
-    { l:'부가세 2기 예상', v:fmtWonExact(Math.round(vatDue/2)), s:'1월 25일 납부', c:'#854F0B', bg:'#FAEEDA' },
+    { l:'부가세 1기 예상', v:fmtWonExact(vatDueH1), s:'1~6월 실적 · 7월 25일 납부', c:'#854F0B', bg:'#FAEEDA' },
+    { l:'부가세 2기 예상', v:fmtWonExact(vatDueH2), s:'7~12월 실적 · 1월 25일 납부', c:'#854F0B', bg:'#FAEEDA' },
     { l:'연간 원천세 합계', v:fmtWonExact(withhold),            s:'매월 10일 납부', c:'#A32D2D', bg:'#FCEBEB' },
   ].map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:${t.bg};border-radius:8px;margin-bottom:8px;">
     <div><div style="font-size:12px;font-weight:500;color:${t.c};">${t.l}</div><div style="font-size:10px;color:${t.c};opacity:.7;margin-top:1px;">${t.s}</div></div>
@@ -21852,13 +20837,15 @@ async function loadTaxVat() {
   const totalRev   = salesArr.flat().reduce((a,r)=>a+(r.amount||0),0);
   const allCosts   = costsArr.flat();
   const taxCosts   = allCosts.filter(c=>c.hasTax);
-  const vatSales   = Math.round(totalRev/11);
+  // 과세매출(세금계산서 발행분)만 매출세액 대상
+  const revSplit   = await getTaxableRevenueMonths(taxYear, months);
+  const vatSales   = Math.round(revSplit.taxable/11);
   const vatInput   = taxCosts.reduce((a,c)=>a+Math.round((c.amount||0)/11),0);
   const vatDue     = Math.max(0, vatSales-vatInput);
 
   $('tax-vat-cards').innerHTML = [
-    { l:'공급 대가 합계',  v:fmtWonExact(totalRev) },
-    { l:'매출 세액',      v:fmtWonExact(vatSales), s:'공급대가 ÷ 11' },
+    { l:'공급 대가 합계',  v:fmtWonExact(totalRev), s: revSplit.exempt>0 ? `과세 ${fmtWonExact(revSplit.taxable)} · 미발행 ${fmtWonExact(revSplit.exempt)}` : '전액 과세' },
+    { l:'매출 세액',      v:fmtWonExact(vatSales), s:'과세매출 ÷ 11' },
     { l:'납부 예상 부가세',v:fmtWonExact(vatDue),  c:'#854F0B', bg:'#FAEEDA' },
   ].map(c=>`<div style="background:${c.bg||'var(--surface2)'};border-radius:var(--r);padding:12px 14px;">
     <div style="font-size:10px;color:${c.c||'var(--light)'};opacity:.8;margin-bottom:3px;">${c.l}</div>
@@ -22877,7 +21864,6 @@ document.addEventListener('keydown', e => {
    'inv-product-modal','inv-receipt-modal','inv-produce-modal','inv-alloc-modal','inv-upload-modal','inv-import-modal',
    'prod-schedule-modal','prod-supply-modal','prod-link-modal','prod-defect-modal',
    'ops-event-modal','ops-order-modal','content-modal',
-   'mkt-data-modal','mkt-apptest-modal','mkt-crm-modal','mkt-settings-modal',
    'asset-modal','asset-cat-modal',
    'plan-item-modal','plan-memo-modal','plan-budget-modal','plan-product-modal','plan-monthly-modal',
    'tax-cost-modal'].forEach(id=>{
@@ -22899,19 +21885,60 @@ document.querySelectorAll('.tb-nav-item[data-page]').forEach(el=>{
 /* ═══════════════════════════════════════
    BOOT
 ═══════════════════════════════════════ */
-/* ── 5분마다 자동 백업 ── */
-setInterval(async () => {
+/* ── 자동 백업: 시간대별 24세대 순환 ──
+   기존에는 슬롯 1개를 5분마다 덮어써서, 사고 후 5분이 지나면 백업도 같이 오염됐음.
+   이제 cherop_backup_00 ~ _23 으로 시간대별 분산 저장 → 최대 24시간 전까지 복구 가능.
+   또 탭이 여러 개 열려 있어도 리더 탭 1개에서만 돌도록 제한. */
+const BACKUP_LEADER_KEY = 'cherop_backup_leader';
+const BACKUP_TAB_ID = String(Math.floor(Math.random()*1e9)) + '-' + performance.now();
+
+function _backupIsLeader() {
+  try {
+    const raw = localStorage.getItem(BACKUP_LEADER_KEY);
+    const now = Date.now();
+    if (raw) {
+      const o = JSON.parse(raw);
+      // 다른 탭이 90초 안에 갱신했으면 그쪽이 리더
+      if (o.id !== BACKUP_TAB_ID && (now - o.ts) < 90000) return false;
+    }
+    localStorage.setItem(BACKUP_LEADER_KEY, JSON.stringify({ id: BACKUP_TAB_ID, ts: now }));
+    return true;
+  } catch(e) { return true; }
+}
+
+async function runAutoBackup() {
+  if (document.visibilityState !== 'visible') return;
+  if (!_backupIsLeader()) return;
   try {
     const { data } = await db.from('app_state').select('data').eq('id','cherop_main').single();
-    if (data?.data) {
-      await db.from('app_state').upsert({
-        id: 'cherop_backup',
-        data: data.data,
-        updated_at: new Date().toISOString()
-      });
-    }
-  } catch(e) {}
-}, 5 * 60 * 1000);
+    if (!data?.data) return;
+    const slot = String(new Date().getHours()).padStart(2,'0');
+    const { error } = await db.from('app_state').upsert({
+      id: 'cherop_backup_' + slot,
+      data: data.data,
+      updated_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    // 구버전 복구 경로 호환용 최신 슬롯도 함께 유지
+    await db.from('app_state').upsert({
+      id: 'cherop_backup', data: data.data, updated_at: new Date().toISOString()
+    });
+    localStorage.setItem('cherop_backup_last_ok', new Date().toISOString());
+  } catch(e) {
+    console.error('자동 백업 실패:', e);
+    localStorage.setItem('cherop_backup_last_err', new Date().toISOString() + ' / ' + (e.message||e));
+  }
+}
+
+setInterval(runAutoBackup, 5 * 60 * 1000);
+
+/* 마지막 백업 성공 시각 확인용 (콘솔에서 backupStatus() 호출) */
+function backupStatus() {
+  return {
+    마지막성공: localStorage.getItem('cherop_backup_last_ok') || '기록 없음',
+    마지막실패: localStorage.getItem('cherop_backup_last_err') || '없음'
+  };
+}
 
 boot();
 </script>
