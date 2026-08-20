@@ -5536,7 +5536,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.9.1</div>
+<div id="version">v5.9.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5553,7 +5553,24 @@ const MEMBERS = [
   { id:'sungae',  name:'김성애', label:'김성애님', av:'김성', role:'QC',     pin:'711209', admin:false },
 ];
 
-const POPUP = { title:'더현대 서울\n팝업 스토어', range:'8월 6일 – 8월 12일', start:new Date('2026-08-06'), end:new Date('2026-08-12'), prep:new Date('2026-06-26') };
+/* 팝업 일정 — 날짜순으로 등록해두면 대시보드 '중요 일정' 카드가
+   오늘 기준으로 진행 중이거나 가장 가까운 다음 팝업을 자동으로 표시함.
+   (전부 종료되면 마지막 팝업을 '종료' 상태로 표시) */
+const POPUPS = [
+  { title:'더현대 서울\n팝업 스토어',      range:'8월 6일 – 8월 12일',   start:new Date('2026-08-06'), end:new Date('2026-08-12'), prep:new Date('2026-06-26') },
+  { title:'신세계 센텀시티\n부산 팝업',    range:'10월 5일 – 10월 18일', start:new Date('2026-10-05'), end:new Date('2026-10-18'), prep:new Date('2026-08-24') },
+  { title:'더현대 대구 9F\n더포럼 팝업',   range:'10월 21일 – 11월 11일', start:new Date('2026-10-21'), end:new Date('2026-11-11'), prep:new Date('2026-09-09') },
+];
+
+/* 오늘 기준 표시할 팝업 1건 선택: 아직 안 끝난 것 중 가장 빠른 것 */
+function currentPopup() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = POPUPS.filter(p => {
+    const e = new Date(p.end); e.setHours(0,0,0,0);
+    return e >= today;
+  }).sort((a,b) => new Date(a.start) - new Date(b.start));
+  return upcoming[0] || POPUPS[POPUPS.length - 1];
+}
 
 /* ═══════════════════════════════════════
    STATE
@@ -7076,6 +7093,7 @@ function renderDashTrendChart(rows) {
 
 function loadDashDday() {
   const today=new Date(); today.setHours(0,0,0,0);
+  const POPUP = currentPopup();
   const start=new Date(POPUP.start); start.setHours(0,0,0,0);
   const end=new Date(POPUP.end);     end.setHours(0,0,0,0);
   const prep=new Date(POPUP.prep);   prep.setHours(0,0,0,0);
