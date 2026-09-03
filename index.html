@@ -1305,6 +1305,7 @@ a { text-decoration:none; color:inherit; }
               <button class="f-btn f-btn-cancel" style="font-size:12px;padding:7px 14px;" onclick="exportInvExcel()">📤 재고 내보내기</button>
               <button class="f-btn f-btn-cancel" style="font-size:12px;padding:7px 14px;" onclick="openShipmentModal()">📦 출고 등록</button>
               <button class="f-btn f-btn-cancel" id="inv-import-btn" style="font-size:12px;padding:7px 14px;display:none;" onclick="openImportModal()">📂 재고 가져오기</button>
+              <button class="f-btn f-btn-cancel" style="font-size:12px;padding:7px 14px;" onclick="runInventoryAudit()" title="총재고·상품화·가용·채널배분 사이의 계산이 어긋난 상품을 찾아 바로잡습니다">🩺 재고 점검</button>
               <button class="f-btn f-btn-save"   style="font-size:12px;padding:7px 14px;" onclick="openInvModal('product')">+ 상품 추가</button>
             </div>
           </div>
@@ -5149,7 +5150,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.9.4</div>
+<div id="version">v5.9.5</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5741,8 +5742,9 @@ async function adjustInventoryForWorkLog(productId, qty) {
 
     // 생산완료(+qty)로 가용재고가 생기면 → 예약 배분 자동 전환
     if (qty > 0) {
-      try { await applyChReservations(productId); } catch(e){ console.warn('예약 전환 실패:', e); }
+      try { await applyChReservations(productId); } catch(e){ console.error('예약 전환 실패:', e); }
     }
+    await reconcileInventory(productId);
 
     return { ok:true, supplyWarn };
   } catch (e) {
@@ -8864,33 +8866,203 @@ async function deleteShipLog(id) {
    예전에는 출고 등록에만 차감 코드가 있고 수정·삭제에는 없어서,
    100개를 10개로 고쳐도 빠진 100개가 그대로 남았음.
    (같은 앱에서 작업기록은 삭제하면 되돌리는데 출고만 정책이 반대였음) */
+/* ── 재고 정합성 복구 ────────────────────────────────────
+   지켜야 하는 등식 두 개:
+     total_stock    = pending_production + produced_stock
+     produced_stock = available_stock    + Σ(channel_inventory.stock)
+   여러 경로가 각자 재고를 건드리다 이 등식이 깨지면 화면마다 숫자가 달라짐.
+   파생값(available, pending)을 실제 값에서 다시 계산해 맞춰줌.
+   ※ 실제 수량(produced, 채널배분)은 건드리지 않음 — 데이터 보존 */
+async function reconcileInventory(productId) {
+  try {
+    const [invRes, chRes] = await Promise.all([
+      db.from('inventory').select('*').eq('product_id', productId).maybeSingle(),
+      db.from('channel_inventory').select('channel,stock').eq('product_id', productId),
+    ]);
+    const inv = invRes.data;
+    if (!inv) return null;
+
+    const produced = Math.max(0, inv.produced_stock || 0);
+    const chSum    = (chRes.data || []).reduce((a, r) => a + (r.stock || 0), 0);
+    let   total    = Math.max(0, inv.total_stock || 0);
+    if (produced > total) total = produced;      // 상품화가 총재고보다 많을 수는 없음
+
+    const available = Math.max(0, produced - chSum);
+    const pending   = Math.max(0, total - produced);
+
+    const before = {
+      total: inv.total_stock || 0, produced,
+      available: inv.available_stock || 0, pending: inv.pending_production || 0, chSum,
+    };
+    const changed = available !== before.available
+                 || pending   !== before.pending
+                 || total     !== before.total;
+    if (changed) {
+      await db.from('inventory').update({
+        total_stock:        total,
+        available_stock:    available,
+        pending_production: pending,
+        updated_at:         new Date().toISOString(),
+      }).eq('product_id', productId);
+    }
+    return { changed, before, after: { total, produced, available, pending, chSum } };
+  } catch(e) { console.error('reconcileInventory', e); return null; }
+}
+
+/* ── 출고에 따른 재고 반영 ──────────────────────────────
+   delta > 0 = 출고(차감), delta < 0 = 취소(복구)
+
+   예전 문제: 채널 실배분에서만 빼려 했는데, 배분 행이 없는 채널
+   (팝업·이모티콘·라인프렌즈 등)로 출고하면 채널 쪽은 그대로 두고
+   produced만 줄여서 등식이 깨졌음. 예약 수량도 전혀 건드리지 않아
+   출고해도 예약이 그대로 남아 재고가 이중으로 잡혔음.
+   → 실배분 → 예약 순으로 소진하고, 마지막에 정합성 복구까지 수행. */
 async function applyShipmentStock(productId, channel, delta) {
   if (!productId || !delta) return { ok: true, note: 'skip' };
   try {
     const { data: inv } = await db.from('inventory').select('*').eq('product_id', productId).maybeSingle();
-    if (inv) {
-      const newTotal    = Math.max(0, (inv.total_stock    || 0) - delta);
-      const newProduced = Math.max(0, (inv.produced_stock || 0) - delta);
-      const newPending  = Math.max(0, newTotal - newProduced);
+    if (!inv) return { ok: false, error: '재고 정보가 없어요' };
+
+    const nowIso = () => new Date().toISOString();
+
+    if (delta > 0) {
+      let remain = delta;
+
+      // 1) 채널 실배분에서 먼저 차감
+      if (channel) {
+        const { data: ci } = await db.from('channel_inventory').select('*')
+          .eq('product_id', productId).eq('channel', channel).maybeSingle();
+        if (ci && (ci.stock || 0) > 0) {
+          const take = Math.min(ci.stock, remain);
+          await db.from('channel_inventory')
+            .update({ stock: ci.stock - take, updated_at: nowIso() }).eq('id', ci.id);
+          remain -= take;
+        }
+      }
+
+      // 2) 남은 만큼 그 채널 예약에서 차감 (예약분을 미리 당겨 쓴 것으로 처리)
+      let fromReserve = 0;
+      if (remain > 0 && channel) {
+        await patchAppState(s => {
+          const r = (s.ch_reservations || []).find(x => x.product_id === productId && x.channel === channel);
+          if (r && r.qty > 0) {
+            fromReserve = Math.min(r.qty, remain);
+            r.qty -= fromReserve;
+          }
+          s.ch_reservations = (s.ch_reservations || []).filter(x => (x.qty || 0) > 0);
+          return s;
+        });
+        remain -= fromReserve;
+      }
+      // 3) 나머지는 가용재고에서 나간 것 — 아래 정합성 복구가 자동 반영
+
       await db.from('inventory').update({
-        total_stock:        newTotal,
-        produced_stock:     newProduced,
-        pending_production: newPending,
-        updated_at:         new Date().toISOString(),
+        total_stock:    Math.max(0, (inv.total_stock    || 0) - delta),
+        produced_stock: Math.max(0, (inv.produced_stock || 0) - delta),
+        updated_at:     nowIso(),
       }).eq('product_id', productId);
+
+    } else {
+      // 출고 취소/수정 → 되돌리기
+      const back = -delta;
+      await db.from('inventory').update({
+        total_stock:    (inv.total_stock    || 0) + back,
+        produced_stock: (inv.produced_stock || 0) + back,
+        updated_at:     nowIso(),
+      }).eq('product_id', productId);
+
+      if (channel) {
+        const { data: ci } = await db.from('channel_inventory').select('*')
+          .eq('product_id', productId).eq('channel', channel).maybeSingle();
+        if (ci) {
+          await db.from('channel_inventory')
+            .update({ stock: (ci.stock || 0) + back, updated_at: nowIso() }).eq('id', ci.id);
+        } else {
+          await db.from('channel_inventory').insert([{
+            id: `chinv_${productId}_${channel}`, product_id: productId,
+            channel, stock: back, updated_at: nowIso(),
+          }]);
+        }
+      }
     }
-    if (channel) {
-      const { data: ci } = await db.from('channel_inventory').select('*')
-        .eq('product_id', productId).eq('channel', channel).maybeSingle();
-      if (ci) await db.from('channel_inventory').update({
-        stock:      Math.max(0, (ci.stock || 0) - delta),
-        updated_at: new Date().toISOString(),
-      }).eq('id', ci.id);
-    }
+
+    await reconcileInventory(productId);   // 등식 다시 맞추기
     return { ok: true };
   } catch(e) {
     console.error('applyShipmentStock', e);
     return { ok: false, error: e.message };
+  }
+}
+
+/* ── 재고 정합성 일괄 점검 ──────────────────────────────
+   여러 경로가 각자 재고를 건드리면서 이미 어긋나 있는 상품을 찾아 바로잡음.
+   ※ 실제 수량(상품화 완료분, 채널 배분)은 절대 건드리지 않고,
+      거기서 계산되는 값(가용재고·상품화 대기)만 다시 맞춤. */
+async function runInventoryAudit() {
+  toast('재고를 점검하고 있어요…');
+  try {
+    const [prodRes, invRes, chRes] = await Promise.all([
+      db.from('products').select('id,name,option_name'),
+      db.from('inventory').select('*'),
+      db.from('channel_inventory').select('product_id,channel,stock'),
+    ]);
+    const prods = prodRes.data || [], invs = invRes.data || [], chs = chRes.data || [];
+    const pMap = {}; prods.forEach(p => pMap[p.id] = p);
+    const chSumMap = {};
+    chs.forEach(c => { chSumMap[c.product_id] = (chSumMap[c.product_id] || 0) + (c.stock || 0); });
+
+    const issues = [];
+    for (const inv of invs) {
+      const produced = Math.max(0, inv.produced_stock || 0);
+      const chSum    = chSumMap[inv.product_id] || 0;
+      let   total    = Math.max(0, inv.total_stock || 0);
+      const totalRaised = produced > total;
+      if (totalRaised) total = produced;
+      const available = Math.max(0, produced - chSum);
+      const pending   = Math.max(0, total - produced);
+      const curAvail  = inv.available_stock || 0;
+      const curPend   = inv.pending_production || 0;
+      const curTotal  = inv.total_stock || 0;
+      if (available === curAvail && pending === curPend && total === curTotal) continue;
+      const p = pMap[inv.product_id];
+      issues.push({
+        productId: inv.product_id,
+        label: p ? (p.option_name ? `${p.name} · ${p.option_name}` : p.name) : '(삭제된 상품)',
+        curTotal, curAvail, curPend, total, available, pending, produced, chSum, totalRaised,
+      });
+    }
+
+    if (!issues.length) {
+      await customConfirm('재고 점검 완료', '어긋난 항목이 없어요. 모든 상품의 재고 계산이 맞습니다 ✓', '확인');
+      return;
+    }
+
+    const lines = issues.slice(0, 8).map(x => {
+      const parts = [];
+      if (x.curAvail !== x.available) parts.push(`가용 ${x.curAvail}→${x.available}`);
+      if (x.curPend  !== x.pending)   parts.push(`대기 ${x.curPend}→${x.pending}`);
+      if (x.curTotal !== x.total)     parts.push(`총재고 ${x.curTotal}→${x.total}`);
+      return `· ${x.label}: ${parts.join(', ')}`;
+    }).join('\n');
+
+    const ok = await customConfirm(
+      `${issues.length}개 상품의 재고 계산이 어긋나 있어요`,
+      `${lines}${issues.length > 8 ? `\n· 외 ${issues.length - 8}개` : ''}\n\n` +
+      `상품화 완료 수량과 채널 배분 수량은 그대로 두고, ` +
+      `거기서 계산되는 가용재고·상품화 대기만 다시 맞춥니다. 진행할까요?`,
+      '바로잡기');
+    if (!ok) return;
+
+    let fixed = 0;
+    for (const x of issues) {
+      const r = await reconcileInventory(x.productId);
+      if (r?.changed) fixed++;
+    }
+    toast(`${fixed}개 상품의 재고를 바로잡았어요 ✓`);
+    loadInvOverview();
+  } catch(e) {
+    console.error('runInventoryAudit', e);
+    toast('점검 실패: ' + e.message);
   }
 }
 
@@ -10043,6 +10215,10 @@ async function saveProduction() {
       available_stock:(inv.available_stock||0)+qty,
       updated_at:new Date().toISOString()
     }).eq('product_id',productId);
+    // 가용재고가 생겼으니 예약 배분을 실배분으로 전환 (이 호출이 빠져 있어서
+    // 생산화해도 예약이 그대로 남고 채널 재고에 반영되지 않았음)
+    try { await applyChReservations(productId); } catch(e){ console.error('예약 전환 실패:', e); }
+    await reconcileInventory(productId);
     toast('생산화 처리됐어요 ✓');
     closeModal('inv-produce-modal'); loadInvOverview();
   } catch(e){ toast('오류: '+e.message); }
@@ -12097,6 +12273,8 @@ async function resolveDefect(defectId, status) {
           available_stock: (inv.available_stock||0) + qty,
           updated_at: new Date().toISOString(),
         }).eq('product_id', item.product_id);
+        try { await applyChReservations(item.product_id); } catch(e){ console.error('예약 전환 실패:', e); }
+        await reconcileInventory(item.product_id);
       }
     } else if (item.type === 'return') {
       // 반품불량 복원: 총재고·상품화·가용 증가 (재사용 가능한 상품으로 다시 계상)
@@ -12109,6 +12287,8 @@ async function resolveDefect(defectId, status) {
           available_stock: (inv.available_stock||0) + qty,
           updated_at: new Date().toISOString(),
         }).eq('product_id', item.product_id);
+        try { await applyChReservations(item.product_id); } catch(e){ console.error('예약 전환 실패:', e); }
+        await reconcileInventory(item.product_id);
       }
     }
   }
@@ -12550,6 +12730,8 @@ async function completeProd(itemId) {
         pending_production: Math.max(0,(inv.pending_production||0)-qty),
         updated_at: new Date().toISOString(),
       }).eq('product_id', item.product_id);
+      try { await applyChReservations(item.product_id); } catch(e){ console.error('예약 전환 실패:', e); }
+      await reconcileInventory(item.product_id);
     }
     // 2. 소모품 차감
     const links = (s.prod_supply_links||{})[item.product_id]||[];
@@ -13022,10 +13204,14 @@ async function saveProdLogEdit() {
   // 재고 조정 (수량 변경 시)
   if (qtyDiff !== 0 && oldLog.product_id) {
     const { data: inv } = await db.from('inventory').select('*').eq('product_id', oldLog.product_id).maybeSingle();
-    if (inv) await db.from('inventory').update({
-      produced_stock:  Math.max(0,(inv.produced_stock||0)+qtyDiff),
-      available_stock: Math.max(0,(inv.available_stock||0)+qtyDiff),
-    }).eq('product_id', oldLog.product_id);
+    if (inv) {
+      await db.from('inventory').update({
+        produced_stock:  Math.max(0,(inv.produced_stock||0)+qtyDiff),
+        available_stock: Math.max(0,(inv.available_stock||0)+qtyDiff),
+      }).eq('product_id', oldLog.product_id);
+      if (qtyDiff > 0) { try { await applyChReservations(oldLog.product_id); } catch(e){ console.error(e); } }
+      await reconcileInventory(oldLog.product_id);
+    }
   }
 
   s.prod_logs[idx] = { ...oldLog, date, product_id: prodId, qty, mins, memo };
