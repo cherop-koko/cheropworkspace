@@ -1026,6 +1026,21 @@ a { text-decoration:none; color:inherit; }
   padding:2px 7px; border-radius:99px; }
 @media (max-width:768px){ .exit-stages { grid-template-columns:repeat(2,1fr); } }
 
+/* 할일 메모 체크리스트 */
+.tck-bar { height:4px; background:var(--surface2); border-radius:99px; overflow:hidden; margin:0 0 8px; }
+.tck-fill { height:100%; background:var(--green); border-radius:99px; transition:width .2s; }
+#task-checklist { border:0.5px solid var(--border); border-radius:8px; padding:10px 12px;
+  background:var(--surface2); margin-bottom:10px; max-height:300px; overflow-y:auto; }
+.tck-row { display:flex; gap:9px; align-items:flex-start; padding:6px 2px; cursor:pointer; border-radius:5px; }
+.tck-row:hover { background:var(--surface); }
+.tck-box { width:17px; height:17px; border:1.5px solid var(--border); border-radius:5px; flex-shrink:0;
+  margin-top:1px; display:flex; align-items:center; justify-content:center; background:var(--surface); transition:.14s; }
+.tck-row.done .tck-box { background:var(--green); border-color:var(--green); }
+.tck-box svg { opacity:0; transition:.14s; }
+.tck-row.done .tck-box svg { opacity:1; }
+.tck-t { font-size:12.5px; line-height:1.5; word-break:break-word; }
+.tck-row.done .tck-t { color:var(--faint); text-decoration:line-through; }
+
 /* 경영계획 — 6개 자산 / 제안 */
 .pl-assets { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
 .pl-ast { border:0.5px solid var(--border); border-radius:10px; padding:11px 13px; background:var(--surface); }
@@ -2463,8 +2478,9 @@ a { text-decoration:none; color:inherit; }
         <div id="plan-tab-annual">
           <div style="display:flex;gap:8px;margin-bottom:14px;">
             <button class="f-btn f-btn-save" style="font-size:12px;padding:7px 16px;" onclick="openPlanItemModal('goal')">+ 연간 목표 추가</button>
-
+            <button class="f-btn f-btn-cancel" style="font-size:12px;padding:7px 16px;" onclick="openPlanMonthlyModal()" title="12개월 목표를 한 화면에서 입력합니다. 연간 목표는 이 합계로 자동 계산됩니다">📊 월별 목표 일괄 입력</button>
           </div>
+          <div id="plan-monthly-hint" style="display:none;margin-bottom:12px;"></div>
           <!-- KPI 요약 카드 -->
           <div id="plan-exit-stages" style="margin-bottom:16px;"></div>
           <div id="plan-kpi-summary" style="margin-bottom:16px;"></div>
@@ -2917,8 +2933,13 @@ a { text-decoration:none; color:inherit; }
         </div>
       </div>
 
-      <div class="modal-memo-lbl">📝 메모</div>
-      <textarea class="modal-textarea" id="task-memo" placeholder="내용을 입력하세요..." style="min-height:340px;"></textarea>
+      <div class="modal-memo-lbl" style="display:flex;align-items:center;gap:8px;">
+        <span>📝 메모</span>
+        <span id="task-ck-progress" style="font-size:11px;color:var(--light);font-weight:400;"></span>
+        <button type="button" onclick="taskCkAddLine()" style="margin-left:auto;font-size:11px;padding:3px 10px;border:0.5px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:var(--font);">+ 체크리스트 줄</button>
+      </div>
+      <div id="task-checklist" style="display:none;"></div>
+      <textarea class="modal-textarea" id="task-memo" placeholder="내용을 입력하세요..." style="min-height:340px;" oninput="renderTaskChecklist()"></textarea>
     </div>
     <div class="modal-footer">
       <button class="f-btn f-btn-cancel" onclick="closeModal('task-modal')">취소</button>
@@ -5322,7 +5343,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.10.1</div>
+<div id="version">v5.10.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5479,11 +5500,78 @@ function applyStarred() {
 }
 function toggleStar() { taskStarred=!taskStarred; applyStarred(); }
 
+/* ── 할일 메모 안의 체크리스트 ──
+   메모는 그냥 텍스트라서, "- [ ] 내용" / "- [x] 내용" 줄을 체크박스로 그려준다.
+   체크하면 그 줄의 문자만 바꾸므로 메모에 적어둔 다른 내용은 그대로 남는다. */
+const TASK_CK_RE = /^(\s*)-\s\[( |x|X)\]\s?(.*)$/;
+
+/* 리스트에서 메모 안 체크리스트 진행률만 빠르게 세기 */
+function taskCkCount(memo) {
+  if (!memo) return null;
+  let total = 0, done = 0;
+  String(memo).split('\n').forEach(l => {
+    const m = l.match(TASK_CK_RE);
+    if (m) { total++; if (m[2].toLowerCase()==='x') done++; }
+  });
+  return total ? { total, done } : null;
+}
+
+function renderTaskChecklist() {
+  const ta = $('task-memo'); const box = $('task-checklist'); const prog = $('task-ck-progress');
+  if (!ta || !box) return;
+  const lines = (ta.value||'').split('\n');
+  const items = [];
+  lines.forEach((ln, i) => {
+    const m = ln.match(TASK_CK_RE);
+    if (m) items.push({ i, done: m[2].toLowerCase()==='x', text: m[3] });
+  });
+  if (!items.length) {
+    box.style.display = 'none'; box.innerHTML = '';
+    ta.style.minHeight = '340px';
+    if (prog) prog.textContent = '';
+    return;
+  }
+  // 체크리스트가 있으면 위쪽 체크박스가 주(主)이고 원문은 편집용으로 줄인다
+  ta.style.minHeight = '140px';
+  const done = items.filter(x=>x.done).length;
+  const pct  = Math.round(done/items.length*100);
+  if (prog) prog.textContent = `${done}/${items.length} 완료`;
+  box.style.display = '';
+  box.innerHTML = `
+    <div class="tck-bar"><div class="tck-fill" style="width:${pct}%"></div></div>
+    ${items.map(it=>`
+      <div class="tck-row${it.done?' done':''}" onclick="taskCkToggle(${it.i})">
+        <span class="tck-box"><svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.4L4 7.4L10 1.4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="tck-t">${escapeHtml(it.text)}</span>
+      </div>`).join('')}`;
+}
+
+function taskCkToggle(lineIdx) {
+  const ta = $('task-memo'); if (!ta) return;
+  const lines = ta.value.split('\n');
+  const m = (lines[lineIdx]||'').match(TASK_CK_RE);
+  if (!m) return;
+  const nowDone = m[2].toLowerCase()==='x';
+  lines[lineIdx] = `${m[1]}- [${nowDone?' ':'x'}] ${m[3]}`;
+  ta.value = lines.join('\n');
+  renderTaskChecklist();
+}
+
+function taskCkAddLine() {
+  const ta = $('task-memo'); if (!ta) return;
+  const v = ta.value;
+  ta.value = (v && !v.endsWith('\n') ? v + '\n' : v) + '- [ ] ';
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  renderTaskChecklist();
+}
+
 function openTaskModal(id) {
   taskIsNew=!id; taskId=id||null; taskSt='todo'; taskUrgent=false; taskStarred=false;
   $('task-modal-kind').textContent=id?'할일 수정':'할일 추가';
   $('task-del-btn').style.display=id?'flex':'none';
   $('task-title').value=''; $('task-note').value=''; $('task-due').value=''; $('task-memo').value='';
+  renderTaskChecklist();
   taskAssignee = tasksWho || (user?.name) || (MEMBERS[0]?.name);
   renderTaskAssigneePills();
   // 속성 접힌 상태로 초기화
@@ -5495,6 +5583,7 @@ function openTaskModal(id) {
       if(!t)return;
       $('task-title').value=t.title||''; $('task-note').value=t.note||'';
       $('task-due').value=t.due_date||''; $('task-memo').value=t.memo||'';
+      renderTaskChecklist();
       taskSt=t.status||'todo'; taskUrgent=!!t.is_urgent; taskStarred=!!t.is_starred;
       taskAssignee = t.assignee || tasksWho;
       renderTaskAssigneePills();
@@ -7082,6 +7171,60 @@ function initTasks(sub='') {
   }
   renderTasksMemberPills();
   loadAllTasks();
+  backfillContentTaskMemos();
+}
+
+/* 자동 생성된 "○○ 콘텐츠 N건 제작" 할일 중, 아직 체크리스트가 없는 것만
+   해당 캠페인의 실제 콘텐츠 목록으로 메모를 채워준다.
+   - 사람이 이미 뭔가 적어둔 메모는 지우지 않고 위에 그대로 남긴다
+   - 이미 체크리스트가 있으면 건너뛴다 (체크한 상태가 날아가지 않도록) */
+let _ckBackfillRan = false;
+async function backfillContentTaskMemos() {
+  if (_ckBackfillRan) return;
+  _ckBackfillRan = true;
+  try {
+    const { data: rows } = await db.from('tasks').select('id,title,memo,status')
+      .like('title', '%건 제작').neq('status','done');
+    if (!rows || !rows.length) return;
+    const s = await getAppState();
+    const camps = s.cplan_campaigns || [];
+    const plans = s.content_plans || [];
+    const DOW = ['일','월','화','수','목','금','토'];
+    const CH  = { reels:'릴스', feed:'피드', story:'스토리', ad:'광고' };
+    let touched = 0;
+
+    for (const t of rows) {
+      if ((t.memo||'').split('\n').some(l => TASK_CK_RE.test(l))) continue;  // 이미 체크리스트 있음
+      const m = String(t.title||'').match(/^(.*?)\s*콘텐츠\s*\d+건 제작$/);
+      if (!m) continue;
+      const nm = m[1].trim();
+      const camp = camps.find(c => c.name === nm);
+      if (!camp) continue;
+      const list = plans.filter(p => p.campaign === camp.id)
+        .sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+      if (!list.length) continue;
+
+      const open = camp.targetDate || list[list.length-1].date;
+      const lines = list.map(p => {
+        const d = p.date ? new Date(p.date+'T00:00:00') : null;
+        const mm = d ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}(${DOW[d.getDay()]})` : '날짜미정';
+        let dd = '';
+        if (p.date && open) {
+          const diff = Math.round((new Date(open+'T00:00:00') - new Date(p.date+'T00:00:00'))/86400000);
+          dd = diff > 0 ? `D-${diff}` : diff === 0 ? '오픈일' : `D+${-diff}`;
+        }
+        const mark = p.status === 'done' ? 'x' : ' ';
+        return `- [${mark}] ${mm}${dd?' '+dd:''} · ${CH[p.channel]||p.channel} · ${p.title}${p.memo?` — ${p.memo}`:''}`;
+      });
+      const head = `${open} 오픈 · 콘텐츠 ${list.length}건\n아래 한 줄이 업로드 한 건입니다. 만든 것부터 체크하세요.`;
+      const tail = `※ 콘텐츠 탭 > 콘텐츠 기획 > 캠페인 '${nm}' 에서 같은 목록을 볼 수 있어요.`;
+      const prev = (t.memo||'').trim();
+      const memo = (prev ? prev + '\n\n' : '') + head + '\n\n' + lines.join('\n') + '\n\n' + tail;
+      await db.from('tasks').update({ memo }).eq('id', t.id);
+      touched++;
+    }
+    if (touched) loadAllTasks();
+  } catch(e) { console.error('backfillContentTaskMemos', e); }
 }
 
 function renderTasksMemberPills() {
@@ -7479,7 +7622,7 @@ function renderTaskRow(t) {
     <div class="trow-info" style="flex:1;min-width:0;">
       <div class="trow-title${done?' done':''}${urgent?' urgent':''}">${t.title}${t.is_starred&&!done?' <span style="color:var(--pink);font-size:12px;font-weight:400;">★</span>':''}</div>
       ${t.note?`<div class="trow-sub">${t.note}</div>`:''}
-      ${dueStr?`<div class="trow-meta"><span class="trow-due${over?' over':''}">${dueStr}</span></div>`:''}
+      ${(dueStr||taskCkCount(t.memo))?`<div class="trow-meta">${dueStr?`<span class="trow-due${over?' over':''}">${dueStr}</span>`:''}${(()=>{const c=taskCkCount(t.memo);return c?`<span style="font-size:10.5px;color:${c.done===c.total?'#3B6D11':'var(--light)'};margin-left:${dueStr?'8px':'0'};">☑ ${c.done}/${c.total}</span>`:'';})()}</div>`:''}
     </div>
     <button class="trow-status-btn ${st.cls}" style="margin-left:8px;flex-shrink:0;font-size:11px;padding:4px 12px;" onclick="event.stopPropagation();cycleTaskStatus(${t.id},'${t.status}')">${st.lbl}</button>
   </div>`;
@@ -14536,7 +14679,8 @@ function opsSetTab(tab, el) {
 /* ═══ 운영캘린더 고정 분류 (추가/삭제 불가) ═══ */
 const OPS_FIXED_CATS = [
   { id:'cat-incoming', name:'입고', color:'#378ADD' },
-  { id:'cat-open',     name:'제품 오픈', color:'#B5487A' },
+  // 오픈은 보라, 팝업은 분홍 — 예전엔 둘 다 자주색 계열이라 캘린더에서 구분이 안 됐음
+  { id:'cat-open',     name:'제품 오픈', color:'#7C5BB8' },
   { id:'cat-popup',    name:'팝업', color:'#D4537E' },
   { id:'cat-meeting',  name:'미팅', color:'#639922' },
   { id:'cat-general',  name:'일정', color:'#EF9F27' },
@@ -14641,8 +14785,8 @@ async function loadOpsCal() {
       ${dayEvts.slice(0,3).map(e=>{
         const cat = opsCatOf(e.cat);
         const isStart = e.startDate === ds;
-        return `<span class="opscal-ev" style="background:${cat.color}1F;color:${cat.color};border-left:2.5px solid ${cat.color};"
-          title="${escapeHtml(e.title||'')}">${isStart?'':'· '}${escapeHtml(e.title||'')}</span>`;
+        return `<span class="opscal-ev" style="background:${cat.color}26;color:${cat.color};border-left:3px solid ${cat.color};"
+          title="${escapeHtml(cat.name)} · ${escapeHtml(e.title||'')}">${isStart?'':'· '}${escapeHtml(e.title||'')}</span>`;
       }).join('')}
       ${dayEvts.length>3?`<span class="opscal-more">+${dayEvts.length-3}</span>`:''}
     </div>`;
@@ -17037,6 +17181,28 @@ const dOff = (baseStr, off) => {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 
+/* 제작 할일의 메모 본문 — 체크박스 한 줄 = 콘텐츠 한 건.
+   "- [ ] 09/28(월) D-7 · 릴스 · 몽슴도치 티저" 형태로, 업로드 날짜와 내용을 함께 적는다. */
+function buildContentTaskMemo(name, ev, list) {
+  const DOW = ['일','월','화','수','목','금','토'];
+  const CH  = { reels:'릴스', feed:'피드', story:'스토리', ad:'광고' };
+  const lines = list.map(([off, ch, label, note]) => {
+    const ds = dOff(ev.startDate, off);
+    const d  = new Date(ds + 'T00:00:00');
+    const dd = off === 0 ? '오픈일' : (off < 0 ? `D${off}` : `D+${off}`);
+    const mm = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}(${DOW[d.getDay()]})`;
+    return `- [ ] ${mm} ${dd} · ${CH[ch]||ch} · ${name} ${label}${note?` — ${note}`:''}`;
+  });
+  return [
+    `${ev.startDate} 오픈 · 콘텐츠 ${list.length}건`,
+    `아래 한 줄이 업로드 한 건입니다. 만든 것부터 체크하세요.`,
+    '',
+    ...lines,
+    '',
+    `※ 콘텐츠 탭 > 콘텐츠 기획 > 캠페인 '${name}' 에서 같은 목록을 볼 수 있어요.`,
+  ].join('\n');
+}
+
 /* ── 일정 하나로부터 전부 생성 ── */
 async function autoGenerateFromEvent(ev, curType, opts = {}) {
   const isPopup = ev.cat === 'cat-popup';
@@ -17122,13 +17288,16 @@ async function autoGenerateFromEvent(ev, curType, opts = {}) {
   });
 
   // 제작 할일 — 대표님 체크리스트 (별도 테이블)
+  // 제목만 "콘텐츠 11건 제작"이면 뭘 만들어야 하는지 알 수 없으므로,
+  // 메모에 업로드 날짜 + 채널 + 콘텐츠명을 체크리스트로 풀어서 넣는다.
   if (opts.task !== false) {
     try {
       await db.from('tasks').insert([{
         title: `${name} 콘텐츠 ${made.content}건 제작`,
         assignee: '고예흰', status: 'todo',
         due_date: dOff(ev.startDate, -7),
-        memo: `${ev.startDate} 오픈 · 첫 발행 ${dOff(ev.startDate, list[0][0])}\n콘텐츠 탭 > 캠페인 '${name}' 에서 ${made.content}건 확인`,
+        note: `${ev.startDate} 오픈 · 업로드 ${made.content}건`,
+        memo: buildContentTaskMemo(name, ev, list),
       }]);
       made.task = 1;
     } catch(e) { console.error('제작 할일 생성 실패:', e); }
@@ -20552,12 +20721,45 @@ function openMonthTargetModal(month, currentTarget) {
   setTimeout(()=>{ const i=$('mth-target-inp'); if(i){i.focus();i.select();} }, 80);
 }
 
+/* 월별 목표는 plan[년].memos.monthly (JSON 문자열) 한 곳에만 저장한다.
+   예전 코드가 plan[년].monthly (객체)에도 쓰던 시기가 있어서, 그때 입력한 목표는
+   화면에서 읽지 않아 "설정했는데 안 뜬다"가 됐다. 아래 두 함수로 한 곳으로 모은다. */
+function readMonthlyGoals(planObj) {
+  let m = {};
+  try { m = planObj?.memos?.monthly ? JSON.parse(planObj.memos.monthly) : {}; } catch(e) { m = {}; }
+  // 레거시 위치(plan[년].monthly)에 남아 있는 값을 흡수 — 이미 있는 달은 덮어쓰지 않음
+  const legacy = planObj?.monthly;
+  if (legacy && typeof legacy === 'object') {
+    Object.keys(legacy).forEach(k => {
+      const t = Number(legacy[k]?.target) || 0;
+      const a = Number(legacy[k]?.actual) || 0;
+      if (!(t || a)) return;
+      const cur = m[k] || {};
+      if (!(Number(cur.target)||0) && t) cur.target = t;
+      if (!(Number(cur.actual)||0) && a) cur.actual = a;
+      m[k] = cur;
+    });
+  }
+  return m;
+}
+
+async function writeMonthlyGoal(month, patch) {
+  await patchAppState(s => {
+    s.plan = s.plan || {};
+    s.plan[planYear] = s.plan[planYear] || { goals:[], items:[], memos:{}, budget:{}, teamGoals:[] };
+    s.plan[planYear].memos = s.plan[planYear].memos || {};
+    const m = readMonthlyGoals(s.plan[planYear]);
+    m[month] = { ...(m[month]||{}), ...patch };
+    s.plan[planYear].memos.monthly = JSON.stringify(m);
+    // 레거시 위치도 같은 값으로 맞춰둔다 (예전 화면과 섞여도 어긋나지 않게)
+    s.plan[planYear].monthly = m;
+    return s;
+  });
+}
+
 async function saveMonthTarget(month) {
   const val = parseInt($('mth-target-inp')?.value)||0;
-  const s = await getPlanData();
-  s.plan[planYear].monthly = s.plan[planYear].monthly||{};
-  s.plan[planYear].monthly[month] = {...(s.plan[planYear].monthly[month]||{}), target:val};
-  await setAppState(s);
+  await writeMonthlyGoal(month, { target: val });
   toast(`${month}월 목표 저장됐어요 ✓`);
   document.getElementById('month-target-modal')?.remove();
   loadPlanAnnual();
@@ -20697,9 +20899,21 @@ async function loadPlanAnnual() {
   const curMonth = now.getFullYear()===planYear ? now.getMonth() : 11;
 
   // 연간 매출 목표 = 월별 목표 12개월 합계 (함수 전체에서 쓰이므로 여기서 선언)
-  let monthlyGoals = {};
-  try { monthlyGoals = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {}; } catch(e) {}
+  const monthlyGoals = readMonthlyGoals(p);
   const monthlySum = Object.values(monthlyGoals).reduce((a,m)=>a+(Number(m?.target)||0),0);
+
+  // 목표가 안 들어간 달이 있으면 알려준다 — 비어 있으면 달성률·연말 예상이 전부 틀어지므로
+  const hintEl = $('plan-monthly-hint');
+  if (hintEl) {
+    const filled = Object.keys(monthlyGoals).filter(k => (Number(monthlyGoals[k]?.target)||0) > 0).length;
+    if (filled < 12) {
+      hintEl.style.display = '';
+      hintEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:0.5px solid #F0D9A8;background:#FDF6E8;border-radius:8px;">
+        <span style="font-size:12px;color:#854F0B;">월별 목표가 <b>${filled}/12개월</b>만 입력돼 있어요. 나머지가 비어 있으면 연간 목표·달성률·연말 예상이 실제보다 낮게 나옵니다.</span>
+        <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 12px;margin-left:auto;white-space:nowrap;" onclick="openPlanMonthlyModal()">지금 채우기</button>
+      </div>`;
+    } else { hintEl.style.display = 'none'; hintEl.innerHTML = ''; }
+  }
 
   // ── KPI 요약 카드 (C안: 강조 카드형) ──
   const kpiEl = $('plan-kpi-summary');
@@ -20827,7 +21041,7 @@ async function loadPlanAnnual() {
         : '<div style="font-size:13px;color:var(--faint);padding:8px 0;">월별 목표를 입력하면 연간 목표가 자동으로 계산됩니다</div>');
 
   // 월별 목표 vs 실적 테이블 렌더
-  const monthly = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {};
+  const monthly = readMonthlyGoals(p);
   // channel_sales_log 기준으로만 실적 집계 (엑셀 업로드 + 직접 입력 데이터)
   const chSalesRes = await db.from('channel_sales_log').select('date,amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
   const salesData = (chSalesRes.data||[]).map(r=>({sale_date:r.date, amount:r.amount}));
@@ -21021,7 +21235,7 @@ async function loadPlanAnnualTable() {
   // 월별 상세 테이블 (지출·순수익 포함) — M3 차트 아래에 함께 렌더
   const s = await getPlanData();
   const p = s.plan[planYear];
-  const monthly = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {};
+  const monthly = readMonthlyGoals(p);
   const now = new Date();
   const curMonth = now.getFullYear()===planYear ? now.getMonth() : 11;
 
@@ -21531,8 +21745,7 @@ function renderPlanMonthlyInputs(monthly) {
 
 async function openPlanMonthlyModal() {
   const s = await getPlanData();
-  const monthly = s.plan[planYear].memos?.monthly
-    ? JSON.parse(s.plan[planYear].memos.monthly) : {};
+  const monthly = readMonthlyGoals(s.plan[planYear]);
   $('plan-monthly-modal-kind').textContent = `${planYear}년 월별 매출 목표 · 실적`;
   $('plan-monthly-modal-sub').textContent  = '단위: 원 (예: 5000000 = 500만원)';
   renderPlanMonthlyInputs(monthly);
@@ -21555,6 +21768,7 @@ async function savePlanMonthlyModal() {
     s.plan[planYear] = s.plan[planYear] || { goals:[], items:[], memos:{}, budget:{}, teamGoals:[] };
     s.plan[planYear].memos = s.plan[planYear].memos || {};
     s.plan[planYear].memos.monthly = JSON.stringify(monthly);
+    s.plan[planYear].monthly = monthly;   // 레거시 위치도 동기화
     return s;
   });
   toast('저장됐어요 ✓');
