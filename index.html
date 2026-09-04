@@ -1039,6 +1039,7 @@ a { text-decoration:none; color:inherit; }
 .tck-box svg { opacity:0; transition:.14s; }
 .tck-row.done .tck-box svg { opacity:1; }
 .tck-t { font-size:12.5px; line-height:1.5; word-break:break-word; }
+.tck-note { font-size:11.5px; color:var(--muted); line-height:1.6; margin:0 0 10px; }
 .tck-row.done .tck-t { color:var(--faint); text-decoration:line-through; }
 
 /* 경영계획 — 6개 자산 / 제안 */
@@ -2936,7 +2937,10 @@ a { text-decoration:none; color:inherit; }
       <div class="modal-memo-lbl" style="display:flex;align-items:center;gap:8px;">
         <span>📝 메모</span>
         <span id="task-ck-progress" style="font-size:11px;color:var(--light);font-weight:400;"></span>
-        <button type="button" onclick="taskCkAddLine()" style="margin-left:auto;font-size:11px;padding:3px 10px;border:0.5px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:var(--font);">+ 체크리스트 줄</button>
+        <span style="margin-left:auto;display:flex;gap:6px;">
+          <button type="button" id="task-memo-raw-btn" onclick="taskCkToggleRaw()" style="display:none;font-size:11px;padding:3px 10px;border:0.5px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:var(--font);">✏️ 원문 편집</button>
+          <button type="button" onclick="taskCkAddLine()" style="font-size:11px;padding:3px 10px;border:0.5px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:var(--font);">+ 체크리스트 줄</button>
+        </span>
       </div>
       <div id="task-checklist" style="display:none;"></div>
       <textarea class="modal-textarea" id="task-memo" placeholder="내용을 입력하세요..." style="min-height:340px;" oninput="renderTaskChecklist()"></textarea>
@@ -5343,7 +5347,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.10.2</div>
+<div id="version">v5.10.3</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5516,34 +5520,65 @@ function taskCkCount(memo) {
   return total ? { total, done } : null;
 }
 
+/* 체크리스트가 있을 때 원문(textarea)을 펼쳐 놨는지 */
+let _taskRawOpen = false;
+
+function taskCkToggleRaw() {
+  _taskRawOpen = !_taskRawOpen;
+  renderTaskChecklist();
+  if (_taskRawOpen) { const ta = $('task-memo'); if (ta) ta.focus(); }
+}
+
 function renderTaskChecklist() {
   const ta = $('task-memo'); const box = $('task-checklist'); const prog = $('task-ck-progress');
+  const rawBtn = $('task-memo-raw-btn');
   if (!ta || !box) return;
   const lines = (ta.value||'').split('\n');
   const items = [];
+  const plain = [];
   lines.forEach((ln, i) => {
     const m = ln.match(TASK_CK_RE);
     if (m) items.push({ i, done: m[2].toLowerCase()==='x', text: m[3] });
+    else if (ln.trim()) plain.push(ln.trim());
   });
   if (!items.length) {
+    // 체크리스트가 없으면 예전처럼 메모창만 보여준다
     box.style.display = 'none'; box.innerHTML = '';
-    ta.style.minHeight = '340px';
+    ta.style.display = ''; ta.style.minHeight = '340px';
+    if (rawBtn) rawBtn.style.display = 'none';
     if (prog) prog.textContent = '';
     return;
   }
-  // 체크리스트가 있으면 위쪽 체크박스가 주(主)이고 원문은 편집용으로 줄인다
-  ta.style.minHeight = '140px';
+  // 체크리스트가 있으면 체크박스가 본문이고, 원문은 [원문 편집]을 눌렀을 때만 보여준다.
+  // (둘 다 보이면 같은 내용이 두 번 나와서 읽기 어려움)
   const done = items.filter(x=>x.done).length;
   const pct  = Math.round(done/items.length*100);
   if (prog) prog.textContent = `${done}/${items.length} 완료`;
+  if (rawBtn) {
+    rawBtn.style.display = '';
+    rawBtn.textContent = _taskRawOpen ? '✓ 원문 닫기' : '✏️ 원문 편집';
+  }
+  ta.style.display = _taskRawOpen ? '' : 'none';
+  ta.style.minHeight = '200px';
+
+  // 체크박스가 아닌 줄(설명·안내문)은 위아래로 나눠서 한 번만 보여준다
+  const headLines = [], tailLines = [];
+  const firstCk = items[0].i, lastCk = items[items.length-1].i;
+  lines.forEach((ln, i) => {
+    if (!ln.trim() || TASK_CK_RE.test(ln)) return;
+    (i < firstCk ? headLines : (i > lastCk ? tailLines : tailLines)).push(ln.trim());
+  });
+
   box.style.display = '';
   box.innerHTML = `
+    ${headLines.length?`<div class="tck-note">${headLines.map(escapeHtml).join('<br>')}</div>`:''}
     <div class="tck-bar"><div class="tck-fill" style="width:${pct}%"></div></div>
     ${items.map(it=>`
       <div class="tck-row${it.done?' done':''}" onclick="taskCkToggle(${it.i})">
         <span class="tck-box"><svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.4L4 7.4L10 1.4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         <span class="tck-t">${escapeHtml(it.text)}</span>
-      </div>`).join('')}`;
+      </div>`).join('')}
+    ${tailLines.length?`<div class="tck-note" style="margin:8px 0 0;">${tailLines.map(escapeHtml).join('<br>')}</div>`:''}`;
 }
 
 function taskCkToggle(lineIdx) {
@@ -5571,6 +5606,7 @@ function openTaskModal(id) {
   $('task-modal-kind').textContent=id?'할일 수정':'할일 추가';
   $('task-del-btn').style.display=id?'flex':'none';
   $('task-title').value=''; $('task-note').value=''; $('task-due').value=''; $('task-memo').value='';
+  _taskRawOpen = false;
   renderTaskChecklist();
   taskAssignee = tasksWho || (user?.name) || (MEMBERS[0]?.name);
   renderTaskAssigneePills();
