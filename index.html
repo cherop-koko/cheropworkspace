@@ -880,7 +880,7 @@ a { text-decoration:none; color:inherit; }
   div[style*="grid-template-columns:repeat(7,1fr)"] > div { min-width:0; overflow:hidden; }
 
   /* ── 운영 캘린더: 셀 축소 ── */
-  #ops-cal div[style*="min-height:64px"] { min-height:52px !important; padding:3px 3px !important; }
+  #ops-cal div[style*="height:104px"] { height:88px !important; padding:3px 3px !important; }
 
   /* ── 작업기록 퀵바: 수량/버튼 터치 크기 ── */
   #work-log-qty { flex:1; min-width:70px; font-size:14px !important; }
@@ -1265,6 +1265,7 @@ a { text-decoration:none; color:inherit; }
             <div class="tcol-head"><div class="tcol-title">프로젝트 업무</div><div class="tcol-count" id="ptask-count">0건</div></div>
             <div class="tcol-body" id="ptask-list"></div>
             <div class="tcol-add" onclick="openPtaskModal(null)">+ 프로젝트 업무 추가</div>
+            <div class="tcol-add" onclick="openTplModal('popup')" title="팝업 일정 등록 시 자동으로 만들어질 준비 업무를 정합니다">⚙ 팝업 준비 템플릿</div>
           </div>
           <div class="tcol">
             <div class="tcol-head"><div class="tcol-title">비고</div><div class="tcol-count" id="memo-count">0건</div></div>
@@ -1987,6 +1988,7 @@ a { text-decoration:none; color:inherit; }
               <span id="cplan-dday" style="font-size:11px;padding:3px 10px;border-radius:20px;background:#FCEBEB;color:#A32D2D;font-weight:500;display:none;"></span>
               <span id="cplan-count" style="font-size:12px;color:var(--light);"></span>
               <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;white-space:nowrap;" onclick="openTplModal('cur')" title="오픈 유형별로 자동 생성될 콘텐츠를 정합니다">⚙ 커리큘럼</button>
                 <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;white-space:nowrap;" onclick="cplanNewCampaign()">+ 새 캠페인</button>
                 <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;white-space:nowrap;" onclick="cplanEditCampaign()">캠페인 설정</button>
                 <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;white-space:nowrap;" onclick="cplanCopyFromCampaign()" title="다른 캠페인의 일정 구성을 목표일 간격(D-N)을 유지한 채 그대로 가져옵니다">일정 복사</button>
@@ -4279,6 +4281,24 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <!-- ═══ 운영: 일정 등록/편집 모달 ═══ -->
+<div class="modal-overlay" id="tpl-modal" onclick="if(event.target===this)closeModal('tpl-modal')">
+  <div class="modal" style="max-width:680px;" onclick="event.stopPropagation()">
+    <div class="modal-bar">
+      <div class="modal-kind" id="tpl-modal-kind">템플릿 편집</div>
+      <div class="modal-bar-right"><div class="mbtn" onclick="closeModal('tpl-modal')">✕</div></div>
+    </div>
+    <div class="modal-body">
+      <p id="tpl-desc" style="margin:0 0 12px;font-size:12px;color:var(--muted);line-height:1.6;"></p>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;" id="tpl-tabs"></div>
+      <div style="border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;max-height:52vh;overflow-y:auto;" id="tpl-body"></div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;align-items:center;">
+      <span id="tpl-impact" style="font-size:11.5px;color:var(--muted);text-align:left;line-height:1.5;"></span>
+      <button class="f-btn f-btn-save" onclick="saveTplModal()">저장</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="ops-event-modal" onclick="if(event.target===this)closeModal('ops-event-modal')">
   <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
     <div class="modal-bar">
@@ -4294,20 +4314,35 @@ a { text-decoration:none; color:inherit; }
         <div class="prop-row">
           <div class="prop-icon">🏷</div><div class="prop-label">분류</div>
           <div class="prop-val">
-            <select class="prop-inp" id="ops-event-cat">
+            <select class="prop-inp" id="ops-event-cat" onchange="opsPreviewGen()">
               <option value="">분류 선택</option>
             </select>
           </div>
         </div>
         <div class="prop-row">
           <div class="prop-icon">📅</div><div class="prop-label">시작일</div>
-          <div class="prop-val"><input type="date" class="prop-inp" id="ops-event-start"></div>
+          <div class="prop-val"><input type="date" class="prop-inp" id="ops-event-start" oninput="opsPreviewGen()"></div>
         </div>
         <div class="prop-row">
           <div class="prop-icon">📅</div><div class="prop-label">종료일</div>
           <div class="prop-val">
             <input type="date" class="prop-inp" id="ops-event-end">
             <div style="font-size:11px;color:var(--light);margin-top:4px;">하루 일정이면 시작일만 입력</div>
+          </div>
+        </div>
+        <div class="prop-row" id="ops-e-curwrap" style="display:none;">
+          <div class="prop-icon">✨</div><div class="prop-label">커리큘럼</div>
+          <div class="prop-val">
+            <select class="prop-inp" id="ops-event-curtype" onchange="opsPreviewGen()">
+              <option value="normal">일반 신제품</option>
+              <option value="hero">히어로 (사과트리·코코·꽃바구니 등)</option>
+              <option value="popup">팝업</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12px;color:var(--muted);cursor:pointer;">
+              <input type="checkbox" id="ops-event-islocal" style="width:16px;height:16px;" onchange="opsPreviewGen()">
+              지방 팝업 (숙소 예약 등 추가)
+            </label>
+            <div id="ops-gen-preview" style="margin-top:9px;"></div>
           </div>
         </div>
         <div class="prop-row">
@@ -5150,7 +5185,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.9.6</div>
+<div id="version">v5.10.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -7098,6 +7133,24 @@ const defaultRoutines = {
   '김성애':[{id:'r1',label:'불량 접수 확인'},{id:'r2',label:'QC 체크리스트 작성'}],
 };
 
+/* 예전 버그로 URL 인코딩된 멤버명 키가 생긴 것을 1회 정리 */
+async function cleanupBrokenRoutineKeys() {
+  try {
+    const s = await getAppState();
+    const bad = Object.keys(s.routines||{}).filter(k => k.includes('%'));
+    if (!bad.length) return;
+    await patchAppState(x => {
+      bad.forEach(k => {
+        let real = k; try { real = decodeURIComponent(k); } catch(e) {}
+        if (real !== k && !x.routines[real]?.length && x.routines[k]?.length) x.routines[real] = x.routines[k];
+        delete x.routines[k];
+      });
+      return x;
+    });
+    console.log('깨진 루틴 키 정리:', bad);
+  } catch(e) { console.error('cleanupBrokenRoutineKeys', e); }
+}
+
 async function loadRoutines() {
   try {
     const s=await getAppState();
@@ -7106,9 +7159,30 @@ async function loadRoutines() {
     // 예전에는 localStorage에만 있어서 (1) 모바일에서 체크하고 PC를 열면 전부 미완료로 보이고
     // (2) 대표님이 직원 탭을 열면 본인 브라우저 값을 읽어 항상 0/N 이었음.
     const done = new Set(routineDoneOf(s, tasksWho, dateStr()));
-    const cnt=routines.filter(r=>done.has(r.id)).length;
+
+    // 오늘 발행할 콘텐츠를 루틴 맨 위에 얹음 (담당자 지정분 + 미지정은 대표님)
+    const today = dateStr();
+    const todayPlans = (s.content_plans||[]).filter(p =>
+      p.date === today && p.status !== 'done' &&
+      ((p.assignee || '고예흰') === tasksWho));
+    const cnt=routines.filter(r=>done.has(r.id)).length + 0;
     $('routine-count').textContent=`${cnt}/${routines.length}`;
-    $('routine-list').innerHTML=routines.length
+    const planHtml = todayPlans.map(p=>{
+      const ch = CPLAN_CH[p.channel] || CPLAN_CH.feed;
+      return `<div class="ritem" style="padding-right:8px;">
+        <div style="flex:1;display:flex;align-items:center;gap:10px;" onclick="routinePublish('${p.id}')">
+          <div class="rcheck"></div>
+          <div class="rlabel" style="min-width:0;">
+            <span style="font-size:10px;padding:1px 7px;border-radius:4px;background:${ch.bg};color:${ch.fg};margin-right:6px;">${ch.label}</span>${escapeHtml(p.title||'')}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    const planHead = todayPlans.length
+      ? `<div style="padding:7px 16px 4px;font-size:10.5px;color:var(--light);letter-spacing:.03em;">오늘 발행 ${todayPlans.length}건</div>${planHtml}
+         <div style="height:1px;background:var(--border);margin:6px 16px;"></div>`
+      : '';
+    $('routine-list').innerHTML = planHead + (routines.length
       ? routines.map(r=>`
           <div class="ritem" data-id="${r.id}" style="padding-right:8px;cursor:grab;">
             <div style="flex:1;display:flex;align-items:center;gap:10px;" onclick="toggleRoutine('${r.id}')">
@@ -7117,7 +7191,7 @@ async function loadRoutines() {
             </div>
             <div class="mbtn" style="width:22px;height:22px;font-size:11px;flex-shrink:0;opacity:.4;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.4'" onclick="openRoutineEditModal('${r.id}','${r.label.replace(/'/g,"\\'")}')">✏</div>
           </div>`).join('')
-      : '<div style="padding:12px 16px;font-size:12px;color:var(--faint);">루틴이 없어요</div>';
+      : (todayPlans.length ? '' : '<div style="padding:12px 16px;font-size:12px;color:var(--faint);">루틴이 없어요</div>'));
     // 드래그로 순서 변경
     if (routines.length) {
       initDragList('routine-list', '.ritem', async (ids) => {
@@ -7130,6 +7204,20 @@ async function loadRoutines() {
       });
     }
   } catch(e) { console.error('loadRoutines',e); }
+}
+
+/* 루틴에서 오늘 콘텐츠를 체크 → 콘텐츠 기획 상태를 '발행완료'로 */
+async function routinePublish(planId) {
+  try {
+    await patchAppState(s => {
+      const p = (s.content_plans||[]).find(x => x.id === planId);
+      if (p) { p.status = 'done'; p.publishedAt = new Date().toISOString(); }
+      return s;
+    });
+    toast('발행 완료로 표시했어요 ✓');
+  } catch(e) { console.error(e); toast('저장 실패 — 다시 시도해 주세요'); return; }
+  loadRoutines();
+  if (typeof loadDashRoutineAll === 'function') loadDashRoutineAll();
 }
 
 /* app_state.routine_done[날짜][멤버] = [루틴id...] */
@@ -14298,10 +14386,13 @@ function opsSetTab(tab, el) {
 /* ═══ 운영캘린더 고정 분류 (추가/삭제 불가) ═══ */
 const OPS_FIXED_CATS = [
   { id:'cat-incoming', name:'입고', color:'#378ADD' },
+  { id:'cat-open',     name:'제품 오픈', color:'#B5487A' },
   { id:'cat-popup',    name:'팝업', color:'#D4537E' },
   { id:'cat-meeting',  name:'미팅', color:'#639922' },
   { id:'cat-general',  name:'일정', color:'#EF9F27' },
 ];
+// 자동 생성이 붙는 분류 (오픈·팝업)
+const AUTOGEN_CATS = ['cat-open','cat-popup'];
 // 알 수 없는/빈 분류 → '일정' 취급
 function opsCatOf(catId) {
   return OPS_FIXED_CATS.find(c=>c.id===catId) || OPS_FIXED_CATS.find(c=>c.id==='cat-general');
@@ -14394,18 +14485,20 @@ async function loadOpsCal() {
     const isWk= dow>=5;
     const dayEvts = mEvents.filter(e => e.startDate<=ds && (e.endDate||e.startDate)>=ds);
     const hasProd = dayEvts.length>0;
-    html+=`<div onclick="opsSelectDay('${ds}')" style="min-height:64px;border-radius:6px;padding:5px 6px;cursor:pointer;
+    // 칸 높이를 고정해 주마다 들쭉날쭉하지 않게 하고, 긴 제목은 잘라내지 않고 줄바꿈
+    html+=`<div onclick="opsSelectDay('${ds}')" style="height:104px;border-radius:6px;padding:5px 6px;cursor:pointer;
+      overflow:hidden;display:flex;flex-direction:column;gap:2px;
       border:${isToday?'1.5px solid var(--text)':'0.5px solid transparent'};
       background:transparent;"
       onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
-      <div style="font-size:12px;color:${isWk?'var(--red)':isToday?'var(--text)':'var(--light)'};font-weight:${isToday?'600':'400'};">${day}</div>
-      ${dayEvts.slice(0,2).map(e=>{
+      <div style="font-size:12px;flex-shrink:0;color:${isWk?'var(--red)':isToday?'var(--text)':'var(--light)'};font-weight:${isToday?'600':'400'};">${day}</div>
+      ${dayEvts.slice(0,3).map(e=>{
         const cat = opsCatOf(e.cat);
         const bg  = cat ? cat.color+'22' : 'var(--surface2)';
-        const col = cat ? cat.color      : 'var(--muted)';
-        return `<div style="font-size:11px;margin-top:2px;padding:2px 5px;border-radius:3px;background:${bg};color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.title}</div>`;
+        return `<div style="font-size:10.5px;line-height:1.3;padding:2px 5px;border-radius:3px;background:${bg};color:var(--text);
+          white-space:normal;word-break:keep-all;overflow-wrap:anywhere;">${escapeHtml(e.title||'')}</div>`;
       }).join('')}
-      ${dayEvts.length>2?`<div style="font-size:9px;color:var(--light);padding:1px 4px;">+${dayEvts.length-2}</div>`:''}
+      ${dayEvts.length>3?`<div style="font-size:9px;color:var(--light);padding:1px 4px;">+${dayEvts.length-3}</div>`:''}
     </div>`;
   }
   html+='</div>';
@@ -14494,8 +14587,47 @@ async function openOpsEventModal(id='') {
     $('ops-event-memo').value   = '';
     $('ops-event-status').value = 'planned';
   }
+  // 편집 모드에서는 자동 생성을 다시 돌리지 않음 (이미 만들어진 것과 중복되므로)
+  $('ops-event-curtype').value = (id && (await getAppState()).ops_events?.find(x=>x.id===id)?.curType) || 'normal';
+  $('ops-event-islocal').checked = false;
+  opsPreviewGen();
   $('ops-event-modal').classList.add('on');
   setTimeout(()=>$('ops-event-title').focus(),80);
+}
+
+/* 분류가 오픈·팝업이면 무엇이 자동 생성되는지 미리 보여줌 */
+async function opsPreviewGen() {
+  const wrap = $('ops-e-curwrap'); if (!wrap) return;
+  const cat = $('ops-event-cat')?.value;
+  const isGen = AUTOGEN_CATS.includes(cat) && !opsEventEditId;
+  wrap.style.display = isGen ? '' : 'none';
+  if (!isGen) return;
+  const isPopup = cat === 'cat-popup';
+  const sel = $('ops-event-curtype');
+  if (isPopup && sel.value !== 'popup') sel.value = 'popup';
+  $('ops-event-islocal').parentElement.style.display = isPopup ? 'flex' : 'none';
+
+  const start = $('ops-event-start').value;
+  if (!start) { $('ops-gen-preview').innerHTML = ''; return; }
+  const cur = await getCurriculum();
+  const list = cur[sel.value] || cur.normal;
+  const tpl = await getPopupTpl();
+  const isLocal = $('ops-event-islocal').checked;
+  const ptaskN = isPopup ? tpl.reduce((a,[g,c,rows]) => a + rows.filter(r => !r[3] || isLocal).length, 0) : 0;
+  const first = dOff(start, list[0][0]);
+
+  const item = (icon, t, d) => `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 9px;border:0.5px solid var(--border);border-radius:8px;">
+    <span style="flex-shrink:0;">${icon}</span><div style="min-width:0;">
+    <div style="font-size:11.5px;font-weight:500;">${t}</div>
+    <div style="font-size:10.5px;color:var(--light);margin-top:1px;">${d}</div></div></div>`;
+  $('ops-gen-preview').innerHTML =
+    `<div style="font-size:11px;color:var(--light);margin-bottom:6px;">저장하면 아래가 함께 만들어집니다</div>
+     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+       ${item('📅', `콘텐츠 ${list.length}건`, `${first}부터`)}
+       ${item('✓', '제작 할일 1건', `고예흰 · ${dOff(start,-7)}`)}
+       ${isPopup ? item('📋', `프로젝트 업무 ${ptaskN}건`, '7개 분류 · 담당자 자동 배정')
+                 : item('🧸', '라인업 카드 1개', '사진은 라인업 탭에서 추가')}
+     </div>`;
 }
 
 async function saveOpsEvent() {
@@ -14511,24 +14643,57 @@ async function saveOpsEvent() {
     memo: $('ops-event-memo').value.trim(),
     status: $('ops-event-status').value||'planned',
   };
+  const isGen = AUTOGEN_CATS.includes(data.cat) && !opsEventEditId;
+  const curType = isGen ? ($('ops-event-curtype')?.value || 'normal') : null;
+  const isLocal = isGen ? !!$('ops-event-islocal')?.checked : false;
+  let newEv = null;
+
   if(opsEventEditId){
     const idx = s.ops_events.findIndex(e=>e.id===opsEventEditId);
     if(idx>=0) s.ops_events[idx] = { ...s.ops_events[idx], ...data };
   } else {
-    s.ops_events.push({ id:`ev-${Date.now()}`, ...data });
+    newEv = { id:`ev-${Date.now()}`, ...data };
+    if (isGen) { newEv.curType = curType; newEv.isLocal = isLocal; }
+    s.ops_events.push(newEv);
   }
   await setAppState(s);
-  toast(opsEventEditId ? '수정됐어요 ✓' : '일정이 등록됐어요 ✓');
+
+  // 오픈·팝업이면 콘텐츠·할일·라인업·프로젝트를 함께 생성
+  if (isGen && newEv) {
+    try {
+      const tpl = await getPopupTpl();
+      const made = await autoGenerateFromEvent(newEv, curType, { popupTpl: tpl, isLocal });
+      const parts = [`콘텐츠 ${made.content}건`];
+      if (made.task)   parts.push('제작 할일 1건');
+      if (made.lineup) parts.push('라인업 카드 1개');
+      if (made.ptask)  parts.push(`프로젝트 업무 ${made.ptask}건`);
+      toast(`일정 등록 ✓ ${parts.join(' · ')} 생성됐어요`);
+    } catch(e) {
+      console.error('자동 생성 실패:', e);
+      toast('일정은 등록됐지만 자동 생성에 실패했어요: ' + (e.message||''));
+    }
+  } else {
+    toast(opsEventEditId ? '수정됐어요 ✓' : '일정이 등록됐어요 ✓');
+  }
   closeModal('ops-event-modal');
   loadOpsCal();
 }
 
 async function deleteOpsEvent() {
   if(!opsEventEditId) return;
-  const ok = await customConfirm('일정을 삭제할까요?'); if(!ok) return;
+  const s0 = await getAppState();
+  const ev = (s0.ops_events||[]).find(e=>e.id===opsEventEditId);
+  const linked = ev && AUTOGEN_CATS.includes(ev.cat)
+    ? (s0.content_plans||[]).filter(p=>p.srcEvent===ev.id).length
+      + (s0.proj_tasks||[]).filter(t=>t.srcEvent===ev.id).length
+    : 0;
+  const ok = await customConfirm('일정을 삭제할까요?',
+    linked ? `이 일정에서 만들어진 ${linked}건도 함께 정리됩니다.\n(이미 발행완료·완료 처리한 건은 남습니다)` : '');
+  if(!ok) return;
   const s = await getAppState();
   s.ops_events = (s.ops_events||[]).filter(e=>e.id!==opsEventEditId);
   await setAppState(s);
+  if (linked) { try { await autoCleanupForEvent(opsEventEditId); } catch(e){ console.error(e); } }
   toast('삭제됐어요'); closeModal('ops-event-modal'); loadOpsCal();
 }
 
@@ -15433,7 +15598,12 @@ async function loadLineupProducts() {
 
   el.innerHTML = `<div id="lineup-grid-inner" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">` +
     prods.map((p,idx)=>{
-      const st   = p.status||'sample';
+      // 출시일이 지났으면 자동으로 '출시 완료'로 표시.
+      // 샘플 제작중·제품 제작중은 직접 정한 상태이므로 건드리지 않음.
+      let st = p.status||'sample';
+      if ((st === 'ready' || st === 'launched') && p.launch) {
+        st = (p.launch <= dateStr()) ? 'launched' : 'ready';
+      }
       const sc   = STATUS_COLOR[st]||STATUS_COLOR.sample;
       const dim  = st==='discontinued' ? 'opacity:.45;' : '';
       const monthLabel = p.month ? `${p.month}월` : '';
@@ -16580,10 +16750,337 @@ let _cplanExpandedId = null;
 let _cplanModalCh = 'reels';
 let _cplanModalSt = 'idea';
 
+
+/* ═══════════════════════════════════════════════════════════
+   오픈·팝업 자동 생성 엔진
+   운영 캘린더에 오픈/팝업 일정을 등록하면 아래가 한 번에 만들어짐:
+     · 콘텐츠 기획   (커리큘럼 템플릿 기준)
+     · 제작 할일     (대표님 체크리스트, 오픈 D-7)
+     · 라인업 카드   (제품 오픈일 때)
+     · 프로젝트+업무 (팝업일 때, 준비 템플릿 기준)
+   템플릿은 app_state에 저장되어 화면에서 수정 가능 —
+   코드에 박아두면 바꿀 때마다 파일을 고쳐야 하므로.
+═══════════════════════════════════════════════════════════ */
+
+/* 커리큘럼 기본값 — [D-day offset, 채널, 내용, 메모] */
+const DEFAULT_CURRICULUM = {
+  normal: [
+    [-7,'story','실루엣 티저','"다음 주 새 친구"'],
+    [-5,'story','투표 스토리','이름 맞히기 / 어떤 동물'],
+    [-3,'feed','캐릭터 짤 (오픈 예고)',''],
+    [-3,'story','"목요일 오픈"',''],
+    [-2,'ad','광고 소재 투입',''],
+    [-2,'story','무물 스토리',''],
+    [-1,'story','무물 답변 3개 + "내일 오픈"',''],
+    [0,'feed','신제품 안내 피드',''],
+    [0,'story','오픈 스토리 3개','오픈 알림 / 링크 / 첫 후기'],
+    [1,'reels','신제품 릴스',''],
+    [2,'story','후기 리그램 + 투표','"다음엔 누구?"'],
+  ],
+  hero: [
+    [-10,'story','첫 힌트 스토리','소품만, 실루엣 없이'],
+    [-7,'story','티저 2탄 + 투표',''],
+    [-5,'story','무물 스토리','답은 D-1까지 아낌'],
+    [-3,'feed','티저 짤','핵심은 안 보여줌'],
+    [-2,'ad','광고 소재 투입',''],
+    [-2,'story','무물 답변 1차 + 카운트다운',''],
+    [-1,'reels','15초 티저 릴스','개봉 직전에서 컷'],
+    [0,'feed','오픈 안내 + 세트 구성',''],
+    [0,'story','오픈 스토리 3개 + 1시간 후 반응',''],
+    [1,'reels','개봉·수납 풀버전 릴스',''],
+    [2,'story','후기 리그램 릴레이 + 투표','"세트 vs 단품"'],
+    [4,'reels','2차 릴스','주말 도달 재점화'],
+  ],
+  popup: [
+    [-7,'feed','팝업 안내 피드',''],
+    [-7,'story','"가실 분?" 투표',''],
+    [-5,'ad','지역 타겟 광고 투입',''],
+    [-3,'story','무물 + 한정 사은품 예고',''],
+    [-1,'reels','세팅 비하인드 릴스',''],
+    [-1,'story','"내일 오픈"',''],
+    [0,'feed','오픈 당일 현장 피드',''],
+    [0,'story','현장 라이브 스토리 3개',''],
+    [1,'story','기간 중 매일 스토리 3','현장·제품·소통'],
+    [3,'reels','현장 릴스','수요일'],
+  ],
+};
+const CURRICULUM_LABEL = { normal:'일반 신제품', hero:'히어로', popup:'팝업' };
+
+/* 팝업 준비 템플릿 기본값 — 판교·서울·센텀 실제 등록 업무에서 도출
+   [분류, 색, [[D-day, 업무명, 담당자, 지방전용여부], ...]] */
+const DEFAULT_POPUP_TPL = [
+  ['현장미팅','#6D5B9E',[
+    [-45,'현장 미팅 · 조건 협의','김효민',0],
+    [-42,'백화점 지원 내용 확인','김효민',0],
+    [-40,'수수료·정산 조건 확정','김효민',0],
+  ]],
+  ['실측','#3B7FC4',[
+    [-35,'현장 실측 · 도면 확인','김효민',0],
+    [-35,'전기·조명·급배수 확인','김효민',0],
+    [-3,'바닥 보양 실시','김효민',0],
+  ]],
+  ['레이아웃','#5F9270',[
+    [-30,'인테리어 집기 · 제품 배치 결정','고예흰',0],
+    [-28,'인테리어 시안 · 사인물 디자인','고예흰',0],
+    [-26,'인테리어 업체 계약','김효민',0],
+  ]],
+  ['공간기획','#D4537E',[
+    [-22,'인테리어 포맥스 · 폼보드 제작','고예흰',0],
+    [-20,'VP 메인 디스플레이 작업','고예흰',0],
+    [-18,'조형물 제작','정현진',0],
+    [-16,'POP 안내판 디자인','고예흰',0],
+    [-14,'A3 거치대 · 이젤 준비','정현진',0],
+  ]],
+  ['마케팅기획','#B8964F',[
+    [-25,'팝업 마케팅 기획','고예흰',0],
+    [-24,'팝업 계획서 작성','김효민',0],
+    [-20,'GWP 기획','김효민',0],
+    [-14,'GWP 제작','고예흰',0],
+    [-12,'팝업용 엽서 제작','고예흰',0],
+    [-10,'SNS 팝업 공지 디자인','고예흰',0],
+    [-10,'리소스 이미지 · 영상 준비','정현진',0],
+    [-8,'브랜드 정보 정리','김효민',0],
+  ]],
+  ['재고준비','#C0685F',[
+    [-14,'제품리스트 · 진열 재고 설정','정현진',0],
+    [-12,'채널 배분에 팝업 물량 예약','정현진',0],
+    [-10,'굿즈류 제작','김효민',0],
+    [-8,'팝업 매장 판매 사은품','정현진',0],
+    [-3,'현장 반출 · 재고 실사','정현진',0],
+  ]],
+  ['실무','#4A4D57',[
+    [-20,'인력 계획 · 채용','김효민',0],
+    [-10,'스태프 티셔츠 발주','김효민',0],
+    [-7,'가격표 디자인 · 출력','김효민',0],
+    [-6,'토스 POS 준비','정현진',0],
+    [-6,'온라인 판매 연동','정현진',0],
+    [-5,'숙소 예약','김효민',1],
+    [-2,'최종 점검 · 반출 리스트 확인','김효민',0],
+    [-1,'현장 세팅','김효민',0],
+  ]],
+];
+
+/* 템플릿 읽기 — 저장된 게 없으면 기본값 */
+async function getCurriculum(state) {
+  const s = state || await getAppState();
+  const t = s.tpl_curriculum;
+  if (!t || !t.normal) return JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
+  return t;
+}
+async function getPopupTpl(state) {
+  const s = state || await getAppState();
+  const t = s.tpl_popup;
+  if (!Array.isArray(t) || !t.length) return JSON.parse(JSON.stringify(DEFAULT_POPUP_TPL));
+  return t;
+}
+
+const dOff = (baseStr, off) => {
+  const d = new Date(baseStr + 'T00:00:00');
+  d.setDate(d.getDate() + off);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+/* ── 일정 하나로부터 전부 생성 ── */
+async function autoGenerateFromEvent(ev, curType, opts = {}) {
+  const isPopup = ev.cat === 'cat-popup';
+  const name = String(ev.title || '').replace(/\s*(오픈|팝업 오픈|팝업)\s*$/,'').trim() || ev.title;
+  const made = { content:0, task:0, lineup:0, ptask:0 };
+
+  const cur = await getCurriculum();
+  const list = cur[curType] || cur.normal;
+
+  await patchAppState(s => {
+    s.content_plans = s.content_plans || [];
+    s.cplan_campaigns = s.cplan_campaigns || [];
+
+    // 캠페인 — 이 일정 전용
+    const campId = 'camp-ev-' + ev.id;
+    if (!s.cplan_campaigns.find(c => c.id === campId)) {
+      s.cplan_campaigns.push({ id: campId, name, targetDate: ev.startDate, srcEvent: ev.id });
+    }
+
+    // 콘텐츠 — srcEvent/srcKey를 남겨야 나중에 커리큘럼 변경분을 되짚을 수 있음
+    list.forEach((row, i) => {
+      const [off, ch, label, note] = row;
+      s.content_plans.push({
+        id: `cp-ev-${ev.id}-${i}`,
+        campaign: campId,
+        title: `${name} ${label}`,
+        date: dOff(ev.startDate, off),
+        channel: ch === 'ad' ? 'ad' : ch,
+        status: 'idea',
+        assignee: '', ref: '', memo: note || '',
+        srcEvent: ev.id, srcType: curType, srcKey: i, srcOff: off,
+        createdAt: new Date().toISOString(),
+      });
+      made.content++;
+    });
+
+    // 라인업 카드 — 제품 오픈일 때만
+    if (!isPopup && opts.lineup !== false) {
+      const yr = Number(ev.startDate.slice(0,4));
+      s.plan = s.plan || {};
+      s.plan[yr] = s.plan[yr] || { goals:[], items:[], memos:{}, budget:{}, teamGoals:[] };
+      s.plan[yr].products = s.plan[yr].products || [];
+      if (!s.plan[yr].products.find(p => p.srcEvent === ev.id)) {
+        s.plan[yr].products.push({
+          id: `pp-ev-${ev.id}`, name, cat: '', sizes: [], colors: [], tags: [],
+          launch: ev.startDate, month: Number(ev.startDate.slice(5,7)),
+          memo: '', status: 'ready', imgs: {}, srcEvent: ev.id,
+        });
+        made.lineup++;
+      }
+    }
+
+    // 팝업 준비 프로젝트
+    if (isPopup && opts.project !== false) {
+      s.projects = s.projects || [];
+      s.proj_tasks = s.proj_tasks || [];
+      const pid = `proj-ev-${ev.id}`;
+      if (!s.projects.find(p => p.id === pid)) {
+        s.projects.push({
+          id: pid, title: `${name} 팝업`, status: 'todo', progress: 0,
+          start_date: dOff(ev.startDate, -45), end_date: ev.endDate || ev.startDate,
+          description: `운영 캘린더 일정에서 자동 생성 · ${ev.startDate} 오픈`,
+          srcEvent: ev.id,
+        });
+      }
+      const tpl = opts.popupTpl || DEFAULT_POPUP_TPL;
+      tpl.forEach(([group, color, rows]) => {
+        rows.forEach((r, i) => {
+          const [off, title, who, localOnly] = r;
+          if (localOnly && !opts.isLocal) return;
+          s.proj_tasks.push({
+            id: `pt-ev-${ev.id}-${group}-${i}`,
+            proj_id: pid, title: `[${group}] ${title}`,
+            assignee: who, status: 'todo',
+            due_date: dOff(ev.startDate, off),
+            memo: '', note: '', srcEvent: ev.id, srcGroup: group,
+          });
+          made.ptask++;
+        });
+      });
+    }
+    return s;
+  });
+
+  // 제작 할일 — 대표님 체크리스트 (별도 테이블)
+  if (opts.task !== false) {
+    try {
+      await db.from('tasks').insert([{
+        title: `${name} 콘텐츠 ${made.content}건 제작`,
+        assignee: '고예흰', status: 'todo',
+        due_date: dOff(ev.startDate, -7),
+        memo: `${ev.startDate} 오픈 · 첫 발행 ${dOff(ev.startDate, list[0][0])}`,
+      }]);
+      made.task = 1;
+    } catch(e) { console.error('제작 할일 생성 실패:', e); }
+  }
+  return made;
+}
+
+/* ── 일정 삭제 시 딸린 것들도 정리 ── */
+async function autoCleanupForEvent(evId) {
+  await patchAppState(s => {
+    s.content_plans   = (s.content_plans||[]).filter(p => p.srcEvent !== evId || p.status === 'done');
+    s.cplan_campaigns = (s.cplan_campaigns||[]).filter(c => c.srcEvent !== evId);
+    s.proj_tasks      = (s.proj_tasks||[]).filter(t => t.srcEvent !== evId || t.status === 'done');
+    s.projects        = (s.projects||[]).filter(p => p.srcEvent !== evId);
+    Object.keys(s.plan||{}).forEach(y => {
+      if (s.plan[y]?.products) s.plan[y].products = s.plan[y].products.filter(p => p.srcEvent !== evId);
+    });
+    return s;
+  });
+}
+
+/* ── 커리큘럼을 고쳤을 때 이미 등록된 콘텐츠에 반영 ──
+   건드리지 않는 것: ① 발행완료 ② 사용자가 직접 수정 ③ 이미 지난 오픈 */
+function planCurriculumReapply(s, curType, list) {
+  const today = dateStr();
+  const events = (s.ops_events||[]).filter(e =>
+    AUTOGEN_CATS.includes(e.cat) && e.curType === curType && (e.startDate||'') >= today);
+  const plans = s.content_plans || [];
+  const add = [], upd = [], del = [];
+  const keep = { done:0, edited:0 };
+
+  for (const ev of events) {
+    const mine = plans.filter(p => p.srcEvent === ev.id);
+    const byKey = {};
+    mine.forEach(p => { byKey[p.srcKey] = p; });
+    const name = String(ev.title||'').replace(/\s*(오픈|팝업 오픈|팝업)\s*$/,'').trim() || ev.title;
+
+    list.forEach((row, i) => {
+      const [off, ch, label, note] = row;
+      const cur = byKey[i];
+      if (!cur) { add.push({ ev, i, row, name }); return; }
+      if (cur.status === 'done') { keep.done++; return; }
+      if (cur.userEdited) { keep.edited++; return; }
+      const newDate = dOff(ev.startDate, off), newTitle = `${name} ${label}`;
+      if (cur.date !== newDate || cur.title !== newTitle || cur.channel !== ch || (cur.memo||'') !== (note||''))
+        upd.push({ p: cur, row, newDate, newTitle });
+    });
+    // 템플릿에서 사라진 항목
+    mine.forEach(p => {
+      if (p.srcKey == null || p.srcKey < list.length) return;
+      if (p.status === 'done') { keep.done++; return; }
+      if (p.userEdited) { keep.edited++; return; }
+      del.push(p);
+    });
+  }
+  return { add, upd, del, keep, events };
+}
+
+async function applyCurriculumChange(curType, list) {
+  const s0 = await getAppState();
+  const plan = planCurriculumReapply(s0, curType, list);
+  if (!plan.add.length && !plan.upd.length && !plan.del.length) {
+    await patchAppState(s => {
+      s.tpl_curriculum = s.tpl_curriculum || JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
+      s.tpl_curriculum[curType] = list;
+      return s;
+    });
+    return { ...plan, applied:true, noChange:true };
+  }
+  const ok = await customConfirm(
+    `커리큘럼 변경을 앞으로 남은 오픈 ${plan.events.length}건에 반영할까요?`,
+    `콘텐츠 추가 ${plan.add.length}건 · 갱신 ${plan.upd.length}건 · 삭제 ${plan.del.length}건\n` +
+    `발행완료 ${plan.keep.done}건과 직접 수정한 ${plan.keep.edited}건은 그대로 둡니다.`,
+    '반영');
+  if (!ok) return { ...plan, applied:false };
+
+  const delIds = new Set(plan.del.map(p => p.id));
+  await patchAppState(s => {
+    s.tpl_curriculum = s.tpl_curriculum || JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
+    s.tpl_curriculum[curType] = list;
+    s.content_plans = (s.content_plans||[]).filter(p => !delIds.has(p.id));
+    // 갱신
+    const map = {}; (s.content_plans||[]).forEach(p => { map[p.id] = p; });
+    plan.upd.forEach(u => {
+      const t = map[u.p.id]; if (!t) return;
+      t.date = u.newDate; t.title = u.newTitle;
+      t.channel = u.row[1]; t.memo = u.row[3] || '';
+      t.srcOff = u.row[0];
+    });
+    // 추가
+    plan.add.forEach(({ev,i,row,name}) => {
+      s.content_plans.push({
+        id: `cp-ev-${ev.id}-${i}`, campaign: 'camp-ev-' + ev.id,
+        title: `${name} ${row[2]}`, date: dOff(ev.startDate, row[0]),
+        channel: row[1], status:'idea', assignee:'', ref:'', memo: row[3]||'',
+        srcEvent: ev.id, srcType: curType, srcKey: i, srcOff: row[0],
+        createdAt: new Date().toISOString(),
+      });
+    });
+    return s;
+  });
+  return { ...plan, applied:true };
+}
+
 const CPLAN_CH = {
   reels: { label:'릴스',   bg:'#EEEDFE', fg:'#3C3489', bar:'#7F77DD' },
   feed:  { label:'피드',   bg:'#FBEAF0', fg:'#72243E', bar:'#D4537E' },
   story: { label:'스토리', bg:'#E6F1FB', fg:'#0C447C', bar:'#378ADD' },
+  ad:    { label:'광고',   bg:'#EAF3EC', fg:'#2E5C3E', bar:'#5F9270' },
 };
 const CPLAN_ST = {
   idea:   { label:'기획중',   bg:'var(--surface2)', fg:'var(--muted)' },
@@ -17004,6 +17501,105 @@ async function openCplanModal(id) {
   setTimeout(()=>$('cplan-title').focus(), 80);
 }
 
+
+/* ═══ 템플릿 편집 UI (커리큘럼 · 팝업 준비) ═══ */
+let _tplMode = 'cur';        // 'cur' | 'popup'
+let _tplCurType = 'normal';
+let _tplDraft = null;
+
+async function openTplModal(mode) {
+  _tplMode = mode || 'cur';
+  _tplDraft = _tplMode === 'cur'
+    ? JSON.parse(JSON.stringify(await getCurriculum()))
+    : JSON.parse(JSON.stringify(await getPopupTpl()));
+  renderTplModal();
+  $('tpl-modal').classList.add('on');
+}
+
+function renderTplModal() {
+  const isCur = _tplMode === 'cur';
+  $('tpl-modal-kind').textContent = isCur ? '콘텐츠 커리큘럼' : '팝업 준비 템플릿';
+  $('tpl-desc').textContent = isCur
+    ? '오픈 유형별로 어떤 콘텐츠가 자동 생성될지 정합니다. 저장하면 아직 오지 않은 오픈에도 반영됩니다.'
+    : '팝업 일정을 등록할 때 프로젝트로 만들어질 준비 업무입니다. 저장하면 다음 팝업부터 적용됩니다.';
+
+  if (isCur) {
+    $('tpl-tabs').innerHTML = Object.keys(CURRICULUM_LABEL).map(t =>
+      `<div class="inv-pill${t===_tplCurType?' on':''}" style="font-size:11px;padding:4px 11px;"
+        onclick="_tplCurType='${t}';renderTplModal()">${CURRICULUM_LABEL[t]} <span style="opacity:.6">${(_tplDraft[t]||[]).length}</span></div>`).join('');
+    const list = _tplDraft[_tplCurType] || [];
+    $('tpl-body').innerHTML = list.map((r,i)=>`
+      <div style="display:flex;gap:6px;align-items:center;padding:7px 12px;border-bottom:0.5px solid var(--surface2);">
+        <input type="number" class="prop-inp" value="${r[0]}" onchange="_tplSet(${i},0,this.value)"
+          style="width:58px;text-align:center;font-family:var(--mono);font-size:12px;" title="D-day (음수=이전)">
+        <select class="prop-inp" onchange="_tplSet(${i},1,this.value)" style="width:78px;font-size:12px;">
+          ${Object.keys(CPLAN_CH).map(c=>`<option value="${c}"${r[1]===c?' selected':''}>${CPLAN_CH[c].label}</option>`).join('')}
+        </select>
+        <input type="text" class="prop-inp" value="${escapeHtml(r[2]||'')}" onchange="_tplSet(${i},2,this.value)"
+          style="flex:1;font-size:12px;" placeholder="내용">
+        <div class="mbtn" style="width:30px;height:30px;font-size:12px;" onclick="_tplDel(${i})">✕</div>
+      </div>`).join('') +
+      `<div style="padding:8px 12px;text-align:center;">
+         <span class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 13px;cursor:pointer;" onclick="_tplAdd()">+ 콘텐츠 추가</span></div>`;
+    const im = _tplImpactText();
+    $('tpl-impact').innerHTML = im;
+  } else {
+    $('tpl-tabs').innerHTML = '';
+    $('tpl-body').innerHTML = _tplDraft.map(([g,color,rows],gi)=>`
+      <div style="border-bottom:0.5px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface2);">
+          <span style="width:12px;height:12px;border-radius:3px;background:${color};"></span>
+          <strong style="font-size:12.5px;">${escapeHtml(g)}</strong>
+          <span style="font-size:10.5px;color:var(--light);">${rows.length}건</span>
+        </div>
+        ${rows.map((r,ri)=>`
+          <div style="display:flex;gap:6px;align-items:center;padding:6px 12px;border-bottom:0.5px solid var(--surface2);">
+            <input type="number" class="prop-inp" value="${r[0]}" onchange="_ptplSet(${gi},${ri},0,this.value)"
+              style="width:58px;text-align:center;font-family:var(--mono);font-size:12px;" title="D-day">
+            <input type="text" class="prop-inp" value="${escapeHtml(r[1]||'')}" onchange="_ptplSet(${gi},${ri},1,this.value)"
+              style="flex:1;font-size:12px;">
+            <select class="prop-inp" onchange="_ptplSet(${gi},${ri},2,this.value)" style="width:84px;font-size:12px;">
+              ${MEMBERS.map(m=>`<option${r[2]===m.name?' selected':''}>${m.name}</option>`).join('')}
+            </select>
+            <label style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--light);white-space:nowrap;cursor:pointer;">
+              <input type="checkbox" ${r[3]?'checked':''} onchange="_ptplSet(${gi},${ri},3,this.checked?1:0)" style="width:14px;height:14px;">지방</label>
+            <div class="mbtn" style="width:30px;height:30px;font-size:12px;" onclick="_ptplDel(${gi},${ri})">✕</div>
+          </div>`).join('')}
+        <div style="padding:7px 12px;">
+          <span class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 11px;cursor:pointer;" onclick="_ptplAdd(${gi})">+ ${escapeHtml(g)} 업무 추가</span></div>
+      </div>`).join('');
+    const n = _tplDraft.reduce((a,[g,c,rows])=>a+rows.length,0);
+    $('tpl-impact').innerHTML = `팝업 일정 등록 시 <b>${n}건</b>이 프로젝트 업무로 생성됩니다`;
+  }
+}
+function _tplSet(i,f,v){ _tplDraft[_tplCurType][i][f] = (f===0?(parseInt(v)||0):v); if(f===0) _tplDraft[_tplCurType].sort((a,b)=>a[0]-b[0]); renderTplModal(); }
+function _tplDel(i){ _tplDraft[_tplCurType].splice(i,1); renderTplModal(); }
+function _tplAdd(){ _tplDraft[_tplCurType].push([0,'story','새 콘텐츠','']); _tplDraft[_tplCurType].sort((a,b)=>a[0]-b[0]); renderTplModal(); }
+function _ptplSet(g,r,f,v){ _tplDraft[g][2][r][f] = (f===0?(parseInt(v)||0):v); if(f===0) _tplDraft[g][2].sort((a,b)=>a[0]-b[0]); renderTplModal(); }
+function _ptplDel(g,r){ _tplDraft[g][2].splice(r,1); renderTplModal(); }
+function _ptplAdd(g){ _tplDraft[g][2].push([-10,'새 업무','김효민',0]); _tplDraft[g][2].sort((a,b)=>a[0]-b[0]); renderTplModal(); }
+
+function _tplImpactText() {
+  const n = (_tplDraft[_tplCurType]||[]).length;
+  return `이 유형으로 등록된 <b>앞으로의 오픈</b>에 반영됩니다 · 현재 ${n}건`;
+}
+
+async function saveTplModal() {
+  try {
+    if (_tplMode === 'cur') {
+      const res = await applyCurriculumChange(_tplCurType, _tplDraft[_tplCurType]);
+      if (!res.applied) return;
+      toast(res.noChange ? '커리큘럼이 저장됐어요 ✓'
+        : `저장 ✓ 추가 ${res.add.length} · 갱신 ${res.upd.length} · 삭제 ${res.del.length}건 반영`);
+      if (typeof loadCplan === 'function') loadCplan();
+    } else {
+      await patchAppState(s => { s.tpl_popup = _tplDraft; return s; });
+      toast('팝업 준비 템플릿이 저장됐어요 ✓');
+    }
+    closeModal('tpl-modal');
+  } catch(e) { console.error('saveTplModal', e); toast('저장 실패: ' + (e.message||'')); }
+}
+
 async function saveCplan() {
   const title = $('cplan-title').value.trim();
   if (!title) { toast('제목을 입력해주세요'); return; }
@@ -17021,7 +17617,9 @@ async function saveCplan() {
     s.content_plans = s.content_plans || [];
     if (_cplanEditId) {
       const p = s.content_plans.find(x=>x.id===_cplanEditId);
-      if (p) Object.assign(p, data);
+      // 자동 생성분을 사람이 고쳤으면 표식을 남김 →
+      // 나중에 커리큘럼을 바꿔도 이 항목은 덮어쓰지 않음
+      if (p) { const wasAuto = p.srcEvent != null; Object.assign(p, data); if (wasAuto) p.userEdited = true; }
     } else {
       s.content_plans.push({ id:'cp-'+Date.now(), createdAt:new Date().toISOString(), ...data });
     }
@@ -19715,12 +20313,17 @@ async function loadPlanAnnual() {
     const { data: kpiSales } = await db.from('channel_sales_log').select('amount,date').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
     const rows = kpiSales || [];
     const yearTotal = rows.reduce((sum,r)=>sum+(r.amount||0),0);
+    // 연간 매출 목표 = 월별 목표 12개월 합계 (따로 입력할 필요 없음).
+    // 월별 목표가 하나도 없을 때만 목표 카드의 문자열을 씀.
+    let monthlyGoals = {};
+    try { monthlyGoals = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {}; } catch(e) {}
+    const monthlySum = Object.values(monthlyGoals).reduce((a,m)=>a+(Number(m?.target)||0),0);
     const yearGoalObj = goals.find(g=>g.label?.includes('매출'));
     const yearGoalRaw = yearGoalObj?.target||'';
-    // targetNum(숫자 전용 필드)이 있으면 그걸 우선 사용. 없으면 문자열에서 추정.
-    const yearGoalNum = (typeof yearGoalObj?.targetNum === 'number' && yearGoalObj.targetNum > 0)
-      ? yearGoalObj.targetNum
-      : parseGoalAmount(yearGoalRaw);
+    const yearGoalNum = monthlySum > 0 ? monthlySum
+      : ((typeof yearGoalObj?.targetNum === 'number' && yearGoalObj.targetNum > 0)
+          ? yearGoalObj.targetNum
+          : parseGoalAmount(yearGoalRaw));
     const pct = yearGoalNum ? Math.min(100, Math.round(yearTotal/yearGoalNum*100)) : 0;
 
     // 월별 매출 집계
@@ -19826,7 +20429,13 @@ async function loadPlanAnnual() {
           <div style="font-size:11px;color:var(--light);margin-top:2px;">${g.sub||''}</div>
         </div>`
       ).join('')
-    : '<div style="font-size:13px;color:var(--faint);padding:8px 0;">상단 버튼으로 연간 목표를 추가해보세요</div>';
+    : (monthlySum > 0
+        ? `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px 14px;">
+             <div style="font-size:11px;color:var(--light);margin-bottom:4px;">연간 매출 목표</div>
+             <div style="font-size:20px;font-weight:500;">${fmtWonExact(monthlySum)}</div>
+             <div style="font-size:11px;color:var(--light);margin-top:2px;">월별 목표 ${Object.keys(monthlyGoals).length}개월 합계 · 자동 계산</div>
+           </div>`
+        : '<div style="font-size:13px;color:var(--faint);padding:8px 0;">월별 목표를 입력하면 연간 목표가 자동으로 계산됩니다</div>');
 
   // 월별 목표 vs 실적 테이블 렌더
   const monthly = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {};
@@ -22429,7 +23038,7 @@ document.addEventListener('keydown', e => {
   ['task-modal','ptask-modal','memo-modal','routine-modal','proj-modal','quicklink-modal','leave-req-modal','notice-modal',
    'inv-product-modal','inv-receipt-modal','inv-produce-modal','inv-alloc-modal','inv-upload-modal','inv-import-modal',
    'prod-schedule-modal','prod-supply-modal','prod-link-modal','prod-defect-modal',
-   'ops-event-modal','ops-order-modal','content-modal',
+   'ops-event-modal','ops-order-modal','content-modal','tpl-modal',
    'asset-modal','asset-cat-modal',
    'plan-item-modal','plan-memo-modal','plan-budget-modal','plan-product-modal','plan-monthly-modal',
    'tax-cost-modal'].forEach(id=>{
@@ -22544,6 +23153,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+cleanupBrokenRoutineKeys();
 boot();
 </script>
 </body>
