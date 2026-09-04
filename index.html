@@ -1097,6 +1097,11 @@ a { text-decoration:none; color:inherit; }
 .cx-item .cx-bt { font-size:9px; font-weight:500; display:block; margin-bottom:1px; padding:1px 5px;
   border-radius:3px; width:fit-content; }
 @media (max-width:900px){ .cx-wrap { grid-template-columns:1fr; } }
+.cmon-grid { grid-auto-rows:120px; }
+.opscal-cell.cmon-open { background:#FBEAF0; }
+.opscal-cell.cmon-open.today { background:#F7DCE6; }
+.cmon-grid .opscal-ev { cursor:pointer; }
+@media (max-width:768px){ .cmon-grid { grid-auto-rows:92px; } }
 @media (max-width:768px){
   .cx-cols { grid-template-columns:repeat(4,minmax(0,1fr)); }
   .cx-col { min-height:120px; }
@@ -2150,6 +2155,19 @@ a { text-decoration:none; color:inherit; }
             <div id="cplan-list" style="padding:2px 18px 8px;"></div>
             <!-- 진행률 -->
             <div id="cplan-progress" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-top:0.5px solid var(--surface2);"></div>
+          </div>
+
+          <!-- 월간 콘텐츠 캘린더 — 한 달 전체 업로드 그림을 보는 용도 -->
+          <div class="card" style="margin-top:14px;padding:0;overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
+              <span class="card-link" onclick="cmonMove(-1)" style="font-size:18px;padding:0 4px;">‹</span>
+              <div style="font-size:13px;font-weight:600;min-width:104px;" id="cmon-title"></div>
+              <span class="card-link" onclick="cmonMove(1)" style="font-size:18px;padding:0 4px;">›</span>
+              <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="cmonToday()">이번 달</button>
+              <span style="font-size:11px;color:var(--light);" id="cmon-count"></span>
+              <div style="margin-left:auto;display:flex;gap:10px;font-size:10.5px;color:var(--light);flex-wrap:wrap;" id="cmon-legend"></div>
+            </div>
+            <div id="cmon-cal" style="padding:0;"></div>
           </div>
         </div>
 
@@ -4496,8 +4514,7 @@ a { text-decoration:none; color:inherit; }
           <div class="prop-icon">✨</div><div class="prop-label">커리큘럼</div>
           <div class="prop-val">
             <select class="prop-inp" id="ops-event-curtype" onchange="opsPreviewGen()">
-              <option value="normal">일반 신제품</option>
-              <option value="hero">히어로 (사과트리·코코·꽃바구니 등)</option>
+              <option value="normal">신제품</option>
               <option value="popup">팝업</option>
             </select>
             <label style="display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12px;color:var(--muted);cursor:pointer;">
@@ -5347,7 +5364,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.10.3</div>
+<div id="version">v5.11.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -13471,12 +13488,12 @@ async function loadProdCal() {
     reserveMap[x.date] = true;
   });
 
-  const firstDow = (new Date(year,month,1).getDay()+6)%7; // 0=월
+  const firstDow = new Date(year,month,1).getDay(); // 0=일
   const lastDay  = new Date(year,month+1,0).getDate();
   const today    = dateStr();
 
   let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px;">';
-  ['월','화','수','목','금','토','일'].forEach(d=>{
+  DOW_SUN.forEach(d=>{
     const isWk = d==='토'||d==='일';
     html+=`<div style="font-size:10px;color:${isWk?'var(--red)':'var(--light)'};text-align:center;padding:4px 0;">${d}</div>`;
   });
@@ -13488,7 +13505,7 @@ async function loadProdCal() {
     const hasProd   = !!dayData;
     const hasReserve= !!reserveMap[ds];
     const dow = (firstDow+day-1)%7;
-    const isWk= dow>=5;
+    const isWk= dow===0||dow===6;
     const nameStr = dayData?.names?.slice(0,2).map(n=>n.length>5?n.slice(0,5)+'…':n).join(', ') || '';
     const moreStr = dayData?.names?.length > 2 ? ` +${dayData.names.length-2}` : '';
     const bg = hasProd ? 'var(--surface2)' : hasReserve ? '#F0F7FF' : 'transparent';
@@ -14576,7 +14593,7 @@ async function loadSalesDow() {
   // 요일별 날짜 수 카운트 (일평균 계산용)
   const dowDayCnt = [0,0,0,0,0,0,0];
   for (let d = new Date(from+'T00:00:00'); d <= new Date(); d.setDate(d.getDate()+1)) {
-    dowDayCnt[(d.getDay()+6)%7]++;
+    dowDayCnt[d.getDay()]++;
   }
 
   if (_salesDowType === 'amount') {
@@ -14713,6 +14730,9 @@ function opsSetTab(tab, el) {
 
 /* ── 분류(카테고리) ── */
 /* ═══ 운영캘린더 고정 분류 (추가/삭제 불가) ═══ */
+/* 주 시작 요일 = 일요일. 캘린더/요일 통계가 전부 이 배열 순서를 따른다. */
+const DOW_SUN = ['일','월','화','수','목','금','토'];
+
 const OPS_FIXED_CATS = [
   { id:'cat-incoming', name:'입고', color:'#378ADD' },
   // 오픈은 보라, 팝업은 분홍 — 예전엔 둘 다 자주색 계열이라 캘린더에서 구분이 안 됐음
@@ -14799,21 +14819,22 @@ async function loadOpsCal() {
   });
   $('ops-cal-count').textContent = `${mEvents.length}개 일정`;
 
-  const firstDow = (new Date(year,month,1).getDay()+6)%7;
+  // 주 시작은 일요일 (0=일 … 6=토)
+  const firstDow = new Date(year,month,1).getDay();
   const lastDay  = new Date(year,month+1,0).getDate();
   const today    = dateStr();
 
   // 격자형 캘린더 — 칸 크기 고정, 분류 색으로 구분
   let html = '<div class="opscal">';
-  html += '<div class="opscal-dow">' + ['월','화','수','목','금','토','일']
-    .map((dow,i)=>`<span${i>=5?' class="wk"':''}>${dow}</span>`).join('') + '</div>';
+  html += '<div class="opscal-dow">' + DOW_SUN
+    .map((dow,i)=>`<span${(i===0||i===6)?' class="wk"':''}>${dow}</span>`).join('') + '</div>';
   html += '<div class="opscal-grid">';
   for(let i=0;i<firstDow;i++) html+='<div class="opscal-cell out"></div>';
   for(let day=1;day<=lastDay;day++){
     const ds  = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const isToday = ds===today;
     const dow = (firstDow+day-1)%7;
-    const isWk= dow>=5;
+    const isWk= dow===0||dow===6;
     const dayEvts = mEvents.filter(e => e.startDate<=ds && (e.endDate||e.startDate)>=ds);
     const hasProd = dayEvts.length>0;
     html+=`<div class="opscal-cell${isToday?' today':''}" onclick="opsSelectDay('${ds}')">
@@ -14916,7 +14937,8 @@ async function openOpsEventModal(id='') {
     $('ops-event-status').value = 'planned';
   }
   // 편집 모드에서는 자동 생성을 다시 돌리지 않음 (이미 만들어진 것과 중복되므로)
-  $('ops-event-curtype').value = (id && (await getAppState()).ops_events?.find(x=>x.id===id)?.curType) || 'normal';
+  const _ct = (id && (await getAppState()).ops_events?.find(x=>x.id===id)?.curType) || 'normal';
+  $('ops-event-curtype').value = (_ct === 'hero') ? 'normal' : _ct;   // 히어로 구분 폐지 → 신제품으로
   $('ops-event-islocal').checked = false;
   opsPreviewGen();
   $('ops-event-modal').classList.add('on');
@@ -17098,48 +17120,37 @@ let _cplanModalSt = 'idea';
 ═══════════════════════════════════════════════════════════ */
 
 /* 커리큘럼 기본값 — [D-day offset, 채널, 내용, 메모] */
+/* 오픈 커리큘럼 — [D-day, 채널, 항목명, 메모]
+   채널 'task' 는 인스타 콘텐츠가 아니라 별도 할일로 나갑니다 (콘텐츠 목록에 안 뜸).
+   히어로/일반 구분은 대표님 요청으로 없앴습니다 — 신제품은 한 가지 흐름. */
 const DEFAULT_CURRICULUM = {
   normal: [
-    [-7,'story','실루엣 티저','"다음 주 새 친구"'],
-    [-5,'story','투표 스토리','이름 맞히기 / 어떤 동물'],
-    [-3,'feed','캐릭터 짤 (오픈 예고)',''],
-    [-3,'story','"목요일 오픈"',''],
-    [-2,'ad','광고 소재 투입',''],
-    [-2,'story','무물 스토리',''],
-    [-1,'story','무물 답변 3개 + "내일 오픈"',''],
-    [0,'feed','신제품 안내 피드',''],
-    [0,'story','오픈 스토리 3개','오픈 알림 / 링크 / 첫 후기'],
-    [1,'reels','신제품 릴스',''],
-    [2,'story','후기 리그램 + 투표','"다음엔 누구?"'],
-  ],
-  hero: [
-    [-10,'story','첫 힌트 스토리','소품만, 실루엣 없이'],
-    [-7,'story','티저 2탄 + 투표',''],
-    [-5,'story','무물 스토리','답은 D-1까지 아낌'],
-    [-3,'feed','티저 짤','핵심은 안 보여줌'],
-    [-2,'ad','광고 소재 투입',''],
-    [-2,'story','무물 답변 1차 + 카운트다운',''],
-    [-1,'reels','15초 티저 릴스','개봉 직전에서 컷'],
-    [0,'feed','오픈 안내 + 세트 구성',''],
-    [0,'story','오픈 스토리 3개 + 1시간 후 반응',''],
-    [1,'reels','개봉·수납 풀버전 릴스',''],
-    [2,'story','후기 리그램 릴레이 + 투표','"세트 vs 단품"'],
-    [4,'reels','2차 릴스','주말 도달 재점화'],
+    [-7,'story','어떤 캐릭터인지 + 커밍쑨',''],
+    [-6,'story','신규 캐릭터 스포',''],
+    [-6,'task','제품 업로드(오픈예정 세팅) + 광고 소재 세팅','인스타 콘텐츠 아님 · 별도 할일'],
+    [-5,'feed','오픈 예고','링크 자동댓글 연결'],
+    [-3,'story','신규 캐릭터 관련 무물',''],
+    [-2,'reels','신제품 영상','링크 자동댓글 연결'],
+    [-1,'story','오픈 카운트다운','신제품 관련 투표 선택'],
+    [0,'story','오픈 후 뜨거운 반응',''],
+    [3,'reels','신제품 영상 2차',''],
   ],
   popup: [
-    [-7,'feed','팝업 안내 피드',''],
-    [-7,'story','"가실 분?" 투표',''],
-    [-5,'ad','지역 타겟 광고 투입',''],
-    [-3,'story','무물 + 한정 사은품 예고',''],
-    [-1,'reels','세팅 비하인드 릴스',''],
-    [-1,'story','"내일 오픈"',''],
-    [0,'feed','오픈 당일 현장 피드',''],
-    [0,'story','현장 라이브 스토리 3개',''],
-    [1,'story','기간 중 매일 스토리 3','현장·제품·소통'],
-    [3,'reels','현장 릴스','수요일'],
+    [-21,'story','무물 — 팝업 예고 관련',''],
+    [-18,'feed','팝업 안내 피드','일정 · 사은품 안내'],
+    [-14,'story','팝업 준비 관련',''],
+    [-7,'feed','팝업 MD 리스트',''],
+    [-5,'reels','팝업 제품 모음',''],
+    [-3,'story','무물 — 팝업 운영 관련',''],
+    [-1,'story','내일 오픈 안내',''],
+    [0,'feed','오픈 당일 현장 매거진',''],
+    [1,'reels','현장 라이브 소개 영상',''],
+    [3,'reels','현장 제품 소개 영상','테스트 후 바이럴 검증된 영상 공개'],
   ],
 };
-const CURRICULUM_LABEL = { normal:'일반 신제품', hero:'히어로', popup:'팝업' };
+const CURRICULUM_LABEL = { normal:'신제품', popup:'팝업' };
+/* 커리큘럼 편집기에서 고를 수 있는 종류 — CPLAN_CH(인스타 채널) + 'task'(별도 할일) */
+const TPL_CH_EXTRA = { task: { label:'업무(할일)' } };
 const TPL_GROUP_COLOR = { '현장미팅':'#6D5B9E','실측':'#3B7FC4','레이아웃':'#5F9270','공간기획':'#D4537E',
   '마케팅기획':'#B8964F','재고준비':'#C0685F','실무':'#4A4D57' };
 
@@ -17202,7 +17213,10 @@ async function getCurriculum(state) {
   const s = state || await getAppState();
   const t = s.tpl_curriculum;
   if (!t || !t.normal) return JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
-  return t;
+  // 히어로는 폐지 — 예전에 저장된 hero 가 남아 있어도 normal 을 쓴다
+  const out = { normal: t.normal, popup: t.popup || DEFAULT_CURRICULUM.popup };
+  out.hero = out.normal;
+  return out;
 }
 async function getPopupTpl(state) {
   const s = state || await getAppState();
@@ -17222,7 +17236,7 @@ const dOff = (baseStr, off) => {
 function buildContentTaskMemo(name, ev, list) {
   const DOW = ['일','월','화','수','목','금','토'];
   const CH  = { reels:'릴스', feed:'피드', story:'스토리', ad:'광고' };
-  const lines = list.map(([off, ch, label, note]) => {
+  const lines = list.filter(([off, ch]) => ch !== 'task').map(([off, ch, label, note]) => {
     const ds = dOff(ev.startDate, off);
     const d  = new Date(ds + 'T00:00:00');
     const dd = off === 0 ? '오픈일' : (off < 0 ? `D${off}` : `D+${off}`);
@@ -17230,7 +17244,7 @@ function buildContentTaskMemo(name, ev, list) {
     return `- [ ] ${mm} ${dd} · ${CH[ch]||ch} · ${name} ${label}${note?` — ${note}`:''}`;
   });
   return [
-    `${ev.startDate} 오픈 · 콘텐츠 ${list.length}건`,
+    `${ev.startDate} 오픈 · 콘텐츠 ${lines.length}건`,
     `아래 한 줄이 업로드 한 건입니다. 만든 것부터 체크하세요.`,
     '',
     ...lines,
@@ -17247,6 +17261,7 @@ async function autoGenerateFromEvent(ev, curType, opts = {}) {
 
   const cur = await getCurriculum();
   const list = cur[curType] || cur.normal;
+  const sideTasks = [];   // 커리큘럼 안의 'task' 행 (인스타 콘텐츠 아님)
 
   await patchAppState(s => {
     s.content_plans = s.content_plans || [];
@@ -17261,6 +17276,8 @@ async function autoGenerateFromEvent(ev, curType, opts = {}) {
     // 콘텐츠 — srcEvent/srcKey를 남겨야 나중에 커리큘럼 변경분을 되짚을 수 있음
     list.forEach((row, i) => {
       const [off, ch, label, note] = row;
+      // 'task' 행은 인스타 콘텐츠가 아니라 별도 할일 — 아래에서 따로 등록
+      if (ch === 'task') { sideTasks.push({ off, label, note }); return; }
       s.content_plans.push({
         id: `cp-ev-${ev.id}-${i}`,
         campaign: campId,
@@ -17323,6 +17340,20 @@ async function autoGenerateFromEvent(ev, curType, opts = {}) {
     return s;
   });
 
+  // 커리큘럼 안의 'task' 행 — 콘텐츠가 아닌 실무 준비 할일
+  if (sideTasks.length && opts.task !== false) {
+    try {
+      await db.from('tasks').insert(sideTasks.map(t => ({
+        title: `${name} ${t.label}`,
+        assignee: '고예흰', status: 'todo',
+        due_date: dOff(ev.startDate, t.off),
+        note: `${ev.startDate} 오픈 준비`,
+        memo: t.note || '',
+      })));
+      made.task += sideTasks.length;
+    } catch(e) { console.error('준비 할일 생성 실패:', e); }
+  }
+
   // 제작 할일 — 대표님 체크리스트 (별도 테이블)
   // 제목만 "콘텐츠 11건 제작"이면 뭘 만들어야 하는지 알 수 없으므로,
   // 메모에 업로드 날짜 + 채널 + 콘텐츠명을 체크리스트로 풀어서 넣는다.
@@ -17359,8 +17390,12 @@ async function autoCleanupForEvent(evId) {
    건드리지 않는 것: ① 발행완료 ② 사용자가 직접 수정 ③ 이미 지난 오픈 */
 function planCurriculumReapply(s, curType, list) {
   const today = dateStr();
+  // 히어로 구분은 폐지 — 예전에 hero 로 등록된 오픈도 '신제품'(normal) 변경에 함께 반영한다
+  const want = curType === 'normal' ? ['normal','hero',undefined,null,''] : [curType];
   const events = (s.ops_events||[]).filter(e =>
-    AUTOGEN_CATS.includes(e.cat) && e.curType === curType && (e.startDate||'') >= today);
+    AUTOGEN_CATS.includes(e.cat)
+    && (e.cat === 'cat-popup' ? curType === 'popup' : want.includes(e.curType))
+    && (e.startDate||'') >= today);
   const plans = s.content_plans || [];
   const add = [], upd = [], del = [];
   const keep = { done:0, edited:0 };
@@ -17373,6 +17408,7 @@ function planCurriculumReapply(s, curType, list) {
 
     list.forEach((row, i) => {
       const [off, ch, label, note] = row;
+      if (ch === 'task') return;      // 콘텐츠가 아니므로 동기화 대상 아님
       const cur = byKey[i];
       if (!cur) { add.push({ ev, i, row, name }); return; }
       if (cur.status === 'done') { keep.done++; return; }
@@ -17381,9 +17417,11 @@ function planCurriculumReapply(s, curType, list) {
       if (cur.date !== newDate || cur.title !== newTitle || cur.channel !== ch || (cur.memo||'') !== (note||''))
         upd.push({ p: cur, row, newDate, newTitle });
     });
-    // 템플릿에서 사라진 항목
+    // 템플릿에서 사라진 항목 — 범위를 벗어났거나, 그 자리가 이제 'task'(콘텐츠 아님)로 바뀐 경우
     mine.forEach(p => {
-      if (p.srcKey == null || p.srcKey < list.length) return;
+      if (p.srcKey == null) return;
+      const gone = p.srcKey >= list.length || list[p.srcKey]?.[1] === 'task';
+      if (!gone) return;
       if (p.status === 'done') { keep.done++; return; }
       if (p.userEdited) { keep.edited++; return; }
       del.push(p);
@@ -17399,6 +17437,8 @@ async function applyCurriculumChange(curType, list) {
     await patchAppState(s => {
       s.tpl_curriculum = s.tpl_curriculum || JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
       s.tpl_curriculum[curType] = list;
+      delete s.tpl_curriculum.hero;
+      (s.ops_events||[]).forEach(e => { if (e.curType === 'hero') e.curType = 'normal'; });
       return s;
     });
     return { ...plan, applied:true, noChange:true };
@@ -17414,6 +17454,8 @@ async function applyCurriculumChange(curType, list) {
   await patchAppState(s => {
     s.tpl_curriculum = s.tpl_curriculum || JSON.parse(JSON.stringify(DEFAULT_CURRICULUM));
     s.tpl_curriculum[curType] = list;
+    delete s.tpl_curriculum.hero;                       // 히어로 구분 폐지
+    (s.ops_events||[]).forEach(e => { if (e.curType === 'hero') e.curType = 'normal'; });
     s.content_plans = (s.content_plans||[]).filter(p => !delIds.has(p.id));
     // 갱신
     const map = {}; (s.content_plans||[]).forEach(p => { map[p.id] = p; });
@@ -17444,6 +17486,7 @@ const CPLAN_CH = {
   story: { label:'스토리', bg:'#E6F1FB', fg:'#0C447C', bar:'#378ADD' },
   ad:    { label:'광고',   bg:'#EAF3EC', fg:'#2E5C3E', bar:'#5F9270' },
 };
+const TPL_CH = { ...CPLAN_CH, ...TPL_CH_EXTRA };
 const CPLAN_ST = {
   idea:   { label:'기획중',   bg:'var(--surface2)', fg:'var(--muted)' },
   making: { label:'제작중',   bg:'#FAEEDA', fg:'#854F0B' },
@@ -17688,9 +17731,10 @@ let _cxOpenDays = new Set();
 
 function cxWeekMove(d) { _cxWeekOffset += d; renderCplanExecBoard(); }
 
-function _cxMonday(base) {
+/* 그 날짜가 속한 주의 시작(일요일) */
+function _cxWeekStart(base) {
   const d = new Date(base + 'T00:00:00');
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  d.setDate(d.getDate() - d.getDay());
   return d;
 }
 
@@ -17735,9 +17779,9 @@ function renderCplanExec() {
 function renderCplanExecBoard() {
   const boardEl = $('cx-board'); if (!boardEl) return;
   const today = dateStr();
-  const mon = _cxMonday(today);
+  const mon = _cxWeekStart(today);
   mon.setDate(mon.getDate() + _cxWeekOffset*7);
-  const DOWK = ['월','화','수','목','금','토','일'];
+  const DOWK = DOW_SUN;
 
   const days = [];
   for (let i=0;i<7;i++) { const d = new Date(mon); d.setDate(d.getDate()+i); days.push(d); }
@@ -17767,6 +17811,66 @@ function renderCplanExecBoard() {
   const sEl = $('cx-wk-sum'); if (sEl) sEl.textContent = `콘텐츠 ${total}건`;
 }
 
+/* ── 월간 콘텐츠 캘린더 (콘텐츠 기획 탭 하단) ──
+   주간 보드가 "이번 주에 뭘 올리나"라면 이건 "이 달 전체 그림"을 본다.
+   오픈일·팝업일은 배경으로 표시해서 한 달 안에서 어디가 축인지 보이게 함. */
+let _cmonOffset = 0;
+function cmonMove(d) { _cmonOffset += d; renderCplanMonth(); }
+function cmonToday() { _cmonOffset = 0; renderCplanMonth(); }
+
+function renderCplanMonth() {
+  const el = $('cmon-cal'); if (!el) return;
+  const now = new Date();
+  const base = new Date(now.getFullYear(), now.getMonth() + _cmonOffset, 1);
+  const year = base.getFullYear(), month = base.getMonth();
+  const today = dateStr();
+
+  const tEl = $('cmon-title'); if (tEl) tEl.textContent = `${year}년 ${month+1}월`;
+
+  const mStr = `${year}-${String(month+1).padStart(2,'0')}`;
+  const monthPlans = _cxPlans.filter(p => (p.date||'').startsWith(mStr));
+  const cEl = $('cmon-count');
+  if (cEl) {
+    const dn = monthPlans.filter(p=>p.status==='done').length;
+    cEl.textContent = monthPlans.length ? `${monthPlans.length}건 · ${dn}건 발행완료` : '등록된 콘텐츠 없음';
+  }
+  const lEl = $('cmon-legend');
+  if (lEl) lEl.innerHTML = Object.keys(CPLAN_CH).map(k=>{
+    const c = CPLAN_CH[k];
+    return `<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:${c.bar};"></span>${c.label}</span>`;
+  }).join('') + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#D4537E;"></span>오픈·팝업</span>';
+
+  const firstDow = new Date(year, month, 1).getDay();      // 0=일
+  const lastDay  = new Date(year, month+1, 0).getDate();
+
+  let html = '<div class="opscal"><div class="opscal-dow">' + DOW_SUN
+    .map((d,i)=>`<span${(i===0||i===6)?' class="wk"':''}>${d}</span>`).join('') + '</div>';
+  html += '<div class="opscal-grid cmon-grid">';
+  for (let i=0;i<firstDow;i++) html += '<div class="opscal-cell out"></div>';
+  for (let day=1; day<=lastDay; day++) {
+    const ds = `${mStr}-${String(day).padStart(2,'0')}`;
+    const dow = (firstDow+day-1)%7;
+    const isWk = dow===0||dow===6;
+    const isOpen = _cxOpenDays.has(ds);
+    const items = _cxPlans.filter(p => p.date === ds);
+    html += `<div class="opscal-cell${ds===today?' today':''}${isOpen?' cmon-open':''}">
+      <span class="opscal-day${isWk?' wk':''}">${day}</span>
+      ${items.slice(0,4).map(p=>{
+        const ch = CPLAN_CH[p.channel] || CPLAN_CH.reels;
+        const dn = p.status === 'done';
+        return `<span class="opscal-ev" style="background:${ch.bg};color:${ch.fg};border-left:3px solid ${ch.bar};${dn?'opacity:.5;text-decoration:line-through;':''}"
+          onclick="event.stopPropagation();openCplanModal('${p.id}')"
+          title="${escapeHtml(ch.label)} · ${escapeHtml(p.title||'')}">${escapeHtml(p.title||'')}</span>`;
+      }).join('')}
+      ${items.length>4?`<span class="opscal-more">+${items.length-4}</span>`:''}
+    </div>`;
+  }
+  const tail = (7 - ((firstDow + lastDay) % 7)) % 7;
+  for (let i=0;i<tail;i++) html += '<div class="opscal-cell out"></div>';
+  html += '</div></div>';
+  el.innerHTML = html;
+}
+
 async function cxToggleDone(id) {
   await patchAppState(s => {
     const p = (s.content_plans||[]).find(x => x.id === id);
@@ -17786,6 +17890,7 @@ async function loadCplan() {
       .filter(e => e.cat === 'cat-open' || e.cat === 'cat-popup')
       .map(e => e.startDate).filter(Boolean));
     renderCplanExec();
+    renderCplanMonth();
     const camps = await _cplanEnsureCampaign(s);
     const sel = $('cplan-campaign-sel');
     if (sel) {
@@ -17867,7 +17972,7 @@ function renderCplanList() {
     const weekKey = ds => {
       if (!ds) return '9999-99-99';
       const d = new Date(ds+'T00:00:00');
-      const day = (d.getDay()+6)%7;
+      const day = d.getDay();
       d.setDate(d.getDate()-day);
       return dateStr(d);
     };
@@ -17980,6 +18085,10 @@ async function openTplModal(mode) {
   _tplDraft = _tplMode === 'cur'
     ? JSON.parse(JSON.stringify(await getCurriculum()))
     : JSON.parse(JSON.stringify(await getPopupTpl()));
+  if (_tplMode === 'cur') {
+    delete _tplDraft.hero;                                        // 히어로 구분 폐지
+    if (!CURRICULUM_LABEL[_tplCurType]) _tplCurType = 'normal';
+  }
   renderTplModal();
   $('tpl-modal').classList.add('on');
 }
@@ -18001,7 +18110,7 @@ function renderTplModal() {
         <input type="number" class="prop-inp" value="${r[0]}" onchange="_tplSet(${i},0,this.value)"
           style="width:58px;text-align:center;font-family:var(--mono);font-size:12px;" title="D-day (음수=이전)">
         <select class="prop-inp" onchange="_tplSet(${i},1,this.value)" style="width:78px;font-size:12px;">
-          ${Object.keys(CPLAN_CH).map(c=>`<option value="${c}"${r[1]===c?' selected':''}>${CPLAN_CH[c].label}</option>`).join('')}
+          ${Object.keys(TPL_CH).map(c=>`<option value="${c}"${r[1]===c?' selected':''}>${TPL_CH[c].label}</option>`).join('')}
         </select>
         <input type="text" class="prop-inp" value="${escapeHtml(r[2]||'')}" onchange="_tplSet(${i},2,this.value)"
           style="flex:1;font-size:12px;" placeholder="내용">
@@ -20462,11 +20571,11 @@ async function loadContentStats() {
   : '<div style="padding:14px 0;font-size:13px;color:var(--faint);">실적 데이터가 없어요<br><span style="font-size:11px;">콘텐츠 등록 후 실적을 입력해주세요</span></div>';
 
   // 요일별 성과
-  const DOW = ['월','화','수','목','금','토','일'];
+  const DOW = DOW_SUN;
   const dowViews = Array(7).fill(0), dowCnt = Array(7).fill(0);
   posts.forEach(p=>{
     if(!p.date) return;
-    const dow = (new Date(p.date).getDay()+6)%7;
+    const dow = new Date(p.date).getDay();
     dowViews[dow] += p.stats?.views||0;
     dowCnt[dow]++;
   });
