@@ -880,7 +880,9 @@ a { text-decoration:none; color:inherit; }
   div[style*="grid-template-columns:repeat(7,1fr)"] > div { min-width:0; overflow:hidden; }
 
   /* ── 운영 캘린더: 셀 축소 ── */
-  #ops-cal div[style*="height:104px"] { height:88px !important; padding:3px 3px !important; }
+  .opscal-grid { grid-auto-rows:86px; }
+  .opscal-cell { padding:3px 3px 4px; }
+  .opscal-ev { font-size:9px; padding:1.5px 4px; }
 
   /* ── 작업기록 퀵바: 수량/버튼 터치 크기 ── */
   #work-log-qty { flex:1; min-width:70px; font-size:14px !important; }
@@ -984,6 +986,104 @@ a { text-decoration:none; color:inherit; }
   }
   .tb-nav-item { padding:6px 10px; font-size:11px; }
   #dash-rev-val { font-size:26px !important; }
+}
+
+/* ── 운영 캘린더 ── */
+.opscal { border:0.5px solid var(--border); border-radius:var(--r); overflow:hidden; margin-top:10px; }
+.opscal-dow { display:grid; grid-template-columns:repeat(7,1fr); background:var(--surface2); border-bottom:0.5px solid var(--border); }
+.opscal-dow span { padding:7px 0; text-align:center; font-size:10.5px; color:var(--muted); font-weight:500; }
+.opscal-dow span.wk { color:var(--red); }
+.opscal-grid { display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:106px; }
+.opscal-cell { border-right:0.5px solid var(--border); border-bottom:0.5px solid var(--border);
+  padding:5px 5px 6px; display:flex; flex-direction:column; gap:2px; overflow:hidden;
+  background:var(--surface); cursor:pointer; transition:.1s; }
+.opscal-cell:nth-child(7n) { border-right:none; }
+.opscal-cell:hover { background:var(--surface2); }
+.opscal-cell.out { background:var(--surface2); opacity:.45; cursor:default; }
+.opscal-cell.out:hover { background:var(--surface2); }
+.opscal-cell.today { background:#FBEAF0; }
+.opscal-day { font-size:11px; color:var(--light); font-family:var(--mono); line-height:1.2; flex-shrink:0; }
+.opscal-day.wk { color:var(--red); }
+.opscal-cell.today .opscal-day { color:#D4537E; font-weight:600; }
+.opscal-ev { font-size:10px; line-height:1.3; padding:2px 5px; border-radius:3px; display:block;
+  white-space:normal; word-break:keep-all; overflow-wrap:anywhere; font-weight:500; }
+.opscal-more { font-size:9px; color:var(--light); font-family:var(--mono); padding-left:4px; }
+
+.proj-grp { display:flex; align-items:center; gap:7px; padding:8px 20px 5px; background:var(--surface2);
+  border-top:0.5px solid var(--border); }
+.proj-grp-dot { width:9px; height:9px; border-radius:3px; flex-shrink:0; }
+.proj-grp-name { font-size:11.5px; font-weight:600; color:var(--text); }
+.proj-grp-cnt { font-size:10.5px; color:var(--light); font-family:var(--mono); margin-left:auto; }
+
+.exit-stages { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.exit-stg { border:0.5px solid var(--border); border-radius:9px; padding:10px 11px; position:relative; background:var(--surface); }
+.exit-stg.cur { border-color:#D4537E; background:#FBEAF0; }
+.exit-n { font-family:var(--mono); font-size:9.5px; color:var(--faint); letter-spacing:.04em; }
+.exit-stg.cur .exit-n { color:#D4537E; }
+.exit-t { font-size:12px; font-weight:600; margin:3px 0 2px; line-height:1.35; }
+.exit-d { font-size:10.5px; color:var(--muted); line-height:1.45; }
+.exit-now { position:absolute; top:-8px; right:8px; font-size:9px; font-weight:500; background:#D4537E; color:#fff;
+  padding:2px 7px; border-radius:99px; }
+@media (max-width:768px){ .exit-stages { grid-template-columns:repeat(2,1fr); } }
+
+/* 경영계획 — 6개 자산 / 제안 */
+.pl-assets { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.pl-ast { border:0.5px solid var(--border); border-radius:10px; padding:11px 13px; background:var(--surface); }
+.pl-ast-h { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.pl-ast-n { font-size:12.5px; font-weight:500; }
+.pl-ast-p { font-family:var(--mono); font-size:11px; color:var(--muted); }
+.pl-ast-bar { height:5px; background:var(--surface2); border-radius:99px; margin:7px 0 5px; overflow:hidden; }
+.pl-ast-f { height:100%; border-radius:99px; }
+.pl-ast-d { font-size:10.5px; color:var(--muted); line-height:1.45; }
+.pl-recs { display:flex; flex-direction:column; gap:10px; }
+.pl-rec { border:0.5px solid var(--border); border-left:3px solid #D4537E; border-radius:0 10px 10px 0;
+  padding:12px 15px; background:var(--surface); }
+.pl-rec-t { font-size:13px; font-weight:600; margin:0 0 4px; }
+.pl-rec-b { font-size:12px; color:var(--muted); line-height:1.6; margin:0; }
+.pl-rec-n { font-family:var(--mono); font-size:10.5px; color:var(--faint); margin-top:6px; display:block; }
+.pl-sec-h { font-size:12px; font-weight:600; margin:0 0 9px; }
+@media (max-width:768px){ .pl-assets { grid-template-columns:1fr; } }
+
+/* 콘텐츠 실행 — 오늘 카드 + 주간 보드 */
+.cx-wrap { display:grid; grid-template-columns:1fr 1.5fr; gap:14px; align-items:start; margin-bottom:14px; }
+.cx-today { border:0.5px solid var(--border); border-radius:var(--rlg); overflow:hidden; background:var(--surface); }
+.cx-th { padding:13px 15px; background:#1c1e26; color:#fff; }
+.cx-td { font-family:var(--mono); font-size:11px; opacity:.7; }
+.cx-tt { font-size:15px; font-weight:600; margin:2px 0 0; }
+.cx-bar { height:4px; background:rgba(255,255,255,.18); border-radius:99px; margin-top:10px; overflow:hidden; }
+.cx-fill { height:100%; background:#D4537E; border-radius:99px; transition:width .25s; }
+.cx-chk { display:flex; gap:10px; align-items:flex-start; padding:11px 15px; border-bottom:0.5px solid var(--surface2);
+  cursor:pointer; transition:.12s; }
+.cx-chk:hover { background:var(--surface2); }
+.cx-box { width:19px; height:19px; border:1.5px solid var(--border); border-radius:5px; flex-shrink:0; margin-top:1px;
+  display:flex; align-items:center; justify-content:center; transition:.14s; }
+.cx-chk.done .cx-box { background:var(--green); border-color:var(--green); }
+.cx-box svg { opacity:0; transition:.14s; }
+.cx-chk.done .cx-box svg { opacity:1; }
+.cx-chk.done .cx-t { color:var(--faint); text-decoration:line-through; }
+.cx-t { font-size:12.5px; line-height:1.45; }
+.cx-meta { font-size:10.5px; color:var(--muted); margin-top:2px; }
+.cx-tomo { padding:11px 15px; background:var(--surface2); font-size:11.5px; color:var(--muted); line-height:1.6; }
+.cx-board { border:0.5px solid var(--border); border-radius:var(--rlg); overflow:hidden; background:var(--surface); }
+.cx-bh { padding:12px 15px; border-bottom:0.5px solid var(--border); display:flex; justify-content:space-between;
+  align-items:center; gap:10px; flex-wrap:wrap; }
+.cx-cols { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+.cx-col { border-right:0.5px solid var(--surface2); min-height:190px; padding:0 0 8px; }
+.cx-col:last-child { border-right:0; }
+.cx-col.isopen { background:#FBEAF0; }
+.cx-ch { padding:7px 4px; text-align:center; border-bottom:0.5px solid var(--surface2); }
+.cx-ch .cx-cd { font-family:var(--mono); font-size:10px; color:var(--faint); }
+.cx-ch .cx-cw { font-size:10.5px; color:var(--muted); font-weight:500; }
+.cx-col.isopen .cx-cd, .cx-col.isopen .cx-cw { color:#D4537E; }
+.cx-col.today .cx-ch { background:var(--surface2); }
+.cx-item { margin:5px 5px 0; padding:5px 6px; border-radius:5px; font-size:10px; line-height:1.35;
+  background:var(--surface); border:0.5px solid var(--border); cursor:pointer; word-break:break-word; }
+.cx-item .cx-bt { font-size:9px; font-weight:500; display:block; margin-bottom:1px; padding:1px 5px;
+  border-radius:3px; width:fit-content; }
+@media (max-width:900px){ .cx-wrap { grid-template-columns:1fr; } }
+@media (max-width:768px){
+  .cx-cols { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .cx-col { min-height:120px; }
 }
 </style>
 </head>
@@ -1265,7 +1365,6 @@ a { text-decoration:none; color:inherit; }
             <div class="tcol-head"><div class="tcol-title">프로젝트 업무</div><div class="tcol-count" id="ptask-count">0건</div></div>
             <div class="tcol-body" id="ptask-list"></div>
             <div class="tcol-add" onclick="openPtaskModal(null)">+ 프로젝트 업무 추가</div>
-            <div class="tcol-add" onclick="openTplModal('popup')" title="팝업 일정 등록 시 자동으로 만들어질 준비 업무를 정합니다">⚙ 팝업 준비 템플릿</div>
           </div>
           <div class="tcol">
             <div class="tcol-head"><div class="tcol-title">비고</div><div class="tcol-count" id="memo-count">0건</div></div>
@@ -1282,6 +1381,7 @@ a { text-decoration:none; color:inherit; }
             <div style="display:flex;align-items:center;gap:12px;">
               <div><div class="page-header-title">프로젝트</div></div>
               <button class="f-btn f-btn-save" style="padding:7px 16px;font-size:12px;" onclick="openProjCreateModal()">+ 새 프로젝트</button>
+              <button class="f-btn f-btn-cancel" style="padding:7px 12px;font-size:12px;" onclick="openTplModal('popup')" title="팝업 일정 등록 시 자동으로 만들어질 준비 업무를 정합니다">⚙ 팝업 준비 템플릿</button>
               <button class="f-btn f-btn-cancel" style="padding:7px 12px;font-size:12px;" onclick="openMemberColorModal()" title="담당자 색상 설정">🎨 색상</button>
             </div>
           </div>
@@ -1981,6 +2081,31 @@ a { text-decoration:none; color:inherit; }
         <!-- 🏆 잘된 콘텐츠 라이브러리 (C1+C2 결합) -->
         <!-- 🗓 콘텐츠 기획 탭 (팝업 콘텐츠 캘린더) -->
         <div id="content-tab-plan" style="display:none;">
+          <!-- 콘텐츠 실행: 오늘 올릴 콘텐츠 + 이번 주 보드 (캠페인 무관, 전체 기준) -->
+          <div class="cx-wrap" id="cx-exec">
+            <div class="cx-today">
+              <div class="cx-th">
+                <div class="cx-td" id="cx-date"></div>
+                <div class="cx-tt" id="cx-count">오늘 0건</div>
+                <div class="cx-bar"><div class="cx-fill" id="cx-fill" style="width:0%"></div></div>
+              </div>
+              <div id="cx-today-list"></div>
+              <div class="cx-tomo" id="cx-tomo"></div>
+            </div>
+            <div class="cx-board">
+              <div class="cx-bh">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="card-link" onclick="cxWeekMove(-1)" style="font-size:17px;padding:0 3px;">‹</span>
+                  <strong style="font-size:13px;" id="cx-wk-title">이번 주</strong>
+                  <span style="font-size:11px;color:var(--light);" id="cx-wk-range"></span>
+                  <span class="card-link" onclick="cxWeekMove(1)" style="font-size:17px;padding:0 3px;">›</span>
+                </div>
+                <span style="font-size:11px;color:var(--light);" id="cx-wk-sum"></span>
+              </div>
+              <div class="cx-cols" id="cx-board"></div>
+            </div>
+          </div>
+
           <div class="card" style="padding:0;overflow:hidden;">
             <!-- 헤더: 캠페인 + D-day + 추가 -->
             <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
@@ -2341,6 +2466,7 @@ a { text-decoration:none; color:inherit; }
 
           </div>
           <!-- KPI 요약 카드 -->
+          <div id="plan-exit-stages" style="margin-bottom:16px;"></div>
           <div id="plan-kpi-summary" style="margin-bottom:16px;"></div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;" id="plan-annual-cards"></div>
           <!-- 분기별 로드맵 요약 카드 -->
@@ -2365,6 +2491,17 @@ a { text-decoration:none; color:inherit; }
               <div id="plan-trend-tooltip" style="position:absolute;display:none;background:#1c1e26;color:#fff;padding:7px 10px;border-radius:6px;font-size:11px;line-height:1.4;pointer-events:none;white-space:nowrap;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.15);"></div>
             </div>
             <div id="plan-trend-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;"></div>
+          </div>
+
+          <!-- 엑싯 실사 6개 자산 -->
+          <div style="margin-top:16px;">
+            <div class="pl-sec-h">CJ가 실사에서 여는 6개 자산</div>
+            <div class="pl-assets" id="plan-assets"></div>
+          </div>
+          <!-- 지금 짚어야 할 것 -->
+          <div style="margin-top:16px;">
+            <div class="pl-sec-h">지금 짚어야 할 것</div>
+            <div class="pl-recs" id="plan-recs"></div>
           </div>
         </div>
 
@@ -5185,7 +5322,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.10.0</div>
+<div id="version">v5.10.1</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -7713,8 +7850,21 @@ async function loadProjects() {
       const progress = ptasks.length ? Math.round((doneCount / ptasks.length) * 100) : 0;
 
       const projTaskContainerId = `proj-tasks-${p.id}`;
+      // 자동 생성된 팝업 준비 업무는 분류(srcGroup)별로 묶어서 보여줌
+      const groups = [...new Set(ptasks.map(t => t.srcGroup).filter(Boolean))];
+      const groupHeadFor = (t, idx) => {
+        if (!t.srcGroup) return '';
+        const prev = ptasks[idx-1];
+        if (prev && prev.srcGroup === t.srcGroup) return '';
+        const color = (TPL_GROUP_COLOR[t.srcGroup] || 'var(--muted)');
+        const cnt = ptasks.filter(x => x.srcGroup === t.srcGroup).length;
+        const dn  = ptasks.filter(x => x.srcGroup === t.srcGroup && x.status === 'done').length;
+        return `<div class="proj-grp"><span class="proj-grp-dot" style="background:${color}"></span>
+          <span class="proj-grp-name">${escapeHtml(t.srcGroup)}</span>
+          <span class="proj-grp-cnt">${dn}/${cnt}</span></div>`;
+      };
       const tasksHtml = ptasks.length
-        ? `<div id="${projTaskContainerId}">`+ptasks.map(t => {
+        ? `<div id="${projTaskContainerId}">`+ptasks.map((t,_ti) => groupHeadFor(t,_ti) + (t => {
             const done = t.status === 'done';
             const m = MEMBERS.find(x => x.name === t.assignee);
             const st = { cls: stCls[t.status]||'sbadge-todo', lbl: stLbl[t.status]||'' };
@@ -7734,7 +7884,7 @@ async function loadProjects() {
                 </div>
               </div>
             </div>`;
-          }).join('')+`</div>`
+          })(t)).join('')+`</div>`
         : '<div style="padding:10px 20px;font-size:12px;color:var(--faint);">등록된 업무가 없어요</div>';
 
       return `<div class="proj-card" style="width:calc(50% - 7px);">
@@ -14473,11 +14623,12 @@ async function loadOpsCal() {
   const lastDay  = new Date(year,month+1,0).getDate();
   const today    = dateStr();
 
-  let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;">';
-  ['월','화','수','목','금','토','일'].forEach((dow,i)=>{
-    html+=`<div style="font-size:10px;color:${i>=5?'var(--red)':'var(--light)'};text-align:center;padding:3px 0;">${dow}</div>`;
-  });
-  for(let i=0;i<firstDow;i++) html+='<div></div>';
+  // 격자형 캘린더 — 칸 크기 고정, 분류 색으로 구분
+  let html = '<div class="opscal">';
+  html += '<div class="opscal-dow">' + ['월','화','수','목','금','토','일']
+    .map((dow,i)=>`<span${i>=5?' class="wk"':''}>${dow}</span>`).join('') + '</div>';
+  html += '<div class="opscal-grid">';
+  for(let i=0;i<firstDow;i++) html+='<div class="opscal-cell out"></div>';
   for(let day=1;day<=lastDay;day++){
     const ds  = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const isToday = ds===today;
@@ -14485,23 +14636,20 @@ async function loadOpsCal() {
     const isWk= dow>=5;
     const dayEvts = mEvents.filter(e => e.startDate<=ds && (e.endDate||e.startDate)>=ds);
     const hasProd = dayEvts.length>0;
-    // 칸 높이를 고정해 주마다 들쭉날쭉하지 않게 하고, 긴 제목은 잘라내지 않고 줄바꿈
-    html+=`<div onclick="opsSelectDay('${ds}')" style="height:104px;border-radius:6px;padding:5px 6px;cursor:pointer;
-      overflow:hidden;display:flex;flex-direction:column;gap:2px;
-      border:${isToday?'1.5px solid var(--text)':'0.5px solid transparent'};
-      background:transparent;"
-      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
-      <div style="font-size:12px;flex-shrink:0;color:${isWk?'var(--red)':isToday?'var(--text)':'var(--light)'};font-weight:${isToday?'600':'400'};">${day}</div>
+    html+=`<div class="opscal-cell${isToday?' today':''}" onclick="opsSelectDay('${ds}')">
+      <span class="opscal-day${isWk?' wk':''}">${day}</span>
       ${dayEvts.slice(0,3).map(e=>{
         const cat = opsCatOf(e.cat);
-        const bg  = cat ? cat.color+'22' : 'var(--surface2)';
-        return `<div style="font-size:10.5px;line-height:1.3;padding:2px 5px;border-radius:3px;background:${bg};color:var(--text);
-          white-space:normal;word-break:keep-all;overflow-wrap:anywhere;">${escapeHtml(e.title||'')}</div>`;
+        const isStart = e.startDate === ds;
+        return `<span class="opscal-ev" style="background:${cat.color}1F;color:${cat.color};border-left:2.5px solid ${cat.color};"
+          title="${escapeHtml(e.title||'')}">${isStart?'':'· '}${escapeHtml(e.title||'')}</span>`;
       }).join('')}
-      ${dayEvts.length>3?`<div style="font-size:9px;color:var(--light);padding:1px 4px;">+${dayEvts.length-3}</div>`:''}
+      ${dayEvts.length>3?`<span class="opscal-more">+${dayEvts.length-3}</span>`:''}
     </div>`;
   }
-  html+='</div>';
+  const tail = (7 - ((firstDow + lastDay) % 7)) % 7;
+  for(let i=0;i<tail;i++) html+='<div class="opscal-cell out"></div>';
+  html+='</div></div>';
   $('ops-cal').innerHTML = html;
 
   // 이번 달 일정 리스트
@@ -14667,7 +14815,14 @@ async function saveOpsEvent() {
       if (made.task)   parts.push('제작 할일 1건');
       if (made.lineup) parts.push('라인업 카드 1개');
       if (made.ptask)  parts.push(`프로젝트 업무 ${made.ptask}건`);
-      toast(`일정 등록 ✓ ${parts.join(' · ')} 생성됐어요`);
+      // 만들어진 콘텐츠를 바로 볼 수 있게 그 캠페인을 선택해둠
+      _cplanCampaignId = 'camp-ev-' + newEv.id;
+      try { localStorage.setItem('cplan_last_campaign', _cplanCampaignId); } catch(e) {}
+      const go = await customConfirm(
+        `일정이 등록됐어요 ✓`,
+        `${parts.join(' · ')}이 만들어졌습니다.\n\n지금 콘텐츠 기획에서 확인할까요?`,
+        '콘텐츠 보기');
+      if (go) { closeModal('ops-event-modal'); nav('content'); return; }
     } catch(e) {
       console.error('자동 생성 실패:', e);
       toast('일정은 등록됐지만 자동 생성에 실패했어요: ' + (e.message||''));
@@ -16805,6 +16960,8 @@ const DEFAULT_CURRICULUM = {
   ],
 };
 const CURRICULUM_LABEL = { normal:'일반 신제품', hero:'히어로', popup:'팝업' };
+const TPL_GROUP_COLOR = { '현장미팅':'#6D5B9E','실측':'#3B7FC4','레이아웃':'#5F9270','공간기획':'#D4537E',
+  '마케팅기획':'#B8964F','재고준비':'#C0685F','실무':'#4A4D57' };
 
 /* 팝업 준비 템플릿 기본값 — 판교·서울·센텀 실제 등록 업무에서 도출
    [분류, 색, [[D-day, 업무명, 담당자, 지방전용여부], ...]] */
@@ -16971,7 +17128,7 @@ async function autoGenerateFromEvent(ev, curType, opts = {}) {
         title: `${name} 콘텐츠 ${made.content}건 제작`,
         assignee: '고예흰', status: 'todo',
         due_date: dOff(ev.startDate, -7),
-        memo: `${ev.startDate} 오픈 · 첫 발행 ${dOff(ev.startDate, list[0][0])}`,
+        memo: `${ev.startDate} 오픈 · 첫 발행 ${dOff(ev.startDate, list[0][0])}\n콘텐츠 탭 > 캠페인 '${name}' 에서 ${made.content}건 확인`,
       }]);
       made.task = 1;
     } catch(e) { console.error('제작 할일 생성 실패:', e); }
@@ -17314,10 +17471,116 @@ async function _cplanSeedHyundai() {
   });
 }
 
+/* ─────────────────────────────────────
+   콘텐츠 실행 — 오늘 올릴 콘텐츠 + 이번 주 보드
+   캠페인 선택과 무관하게 content_plans 전체를 날짜로 봄.
+   콘텐츠 기획 9건에서 멈춘 이유가 "탭을 열어야 보인다"였으므로,
+   탭을 열자마자 오늘 할 일이 먼저 보이도록 최상단에 둔다.
+─────────────────────────────────────── */
+let _cxWeekOffset = 0;
+let _cxPlans = [];
+let _cxOpenDays = new Set();
+
+function cxWeekMove(d) { _cxWeekOffset += d; renderCplanExecBoard(); }
+
+function _cxMonday(base) {
+  const d = new Date(base + 'T00:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+}
+
+function renderCplanExec() {
+  const today = dateStr();
+  const list  = _cxPlans.filter(p => p.date === today);
+  const DOWK  = ['일','월','화','수','목','금','토'];
+  const td    = new Date(today + 'T00:00:00');
+  const dEl = $('cx-date'); if (dEl) dEl.textContent = `${td.getMonth()+1}월 ${td.getDate()}일 ${DOWK[td.getDay()]}요일`;
+  const cEl = $('cx-count'); if (cEl) cEl.textContent = `오늘 ${list.length}건`;
+
+  const doneN = list.filter(p => p.status === 'done').length;
+  const fEl = $('cx-fill'); if (fEl) fEl.style.width = list.length ? (doneN/list.length*100) + '%' : '0%';
+
+  const lEl = $('cx-today-list');
+  if (lEl) {
+    lEl.innerHTML = list.length ? list.map(p => {
+      const ch = CPLAN_CH[p.channel] || CPLAN_CH.reels;
+      const dn = p.status === 'done';
+      return `<div class="cx-chk${dn?' done':''}" onclick="cxToggleDone('${p.id}')" title="탭하면 발행완료로 바뀝니다">
+        <span class="cx-box"><svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.4L4 7.4L10 1.4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div style="min-width:0;flex:1;">
+          <div class="cx-t">${escapeHtml(p.title||'')}</div>
+          <div class="cx-meta"><span style="padding:1px 6px;border-radius:3px;background:${ch.bg};color:${ch.fg};font-weight:500;">${ch.label}</span>${p.assignee?' · '+escapeHtml(p.assignee):''}</div>
+        </div>
+      </div>`;
+    }).join('') : '<div style="padding:26px 15px;text-align:center;font-size:12px;color:var(--faint);">오늘 올릴 콘텐츠가 없어요.</div>';
+  }
+
+  const tm = new Date(td); tm.setDate(tm.getDate()+1);
+  const tds = dateStr(tm);
+  const nxt = _cxPlans.filter(p => p.date === tds);
+  const tEl = $('cx-tomo');
+  if (tEl) {
+    tEl.innerHTML = nxt.length
+      ? `<b style="color:var(--text);">${tm.getMonth()+1}/${tm.getDate()} ${DOWK[tm.getDay()]}</b> · ${nxt.length}건 예정 — ${nxt.slice(0,2).map(p=>escapeHtml(p.title||'')).join(' / ')}${nxt.length>2?' 외':''}`
+      : `<b style="color:var(--text);">${tm.getMonth()+1}/${tm.getDate()} ${DOWK[tm.getDay()]}</b> · 예정된 콘텐츠 없음`;
+  }
+  renderCplanExecBoard();
+}
+
+function renderCplanExecBoard() {
+  const boardEl = $('cx-board'); if (!boardEl) return;
+  const today = dateStr();
+  const mon = _cxMonday(today);
+  mon.setDate(mon.getDate() + _cxWeekOffset*7);
+  const DOWK = ['월','화','수','목','금','토','일'];
+
+  const days = [];
+  for (let i=0;i<7;i++) { const d = new Date(mon); d.setDate(d.getDate()+i); days.push(d); }
+
+  const tEl = $('cx-wk-title');
+  if (tEl) tEl.textContent = _cxWeekOffset===0 ? '이번 주' : (_cxWeekOffset===1 ? '다음 주' : (_cxWeekOffset===-1 ? '지난 주' : `${_cxWeekOffset>0?'+':''}${_cxWeekOffset}주`));
+  const rEl = $('cx-wk-range');
+  if (rEl) rEl.textContent = `${days[0].getMonth()+1}/${days[0].getDate()} – ${days[6].getMonth()+1}/${days[6].getDate()}`;
+
+  let total = 0;
+  boardEl.innerHTML = days.map((d,i) => {
+    const ds = dateStr(d);
+    const items = _cxPlans.filter(p => p.date === ds);
+    total += items.length;
+    const isOpen = _cxOpenDays.has(ds);
+    const isToday = ds === today;
+    return `<div class="cx-col${isOpen?' isopen':''}${isToday?' today':''}">
+      <div class="cx-ch"><div class="cx-cd">${d.getMonth()+1}/${d.getDate()}</div><div class="cx-cw">${DOWK[i]}</div></div>
+      ${items.map(p => {
+        const ch = CPLAN_CH[p.channel] || CPLAN_CH.reels;
+        return `<div class="cx-item" onclick="openCplanModal('${p.id}')" title="${escapeHtml(p.title||'')}">
+          <span class="cx-bt" style="background:${ch.bg};color:${ch.fg};">${ch.label}</span>${escapeHtml(p.title||'')}</div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+
+  const sEl = $('cx-wk-sum'); if (sEl) sEl.textContent = `콘텐츠 ${total}건`;
+}
+
+async function cxToggleDone(id) {
+  await patchAppState(s => {
+    const p = (s.content_plans||[]).find(x => x.id === id);
+    if (p) { p.status = p.status === 'done' ? 'idea' : 'done'; p.userEdited = true; }
+    return s;
+  });
+  loadCplan();
+}
+
 async function loadCplan() {
   try {
     await _cplanSeedHyundai();
     const s = await getAppState();
+    // 실행 뷰용 — 캠페인 필터 없이 전체
+    _cxPlans = (s.content_plans||[]).slice().sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+    _cxOpenDays = new Set((s.ops_events||[])
+      .filter(e => e.cat === 'cat-open' || e.cat === 'cat-popup')
+      .map(e => e.startDate).filter(Boolean));
+    renderCplanExec();
     const camps = await _cplanEnsureCampaign(s);
     const sel = $('cplan-campaign-sel');
     if (sel) {
@@ -20300,12 +20563,143 @@ async function saveMonthTarget(month) {
   loadPlanAnnual();
 }
 
+/* 엑싯 로드맵 — 단계·6개 자산은 app_state.exit_plan 에서 읽고, 없으면 기본값 */
+const DEFAULT_EXIT_STAGES = [
+  ['Stage 0','2026.09–12','기반 정리','팝업 3 · 신제품 13 · 일본 상표 · 채널별 손익'],
+  ['Stage 1','2027 상','일본 상륙 + 국내 상설','도쿄 팝업 · 유통 파트너 1 · 상설 협상'],
+  ['Stage 2','2027 하','배수 만들기','라이선싱 3건 · 일본 40% · 대표 부재 30일'],
+  ['Stage 3','2028 상','매각 준비','자문사 · IM · 데이터룸 · 인수자 숏리스트'],
+  ['Stage 4','2028 하','클로징','즉시 현금 비율 · 락업 최소화'],
+];
+function renderExitStages() {
+  const el = $('plan-exit-stages'); if (!el) return;
+  const now = new Date();
+  const curIdx = now < new Date('2027-01-01') ? 0
+    : now < new Date('2027-07-01') ? 1
+    : now < new Date('2028-01-01') ? 2
+    : now < new Date('2028-07-01') ? 3 : 4;
+  el.innerHTML = `
+    <div class="card" style="padding:14px 16px;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:11px;">
+        <div><div class="card-title">2028 엑싯 로드맵</div>
+          <div class="card-sub">500억 매각 · 인수자 1순위 CJ · IP 프리미엄 4배 → 2028 매출 125억 필요</div></div>
+      </div>
+      <div class="exit-stages">
+        ${DEFAULT_EXIT_STAGES.map(([n,per,t,d],i)=>`
+          <div class="exit-stg${i===curIdx?' cur':''}">
+            ${i===curIdx?'<span class="exit-now">지금</span>':''}
+            <div class="exit-n">${n} · ${per}</div>
+            <div class="exit-t">${t}</div>
+            <div class="exit-d">${d}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* 엑싯 실사 6개 자산 — 진행률은 앱에 있는 실제 데이터에서 계산할 수 있는 것만 계산하고,
+   앱에 데이터가 없는 항목(상표·라이선싱·해외)은 기준값을 둔다. */
+async function renderPlanAssetsRecs(ctx) {
+  const el = $('plan-assets');
+  const rel = $('plan-recs');
+  if (!el && !rel) return;
+  const eok = v => v >= 100000000 ? (v/100000000).toFixed(1)+'억' : Math.round(v/10000).toLocaleString()+'만원';
+
+  let s = {};
+  try { s = await getAppState(); } catch(e) {}
+  const evts    = s.ops_events || [];
+  const plans   = s.content_plans || [];
+  const opens   = evts.filter(e => e.cat === 'cat-open').length;
+  const popups  = evts.filter(e => e.cat === 'cat-popup').length;
+  const contentN= plans.length;
+
+  // ② 팬덤 — 오픈/콘텐츠 실행량 기준 (오픈 20회 + 콘텐츠 400건을 100%로 봄)
+  const fandom = Math.min(95, Math.round((opens/20*50 + contentN/400*50)));
+  // ③ 유통 실적 — 팝업 6회를 100%로 (상설 없음)
+  const dist   = Math.min(90, Math.round(popups/6*70));
+
+  if (el) {
+    const ASSETS = [
+      ['① IP 권리','#6D5B9E',40,'일본 상표 출원이 Stage 0 과제. 국내 등록분은 정리됨'],
+      ['② 팬덤','#D4537E',Math.max(10,fandom),`오픈 ${opens}회 · 콘텐츠 ${contentN}건이 이 자산을 올리는 중`],
+      ['③ 유통 실적','#3B7FC4',Math.max(10,dist),`팝업 ${popups}건이 오프라인 실적의 전부. 상설 없음`],
+      ['④ 라이선싱','#B8964F',15,'이모티콘 시즌2가 유일. 출시일이 첫 지표'],
+      ['⑤ 해외','#C0685F',5,'2027 상반기 도쿄 팝업 전까지 실적 0'],
+      ['⑥ 조직·재무','#5F9270',45,'채널별 손익 미측정 — 원가·수수료 데이터 없음'],
+    ];
+    el.innerHTML = ASSETS.map(([n,c,pv,d])=>`<div class="pl-ast">
+      <div class="pl-ast-h"><span class="pl-ast-n">${n}</span><span class="pl-ast-p">${pv}%</span></div>
+      <div class="pl-ast-bar"><div class="pl-ast-f" style="width:${pv}%;background:${c};"></div></div>
+      <div class="pl-ast-d">${d}</div></div>`).join('');
+  }
+
+  if (!rel) return;
+  const recs = [];
+
+  // 1) 남은 기간에 필요한 월평균 vs 지금까지의 월평균
+  if (ctx && ctx.yearTarget > 0) {
+    const doneM   = Math.max(1, ctx.curMonth);           // 완료된 개월 수
+    const restM   = Math.max(1, 12 - ctx.curMonth);
+    const avgSoFar= ctx.actualTotal / doneM;
+    const need    = Math.max(0, ctx.yearTarget - ctx.actualTotal);
+    const needAvg = need / restM;
+    const gap     = avgSoFar > 0 ? Math.round((needAvg/avgSoFar - 1) * 100) : null;
+    recs.push([
+      `남은 ${restM}개월에 ${eok(need)}이 남아 있습니다`,
+      `${planYear}년 목표 ${eok(ctx.yearTarget)} 중 지금까지 ${eok(ctx.actualTotal)}. 남은 ${restM}개월 동안 월평균 <b>${eok(needAvg)}</b>을 만들어야 하는데, 지금까지의 월평균은 ${eok(avgSoFar)}입니다${gap!==null?` — <b>${gap>=0?'+':''}${gap}%</b>가 필요합니다`:''}.`,
+      `오픈 1회당 목표 매출을 KPI로 잡으면 이 숫자가 몇 번의 오픈으로 나뉘는지 보입니다`
+    ]);
+  }
+
+  // 2) 매출 원장 두 곳의 정합성 — 판매탭(sales_log)과 세무 매출장(channel_sales_log)
+  try {
+    const [a, b] = await Promise.all([
+      db.from('sales_log').select('amount').gte('sale_date',`${planYear}-01-01`).lte('sale_date',`${planYear}-12-31`),
+      db.from('channel_sales_log').select('amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`),
+    ]);
+    const sumA = (a.data||[]).reduce((x,r)=>x+(r.amount||0),0);
+    const sumB = (b.data||[]).reduce((x,r)=>x+(r.amount||0),0);
+    const diff = Math.abs(sumA - sumB);
+    if (sumA > 0 && sumB > 0 && diff / Math.max(sumA,sumB) > 0.03) {
+      recs.push([
+        '매출 숫자가 두 개라 달성률이 흔들립니다',
+        `같은 기간인데 판매 기록은 <b>${eok(sumA)}</b>, 매출장은 <b>${eok(sumB)}</b>로 ${eok(diff)} 차이가 납니다. 실사에서 가장 먼저 보는 게 매출 정합성인데, 어느 쪽이 맞는지 정해두지 않으면 지금부터 쌓이는 기록이 전부 흔들립니다.`,
+        '둘 중 하나를 공식 원장으로 확정 → 나머지는 입력 화면으로만 사용'
+      ]);
+    }
+  } catch(e) { console.error('plan recs ledger', e); }
+
+  // 3) 팝업 손익 — 비용에 행사 태그가 없으면 팝업별 ROI가 계산 불가
+  const costs = (s.tax_costs||[]).filter(c=>c.year===planYear);
+  const tagged = costs.filter(c=>c.event || c.eventId).length;
+  if (popups > 0 && tagged === 0) {
+    const costSum = costs.reduce((x,c)=>x+(c.amount||0),0);
+    recs.push([
+      `팝업 ${popups}건이 남는 장사인지 알 방법이 없습니다`,
+      `올해 비용 ${eok(costSum)}이 비용관리 탭에 들어와 있지만, 어느 팝업에 쓴 돈인지 묶이는 항목이 <b>0건</b>입니다. 부스비·집기·현장 인건비가 '기타·비품·인건비'로 흩어져서, 상설 매장 협상 때 "팝업 ROI가 이만큼"이라고 내밀 근거가 지금은 만들어지지 않고 있습니다.`,
+      '비용 입력에 "관련 행사" 칸 하나만 추가하면 팝업별 손익이 자동 집계됩니다'
+    ]);
+  }
+
+  rel.innerHTML = recs.length
+    ? recs.map(([t,b,n])=>`<div class="pl-rec">
+        <div class="pl-rec-t">${t}</div>
+        <p class="pl-rec-b">${b}</p>
+        <span class="pl-rec-n">→ ${n}</span></div>`).join('')
+    : '<div style="font-size:12px;color:var(--faint);padding:8px 2px;">지금 데이터에서 짚을 문제는 없습니다.</div>';
+}
+
 async function loadPlanAnnual() {
+  renderExitStages();
   const s    = await getPlanData();
   const p    = s.plan[planYear];
   const goals= p.goals||[];
   const now  = new Date();
   const curMonth = now.getFullYear()===planYear ? now.getMonth() : 11;
+
+  // 연간 매출 목표 = 월별 목표 12개월 합계 (함수 전체에서 쓰이므로 여기서 선언)
+  let monthlyGoals = {};
+  try { monthlyGoals = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {}; } catch(e) {}
+  const monthlySum = Object.values(monthlyGoals).reduce((a,m)=>a+(Number(m?.target)||0),0);
 
   // ── KPI 요약 카드 (C안: 강조 카드형) ──
   const kpiEl = $('plan-kpi-summary');
@@ -20313,11 +20707,6 @@ async function loadPlanAnnual() {
     const { data: kpiSales } = await db.from('channel_sales_log').select('amount,date').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
     const rows = kpiSales || [];
     const yearTotal = rows.reduce((sum,r)=>sum+(r.amount||0),0);
-    // 연간 매출 목표 = 월별 목표 12개월 합계 (따로 입력할 필요 없음).
-    // 월별 목표가 하나도 없을 때만 목표 카드의 문자열을 씀.
-    let monthlyGoals = {};
-    try { monthlyGoals = p.memos?.monthly ? JSON.parse(p.memos.monthly) : {}; } catch(e) {}
-    const monthlySum = Object.values(monthlyGoals).reduce((a,m)=>a+(Number(m?.target)||0),0);
     const yearGoalObj = goals.find(g=>g.label?.includes('매출'));
     const yearGoalRaw = yearGoalObj?.target||'';
     const yearGoalNum = monthlySum > 0 ? monthlySum
@@ -20462,6 +20851,12 @@ async function loadPlanAnnual() {
   renderPlanTrendChart(monthly, actualByMonth, curMonth);
   // 월별 상세 테이블 (지출·순수익 포함)
   loadPlanAnnualTable();
+  // 6개 자산 + 지금 짚어야 할 것 (실패해도 위쪽 렌더를 막지 않도록 분리)
+  renderPlanAssetsRecs({
+    curMonth,
+    yearTarget:  monthlySum,
+    actualTotal: Object.values(actualByMonth).reduce((a,v)=>a+(v||0),0),
+  }).catch(e => console.error('renderPlanAssetsRecs', e));
 }
 
 function renderPlanTrendChart(monthly, actualByMonth, curMonth) {
