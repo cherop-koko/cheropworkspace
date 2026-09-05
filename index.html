@@ -1097,11 +1097,42 @@ a { text-decoration:none; color:inherit; }
 .cx-item .cx-bt { font-size:9px; font-weight:500; display:block; margin-bottom:1px; padding:1px 5px;
   border-radius:3px; width:fit-content; }
 @media (max-width:900px){ .cx-wrap { grid-template-columns:1fr; } }
-.cmon-grid { grid-auto-rows:120px; }
-.opscal-cell.cmon-open { background:#FBEAF0; }
-.opscal-cell.cmon-open.today { background:#F7DCE6; }
-.cmon-grid .opscal-ev { cursor:pointer; }
-@media (max-width:768px){ .cmon-grid { grid-auto-rows:92px; } }
+.cmon-grid { grid-auto-rows:132px; }
+.opscal-cell.cmon-open { background:#FAF6FD; }
+.opscal-cell.cmon-open.today { background:#F3EBFA; }
+.cmon-openlbl { display:block; font-size:9px; font-weight:600; color:#fff; padding:2px 5px;
+  border-radius:3px; margin:2px 0 3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cmon-ev { display:flex; align-items:flex-start; gap:4px; font-size:10px; line-height:1.3;
+  padding:2px 4px 2px 5px; border-radius:3px; background:var(--surface); margin-bottom:2px; cursor:pointer; }
+.cmon-ev:hover { background:var(--surface2); }
+.cmon-badge { flex-shrink:0; display:inline-block; min-width:14px; text-align:center; font-size:9px;
+  font-weight:600; padding:1px 3px; border-radius:3px; }
+.cmon-evt { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+.cmon-evt.done { text-decoration:line-through; color:var(--faint); }
+.cmon-lg { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; color:var(--muted);
+  padding:3px 9px; border:0.5px solid var(--border); border-radius:20px; cursor:pointer; background:var(--surface); }
+.cmon-lg.on { background:var(--text); color:#fff; border-color:var(--text); }
+.cmon-lg-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+@media (max-width:768px){ .cmon-grid { grid-auto-rows:104px; } .cmon-evt { display:none; } }
+
+/* 캠페인 탭 */
+.camptabs-wrap { position:relative; border-bottom:0.5px solid var(--surface2); }
+.camptabs { display:flex; gap:5px; padding:11px 18px; overflow-x:auto; scrollbar-width:none; }
+.camptabs::-webkit-scrollbar { display:none; }
+.camptabs-fade { position:absolute; right:0; top:0; bottom:1px; width:28px; pointer-events:none;
+  background:linear-gradient(90deg, transparent, var(--surface)); }
+.camptab { display:inline-flex; align-items:center; gap:6px; flex-shrink:0; white-space:nowrap;
+  font-size:12px; padding:6px 12px; border-radius:20px; border:0.5px solid var(--border);
+  background:var(--surface); color:var(--muted); cursor:pointer; transition:.12s; }
+.camptab:hover { border-color:var(--muted); }
+.camptab.on { background:var(--text); color:#fff; border-color:var(--text); font-weight:500; }
+.camptab.past { opacity:.55; }
+.camptab.past.on { opacity:1; }
+.camptab.add { border-style:dashed; color:var(--light); }
+.camptab-nm { max-width:180px; overflow:hidden; text-overflow:ellipsis; }
+.camptab-dd { font-family:var(--mono); font-size:10px; opacity:.75; }
+.camptab-n { font-size:10px; padding:0 5px; border-radius:20px; background:var(--surface2); color:var(--muted); }
+.camptab.on .camptab-n { background:rgba(255,255,255,.22); color:#fff; }
 @media (max-width:768px){
   .cx-cols { grid-template-columns:repeat(4,minmax(0,1fr)); }
   .cx-col { min-height:120px; }
@@ -2128,15 +2159,18 @@ a { text-decoration:none; color:inherit; }
           </div>
 
           <div class="card" style="padding:0;overflow:hidden;">
-            <!-- 헤더: 캠페인 + D-day + 추가 -->
-            <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
-              <select id="cplan-campaign-sel" style="font-size:13px;font-weight:500;border:none;outline:none;background:transparent;cursor:pointer;font-family:var(--font);max-width:200px;" onchange="cplanCampaignChanged(this)"></select>
+            <!-- 캠페인 탭 — 드롭다운 대신 가로 탭. 날짜순으로 늘어놓고 D-day를 같이 보여준다 -->
+            <div class="camptabs-wrap">
+              <div class="camptabs" id="cplan-camp-tabs"></div>
+              <div class="camptabs-fade"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:0.5px solid var(--surface2);flex-wrap:wrap;">
               <span id="cplan-dday" style="font-size:11px;padding:3px 10px;border-radius:20px;background:#FCEBEB;color:#A32D2D;font-weight:500;display:none;"></span>
               <span id="cplan-count" style="font-size:12px;color:var(--light);"></span>
               <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;white-space:nowrap;" onclick="openTplModal('cur')" title="오픈 유형별로 자동 생성될 콘텐츠를 정합니다">⚙ 커리큘럼</button>
                 <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;white-space:nowrap;" onclick="cplanNewCampaign()">+ 새 캠페인</button>
-                <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;white-space:nowrap;" onclick="cplanEditCampaign()">캠페인 설정</button>
+                <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;white-space:nowrap;" onclick="cplanEditCampaign()">✏️ 이름·날짜·삭제</button>
                 <button class="f-btn f-btn-cancel" style="font-size:11px;padding:5px 11px;white-space:nowrap;" onclick="cplanCopyFromCampaign()" title="다른 캠페인의 일정 구성을 목표일 간격(D-N)을 유지한 채 그대로 가져옵니다">일정 복사</button>
                 <button class="f-btn f-btn-save" style="font-size:12px;padding:6px 14px;white-space:nowrap;" onclick="openCplanModal(null)">+ 콘텐츠 추가</button>
               </div>
@@ -2147,9 +2181,9 @@ a { text-decoration:none; color:inherit; }
               <div class="inv-pill"    id="cplan-view-week" onclick="cplanSetView('week',this)">주차별</div>
               <div style="width:0.5px;height:16px;background:var(--border);margin:0 4px;"></div>
               <div class="inv-pill on" onclick="cplanSetCh('all',this)">전체</div>
-              <div class="inv-pill" style="color:#3C3489;" onclick="cplanSetCh('reels',this)">릴스</div>
-              <div class="inv-pill" style="color:#72243E;" onclick="cplanSetCh('feed',this)">피드</div>
-              <div class="inv-pill" style="color:#0C447C;" onclick="cplanSetCh('story',this)">스토리</div>
+              <div class="inv-pill" style="color:#4B3BAE;" onclick="cplanSetCh('reels',this)">릴스</div>
+              <div class="inv-pill" style="color:#A85B14;" onclick="cplanSetCh('feed',this)">피드</div>
+              <div class="inv-pill" style="color:#1F6F63;" onclick="cplanSetCh('story',this)">스토리</div>
             </div>
             <!-- 리스트 -->
             <div id="cplan-list" style="padding:2px 18px 8px;"></div>
@@ -2165,8 +2199,9 @@ a { text-decoration:none; color:inherit; }
               <span class="card-link" onclick="cmonMove(1)" style="font-size:18px;padding:0 4px;">›</span>
               <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="cmonToday()">이번 달</button>
               <span style="font-size:11px;color:var(--light);" id="cmon-count"></span>
-              <div style="margin-left:auto;display:flex;gap:10px;font-size:10.5px;color:var(--light);flex-wrap:wrap;" id="cmon-legend"></div>
+              <div style="margin-left:auto;display:flex;gap:9px;font-size:10.5px;color:var(--light);flex-wrap:wrap;align-items:center;" id="cmon-chlegend"></div>
             </div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;padding:10px 18px;border-bottom:0.5px solid var(--surface2);" id="cmon-legend"></div>
             <div id="cmon-cal" style="padding:0;"></div>
           </div>
         </div>
@@ -5364,7 +5399,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.11.0</div>
+<div id="version">v5.12.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -14998,8 +15033,15 @@ async function saveOpsEvent() {
   const isLocal = isGen ? !!$('ops-event-islocal')?.checked : false;
   let newEv = null;
 
+  let shifted = null;
   if(opsEventEditId){
     const idx = s.ops_events.findIndex(e=>e.id===opsEventEditId);
+    const prev = idx>=0 ? s.ops_events[idx] : null;
+    // 오픈·팝업 날짜가 바뀌면 여기서 만들어진 콘텐츠·업무도 같이 옮겨야 한다.
+    // (예전엔 일정만 움직이고 콘텐츠는 옛 날짜에 그대로 남아 있었음)
+    if (prev && AUTOGEN_CATS.includes(prev.cat) && prev.startDate && prev.startDate !== startDate) {
+      shifted = { evId: opsEventEditId, from: prev.startDate, to: startDate };
+    }
     if(idx>=0) s.ops_events[idx] = { ...s.ops_events[idx], ...data };
   } else {
     newEv = { id:`ev-${Date.now()}`, ...data };
@@ -15029,11 +15071,67 @@ async function saveOpsEvent() {
       console.error('자동 생성 실패:', e);
       toast('일정은 등록됐지만 자동 생성에 실패했어요: ' + (e.message||''));
     }
+  } else if (shifted) {
+    const n = await shiftEventLinkedDates(shifted.evId, shifted.from, shifted.to);
+    toast(n.total
+      ? `수정됐어요 ✓ 연동된 ${n.total}건도 함께 옮겼어요 (콘텐츠 ${n.content} · 업무 ${n.ptask} · 할일 ${n.task})`
+      : '수정됐어요 ✓');
   } else {
     toast(opsEventEditId ? '수정됐어요 ✓' : '일정이 등록됐어요 ✓');
   }
   closeModal('ops-event-modal');
   loadOpsCal();
+}
+
+/* 오픈·팝업 일정의 날짜가 바뀌었을 때, 그 일정에서 만들어진 것들을 함께 옮긴다.
+   콘텐츠는 srcOff(D-day)로 다시 계산하고, 프로젝트 업무·할일은 바뀐 일수만큼 민다.
+   이미 발행완료/완료한 것과 직접 수정한 콘텐츠는 건드리지 않는다. */
+async function shiftEventLinkedDates(evId, fromDate, toDate) {
+  const delta = Math.round((new Date(toDate+'T00:00:00') - new Date(fromDate+'T00:00:00')) / 86400000);
+  const res = { content:0, ptask:0, lineup:0, task:0, total:0 };
+  if (!delta) return res;
+  const moved = [];   // 할일 due_date 보정용
+  await patchAppState(st => {
+    (st.content_plans||[]).forEach(p => {
+      if (p.srcEvent !== evId) return;
+      if (p.status === 'done' || p.userEdited) return;
+      p.date = (p.srcOff != null) ? dOff(toDate, p.srcOff) : dOff(p.date, delta);
+      res.content++;
+    });
+    (st.cplan_campaigns||[]).forEach(c => { if (c.srcEvent === evId) c.targetDate = toDate; });
+    (st.proj_tasks||[]).forEach(t => {
+      if (t.srcEvent !== evId || t.status === 'done' || !t.due_date) return;
+      t.due_date = dOff(t.due_date, delta); res.ptask++;
+    });
+    (st.projects||[]).forEach(pr => {
+      if (pr.srcEvent !== evId) return;
+      if (pr.start_date) pr.start_date = dOff(pr.start_date, delta);
+      if (pr.end_date)   pr.end_date   = dOff(pr.end_date, delta);
+    });
+    Object.keys(st.plan||{}).forEach(y => {
+      (st.plan[y]?.products||[]).forEach(pp => {
+        if (pp.srcEvent !== evId) return;
+        pp.launch = toDate; pp.month = Number(toDate.slice(5,7)); res.lineup++;
+      });
+    });
+    return st;
+  });
+  // 별도 테이블(tasks)의 마감일도 같이
+  try {
+    const s0 = await getAppState();
+    const camp = (s0.cplan_campaigns||[]).find(c => c.srcEvent === evId);
+    const nm = camp?.name;
+    if (nm) {
+      const { data: rows } = await db.from('tasks').select('id,title,due_date,status').ilike('title', nm + '%');
+      for (const t of (rows||[])) {
+        if (t.status === 'done' || !t.due_date) continue;
+        await db.from('tasks').update({ due_date: dOff(t.due_date, delta) }).eq('id', t.id);
+        res.task++;
+      }
+    }
+  } catch(e) { console.error('shiftEventLinkedDates tasks', e); }
+  res.total = res.content + res.ptask + res.task;
+  return res;
 }
 
 async function deleteOpsEvent() {
@@ -17127,8 +17225,9 @@ const DEFAULT_CURRICULUM = {
   normal: [
     [-7,'story','어떤 캐릭터인지 + 커밍쑨',''],
     [-6,'story','신규 캐릭터 스포',''],
-    [-6,'task','제품 업로드(오픈예정 세팅) + 광고 소재 세팅','인스타 콘텐츠 아님 · 별도 할일'],
+    [-6,'task','광고 소재 세팅','인스타 콘텐츠 아님 · 별도 할일','고예흰'],
     [-5,'feed','오픈 예고','링크 자동댓글 연결'],
+    [-3,'task','홈페이지 제품 업로드 (오픈예정으로 세팅)','인스타 콘텐츠 아님 · 별도 할일','정현진'],
     [-3,'story','신규 캐릭터 관련 무물',''],
     [-2,'reels','신제품 영상','링크 자동댓글 연결'],
     [-1,'story','오픈 카운트다운','신제품 관련 투표 선택'],
@@ -17277,7 +17376,7 @@ async function autoGenerateFromEvent(ev, curType, opts = {}) {
     list.forEach((row, i) => {
       const [off, ch, label, note] = row;
       // 'task' 행은 인스타 콘텐츠가 아니라 별도 할일 — 아래에서 따로 등록
-      if (ch === 'task') { sideTasks.push({ off, label, note }); return; }
+      if (ch === 'task') { sideTasks.push({ off, label, note, who: row[4] || '고예흰' }); return; }
       s.content_plans.push({
         id: `cp-ev-${ev.id}-${i}`,
         campaign: campId,
@@ -17345,7 +17444,7 @@ async function autoGenerateFromEvent(ev, curType, opts = {}) {
     try {
       await db.from('tasks').insert(sideTasks.map(t => ({
         title: `${name} ${t.label}`,
-        assignee: '고예흰', status: 'todo',
+        assignee: t.who || '고예흰', status: 'todo',
         due_date: dOff(ev.startDate, t.off),
         note: `${ev.startDate} 오픈 준비`,
         memo: t.note || '',
@@ -17480,11 +17579,13 @@ async function applyCurriculumChange(curType, list) {
   return { ...plan, applied:true };
 }
 
+/* 채널 색 — 대표님 '몽모 오픈 캘린더' 파일의 팔레트.
+   피드가 분홍이던 시절엔 오픈·팝업(분홍)과 구분이 안 됐어서 주황 계열로 옮김. */
 const CPLAN_CH = {
-  reels: { label:'릴스',   bg:'#EEEDFE', fg:'#3C3489', bar:'#7F77DD' },
-  feed:  { label:'피드',   bg:'#FBEAF0', fg:'#72243E', bar:'#D4537E' },
-  story: { label:'스토리', bg:'#E6F1FB', fg:'#0C447C', bar:'#378ADD' },
-  ad:    { label:'광고',   bg:'#EAF3EC', fg:'#2E5C3E', bar:'#5F9270' },
+  reels: { label:'릴스',   short:'릴', bg:'#ECE8FA', fg:'#4B3BAE', bar:'#4B3BAE' },
+  feed:  { label:'피드',   short:'피', bg:'#F8EEE1', fg:'#A85B14', bar:'#A85B14' },
+  story: { label:'스토리', short:'스', bg:'#E1EFEB', fg:'#1F6F63', bar:'#1F6F63' },
+  ad:    { label:'광고',   short:'광', bg:'#ECE7EA', fg:'#5F5762', bar:'#5F5762' },
 };
 const TPL_CH = { ...CPLAN_CH, ...TPL_CH_EXTRA };
 const CPLAN_ST = {
@@ -17667,18 +17768,89 @@ async function cplanCopyFromCampaign() {
   loadCplan();
 }
 
+/* 캠페인 탭 — 목표일 순으로 늘어놓고, 지난 캠페인은 뒤로 보낸다.
+   드롭다운은 지금 뭐가 있는지 열어봐야 알 수 있어서 탭으로 바꿈. */
+function renderCampTabs(camps) {
+  const el = $('cplan-camp-tabs'); if (!el) return;
+  const today = dateStr();
+  const cnt = {};
+  _cxPlans.forEach(p => { cnt[p.campaign] = (cnt[p.campaign]||0) + 1; });
+
+  const live = [], past = [];
+  camps.forEach(c => {
+    const ended = c.archived || (c.targetDate && c.targetDate < today);
+    (ended ? past : live).push(c);
+  });
+  live.sort((a,b)=>(a.targetDate||'9999').localeCompare(b.targetDate||'9999'));
+  past.sort((a,b)=>(b.targetDate||'0000').localeCompare(a.targetDate||'0000'));
+  const ordered = [...live, ...past];
+
+  el.innerHTML = ordered.map(c => {
+    const on = c.id === _cplanCampaignId;
+    const ended = c.archived || (c.targetDate && c.targetDate < today);
+    let dd = '';
+    if (c.targetDate) {
+      const diff = Math.round((new Date(c.targetDate+'T00:00:00') - new Date(today+'T00:00:00'))/86400000);
+      dd = diff > 0 ? `D-${diff}` : diff === 0 ? 'D-DAY' : '종료';
+    }
+    const n = cnt[c.id] || 0;
+    return `<div class="camptab${on?' on':''}${ended?' past':''}" onclick="cplanPickCampaign('${c.id}')" title="${escapeHtml(c.name)}">
+      <span class="camptab-nm">${escapeHtml(c.name)}</span>
+      ${dd?`<span class="camptab-dd">${dd}</span>`:''}
+      ${n?`<span class="camptab-n">${n}</span>`:''}
+    </div>`;
+  }).join('') + `<div class="camptab add" onclick="cplanNewCampaign()">+ 새 캠페인</div>`;
+
+  // 선택된 탭이 화면 밖이면 보이도록
+  const onEl = el.querySelector('.camptab.on');
+  if (onEl) onEl.scrollIntoView({ block:'nearest', inline:'center' });
+}
+
+function cplanPickCampaign(id) {
+  _cplanCampaignId = id;
+  try { localStorage.setItem('cplan_last_campaign', id); } catch(e) {}
+  loadCplan();
+}
+
 async function cplanEditCampaign() {
   const s = await getAppState();
   const camp = (s.cplan_campaigns||[]).find(c=>c.id===_cplanCampaignId);
-  if (!camp) return;
-  const name = await customPrompt('캠페인 이름', '', camp.name);
-  if (!name) return;
+  if (!camp) { toast('먼저 캠페인을 선택해주세요'); return; }
+  const n = (s.content_plans||[]).filter(p=>p.campaign===camp.id).length;
+  const linked = !!camp.srcEvent;
+
+  const name = await customPrompt(
+    `'${camp.name}' 캠페인`,
+    '이름을 비우고 저장하면 삭제 여부를 물어봅니다',
+    camp.name);
+
+  if (name === null) return;                       // 취소
+  if (!String(name).trim()) {                      // 이름을 비움 → 삭제 확인
+    const ok = await customConfirm(`'${camp.name}' 캠페인을 삭제할까요?`,
+      (n ? `이 캠페인의 콘텐츠 ${n}건도 함께 삭제됩니다.\n` : '') +
+      (linked ? '이 캠페인은 운영 캘린더 일정과 연결돼 있습니다. 일정은 남고 콘텐츠만 지워집니다.' : ''),
+      '삭제');
+    if (!ok) return;
+    await patchAppState(s2 => {
+      s2.cplan_campaigns = (s2.cplan_campaigns||[]).filter(c => c.id !== camp.id);
+      s2.content_plans   = (s2.content_plans||[]).filter(p => p.campaign !== camp.id);
+      return s2;
+    });
+    _cplanCampaignId = null;
+    try { localStorage.removeItem('cplan_last_campaign'); } catch(e) {}
+    toast('삭제됐어요');
+    loadCplan();
+    return;
+  }
+
   const date = await customPrompt('목표일 (D-day 기준, YYYY-MM-DD, 비우면 없음)', '', camp.targetDate||'');
+  if (date === null) return;
   await patchAppState(s2 => {
-    const c = (s2.cplan_campaigns||[]).find(x=>x.id===_cplanCampaignId);
-    if (c) { c.name = name; c.targetDate = (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) ? date : null; }
+    const c = (s2.cplan_campaigns||[]).find(x=>x.id===camp.id);
+    if (c) { c.name = String(name).trim(); c.targetDate = (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) ? date : null; }
     return s2;
   });
+  toast('저장됐어요 ✓');
   loadCplan();
 }
 
@@ -17728,6 +17900,8 @@ async function _cplanSeedHyundai() {
 let _cxWeekOffset = 0;
 let _cxPlans = [];
 let _cxOpenDays = new Set();
+let _cxOpenMap = {};            // 날짜 → {title, cat}  (월간 캘린더에서 오픈·팝업 라벨용)
+let _cplanCampsCache = [];      // 캠페인 이름 조회용
 
 function cxWeekMove(d) { _cxWeekOffset += d; renderCplanExecBoard(); }
 
@@ -17815,8 +17989,22 @@ function renderCplanExecBoard() {
    주간 보드가 "이번 주에 뭘 올리나"라면 이건 "이 달 전체 그림"을 본다.
    오픈일·팝업일은 배경으로 표시해서 한 달 안에서 어디가 축인지 보이게 함. */
 let _cmonOffset = 0;
+let _cmonCamp = 'all';          // 제품·팝업 필터
 function cmonMove(d) { _cmonOffset += d; renderCplanMonth(); }
 function cmonToday() { _cmonOffset = 0; renderCplanMonth(); }
+function cmonSetCamp(id) { _cmonCamp = id; renderCplanMonth(); }
+
+/* 캠페인(제품·팝업)별 색 — 목표일 순서대로 팔레트를 돌려 쓴다.
+   달력에서 '색 = 어떤 제품/팝업', '배지 = 어떤 채널' 두 축으로 읽히게 하기 위함. */
+const CAMP_PALETTE = ['#4B3BAE','#C2185B','#1F6F63','#A85B14','#3B7FC4','#7C5BB8',
+                      '#8C3B1F','#5F9270','#B8964F','#C0685F','#2E6B8A','#8A4A5A'];
+let _campColorMap = {};
+function buildCampColors(camps) {
+  const sorted = [...camps].sort((a,b)=>(a.targetDate||'9999').localeCompare(b.targetDate||'9999'));
+  _campColorMap = {};
+  sorted.forEach((c,i) => { _campColorMap[c.id] = CAMP_PALETTE[i % CAMP_PALETTE.length]; });
+}
+const campColor = id => _campColorMap[id] || '#8F8792';
 
 function renderCplanMonth() {
   const el = $('cmon-cal'); if (!el) return;
@@ -17824,21 +18012,41 @@ function renderCplanMonth() {
   const base = new Date(now.getFullYear(), now.getMonth() + _cmonOffset, 1);
   const year = base.getFullYear(), month = base.getMonth();
   const today = dateStr();
+  const mStr = `${year}-${String(month+1).padStart(2,'0')}`;
 
   const tEl = $('cmon-title'); if (tEl) tEl.textContent = `${year}년 ${month+1}월`;
 
-  const mStr = `${year}-${String(month+1).padStart(2,'0')}`;
-  const monthPlans = _cxPlans.filter(p => (p.date||'').startsWith(mStr));
+  const monthAll = _cxPlans.filter(p => (p.date||'').startsWith(mStr));
+  const shown    = monthAll.filter(p => _cmonCamp === 'all' || p.campaign === _cmonCamp);
+
+  // 이 달에 콘텐츠가 있는 캠페인만 범례로 (전체 20개를 다 보여주면 읽히지 않음)
+  const inMonth = [];
+  monthAll.forEach(p => { if (!inMonth.some(x=>x.id===p.campaign)) inMonth.push({ id:p.campaign, n:0 }); });
+  inMonth.forEach(c => { c.n = monthAll.filter(p=>p.campaign===c.id).length; });
+  const nameOf = id => (_cplanCampsCache.find(c=>c.id===id)?.name) || '(이름 없음)';
+  inMonth.sort((a,b)=>nameOf(a.id).localeCompare(nameOf(b.id)));
+
   const cEl = $('cmon-count');
   if (cEl) {
-    const dn = monthPlans.filter(p=>p.status==='done').length;
-    cEl.textContent = monthPlans.length ? `${monthPlans.length}건 · ${dn}건 발행완료` : '등록된 콘텐츠 없음';
+    const dn = shown.filter(p=>p.status==='done').length;
+    cEl.textContent = shown.length ? `${shown.length}건 · ${dn}건 발행완료` : '등록된 콘텐츠 없음';
   }
+
+  // 범례 1: 제품·팝업 (클릭하면 그것만 보기)
   const lEl = $('cmon-legend');
-  if (lEl) lEl.innerHTML = Object.keys(CPLAN_CH).map(k=>{
+  if (lEl) {
+    lEl.innerHTML =
+      `<span class="cmon-lg${_cmonCamp==='all'?' on':''}" onclick="cmonSetCamp('all')">
+         <span class="cmon-lg-dot" style="background:var(--muted);"></span>전체 ${monthAll.length}</span>` +
+      inMonth.map(c=>`<span class="cmon-lg${_cmonCamp===c.id?' on':''}" onclick="cmonSetCamp('${c.id}')">
+         <span class="cmon-lg-dot" style="background:${campColor(c.id)};"></span>${escapeHtml(nameOf(c.id))} ${c.n}</span>`).join('');
+  }
+  // 범례 2: 채널 배지 읽는 법
+  const chEl = $('cmon-chlegend');
+  if (chEl) chEl.innerHTML = Object.keys(CPLAN_CH).map(k=>{
     const c = CPLAN_CH[k];
-    return `<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:${c.bar};"></span>${c.label}</span>`;
-  }).join('') + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#D4537E;"></span>오픈·팝업</span>';
+    return `<span class="cmon-lg" style="cursor:default;"><span class="cmon-badge" style="background:${c.bg};color:${c.fg};">${c.short}</span>${c.label}</span>`;
+  }).join('');
 
   const firstDow = new Date(year, month, 1).getDay();      // 0=일
   const lastDay  = new Date(year, month+1, 0).getDate();
@@ -17851,16 +18059,20 @@ function renderCplanMonth() {
     const ds = `${mStr}-${String(day).padStart(2,'0')}`;
     const dow = (firstDow+day-1)%7;
     const isWk = dow===0||dow===6;
-    const isOpen = _cxOpenDays.has(ds);
-    const items = _cxPlans.filter(p => p.date === ds);
-    html += `<div class="opscal-cell${ds===today?' today':''}${isOpen?' cmon-open':''}">
+    const open = _cxOpenMap[ds];                 // {title, cat} — 그날 오픈·팝업
+    const items = shown.filter(p => p.date === ds);
+    html += `<div class="opscal-cell${ds===today?' today':''}${open?' cmon-open':''}">
       <span class="opscal-day${isWk?' wk':''}">${day}</span>
+      ${open?`<span class="cmon-openlbl" style="background:${open.cat==='cat-popup'?'#D4537E':'#7C5BB8'};" title="${escapeHtml(open.title)}">${open.cat==='cat-popup'?'팝업':'오픈'} · ${escapeHtml(open.title)}</span>`:''}
       ${items.slice(0,4).map(p=>{
         const ch = CPLAN_CH[p.channel] || CPLAN_CH.reels;
+        const col = campColor(p.campaign);
         const dn = p.status === 'done';
-        return `<span class="opscal-ev" style="background:${ch.bg};color:${ch.fg};border-left:3px solid ${ch.bar};${dn?'opacity:.5;text-decoration:line-through;':''}"
+        return `<span class="cmon-ev" style="border-left:3px solid ${col};${dn?'opacity:.45;':''}"
           onclick="event.stopPropagation();openCplanModal('${p.id}')"
-          title="${escapeHtml(ch.label)} · ${escapeHtml(p.title||'')}">${escapeHtml(p.title||'')}</span>`;
+          title="${escapeHtml(nameOf(p.campaign))} · ${escapeHtml(ch.label)} · ${escapeHtml(p.title||'')}">
+          <span class="cmon-badge" style="background:${ch.bg};color:${ch.fg};">${ch.short}</span>
+          <span class="cmon-evt${dn?' done':''}">${escapeHtml(p.title||'')}</span></span>`;
       }).join('')}
       ${items.length>4?`<span class="opscal-more">+${items.length-4}</span>`:''}
     </div>`;
@@ -17886,16 +18098,20 @@ async function loadCplan() {
     const s = await getAppState();
     // 실행 뷰용 — 캠페인 필터 없이 전체
     _cxPlans = (s.content_plans||[]).slice().sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
-    _cxOpenDays = new Set((s.ops_events||[])
-      .filter(e => e.cat === 'cat-open' || e.cat === 'cat-popup')
-      .map(e => e.startDate).filter(Boolean));
+    const genEvts = (s.ops_events||[]).filter(e => e.cat === 'cat-open' || e.cat === 'cat-popup');
+    _cxOpenDays = new Set(genEvts.map(e => e.startDate).filter(Boolean));
+    _cxOpenMap = {};
+    genEvts.forEach(e => {
+      if (!e.startDate) return;
+      const nm = String(e.title||'').replace(/\s*(오픈|팝업 오픈|팝업)\s*$/,'').trim() || e.title;
+      _cxOpenMap[e.startDate] = { title: nm, cat: e.cat };
+    });
+    _cplanCampsCache = s.cplan_campaigns || [];
+    buildCampColors(_cplanCampsCache);
     renderCplanExec();
     renderCplanMonth();
     const camps = await _cplanEnsureCampaign(s);
-    const sel = $('cplan-campaign-sel');
-    if (sel) {
-      sel.innerHTML = camps.map(c=>`<option value="${c.id}"${c.id===_cplanCampaignId?' selected':''}>${escapeHtml(c.name)}${c.archived?' (종료)':''}</option>`).join('');
-    }
+    renderCampTabs(camps);
     const camp = camps.find(c=>c.id===_cplanCampaignId);
     _cplanTargetDate = camp?.targetDate || null;
     const ddayEl = $('cplan-dday');
@@ -18114,6 +18330,11 @@ function renderTplModal() {
         </select>
         <input type="text" class="prop-inp" value="${escapeHtml(r[2]||'')}" onchange="_tplSet(${i},2,this.value)"
           style="flex:1;font-size:12px;" placeholder="내용">
+        ${r[1]==='task'
+          ? `<select class="prop-inp" onchange="_tplSet(${i},4,this.value)" style="width:84px;font-size:12px;" title="담당자">
+               ${MEMBERS.map(m=>`<option${(r[4]||'고예흰')===m.name?' selected':''}>${m.name}</option>`).join('')}
+             </select>`
+          : ''}
         <div class="mbtn" style="width:30px;height:30px;font-size:12px;" onclick="_tplDel(${i})">✕</div>
       </div>`).join('') +
       `<div style="padding:8px 12px;text-align:center;">
