@@ -5399,7 +5399,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.12.2</div>
+<div id="version">v5.13.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5424,6 +5424,22 @@ if (typeof supabase === 'undefined' || !supabase.createClient) {
 }
 
 const db = supabase.createClient(SB_URL, SB_KEY);
+
+/* Supabase REST 는 한 번에 1000행까지만 돌려준다.
+   판매 행이 그보다 많으면 조용히 잘려서 판매속도·발주 계산이 실제보다 낮게 나온다.
+   (2026-09 기준 최근 28일 1,279행 중 279행이 계산에서 빠지고 있었음 — 매출이 커질수록 악화)
+   그래서 잘릴 수 있는 조회는 전부 이걸로 감싼다. */
+async function dbFetchAll(build, pageSize = 1000) {
+  const out = [];
+  for (let i = 0; i < 100; i++) {
+    const { data, error } = await build().range(i * pageSize, (i + 1) * pageSize - 1);
+    if (error) { console.error('dbFetchAll', error); break; }
+    if (!data || !data.length) break;
+    out.push(...data);
+    if (data.length < pageSize) break;
+  }
+  return out;
+}
 
 /* 처리되지 않은 오류를 사용자에게 알림 (조용한 실패 방지) */
 window.addEventListener('unhandledrejection', function(ev){
@@ -6912,7 +6928,7 @@ async function loadDashInventory() {
   try {
     const prods = (await db.from('products').select('id,disc_status').eq('is_discontinued',false)).data||[];
     const invRows = (await db.from('inventory').select('*')).data||[];
-    const salesRows = (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    const salesRows = await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
     let lowCount=0;
     for(const p of prods){
       if(p.disc_status === 'planned') continue;
@@ -8609,7 +8625,7 @@ async function loadInvOverviewBanner() {
   try {
     const prods    = (await db.from('products').select('*').eq('is_discontinued',false)).data||[];
     const invRows  = (await db.from('inventory').select('*')).data||[];
-    const salesRows= (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    const salesRows= await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
     // 단종예정 + 이미 발주 등록된 상품 제외 (발주 알림 탭과 동일 기준)
     const sBan = await getAppState();
     const orderedPidsBan = new Set((sBan.ops_orders||[])
@@ -8771,7 +8787,7 @@ async function loadInvList() {
       p.name?.toLowerCase().includes(searchQ)||(p.option_name||'').toLowerCase().includes(searchQ));
     const invRows   = (await db.from('inventory').select('*')).data||[];
     const chInvRows = (await db.from('channel_inventory').select('*')).data||[];
-    const salesRows = (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    const salesRows = await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
     const sState    = await getAppState();
     const reservations = sState.ch_reservations || [];
 
@@ -9936,7 +9952,7 @@ async function loadChannelInv(ch) {
     const allProds   = (await db.from('products').select('*').eq('is_discontinued',false).order('name')).data||[];
     const allChInv   = (await db.from('channel_inventory').select('*')).data||[];
     const allInvRows = (await db.from('inventory').select('*')).data||[];
-    const allSales   = (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    const allSales   = await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
     // 배분 필요 알림
     const allocNeeded = allProds.filter(p=>{
       const ci=allChInv.find(x=>x.product_id===p.id&&x.channel===ch)||{stock:0};
@@ -10256,7 +10272,7 @@ async function loadOrderAlerts() {
     const prods    = prodsAll.filter(p => p.disc_status !== 'planned');
     const invRows  = (await db.from('inventory').select('*')).data||[];
     const chInvRows= (await db.from('channel_inventory').select('*')).data||[];
-    const salesRows= (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    const salesRows= await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
     // 이미 발주 등록된 상품 (미완료 발주 존재) → 발주 필요에서 제외
     const sOrd = await getAppState();
     const orderedPids = new Set((sOrd.ops_orders||[])
@@ -11118,21 +11134,14 @@ async function processUpload() {
         if (btn) btn.textContent = `업로드 중... ${Math.round(doneRows / totalRows * 100)}%`;
       }
 
-      // 채널 재고 차감
-      const { data: ci } = await db.from('channel_inventory').select('*')
-        .eq('product_id', productId).eq('channel', invUploadChannel).maybeSingle();
-      if (ci) await db.from('channel_inventory').update({
-        stock:      Math.max(0, (ci.stock || 0) - totalQtyForInv),
-        updated_at: new Date().toISOString(),
-      }).eq('id', ci.id);
-
-      // 총재고 차감
-      const { data: inv } = await db.from('inventory').select('*')
-        .eq('product_id', productId).maybeSingle();
-      if (inv) await db.from('inventory').update({
-        total_stock: Math.max(0, (inv.total_stock || 0) - totalQtyForInv),
-        updated_at:  new Date().toISOString(),
-      }).eq('product_id', productId);
+      // 재고 차감 — 출고 등록과 똑같은 경로를 쓴다.
+      // 예전에는 여기서 total_stock 과 채널재고만 줄이고 produced_stock 은 그대로 둬서
+      // produced > total 이 되고, 다음 정합성 점검이 total 을 produced 로 되돌려
+      // 깎았던 총재고가 되살아났음 (실제로 2개 상품이 그 상태였음).
+      if (totalQtyForInv > 0) {
+        const r = await applyShipmentStock(productId, invUploadChannel, totalQtyForInv);
+        if (r && r.ok === false) console.error('업로드 재고 차감 실패', productId, r.error);
+      }
 
       // channel_sales_log: 이 matchKey의 날짜별 합산 upsert
       const byDate = {};
@@ -12323,7 +12332,7 @@ async function loadProdRecFull() {
 
     const prods   = (await db.from('products').select('*').eq('is_discontinued',false).order('name')).data||[];
     const invRows = (await db.from('inventory').select('*')).data||[];
-    const salesRows= (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    const salesRows= await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
 
     let items = prods.map(p=>{
       const inv     = invRows.find(x=>x.product_id===p.id)||{};
@@ -12860,7 +12869,7 @@ async function loadProdRecommend() {
     const hidden   = new Set(s.prod_reco_hidden || []);
     const prods    = (await db.from('products').select('*').eq('is_discontinued',false).order('name')).data||[];
     const invRows  = (await db.from('inventory').select('*')).data||[];
-    const salesRows= (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    const salesRows= await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
 
     const items = prods.map(p=>{
       const inv = invRows.find(x=>x.product_id===p.id)||{};
@@ -14032,13 +14041,13 @@ async function initSalesPage() {
 async function loadSalesData() {
   const { from, to, label } = salesDateRange();
   const [salesRows, prevRows] = await Promise.all([
-    db.from('sales_log').select('*').gte('sale_date', from).lte('sale_date', to).then(r => r.data||[]),
+    dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', from).lte('sale_date', to)),
     (async () => {
       // 전월 비교
       const d = new Date(from); d.setMonth(d.getMonth()-1);
       const pFrom = dateStr(new Date(d.getFullYear(), d.getMonth(), 1));
       const pTo   = dateStr(new Date(d.getFullYear(), d.getMonth()+1, 0));
-      return (await db.from('sales_log').select('*').gte('sale_date', pFrom).lte('sale_date', pTo)).data||[];
+      return await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', pFrom).lte('sale_date', pTo));
     })(),
   ]);
 
@@ -14541,7 +14550,7 @@ async function loadSalesSlow() {
     const [prods, invRows, recentSales] = await Promise.all([
       db.from('products').select('id,name,option_name,category').eq('is_discontinued',false).then(r=>r.data||[]),
       db.from('inventory').select('product_id,total_stock,available_stock').then(r=>r.data||[]),
-      db.from('sales_log').select('product_id').gte('sale_date', from30).then(r=>r.data||[]),
+      dbFetchAll(() => db.from('sales_log').select('product_id').gte('sale_date', from30)),
     ]);
     const soldIds = new Set(recentSales.map(r=>r.product_id));
     const slow = prods.filter(p => {
@@ -14643,7 +14652,7 @@ async function loadSalesDow() {
     vals.forEach((v, i) => { vals[i] = dowDayCnt[i] > 0 ? Math.round(v / dowDayCnt[i]) : 0; });
   } else {
     // 수량: sales_log 기반
-    const rows = (await db.from('sales_log').select('sale_date,quantity,channel').gte('sale_date', from).in('channel', ONLINE_CHANNELS)).data||[];
+    const rows = await dbFetchAll(() => db.from('sales_log').select('sale_date,quantity,channel').gte('sale_date', from).in('channel', ONLINE_CHANNELS));
     rows.forEach(r => {
       if (!r.sale_date) return;
       const dow = (new Date(r.sale_date+'T00:00:00').getDay() + 6) % 7;
@@ -15171,7 +15180,7 @@ async function loadOpsOrderAlert() {
     const prodsAll = (await db.from('products').select('id,name,option_name,disc_status').eq('is_discontinued',false)).data||[];
     const prods    = prodsAll.filter(p => p.disc_status !== 'planned');   // 단종예정 제외
     const invRows  = (await db.from('inventory').select('*')).data||[];
-    const salesRows= (await db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000)))).data||[];
+    const salesRows= await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
     // 재고탭 발주 알림과 같은 필터 적용 — 예전에는 이 필터가 없어서
     // 이미 발주해둔 상품도 계속 '긴급'으로 떠 중복 발주 위험이 있었음
     const sOrd = await getAppState();
@@ -20806,7 +20815,7 @@ async function loadContentStats() {
   const posts  = allPub.filter(p=>contentStatType==='all'||p.type===contentStatType);
   // 판매 연결 데이터 로드 (content_posts 날짜 ±3일 매출)
   window._contentSalesData = null;
-  db.from('sales_log').select('sale_date,amount').gte('sale_date', from).then(r => {
+  dbFetchAll(() => db.from('sales_log').select('sale_date,amount').gte('sale_date', from)).then(r => {
     window._contentSalesData = r.data || [];
   });
 
@@ -21303,8 +21312,8 @@ async function renderPlanAssetsRecs(ctx) {
   // 2) 매출 원장 두 곳의 정합성 — 판매탭(sales_log)과 세무 매출장(channel_sales_log)
   try {
     const [a, b] = await Promise.all([
-      db.from('sales_log').select('amount').gte('sale_date',`${planYear}-01-01`).lte('sale_date',`${planYear}-12-31`),
-      db.from('channel_sales_log').select('amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`),
+      dbFetchAll(() => db.from('sales_log').select('amount').gte('sale_date',`${planYear}-01-01`).lte('sale_date',`${planYear}-12-31`)).then(d=>({data:d})),
+      dbFetchAll(() => db.from('channel_sales_log').select('amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`)).then(d=>({data:d})),
     ]);
     const sumA = (a.data||[]).reduce((x,r)=>x+(r.amount||0),0);
     const sumB = (b.data||[]).reduce((x,r)=>x+(r.amount||0),0);
@@ -21366,8 +21375,7 @@ async function loadPlanAnnual() {
   // ── KPI 요약 카드 (C안: 강조 카드형) ──
   const kpiEl = $('plan-kpi-summary');
   if (kpiEl) {
-    const { data: kpiSales } = await db.from('channel_sales_log').select('amount,date').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
-    const rows = kpiSales || [];
+    const rows = await dbFetchAll(() => db.from('channel_sales_log').select('amount,date').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`));
     const yearTotal = rows.reduce((sum,r)=>sum+(r.amount||0),0);
     const yearGoalObj = goals.find(g=>g.label?.includes('매출'));
     const yearGoalRaw = yearGoalObj?.target||'';
@@ -21491,8 +21499,8 @@ async function loadPlanAnnual() {
   // 월별 목표 vs 실적 테이블 렌더
   const monthly = readMonthlyGoals(p);
   // channel_sales_log 기준으로만 실적 집계 (엑셀 업로드 + 직접 입력 데이터)
-  const chSalesRes = await db.from('channel_sales_log').select('date,amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
-  const salesData = (chSalesRes.data||[]).map(r=>({sale_date:r.date, amount:r.amount}));
+  const chRows = await dbFetchAll(() => db.from('channel_sales_log').select('date,amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`));
+  const salesData = chRows.map(r=>({sale_date:r.date, amount:r.amount}));
 
   // (A안 리뉴얼로 plan-progress-*, plan-direction-memo DOM 제거됨 — 관련 렌더 코드 삭제)
 
@@ -21688,9 +21696,9 @@ async function loadPlanAnnualTable() {
   const curMonth = now.getFullYear()===planYear ? now.getMonth() : 11;
 
   // 실적 (channel_sales_log)
-  const chSalesRes = await db.from('channel_sales_log').select('date,amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`);
+  const chRows2 = await dbFetchAll(() => db.from('channel_sales_log').select('date,amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`));
   const actualByMonth = {};
-  (chSalesRes.data||[]).forEach(r => {
+  chRows2.forEach(r => {
     const m = parseInt((r.date||'').slice(5,7));
     if (m) actualByMonth[m] = (actualByMonth[m]||0) + (r.amount||0);
   });
@@ -22046,7 +22054,7 @@ async function loadPlanBudget() {
   if (kpiEl) {
     const [stateData, salesRes] = await Promise.all([
       getAppState(),
-      db.from('channel_sales_log').select('amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`),
+      dbFetchAll(() => db.from('channel_sales_log').select('amount').gte('date',`${planYear}-01-01`).lte('date',`${planYear}-12-31`)).then(d=>({data:d})),
     ]);
     const costData = (stateData.tax_costs||[]).filter(c =>
       c.year===planYear && (_budgetMonth===0 || c.month===_budgetMonth)
