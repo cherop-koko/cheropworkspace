@@ -4918,26 +4918,7 @@ a { text-decoration:none; color:inherit; }
               <div class="prop-icon">🏷</div><div class="prop-label">카테고리</div>
               <div class="prop-val"><input type="text" class="prop-inp" id="pp-cat" placeholder="예: 애착인형, 키링, 파우치"></div>
             </div>
-            <div class="prop-row">
-              <div class="prop-icon">📅</div><div class="prop-label">출시 월</div>
-              <div class="prop-val">
-                <select class="prop-inp" id="pp-month" style="width:100px;">
-                  <option value="0">미정</option>
-                  <option value="1">1월</option>
-                  <option value="2">2월</option>
-                  <option value="3">3월</option>
-                  <option value="4">4월</option>
-                  <option value="5">5월</option>
-                  <option value="6">6월</option>
-                  <option value="7">7월</option>
-                  <option value="8">8월</option>
-                  <option value="9">9월</option>
-                  <option value="10">10월</option>
-                  <option value="11">11월</option>
-                  <option value="12">12월</option>
-                </select>
-              </div>
-            </div>
+
             <div class="prop-row">
               <div class="prop-icon">📐</div><div class="prop-label">사이즈</div>
               <div class="prop-val" style="display:flex;gap:5px;flex-wrap:wrap;" id="pp-size-btns">
@@ -5399,7 +5380,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.13.1</div>
+<div id="version">v5.14.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -22274,7 +22255,7 @@ async function loadPlanProduct() {
       const colorDots = (p.colors||[]).slice(0,4).map(c=>
         `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.hex||'#888'};" title="${c.name||''}"></span>`).join('');
       const sizes = (p.sizes||[]).join(' · ');
-      const tags = (p.tags||'').split(',').filter(Boolean).slice(0,2).map(t=>
+      const tags = ppTagList(p.tags).slice(0,2).map(t=>
         `<span style="font-size:10px;padding:1px 6px;border-radius:50px;background:var(--surface2);color:var(--muted);">${t.trim()}</span>`).join('');
       return `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;"
         onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='var(--border)'"
@@ -22407,6 +22388,12 @@ async function ppImgChange(input, side) {
   if (el) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:${side==='front'?10:8}px;" alt="">`;
 }
 
+/* 태그는 예전엔 문자열, 홈페이지에서 가져온 건 배열이라 둘 다 받아준다 */
+function ppTagList(t) {
+  if (Array.isArray(t)) return t.map(x=>String(x).trim()).filter(Boolean);
+  return String(t||'').split(',').map(x=>x.trim()).filter(Boolean);
+}
+
 async function openPlanProductModal(id='') {
   // 현재 활성 페이지 확인 — 라인업이면 planYear를 _lineupYear로 맞춤
   if (window.currentPage === 'lineup' && typeof _lineupYear !== 'undefined') {
@@ -22431,8 +22418,8 @@ async function openPlanProductModal(id='') {
     const p=(s.plan[planYear].products||[]).find(x=>x.id===id); if(!p) return;
     $('pp-name').value=p.name||'';
     $('pp-cat').value=p.cat||'';
-    if($('pp-month')) $('pp-month').value=p.month||0;
-    $('pp-tags').value=(p.tags||'');
+    // 출시 월은 예상 출시일에서 자동 산출 — 별도 입력칸 없음
+    $('pp-tags').value=ppTagList(p.tags).join(', ');
     $('pp-memo').value=p.memo||'';
     $('pp-launch').value=p.launch||'';
     ppStatus=p.status||'sample';
@@ -22480,7 +22467,7 @@ async function savePlanProduct() {
   s.plan[planYear].products=s.plan[planYear].products||[];
   const data={name,cat:$('pp-cat')?.value.trim(),sizes,colors:ppColors,
     tags:$('pp-tags')?.value.trim(),launch:$('pp-launch')?.value,
-    month:parseInt($('pp-month')?.value)||0,
+    month:parseInt(($('pp-launch')?.value||'').slice(5,7))||0,   // 예상 출시일에서 자동 (월 입력칸 제거됨)
     memo:$('pp-memo')?.value.trim(),status:ppStatus,imgs:{...ppImgs}};
   if(planProductEditId){
     const idx=s.plan[planYear].products.findIndex(p=>p.id===planProductEditId);
