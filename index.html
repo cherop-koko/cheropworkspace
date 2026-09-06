@@ -4957,7 +4957,7 @@ a { text-decoration:none; color:inherit; }
     </div>
     <div class="modal-footer">
       <button class="f-btn f-btn-cancel" onclick="closeModal('plan-product-modal')">취소</button>
-      <button class="f-btn f-btn-save" onclick="savePlanProduct()">저장</button>
+      <button class="f-btn f-btn-save" id="pp-save-btn" onclick="savePlanProduct()">저장</button>
     </div>
   </div>
 </div>
@@ -5380,7 +5380,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.14.0</div>
+<div id="version">v5.15.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -5887,12 +5887,64 @@ function _snapshotAppState(obj) {
   catch(e) { try { _appStateSnapshot = JSON.parse(JSON.stringify(obj)); } catch(e2) { _appStateSnapshot = null; } }
 }
 
+/* ── 무거운 키는 별도 행으로 분리 ────────────────────────────────
+   app_state 는 원래 한 덩어리 JSON 이었는데, 저장 한 번에 전체를 내려받고
+   전체를 다시 올린다. 2026-09 기준 870KB 였고 그 중
+     card_usage(카드사용내역 1,783건)  339KB — 39%
+     instaProfile(프로필 사진 base64)  183KB — 21%
+   둘이 60%를 차지했다. 라인업 제품 하나 고치는데도 이 60%가 같이 오르내려서
+   모바일에서 저장이 몇 초씩 멈추다 실패("처리 중 문제가 생겼어요")했다.
+   그래서 이 둘은 자기 행에 따로 두고, 바뀐 것만 올린다.
+   읽을 때는 원래처럼 하나의 state 객체로 합쳐서 돌려주므로
+   나머지 코드는 이 변경을 몰라도 된다. */
+const SPLIT_KEYS = { card_usage:'cherop_card_usage', instaProfile:'cherop_insta' };
+
+async function _readFullState() {
+  const ids = ['cherop_main', ...Object.values(SPLIT_KEYS)];
+  const { data, error } = await db.from('app_state').select('id,data').in('id', ids);
+  if (error) throw error;
+  const rows = {};
+  (data||[]).forEach(r => { rows[r.id] = r.data; });
+  const s = { ...(rows['cherop_main'] || {}) };
+  for (const [k, id] of Object.entries(SPLIT_KEYS)) {
+    if (rows[id] !== undefined && rows[id] !== null) {
+      const split = rows[id];
+      const inMain = s[k];
+      // 예전 버전이 열린 탭에서 저장하면 main 에도 값이 남을 수 있다.
+      // 그 사이에 들어온 카드내역이 사라지지 않게 id 기준으로 합친다.
+      if (k === 'card_usage' && inMain && Array.isArray(inMain.logs) && inMain.logs.length) {
+        const seen = new Set((split.logs||[]).map(l=>l.id));
+        const extra = inMain.logs.filter(l => l && !seen.has(l.id));
+        s[k] = { ...split, logs: [...(split.logs||[]), ...extra] };
+      } else {
+        s[k] = split;
+      }
+    }
+  }
+  return s;
+}
+
+async function _writeFullState(state) {
+  const main = { ...state };
+  const jobs = [];
+  for (const [k, id] of Object.entries(SPLIT_KEYS)) {
+    delete main[k];                      // 본체에서는 항상 뺀다
+    const cur = state[k];
+    if (cur === undefined) continue;
+    let changed = true;
+    try { changed = JSON.stringify(cur) !== JSON.stringify(_appStateSnapshot?.[k]); } catch(e) {}
+    if (changed) jobs.push(db.from('app_state').upsert({ id, data: cur, updated_at:new Date().toISOString() }));
+  }
+  jobs.push(db.from('app_state').upsert({ id:'cherop_main', data: main, updated_at:new Date().toISOString() }));
+  const res = await Promise.all(jobs);
+  const bad = res.find(r => r && r.error);
+  if (bad) throw bad.error;
+}
+
 async function getAppState() {
   const now = Date.now();
   if (_appStateCache && (now - _appStateCacheAt) < APP_STATE_TTL) return _appStateCache;
-  const { data, error } = await db.from('app_state').select('data').eq('id','cherop_main').single();
-  if (error) throw error;
-  _appStateCache = data?.data || {};
+  _appStateCache = await _readFullState();
   _appStateCacheAt = now;
   _snapshotAppState(_appStateCache);
   return _appStateCache;
@@ -5904,8 +5956,7 @@ async function setAppState(state) {
   // 2) 마지막 읽은 시점 스냅샷과 비교해 "실제로 바뀐 키"만 fresh 위에 반영
   //    → 이 세션에서 건드리지 않은 데이터(예: 다른 기기에서 등록한 작업기록)는 절대 덮이지 않음
   try {
-    const { data: cur } = await db.from('app_state').select('data').eq('id','cherop_main').single();
-    const fresh = cur?.data || {};
+    const fresh = await _readFullState();
     const snap  = _appStateSnapshot;
     const merged = { ...fresh };
     for (const key of Object.keys(state)) {
@@ -5931,15 +5982,10 @@ async function setAppState(state) {
     if (typeof toast === 'function') toast('저장 실패 — 다른 기기의 데이터를 지킬 수 없어 중단했어요. 새로고침 후 다시 시도해 주세요');
     throw new Error('app_state 병합 실패: ' + (e.message || e));
   }
+  await _writeFullState(state);          // 스냅샷 비교가 끝난 뒤에 스냅샷을 갱신해야 한다
   _appStateCache = state;
   _appStateCacheAt = Date.now();
   _snapshotAppState(state);
-  const { error } = await db.from('app_state').upsert({
-    id: 'cherop_main',
-    data: state,
-    updated_at: new Date().toISOString()
-  });
-  if (error) throw error;
 }
 
 function deepMerge(base, override) {
@@ -5974,7 +6020,8 @@ async function restoreFromBackup() {
   const { data } = await db.from('app_state').select('data').eq('id','cherop_backup').single();
   if (!data?.data) { toast('백업 데이터가 없어요'); return; }
   _appStateCache = data.data;
-  await db.from('app_state').upsert({ id:'cherop_main', data:data.data, updated_at:new Date().toISOString() });
+  _appStateSnapshot = null;              // 분리 행도 전부 다시 쓰도록
+  await _writeFullState(data.data);
   toast('복구됐어요. 새로고침해주세요.');
   setTimeout(() => location.reload(), 1500);
 }
@@ -5982,18 +6029,13 @@ async function restoreFromBackup() {
 // 안전한 부분 업데이트 — DB 최신값 가져와서 merge 후 저장
 async function patchAppState(patchFn) {
   // 항상 DB에서 최신 데이터 가져오기 (캐시 무시)
-  const { data } = await db.from('app_state').select('data').eq('id','cherop_main').single();
-  const fresh = data?.data || {};
-  const patched = patchFn(fresh);
+  const fresh = await _readFullState();
+  _snapshotAppState(fresh);              // 분리된 키가 바뀌었는지 비교할 기준
+  const patched = patchFn(fresh) || fresh;
+  await _writeFullState(patched);
   _appStateCache = patched;
   _appStateCacheAt = Date.now();
   _snapshotAppState(patched);
-  const { error } = await db.from('app_state').upsert({
-    id: 'cherop_main',
-    data: patched,
-    updated_at: new Date().toISOString()
-  });
-  if (error) throw error;
   return patched;
 }
 
@@ -20207,8 +20249,11 @@ function openInstaProfilePicEdit() {
   $('insta-pic-modal').classList.add('on');
 }
 
+let _instaPicFile = null;
+
 function previewInstaProfilePic(input) {
   const file = input.files[0]; if (!file) return;
+  _instaPicFile = file;
   const reader = new FileReader();
   reader.onload = e => {
     _instaPicData = e.target.result;
@@ -20220,10 +20265,22 @@ function previewInstaProfilePic(input) {
 
 async function saveInstaProfilePic() {
   if (!_instaPicData) { closeModal('insta-pic-modal'); return; }
+  // 사진은 스토리지에 올리고 주소만 저장한다.
+  // 예전엔 base64 원본을 state 안에 통째로 넣어서 183KB 짜리 사진 하나가
+  // 모든 저장마다 함께 오르내렸다 (제품 이미지와 같은 방식으로 통일).
+  let imgUrl = _instaPicData;
+  if (_instaPicFile) {
+    try {
+      const ext  = (_instaPicFile.name.split('.').pop()||'jpg').toLowerCase();
+      const path = `profile/insta_${Date.now()}.${ext}`;
+      const { error } = await db.storage.from('product-images').upload(path, _instaPicFile, { upsert:true });
+      if (!error) imgUrl = db.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+    } catch(e) { console.error('프로필 사진 업로드 실패, base64로 저장', e); }
+  }
   const s = await getAppState();
-  s.instaProfile = { ...(s.instaProfile||{}), imgUrl: _instaPicData };
+  s.instaProfile = { ...(s.instaProfile||{}), imgUrl };
   await setAppState(s);
-  _instaPicData = null;
+  _instaPicData = null; _instaPicFile = null;
   closeModal('insta-pic-modal');
   toast('프로필 사진이 변경됐어요 ✓');
   loadContentCal();
@@ -22415,7 +22472,16 @@ async function openPlanProductModal(id='') {
 
   if(id){
     const s=await getPlanData();
-    const p=(s.plan[planYear].products||[]).find(x=>x.id===id); if(!p) return;
+    let p=(s.plan[planYear].products||[]).find(x=>x.id===id);
+    // 다른 연도에 있는 제품을 열었으면 그 연도로 맞춰준다.
+    // 예전엔 여기서 그냥 return 해서 아무 일도 안 일어난 것처럼 보였다.
+    if(!p){
+      for(const y of Object.keys(s.plan||{})){
+        const hit=(s.plan[y].products||[]).find(x=>x.id===id);
+        if(hit){ p=hit; planYear=parseInt(y)||y; break; }
+      }
+    }
+    if(!p){ toast('제품을 찾을 수 없어요 — 새로고침 후 다시 시도해 주세요'); return; }
     $('pp-name').value=p.name||'';
     $('pp-cat').value=p.cat||'';
     // 출시 월은 예상 출시일에서 자동 산출 — 별도 입력칸 없음
@@ -22453,7 +22519,25 @@ async function openPlanProductModal(id='') {
   setTimeout(()=>$('pp-name')?.focus(),80);
 }
 
+let _ppSaving = false;
 async function savePlanProduct() {
+  // 저장은 네트워크를 타므로 버튼이 눌린 상태를 보여주고 중복 탭을 막는다.
+  // 예전엔 아무 표시가 없어서 모바일에서 "먹통"처럼 보였고,
+  // 급하게 두 번 누르면 저장이 두 번 동시에 돌았다.
+  if (_ppSaving) return;
+  const btn = $('pp-save-btn');
+  const restore = () => { _ppSaving=false; if(btn){ btn.textContent='저장'; btn.style.opacity=''; btn.style.pointerEvents=''; } };
+  try {
+    _ppSaving = true;
+    if (btn) { btn.textContent='저장 중…'; btn.style.opacity='.6'; btn.style.pointerEvents='none'; }
+    await _savePlanProductInner();
+  } catch(e) {
+    console.error('savePlanProduct', e);
+    toast('저장 실패 — ' + (e?.message || '네트워크 상태를 확인하고 다시 시도해 주세요'), 4000);
+  } finally { restore(); }
+}
+
+async function _savePlanProductInner() {
   const name=$('pp-name')?.value.trim();
   if(!name){toast('제품명을 입력해주세요');return;}
   // 커스텀 사이즈 추가
@@ -22469,14 +22553,40 @@ async function savePlanProduct() {
     tags:$('pp-tags')?.value.trim(),launch:$('pp-launch')?.value,
     month:parseInt(($('pp-launch')?.value||'').slice(5,7))||0,   // 예상 출시일에서 자동 (월 입력칸 제거됨)
     memo:$('pp-memo')?.value.trim(),status:ppStatus,imgs:{...ppImgs}};
+  // 출시 연도가 바뀌면 그 연도 목록으로 옮긴다.
+  // 라인업은 연도별로 나뉘어 있어서, 안 옮기면 바꾼 연도 탭에 안 나타나고
+  // 원래 연도에 그대로 남아 "저장은 됐는데 적용이 안 된" 것처럼 보였음.
+  const newYear = parseInt((data.launch||'').slice(0,4)) || Number(planYear);
+  let moved = false;
   if(planProductEditId){
     const idx=s.plan[planYear].products.findIndex(p=>p.id===planProductEditId);
-    if(idx>=0)s.plan[planYear].products[idx]={...s.plan[planYear].products[idx],...data};
+    const merged = idx>=0 ? {...s.plan[planYear].products[idx],...data} : {id:planProductEditId,...data};
+    if (newYear !== Number(planYear)) {
+      if (idx>=0) s.plan[planYear].products.splice(idx,1);
+      s.plan[newYear] = s.plan[newYear] || { goals:[], items:[], memos:{}, budget:{}, teamGoals:[] };
+      s.plan[newYear].products = s.plan[newYear].products || [];
+      const dup = s.plan[newYear].products.findIndex(p=>p.id===planProductEditId);
+      if (dup>=0) s.plan[newYear].products[dup] = merged; else s.plan[newYear].products.push(merged);
+      moved = true;
+    } else if (idx>=0) {
+      s.plan[planYear].products[idx] = merged;
+    }
   } else {
-    s.plan[planYear].products.push({id:`pp-${Date.now()}`,...data});
+    s.plan[newYear] = s.plan[newYear] || { goals:[], items:[], memos:{}, budget:{}, teamGoals:[] };
+    s.plan[newYear].products = s.plan[newYear].products || [];
+    s.plan[newYear].products.push({id:`pp-${Date.now()}`,...data});
+    moved = newYear !== Number(planYear);
   }
   await setAppState(s);
-  toast('저장됐어요 ✓');
+  if (moved) {
+    // 옮긴 연도를 바로 보여줘야 사라진 것처럼 보이지 않는다
+    if (typeof _lineupYear !== 'undefined') _lineupYear = newYear;
+    planYear = newYear;
+    if($('lineup-year-label')) $('lineup-year-label').textContent = newYear;
+    toast(`저장됐어요 ✓ ${newYear}년으로 옮겼어요`);
+  } else {
+    toast('저장됐어요 ✓');
+  }
   closeModal('plan-product-modal');
   window._lineupCache = null;
   if($('plan-product-grid') || $('plan-tab-product')?.style.display !== 'none') {
@@ -24137,18 +24247,20 @@ async function runAutoBackup() {
   if (document.visibilityState !== 'visible') return;
   if (!_backupIsLeader()) return;
   try {
-    const { data } = await db.from('app_state').select('data').eq('id','cherop_main').single();
-    if (!data?.data) return;
+    // 분리 저장된 카드사용·프로필까지 합친 전체본을 백업해야 한다
+    // (본체 행만 백업하면 복구 시 그 둘이 사라짐)
+    const full = await _readFullState();
+    if (!full || !Object.keys(full).length) return;
     const slot = String(new Date().getHours()).padStart(2,'0');
     const { error } = await db.from('app_state').upsert({
       id: 'cherop_backup_' + slot,
-      data: data.data,
+      data: full,
       updated_at: new Date().toISOString()
     });
     if (error) throw error;
     // 구버전 복구 경로 호환용 최신 슬롯도 함께 유지
     await db.from('app_state').upsert({
-      id: 'cherop_backup', data: data.data, updated_at: new Date().toISOString()
+      id: 'cherop_backup', data: full, updated_at: new Date().toISOString()
     });
     localStorage.setItem('cherop_backup_last_ok', new Date().toISOString());
   } catch(e) {
