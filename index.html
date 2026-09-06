@@ -5399,7 +5399,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.12.1</div>
+<div id="version">v5.12.2</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -15033,7 +15033,7 @@ async function saveOpsEvent() {
   const isLocal = isGen ? !!$('ops-event-islocal')?.checked : false;
   let newEv = null;
 
-  let shifted = null;
+  let shifted = null, renamedEv = null;
   if(opsEventEditId){
     const idx = s.ops_events.findIndex(e=>e.id===opsEventEditId);
     const prev = idx>=0 ? s.ops_events[idx] : null;
@@ -15044,8 +15044,9 @@ async function saveOpsEvent() {
     }
     // 일정 제목이 바뀌면 캠페인·라인업 이름도 같이 (예전엔 캠페인이 옛 이름으로 남았음)
     if (prev && AUTOGEN_CATS.includes(prev.cat) && (prev.title||'') !== title) {
+      renamedEv = opsEventEditId;
       const nm = String(title).replace(/\s*(오픈|팝업 오픈|팝업)\s*$/,'').trim() || title;
-      (s.cplan_campaigns||[]).forEach(c => { if (c.srcEvent === opsEventEditId) c.name = nm; });
+      (s.cplan_campaigns||[]).forEach(c => { if (c.srcEvent === opsEventEditId) { c.prevName = c.name; c.name = nm; } });
       Object.keys(s.plan||{}).forEach(y => {
         (s.plan[y]?.products||[]).forEach(pp => { if (pp.srcEvent === opsEventEditId) pp.name = nm; });
       });
@@ -15079,8 +15080,10 @@ async function saveOpsEvent() {
       console.error('자동 생성 실패:', e);
       toast('일정은 등록됐지만 자동 생성에 실패했어요: ' + (e.message||''));
     }
-  } else if (shifted) {
-    const n = await shiftEventLinkedDates(shifted.evId, shifted.from, shifted.to);
+  } else if (shifted || renamedEv) {
+    const n = shifted ? await shiftEventLinkedDates(shifted.evId, shifted.from, shifted.to)
+                      : { total:0, content:0, ptask:0, task:0 };
+    if (renamedEv && !shifted) await syncContentTaskForEvent(renamedEv);
     toast(n.total
       ? `수정됐어요 ✓ 연동된 ${n.total}건도 함께 옮겼어요 (콘텐츠 ${n.content} · 업무 ${n.ptask} · 할일 ${n.task})`
       : '수정됐어요 ✓');
@@ -15138,6 +15141,8 @@ async function shiftEventLinkedDates(evId, fromDate, toDate) {
       }
     }
   } catch(e) { console.error('shiftEventLinkedDates tasks', e); }
+  // 제작 할일의 체크리스트는 날짜만 밀면 안 되고 지금 콘텐츠로 다시 써야 한다
+  await syncContentTaskForEvent(evId);
   res.total = res.content + res.ptask + res.task;
   return res;
 }
@@ -17360,6 +17365,69 @@ function buildContentTaskMemo(name, ev, list) {
   ].join('\n');
 }
 
+/* 제작 할일의 제목·마감일·체크리스트를 지금의 콘텐츠 목록으로 다시 맞춘다.
+   일정 날짜/제목이 바뀌거나 커리큘럼이 바뀌면 콘텐츠는 갱신되는데
+   할일 메모는 옛 날짜 그대로 남아 있어서, 그 경로마다 이 함수를 부른다.
+   이미 체크해 둔 줄은 콘텐츠 제목으로 짝을 지어 체크 상태를 살린다. */
+async function syncContentTaskForEvent(evId) {
+  try {
+    const s = await getAppState();
+    const ev   = (s.ops_events||[]).find(e => e.id === evId);
+    const camp = (s.cplan_campaigns||[]).find(c => c.srcEvent === evId);
+    if (!ev || !camp) return 0;
+    const list = (s.content_plans||[]).filter(p => p.campaign === camp.id)
+      .sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+    if (!list.length) return 0;
+
+    const { data: rows } = await db.from('tasks').select('id,title,memo,status')
+      .like('title', '%건 제작');
+    // 이 일정에서 나온 제작 할일 — 지금 이름이든 예전 이름이든 잡히도록 note 로도 확인
+    const { data: rows2 } = await db.from('tasks').select('id,title,memo,status,note')
+      .like('title', '%건 제작');
+    const cand = (rows2||rows||[]).filter(t => {
+      const m = String(t.title||'').match(/^(.*?)\s*콘텐츠\s*\d+건 제작$/);
+      if (!m) return false;
+      const nm = m[1].trim();
+      return nm === camp.name || nm === (camp.prevName||'') || String(t.note||'').includes(ev.startDate);
+    });
+    if (!cand.length) return 0;
+
+    // 기존 체크 상태 보존 — "· 콘텐츠제목" 뒤쪽 텍스트로 짝짓기
+    const DOW = ['일','월','화','수','목','금','토'];
+    const CH  = { reels:'릴스', feed:'피드', story:'스토리', ad:'광고' };
+    const open = camp.targetDate || ev.startDate;
+    let touched = 0;
+
+    for (const t of cand) {
+      const checked = new Set();
+      String(t.memo||'').split('\n').forEach(l => {
+        const m = l.match(/^\s*-\s\[(x|X)\]\s.*·\s([^·]+?)(?:\s—\s.*)?$/);
+        if (m) checked.add(m[2].trim());
+      });
+      const lines = list.map(p => {
+        const d  = new Date(p.date+'T00:00:00');
+        const mm = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}(${DOW[d.getDay()]})`;
+        const diff = Math.round((new Date(open+'T00:00:00') - d)/86400000);
+        const dd = diff > 0 ? `D-${diff}` : diff === 0 ? '오픈일' : `D+${-diff}`;
+        const on = p.status === 'done' || checked.has(String(p.title||'').trim());
+        return `- [${on?'x':' '}] ${mm} ${dd} · ${CH[p.channel]||p.channel} · ${p.title}${p.memo?` — ${p.memo}`:''}`;
+      });
+      const memo = `${open} 오픈 · 콘텐츠 ${list.length}건\n`
+        + `아래 한 줄이 업로드 한 건입니다. 만든 것부터 체크하세요.\n\n`
+        + lines.join('\n')
+        + `\n\n※ 콘텐츠 탭 > 콘텐츠 기획 > 캠페인 '${camp.name}' 에서 같은 목록을 볼 수 있어요.`;
+      await db.from('tasks').update({
+        title: `${camp.name} 콘텐츠 ${list.length}건 제작`,
+        due_date: dOff(open, -7),
+        note: `${open} 오픈 · 업로드 ${list.length}건`,
+        memo,
+      }).eq('id', t.id);
+      touched++;
+    }
+    return touched;
+  } catch(e) { console.error('syncContentTaskForEvent', e); return 0; }
+}
+
 /* ── 일정 하나로부터 전부 생성 ── */
 async function autoGenerateFromEvent(ev, curType, opts = {}) {
   const isPopup = ev.cat === 'cat-popup';
@@ -17584,6 +17652,8 @@ async function applyCurriculumChange(curType, list) {
     });
     return s;
   });
+  // 콘텐츠가 바뀌었으면 제작 할일의 체크리스트도 새로 써야 한다
+  for (const ev of plan.events) { await syncContentTaskForEvent(ev.id); }
   return { ...plan, applied:true };
 }
 
