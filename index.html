@@ -1112,6 +1112,9 @@ a { text-decoration:none; color:inherit; }
 .cmon-lg { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; color:var(--muted);
   padding:3px 9px; border:0.5px solid var(--border); border-radius:20px; cursor:pointer; background:var(--surface); }
 .cmon-lg.on { background:var(--text); color:#fff; border-color:var(--text); }
+/* 채널 필터가 켜져 있을 때, 선택 안 된 채널은 흐리게 — 지금 뭘 보고 있는지 한눈에 */
+.cmon-lg.dim { opacity:.38; }
+.cmon-lg.chsel { border-color:var(--text); color:var(--text); font-weight:600; }
 .cmon-lg-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
 @media (max-width:768px){ .cmon-grid { grid-auto-rows:104px; } .cmon-evt { display:none; } }
 
@@ -5380,7 +5383,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.15.0</div>
+<div id="version">v5.16.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -18104,9 +18107,19 @@ function renderCplanExecBoard() {
    오픈일·팝업일은 배경으로 표시해서 한 달 안에서 어디가 축인지 보이게 함. */
 let _cmonOffset = 0;
 let _cmonCamp = 'all';          // 제품·팝업 필터
+/* 채널 필터 — 비어 있으면 전체를 본다는 뜻. 여러 개 고르면 고른 것만 겹쳐서 보인다.
+   (릴스만, 또는 릴스+피드처럼) */
+let _cmonCh = new Set();
 function cmonMove(d) { _cmonOffset += d; renderCplanMonth(); }
 function cmonToday() { _cmonOffset = 0; renderCplanMonth(); }
 function cmonSetCamp(id) { _cmonCamp = id; renderCplanMonth(); }
+function cmonToggleCh(k) {
+  if (_cmonCh.has(k)) _cmonCh.delete(k); else _cmonCh.add(k);
+  // 다 고르면 필터가 없는 것과 같으니 초기화 — '전체'로 되돌아간다
+  if (_cmonCh.size === Object.keys(CPLAN_CH).length) _cmonCh.clear();
+  renderCplanMonth();
+}
+function cmonClearCh() { _cmonCh.clear(); renderCplanMonth(); }
 
 /* 캠페인(제품·팝업)별 색 — 목표일 순서대로 팔레트를 돌려 쓴다.
    달력에서 '색 = 어떤 제품/팝업', '배지 = 어떤 채널' 두 축으로 읽히게 하기 위함. */
@@ -18131,19 +18144,22 @@ function renderCplanMonth() {
   const tEl = $('cmon-title'); if (tEl) tEl.textContent = `${year}년 ${month+1}월`;
 
   const monthAll = _cxPlans.filter(p => (p.date||'').startsWith(mStr));
-  const shown    = monthAll.filter(p => _cmonCamp === 'all' || p.campaign === _cmonCamp);
+  const chOK     = p => _cmonCh.size === 0 || _cmonCh.has(p.channel);
+  const shown    = monthAll.filter(p => (_cmonCamp === 'all' || p.campaign === _cmonCamp) && chOK(p));
 
   // 이 달에 콘텐츠가 있는 캠페인만 범례로 (전체 20개를 다 보여주면 읽히지 않음)
+  const monthCh = monthAll.filter(chOK);   // 채널 필터까지 반영한 집합 (제품 범례 숫자용)
   const inMonth = [];
   monthAll.forEach(p => { if (!inMonth.some(x=>x.id===p.campaign)) inMonth.push({ id:p.campaign, n:0 }); });
-  inMonth.forEach(c => { c.n = monthAll.filter(p=>p.campaign===c.id).length; });
+  inMonth.forEach(c => { c.n = monthCh.filter(p=>p.campaign===c.id).length; });
   const nameOf = id => (_cplanCampsCache.find(c=>c.id===id)?.name) || '(이름 없음)';
   inMonth.sort((a,b)=>nameOf(a.id).localeCompare(nameOf(b.id)));
 
   const cEl = $('cmon-count');
   if (cEl) {
     const dn = shown.filter(p=>p.status==='done').length;
-    cEl.textContent = shown.length ? `${shown.length}건 · ${dn}건 발행완료` : '등록된 콘텐츠 없음';
+    const chTxt = _cmonCh.size ? ` · ${[..._cmonCh].map(k=>CPLAN_CH[k]?.label||k).join('+')}만 보는 중` : '';
+    cEl.textContent = (shown.length ? `${shown.length}건 · ${dn}건 발행완료` : '해당 콘텐츠 없음') + chTxt;
   }
 
   // 범례 1: 제품·팝업 (클릭하면 그것만 보기)
@@ -18151,16 +18167,26 @@ function renderCplanMonth() {
   if (lEl) {
     lEl.innerHTML =
       `<span class="cmon-lg${_cmonCamp==='all'?' on':''}" onclick="cmonSetCamp('all')">
-         <span class="cmon-lg-dot" style="background:var(--muted);"></span>전체 ${monthAll.length}</span>` +
+         <span class="cmon-lg-dot" style="background:var(--muted);"></span>전체 ${monthCh.length}</span>` +
       inMonth.map(c=>`<span class="cmon-lg${_cmonCamp===c.id?' on':''}" onclick="cmonSetCamp('${c.id}')">
          <span class="cmon-lg-dot" style="background:${campColor(c.id)};"></span>${escapeHtml(nameOf(c.id))} ${c.n}</span>`).join('');
   }
-  // 범례 2: 채널 배지 읽는 법
+  // 범례 2: 채널 — 누르면 그 채널만 본다. 여러 개 누르면 겹쳐서 본다.
   const chEl = $('cmon-chlegend');
-  if (chEl) chEl.innerHTML = Object.keys(CPLAN_CH).map(k=>{
-    const c = CPLAN_CH[k];
-    return `<span class="cmon-lg" style="cursor:default;"><span class="cmon-badge" style="background:${c.bg};color:${c.fg};">${c.short}</span>${c.label}</span>`;
-  }).join('');
+  if (chEl) {
+    const campBase = monthAll.filter(p => _cmonCamp === 'all' || p.campaign === _cmonCamp);
+    const active = _cmonCh.size > 0;
+    chEl.innerHTML =
+      Object.keys(CPLAN_CH).map(k=>{
+        const c = CPLAN_CH[k];
+        const n = campBase.filter(p=>p.channel===k).length;
+        const sel = _cmonCh.has(k);
+        const cls = 'cmon-lg' + (sel ? ' chsel' : (active ? ' dim' : ''));
+        return `<span class="${cls}" onclick="cmonToggleCh('${k}')" title="${escapeHtml(c.label)}만 보기 (여러 개 선택 가능)">
+          <span class="cmon-badge" style="background:${c.bg};color:${c.fg};">${c.short}</span>${c.label} ${n}</span>`;
+      }).join('') +
+      (active ? `<span class="cmon-lg" onclick="cmonClearCh()" title="채널 필터 해제">✕ 전체</span>` : '');
+  }
 
   const firstDow = new Date(year, month, 1).getDay();      // 0=일
   const lastDay  = new Date(year, month+1, 0).getDate();
