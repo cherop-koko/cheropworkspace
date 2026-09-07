@@ -702,6 +702,19 @@ a { text-decoration:none; color:inherit; }
 }
 .modal-div { height:0.5px; background:var(--surface2); margin:0 0 20px; }
 .modal-memo-lbl { font-size:12px; color:var(--light); margin-bottom:10px; }
+/* 콘텐츠 기획 모달 — 기획안이 길어서 세로로 쌓으면 한 화면에 안 들어온다.
+   넓은 화면에서는 왼쪽 속성 / 오른쪽 메모로 나눠 크게 본다. */
+#cplan-modal .modal { max-width:920px; width:calc(100vw - 32px); }
+#cplan-modal .cplan-2col { display:grid; grid-template-columns:minmax(0,320px) minmax(0,1fr); gap:22px; align-items:start; }
+#cplan-modal .cplan-memo-pane { display:flex; flex-direction:column; min-width:0; }
+#cplan-modal #cplan-memo {
+  min-height:min(52vh,460px); border:0.5px solid var(--border); border-radius:10px;
+  padding:12px 14px; background:var(--surface); resize:vertical; font-size:13.5px; line-height:1.75;
+}
+@media (max-width:820px){
+  #cplan-modal .cplan-2col { grid-template-columns:1fr; gap:14px; }
+  #cplan-modal #cplan-memo { min-height:300px; }
+}
 .modal-textarea {
   width:100%; min-height:100px; border:none; outline:none; resize:none;
   font-size:14px; color:#4A4E60; line-height:1.8;
@@ -4311,7 +4324,8 @@ a { text-decoration:none; color:inherit; }
     </div>
     <div class="modal-body">
       <input class="modal-title-inp" id="cplan-title" placeholder="콘텐츠 제목 (예: 립밤키링 티저)">
-      <div class="modal-props" style="margin-top:14px;">
+      <div class="cplan-2col" style="margin-top:14px;">
+      <div class="modal-props" style="margin-top:0;">
         <div class="prop-row">
           <div class="prop-icon">🎯</div><div class="prop-label">캠페인</div>
           <div class="prop-val"><select class="prop-inp" id="cplan-campaign-pick" style="cursor:pointer;"></select></div>
@@ -4342,11 +4356,21 @@ a { text-decoration:none; color:inherit; }
         </div>
         <div class="prop-row">
           <div class="prop-icon">🔗</div><div class="prop-label">레퍼런스</div>
-          <div class="prop-val"><input type="text" class="prop-inp" id="cplan-ref" placeholder="참고 링크 (선택)"></div>
+          <div class="prop-val" style="display:flex;gap:6px;align-items:center;">
+            <input type="text" class="prop-inp" id="cplan-ref" placeholder="참고 링크 (선택)" style="flex:1;min-width:0;" oninput="cplanRefSync()">
+            <button class="f-btn f-btn-cancel" id="cplan-ref-open" style="font-size:11px;padding:5px 11px;white-space:nowrap;display:none;" onclick="cplanRefOpen()">열기 ↗</button>
+          </div>
         </div>
       </div>
-      <div class="modal-memo-lbl" style="margin-top:14px;">캡션 초안 / 메모</div>
-      <textarea class="modal-textarea" id="cplan-memo" placeholder="캡션 초안, 촬영 아이디어, 준비물 등"></textarea>
+      <div class="cplan-memo-pane">
+        <div class="modal-memo-lbl" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span>캡션 초안 / 기획안</span>
+          <button class="f-btn f-btn-cancel" style="font-size:11px;padding:4px 11px;margin-left:auto;" onclick="cplanCopyMemo()">📋 전체 복사</button>
+        </div>
+        <textarea class="modal-textarea" id="cplan-memo" placeholder="캡션 초안, 촬영 아이디어, 준비물 등" oninput="cplanRefSync()"></textarea>
+        <div id="cplan-memo-links" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;"></div>
+      </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="f-btn f-btn-cancel" onclick="closeModal('cplan-modal')">취소</button>
@@ -5383,7 +5407,7 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="version">v5.17.0</div>
+<div id="version">v5.18.0</div>
 
 <script>
 /* ═══════════════════════════════════════
@@ -18305,7 +18329,11 @@ function _cplanRow(p, today) {
     const memoHtml = p.memo ? `<div style="margin-top:5px;white-space:pre-wrap;">${escapeHtml(p.memo)}</div>` : '';
     detail = `<div class="cplan-detail" style="padding:2px 8px 10px 58px;font-size:12px;color:var(--muted);line-height:1.6;">
       ${parts.length?`<div>${parts.join(' &nbsp; ')}</div>`:''}${memoHtml}
-      <div style="margin-top:8px;"><span onclick="event.stopPropagation();openCplanModal('${p.id}')" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px;padding:5px 14px;border:0.5px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);cursor:pointer;">✏️ 편집</span></div>
+      ${cplanDetailLinks(p)}
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+        <span onclick="event.stopPropagation();openCplanModal('${p.id}')" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px;padding:5px 14px;border:0.5px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);cursor:pointer;">✏️ 편집</span>
+        ${p.memo?`<span onclick="event.stopPropagation();cplanCopyPlan('${p.id}')" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px;padding:5px 14px;border:0.5px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);cursor:pointer;">📋 기획안 복사</span>`:''}
+      </div>
     </div>`;
   }
   return `<div style="border-bottom:0.5px solid var(--surface2);cursor:pointer;" onclick="cplanToggleExpand('${p.id}')">
@@ -18437,8 +18465,68 @@ async function openCplanModal(id) {
     if (_cplanPrefill.channel) cplanModalSetCh(_cplanPrefill.channel);
     _cplanPrefill = null;
   }
+  cplanRefSync();
   $('cplan-modal').classList.add('on');
   setTimeout(()=>$('cplan-title').focus(), 80);
+}
+
+/* 기획안 안에 적어둔 레퍼런스 주소는 텍스트라 눌러도 안 열린다.
+   메모에서 링크를 찾아 버튼으로 뽑아주고, 레퍼런스 칸에도 '열기'를 붙인다. */
+function cplanRefSync() {
+  const ref = ($('cplan-ref')?.value || '').trim();
+  const openBtn = $('cplan-ref-open');
+  if (openBtn) openBtn.style.display = /^https?:\/\//i.test(ref) ? '' : 'none';
+
+  const box = $('cplan-memo-links'); if (!box) return;
+  const memo = $('cplan-memo')?.value || '';
+  const urls = [...new Set((memo.match(/https?:\/\/[^\s"'<>)\]]+/g) || []))].slice(0, 12);
+  box.innerHTML = urls.length
+    ? `<span style="font-size:11px;color:var(--light);align-self:center;">기획안 속 링크</span>` + urls.map(u => {
+        let label = u.replace(/^https?:\/\/(www\.)?/,'');
+        if (/instagram\.com\/(reel|p)\//.test(u)) label = '릴스 ' + (u.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/)||[])[2];
+        else label = label.length > 30 ? label.slice(0,30)+'…' : label;
+        return `<a href="${escapeHtml(u)}" target="_blank" rel="noopener"
+          style="font-size:11px;padding:4px 11px;border:0.5px solid var(--border);border-radius:20px;
+                 background:var(--surface);color:#185FA5;text-decoration:none;white-space:nowrap;">${escapeHtml(label)} ↗</a>`;
+      }).join('')
+    : '';
+}
+
+/* 목록에서 펼쳤을 때도 링크는 바로 눌리게, 기획안은 편집 안 열고 복사되게 */
+function cplanDetailLinks(p) {
+  const urls = [...new Set((String(p.memo||'').match(/https?:\/\/[^\s"'<>)\]]+/g) || []))].slice(0, 12);
+  if (!urls.length) return '';
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">` + urls.map(u => {
+    let label = /instagram\.com\/(reel|p)\//.test(u)
+      ? '릴스 ' + (u.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/)||[])[2]
+      : (l => l.length>30 ? l.slice(0,30)+'…' : l)(u.replace(/^https?:\/\/(www\.)?/,''));
+    return `<a href="${escapeHtml(u)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
+      style="font-size:11px;padding:4px 11px;border:0.5px solid var(--border);border-radius:20px;
+             background:var(--surface);color:#185FA5;text-decoration:none;white-space:nowrap;">${escapeHtml(label)} ↗</a>`;
+  }).join('') + `</div>`;
+}
+
+async function cplanCopyPlan(id) {
+  const p = (_cplanCache||[]).find(x=>x.id===id);
+  if (!p || !p.memo) { toast('복사할 내용이 없어요'); return; }
+  try { await navigator.clipboard.writeText(p.memo); toast('기획안을 복사했어요 ✓'); }
+  catch(e) { openCplanModal(id); setTimeout(()=>{ const el=$('cplan-memo'); if(el){el.focus();el.select();} }, 300); }
+}
+
+function cplanRefOpen() {
+  const ref = ($('cplan-ref')?.value || '').trim();
+  if (/^https?:\/\//i.test(ref)) window.open(ref, '_blank', 'noopener');
+}
+
+async function cplanCopyMemo() {
+  const t = $('cplan-memo')?.value || '';
+  if (!t.trim()) { toast('복사할 내용이 없어요'); return; }
+  try { await navigator.clipboard.writeText(t); toast('기획안을 복사했어요 ✓'); }
+  catch(e) {
+    // 클립보드 권한이 없으면 선택해두기라도 한다 (모바일 사파리 등)
+    const el = $('cplan-memo'); el.focus(); el.select();
+    toast('전체 선택했어요 — 길게 눌러 복사해 주세요');
+  }
 }
 
 
