@@ -1,0 +1,44 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const {JSDOM}=require('jsdom');
+const html=fs.readFileSync('index.html','utf8');
+const backup=process.env.CHEROP_TEST_DATA?JSON.parse(fs.readFileSync(process.env.CHEROP_TEST_DATA,'utf8')).data:require('./sections-fixture.cjs');
+const tables={app_state:[{id:'cherop_main',data:structuredClone(backup),updated_at:'2026-10-17T01:00:00Z'}],tasks:[],leaves:[{id:'leave-test',status:'approved',member:'정현진',type:'half_am',start_date:'2026-10-17',end_date:'2026-10-17'}],products:[]};
+let writes=0;
+class Q{constructor(table){this.table=table;this.filters=[];this.mode='read';}select(){return this}eq(k,v){this.filters.push(x=>String(x[k])===String(v));return this}is(k,v){this.filters.push(x=>x[k]===v);return this}in(k,v){this.filters.push(x=>v.includes(x[k]));return this}like(k,v){const r=new RegExp('^'+v.replaceAll('%','.*')+'$');this.filters.push(x=>r.test(x[k]));return this}order(){return this}range(a,b){this.bounds=[a,b];return this}limit(n){this.bounds=[0,n-1];return this}single(){this.one=true;return this}maybeSingle(){this.one=true;return this}insert(v){this.mode='insert';this.value=v;return this}update(v){this.mode='update';this.value=v;return this}upsert(v){this.mode='upsert';this.value=v;return this}delete(){this.mode='delete';return this}then(resolve,reject){try{let rows=tables[this.table]??=[];let found=rows.filter(x=>this.filters.every(f=>f(x)));if(this.mode==='insert'||this.mode==='upsert'){writes++;const vals=Array.isArray(this.value)?this.value:[this.value];found=vals.map(x=>structuredClone(x));for(const x of found){if(this.mode==='upsert'){const at=rows.findIndex(r=>r.id===x.id);if(at>=0){rows[at]=x;continue;}}if(x.id===undefined)x.id=rows.length+1;rows.push(x);}}if(this.mode==='update'){writes++;for(const x of found)Object.assign(x,structuredClone(this.value));}if(this.mode==='delete'){writes++;tables[this.table]=rows.filter(x=>!found.includes(x));}if(this.bounds)found=found.slice(this.bounds[0],this.bounds[1]+1);return Promise.resolve({data:structuredClone(this.one?found[0]||null:found),error:null}).then(resolve,reject);}catch(e){return Promise.reject(e).then(resolve,reject)}}}
+const dom=new JSDOM(html,{url:'https://cherop-koko.github.io/cheropworkspace/#dashboard',runScripts:'outside-only',pretendToBeVisual:true});
+const w=dom.window;w.structuredClone=structuredClone;w.console=console;w.supabase={createClient:()=>({from:t=>new Q(t),storage:{from:()=>({upload:async()=>({error:null}),getPublicUrl:p=>({data:{publicUrl:'https://example.com/'+p}})})}})};w.setInterval=()=>0;w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')};w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')};
+const ctx=dom.getInternalVMContext();
+for(const node of w.document.scripts){if(node.src){const local=node.src.split('/').at(-1).split('?')[0];if(local.startsWith('workspace-'))vm.runInContext(fs.readFileSync(local,'utf8'),ctx,{filename:local});}else if(!node.textContent.includes('cleanupBrokenRoutineKeys();\nboot();'))vm.runInContext(node.textContent,ctx,{filename:'index-inline'});}
+vm.runInContext("user=MEMBERS[0];",ctx);
+const api=w.CHEROPSections;assert(api);
+const wait=()=>new Promise(r=>setTimeout(r,30));
+async function route(page,sub=''){w.location.hash='#'+page+(sub?'/'+encodeURIComponent(sub):'');vm.runInContext(`renderPage(${JSON.stringify(page)},${JSON.stringify(sub)})`,ctx);await wait();}
+function click(selector){const el=w.document.querySelector(selector);assert(el,selector);el.click();return el;}
+async function submit(values){const form=w.document.querySelector('#pf-form');assert(form);for(const[k,v]of Object.entries(values)){const el=form.elements.namedItem(k);assert(el,k);el.value=v;}form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await wait();}
+(async()=>{
+ assert.equal(writes,0,'no writes during startup');
+ assert.equal(w.document.querySelectorAll('.ws-nav-link').length,12);
+ await route('tasks');assert(w.document.querySelector('#page-tasks .w2').textContent.includes('업무·프로젝트'));assert.equal(w.document.querySelectorAll('#page-tasks .w2-table tbody tr').length,backup.proj_tasks.filter(x=>x.status!=='done').length);
+ const pid=backup.projects[0].id;await route('project',pid);assert(w.document.querySelector('#page-project .w2:not([hidden])').textContent.includes(backup.projects[0].title));assert(w.document.querySelector('#page-project .w2-legacy').hidden);await route('tasks');assert(w.document.querySelector('#page-tasks .w2'));
+ await route('lineup');assert.equal(w.document.querySelectorAll('#page-lineup .w2-table tbody tr').length,30);api.states.ls.year='all';await api.renderLineup();assert.equal(w.document.querySelectorAll('#page-lineup .w2-table tbody tr').length,96);
+ const p=backup.plan['2026'].products[0];await route('lineup','2026:'+p.id);assert(w.document.querySelector('.w2-product-detail').textContent.includes(p.name));
+ await route('manual','10');assert.equal(w.document.querySelectorAll('.w2-manual-reader article section').length,11);assert(w.document.querySelector('.w2-manual-reader').textContent.includes('샘플은 일반 상품과 반드시 구분'));
+ api.states.ms.tab='resources';await api.renderManual();assert.equal(w.document.querySelectorAll('.w2-resource-grid article').length,11);
+ const events=api.normalizedEvents(backup,tables.leaves);assert.equal(events.filter(x=>x.type==='팝업').length,5);assert.equal(events.length,88);assert(!events.some(x=>x.type==='일정'));assert(events.some(x=>x.title.includes('오전반차')));
+ await route('ops','2026-10');assert.equal(w.document.querySelectorAll('.w2-calendar-week').length,5);assert(w.document.querySelectorAll('.w2-calendar-event').length>0);
+ await route('popup');assert.equal(w.document.getElementById('cherop-popup-latest').getRecords().length,0);assert(!w.document.querySelector('#page-popup').textContent.includes('200,546,550'));
+ click('[data-flow="new-popup"]');await submit({name:'검증 팝업',start:'2026-10-17',end:'2026-10-19',pm:'정현진',location:'검증 공간'});assert.equal(w.document.getElementById('cherop-popup-latest').getRecords().length,1);assert(tables.app_state.some(x=>x.id.startsWith('cherop_popup_record_')));
+ click('[data-flow="section"][data-key="daily"]');click('[data-flow="add-daily"]');await submit({date:'2026-10-17',staff:'정현진',dayType:'영업',gross:'1000',refund:'100',toss:'900'});assert.equal(w.document.getElementById('cherop-popup-latest').getRecords()[0].event.revenue,900);
+ click('[data-flow="section"][data-key="plan"]');click('[data-flow="template"]');await wait();click('[data-flow="register-task"]');await submit({title:'연결할 업무',date:'2026-10-18',owner:'정현진',destination:'프로젝트 업무',status:'대기',category:'MD'});
+ const state=tables.app_state.find(x=>x.id==='cherop_main').data;assert.equal(state.projects.length,7);assert.equal(state.proj_tasks.length,147);assert(state.proj_tasks.some(x=>x.title==='연결할 업무'));assert.equal(tables.tasks.length,0);
+ const linked=state.proj_tasks.find(x=>x.title==='연결할 업무');linked.status='done';
+ click('[data-flow="section"][data-key="daily"]');click('[data-flow="add-daily"]');await submit({date:'2026-10-18',staff:'정현진',dayType:'영업',gross:'2000',refund:'0',toss:'2000'});
+ assert.equal(tables.app_state.find(x=>x.id==='cherop_main').data.proj_tasks.find(x=>x.id===linked.id).status,'done','daily sales must not reset linked task status');
+ click('[data-flow="section"][data-key="plan"]');click('[data-flow="task-detail"]');assert(w.document.querySelector('[name="destination"]').readOnly,'registered destination is stable');w.document.getElementById('pf-form').closest('dialog')?.close();
+ await api.getRecord('cherop_manual_chapter_1');await api.putRecord('cherop_manual_chapter_1',{body:'검증 본문'});tables.app_state.find(x=>x.id==='cherop_manual_chapter_1').updated_at='concurrent-change';await assert.rejects(api.putRecord('cherop_manual_chapter_1',{body:'덮어쓰기 금지'}));assert.equal(tables.app_state.find(x=>x.id==='cherop_manual_chapter_1').data.body,'검증 본문');
+ for(const key of ['plan','assets','asset_cats','ops_events','ops_orders','ops_cats','tpl_popup'])assert.deepEqual(state[key],backup[key],key+' preserved');
+ for(const p of backup.projects)assert.deepEqual(state.projects.find(x=>x.id===p.id),p);
+ for(const t of backup.proj_tasks)assert.deepEqual(state.proj_tasks.find(x=>x.id===t.id),t);
+ console.log('PASS: real DOM, 12 menus, routes, 146 preserved project tasks, 96 products, 11 resources, full 11-section manual, legacy categories, equal calendar weeks, empty popup, daily net sales, idempotent project linkage, optimistic conflict protection; old records unchanged.');
+ dom.window.close();
+})().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});

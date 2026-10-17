@@ -33,7 +33,7 @@ assert(!menuHtml.includes('기존 메뉴'));assert(!menuHtml.includes('처리할
  await ctx.refreshCurrentPage();assert.deepEqual(calls.filter(c=>c[0]==='render').at(-1),['render','ops','date:2026-12-03']);
  assert.equal(writes.length,0);
  const baseline=cp.execFileSync('git',['show','5a825fff5b34accad17c47ed44e65a54374fc287:index.html'],{encoding:'utf8',maxBuffer:4e6});
- let edited=fs.readFileSync('index.html','utf8');edited=edited.replace('<link rel="stylesheet" href="workspace-dashboard.css?v=20261017-1">\n','').replace('</script>\n<script src="workspace-dashboard.js?v=20261017-1"></script>\n<script>\n','');assert.equal(edited,baseline,'every byte of original pages and persistence code preserved');
+ let edited=fs.readFileSync('index.html','utf8').replace(/^.*(?:workspace-sections\.(?:js|css)|workspace-popup\.(?:js|css)|workspace-manual-seed\.js).*\n/gm,'');edited=edited.replace('<link rel="stylesheet" href="workspace-dashboard.css?v=20261017-1">\n','').replace('</script>\n<script src="workspace-dashboard.js?v=20261017-1"></script>\n<script>\n','');assert.equal(edited,baseline,'every byte of original pages and persistence code preserved');
  assert(!/\.(insert|update|upsert|delete)\s*\(/.test(source));
  console.log('PASS: 5 sections, 7 dates, calendar interactions, half-day leave, paginated reads, employee filtering, admin menu/route checks, deep links and refresh; original index preserved byte-for-byte apart from two load hooks; no new database writes.');
 })().catch(e=>{console.error(e);process.exitCode=1});
