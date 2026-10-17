@@ -1,0 +1,38 @@
+/* Approved desktop 01 / mobile 02. Authentication remains unchanged. */
+#login{background:#fff;color:#222;flex-direction:column;justify-content:flex-start;align-items:center;overflow-y:auto;overscroll-behavior-y:auto;font-family:'Noto Sans KR',Arial,sans-serif;padding:110px 32px 70px;box-sizing:border-box}
+#login .login-brand{position:absolute;top:30px;left:40px;display:flex;align-items:center;gap:20px}
+#login .login-brand img{display:block;width:96px;height:auto;object-fit:contain}
+#login .login-brand>span{font-size:9px;line-height:1;letter-spacing:4px;color:#333;border-left:1px solid #ddd;padding:10px 0 10px 20px}
+#login .login-box{flex-shrink:0;width:320px;max-width:100%;padding:30px 0;margin:auto 0;background:#fff;border:0;border-radius:0;box-shadow:none;box-sizing:border-box}
+#login .login-box h2{font-size:22px;font-weight:400;line-height:1.5;letter-spacing:-.5px;text-align:center;margin:0 0 30px}
+#login .login-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 28px}
+#login .login-member{position:relative;justify-content:center;min-height:46px;padding:10px 12px;border:1px solid #ddd;border-radius:0;background:#fff;box-sizing:border-box;transition:background .15s,border-color .15s}
+#login .login-member:hover{background:#fafafa;border-color:#999}
+#login .login-member.sel{background:#222;color:#fff;border-color:#222}
+#login .login-member.sel:after{content:'';position:absolute;top:9px;right:9px;width:5px;height:5px;border-radius:50%;background:#dc7296}
+#login .login-av,#login .login-member-role{display:none}
+#login .login-member-name{font-size:12px;font-weight:400;line-height:22px;letter-spacing:0}
+#login .login-field-label{display:block;font-size:10px;font-weight:400;line-height:18px;color:#888;margin-bottom:6px}
+#login .pin-input{display:block;width:100%;min-height:40px;padding:8px 12px;margin:0 0 18px;border:1px solid #ddd;border-radius:0;background:#fff;color:#222;font-family:inherit;font-size:14px!important;font-weight:400;line-height:22px;letter-spacing:3px;box-sizing:border-box}
+#login .pin-input::placeholder{font-size:11px;letter-spacing:0;color:#aaa}
+#login .pin-input:focus{border-color:#555;outline:1px solid #555;outline-offset:0}
+#login .login-btn{display:block;width:100%;min-height:36px;padding:7px 12px;border:1px solid #222;border-radius:0;background:#222;color:#fff;font-family:inherit;font-size:12px!important;font-weight:400;line-height:20px;cursor:pointer;box-sizing:border-box}
+#login .login-btn:focus-visible{outline:2px solid #b33c72;outline-offset:3px}
+#login .login-err{font-size:11px;line-height:18px;min-height:18px;margin-top:10px;color:#a52c40}
+#login .login-footer{position:absolute;left:40px;right:40px;bottom:24px;display:flex;justify-content:space-between;padding-top:15px;border-top:1px solid #e5e5e5;font-size:8px;color:#888;letter-spacing:2px}
+@media(max-height:620px) and (min-width:651px){#login{padding-top:90px;padding-bottom:24px}#login .login-footer{display:none}#login .login-brand{top:15px}#login .login-box{padding:20px 0}}
+@media(max-width:650px){
+ #login{padding:0 0 env(safe-area-inset-bottom);background:#fff}
+ #login .login-brand{position:static;flex-shrink:0;width:100%;height:156px;min-height:156px;box-sizing:border-box;background:#000;flex-direction:column;justify-content:center;gap:9px;padding:20px 24px}
+ #login .login-brand img{width:112px;height:auto}
+ #login .login-brand>span{border:0;padding:0;margin-left:4px;font-size:8px;letter-spacing:4px;color:#fff}
+ #login .login-box{width:calc(100% - 48px);max-width:340px;margin:34px auto auto;padding:0 0 30px}
+ #login .login-box h2{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ #login .login-grid{gap:8px;margin-bottom:27px}
+ #login .login-member{min-height:46px;padding:10px 12px}
+ #login .login-member.sel{background:#fff;color:#222;border-color:#d94180}
+ #login .login-member.sel:after{top:8px;left:8px;right:auto;background:#d94180;width:5px;height:5px}
+ #login .pin-input{font-size:16px!important;min-height:42px}
+ #login .login-footer{display:none}
+}
+@media(max-width:650px) and (max-height:560px){#login .login-brand{height:110px;min-height:110px;padding:12px 24px;gap:4px}#login .login-brand img{width:90px}#login .login-box{margin-top:24px}}
