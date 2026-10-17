@@ -1,18 +1,26 @@
 /* Scoped shell styles; existing page content styles are deliberately untouched. */
 #app.workspace-shell {--ws-ink:#202020;--ws-dim:#747474;--ws-line:#e7e5e4;--ws-paper:#fff;--ws-pink:#d5648c}
 #app.workspace-shell .tb-nav.ws-breadcrumb{background:none;border-radius:0;font-size:12px;color:var(--muted);padding:0;min-width:0}
-#app.workspace-shell .sidebar{width:218px;align-items:stretch;padding:22px 14px;overflow-y:auto;gap:0;background:var(--ws-paper)}
-#app.workspace-shell .sidebar>nav{display:flex;flex-direction:column;gap:3px}
-#app.workspace-shell .ws-nav-link,#app.workspace-shell .ws-nav-unlinked{display:flex;align-items:center;gap:8px;min-height:36px;padding:7px 12px;box-sizing:border-box;font-size:12px;text-decoration:none;color:var(--ws-ink);border-radius:4px}
-#app.workspace-shell .ws-nav-link:hover{background:#f5f3f2}
-#app.workspace-shell .ws-nav-link[aria-current=page]{background:#f8e9ee;color:#9d3156;font-weight:500}
+#app.workspace-shell.on{display:grid;grid-template-columns:175px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+#app.workspace-shell .app-body{display:contents}
+#app.workspace-shell .topbar{grid-column:2;grid-row:1}
+#app.workspace-shell .topbar>.tb-logo,#app.workspace-shell .topbar>.tb-div{display:none}
+#app.workspace-shell .main{grid-column:2;grid-row:2;min-height:0}
+#app.workspace-shell .sidebar{grid-column:1;grid-row:1/3;width:175px;align-items:stretch;padding:20px 12px;overflow-y:auto;gap:0;background:var(--ws-paper)}
+#app.workspace-shell .sidebar>nav{display:grid;gap:4px}
+#app.workspace-shell .ws-brand{padding:0 10px}
+#app.workspace-shell .ws-brand .ws-brand-logo{width:117px;height:69px;object-fit:contain;margin-bottom:16px}
+#app.workspace-shell .ws-brand>span{display:block;font-size:9px;letter-spacing:2px;margin:7px 0 20px 2px}
+#app.workspace-shell .ws-nav-caption{font-size:10px;color:var(--ws-dim);letter-spacing:1px;margin:24px 10px 10px}
+#app.workspace-shell .ws-nav-link,#app.workspace-shell .ws-nav-unlinked{display:block;box-sizing:border-box;font-size:12px;text-decoration:none;color:var(--ws-ink);padding:12px 10px;white-space:nowrap;border-left:2px solid transparent;line-height:18px}
+#app.workspace-shell .ws-nav-link:hover{background:#f7f7f7}
+#app.workspace-shell .ws-nav-link[aria-current=page]{background:#fff0f5;color:#ba4070;border-left-color:#ba4070}
 #app.workspace-shell .ws-nav-link[hidden]{display:none}
 #app.workspace-shell .ws-nav-unlinked{color:var(--ws-dim)}
-#app.workspace-shell .ws-nav-unlinked small{font-size:10px;margin-left:auto}
-#app.workspace-shell .ws-nav-group{font-size:11px;color:var(--ws-dim);padding:16px 12px 5px}
-#app.workspace-shell .ws-legacy{border-top:1px solid var(--ws-line);margin-top:18px;padding-top:12px}
-#app.workspace-shell .ws-legacy summary{padding:8px 12px;font-size:11px;color:var(--ws-dim);cursor:pointer}
-#app.workspace-shell .ws-menu-toggle{display:none}
+#app.workspace-shell .ws-context-links{display:flex;gap:20px;border-bottom:1px solid var(--ws-line);margin-bottom:24px}
+#app.workspace-shell .ws-context-links[hidden]{display:none}
+#app.workspace-shell .ws-context-links a{padding:10px 0;font-size:12px;text-decoration:none;color:var(--ws-dim);border-bottom:2px solid transparent}
+#app.workspace-shell .ws-context-links a[aria-current=page]{color:var(--ws-ink);border-bottom-color:var(--ws-pink)}
 #page-dashboard #ws-dashboard{max-width:1140px;margin:auto;color:var(--ws-ink);font-family:'Noto Sans KR',sans-serif}
 #ws-dashboard a{color:inherit;text-decoration:none}
 #ws-dashboard button{font-family:inherit;color:inherit;cursor:pointer}
@@ -51,17 +59,19 @@
 #ws-dashboard .ws-popup>span{font-size:11px;color:var(--ws-dim)}
 #ws-dashboard .ws-day-label{display:flex;align-items:center;justify-content:space-between;font-size:11px;margin-top:14px;color:var(--ws-dim)}
 #ws-dashboard .ws-day-label button{border:0;background:none;padding:8px}
-@media(max-width:800px){
- #app.workspace-shell .topbar{height:auto;min-height:56px;flex-wrap:wrap;padding:8px 14px;gap:10px}
- #app.workspace-shell .tb-logo{font-size:12px;gap:6px}
- #app.workspace-shell .ws-menu-toggle{display:block;border:1px solid var(--ws-line);background:var(--ws-paper);border-radius:4px;padding:7px 12px;font:inherit;font-size:12px}
- #app.workspace-shell .tb-nav.ws-breadcrumb{display:none}
+@media(max-width:650px){
+ #app.workspace-shell.on{display:flex;flex-direction:column}
+ #app.workspace-shell .topbar{order:0;height:auto;min-height:48px;padding:12px 16px;gap:10px;flex-wrap:wrap}
+ #app.workspace-shell .tb-nav.ws-breadcrumb{display:block;font-size:11px}
  #app.workspace-shell .tb-right{margin-left:auto}
- #app.workspace-shell .app-body{flex-direction:column}
- #app.workspace-shell .sidebar{display:none;order:0;width:100%;max-height:55vh;box-sizing:border-box;border-top:0;border-bottom:1px solid var(--ws-line);padding:10px 14px}
- #app.workspace-shell.ws-menu-open .sidebar{display:flex}
- #app.workspace-shell .sidebar>nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 6px}
- #app.workspace-shell .ws-nav-group,#app.workspace-shell .ws-legacy{grid-column:1/-1}
+ #app.workspace-shell .sidebar{display:flex;order:-1;width:100%;height:auto;max-height:none;flex-direction:column;align-items:stretch;overflow:visible;box-sizing:border-box;border-top:0;border-bottom:1px solid var(--ws-line);padding:12px}
+ #app.workspace-shell .ws-brand{padding:0}
+ #app.workspace-shell .ws-brand .ws-brand-logo{width:75px;height:44px;margin:0 0 12px}
+ #app.workspace-shell .ws-brand>span{margin:7px 0 20px 12px}
+ #app.workspace-shell .sidebar>nav{display:flex;flex-wrap:wrap;gap:4px}
+ #app.workspace-shell .ws-nav-link,#app.workspace-shell .ws-nav-unlinked{font-size:11px;padding:10px 9px;border-left:0;border-bottom:2px solid transparent}
+ #app.workspace-shell .ws-nav-link[aria-current=page]{border-bottom-color:#ba4070}
+ #app.workspace-shell .ws-nav-caption{display:none}
  #app.workspace-shell .main{order:1}
  #ws-dashboard .ws-work-grid{grid-template-columns:1fr;gap:0}
  #ws-dashboard .ws-week-head{align-items:flex-start}
@@ -77,7 +87,7 @@
  #ws-dashboard .ws-dashboard-head>span{font-size:11px;white-space:nowrap}
 }
 @media(pointer:coarse){
- #app.workspace-shell .ws-nav-link,#app.workspace-shell .ws-menu-toggle,#ws-dashboard .ws-action,#ws-dashboard .ws-week-actions button,#ws-dashboard .ws-day-label button{min-height:44px}
+ #app.workspace-shell .ws-nav-link,#ws-dashboard .ws-action,#ws-dashboard .ws-week-actions button,#ws-dashboard .ws-day-label button{min-height:44px}
  #ws-dashboard .ws-week-actions button:nth-child(-n+2){width:44px}
 }
 

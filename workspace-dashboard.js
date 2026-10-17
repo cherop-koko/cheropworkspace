@@ -16,33 +16,32 @@
   const nav = document.querySelector('.tb-nav');
   nav.replaceChildren();
   nav.classList.add('ws-breadcrumb');
-  const menuButton = document.createElement('button');
-  menuButton.type='button';menuButton.className='ws-menu-toggle';menuButton.textContent='메뉴';
-  menuButton.setAttribute('aria-controls','ws-navigation');menuButton.setAttribute('aria-expanded','false');
-  document.querySelector('.topbar').insertBefore(menuButton,document.querySelector('.tb-div'));
   sidebar.id='ws-navigation';
   const entry = (label,page,sub='',admin=false) => `<a class="ws-nav-link${admin?' ws-admin':''}" href="${href(page,sub)}" data-ws-page="${page}" data-ws-sub="${esc(sub)}">${label}</a>`;
-  sidebar.innerHTML = `<nav aria-label="워크스페이스 메뉴">
-    ${entry('대시보드','dashboard')}
-    <div class="ws-nav-group">업무·프로젝트</div>${entry('처리할 업무','tasks')}${entry('프로젝트','project')}
+  const logo=document.querySelector('.tb-logo').innerHTML;
+  sidebar.innerHTML = `<div class="ws-brand">${logo}<span>WORKSPACE</span></div><nav aria-label="워크스페이스 메뉴">
+    ${entry('대시보드','dashboard')}${entry('업무·프로젝트','tasks')}
     ${entry('재고·물류','inventory')}${entry('상품화 관리','production')}${entry('판매분석','sales')}${entry('상품·라인업','lineup')}
-    <span class="ws-nav-unlinked">오프라인·팝업 <small>미연결</small></span>
-    <span class="ws-nav-unlinked">업무 매뉴얼 <small>미연결</small></span>
-    <div class="ws-nav-group">팀·공지</div>${entry('공지','notice')}${entry('출퇴근·연차','attendance')}
-    ${entry('업무 캘린더','ops','calendar')}${entry('목표·예산','plan','',true)}${entry('경영·정산','tax','',true)}
-    <details class="ws-legacy"><summary>기존 메뉴</summary>${entry('콘텐츠','content')}${entry('브랜드 자산·자료 링크','assets')}${entry('발주 관리','ops','order')}${entry('기존 운영 화면','ops')}</details>
+    <span class="ws-nav-unlinked" aria-disabled="true">오프라인·팝업</span>
+    <span class="ws-nav-unlinked" aria-disabled="true">업무 매뉴얼</span>
+  </nav><div class="ws-nav-caption">관리</div><nav aria-label="관리 메뉴">
+    ${entry('팀·공지','notice')}${entry('업무 캘린더','ops','calendar')}${entry('목표·예산','plan','',true)}${entry('경영·정산','tax','',true)}
   </nav>`;
-  menuButton.addEventListener('click',()=>{const opened=app.classList.toggle('ws-menu-open');menuButton.setAttribute('aria-expanded',String(opened));});
+  const contextBar=document.createElement('nav');contextBar.className='ws-context-links';
+  contextBar.setAttribute('aria-label','현재 카테고리 화면');contextBar.hidden=true;
+  const main=document.querySelector('.main');main.insertBefore(contextBar,main.firstChild);
   const labels={dashboard:'대시보드',tasks:'업무·프로젝트 / 처리할 업무',project:'업무·프로젝트 / 프로젝트',inventory:'재고·물류',production:'상품화 관리',sales:'판매분석',lineup:'상품·라인업',notice:'팀·공지 / 공지',attendance:'팀·공지 / 출퇴근·연차',plan:'목표·예산',tax:'경영·정산',content:'기존 메뉴 / 콘텐츠',assets:'기존 메뉴 / 브랜드 자산·자료 링크',ops:'업무 캘린더',revenue:'기존 매출 화면'};
   function syncNavigation(page,sub='') {
     sidebar.querySelectorAll('.ws-admin').forEach(el=>{el.hidden=!user?.admin;});
     sidebar.querySelectorAll('[data-ws-page]').forEach(el=>{
-      const on=el.dataset.wsPage===page && (page!=='ops' || (sub.startsWith('date:') ? el.dataset.wsSub==='calendar' : el.dataset.wsSub===sub));
+      const menuPage=page==='project'?'tasks':page==='attendance'?'notice':page;
+      const on=el.dataset.wsPage===menuPage && (page!=='ops' || sub!=='order');
       if(on)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');
-      if(on && el.closest('details'))el.closest('details').open=true;
     });
     nav.textContent=page==='ops'&&sub==='order'?'기존 메뉴 / 발주 관리':labels[page]||page;
-    app.classList.remove('ws-menu-open');menuButton.setAttribute('aria-expanded','false');
+    const links=['tasks','project'].includes(page)?[['처리할 업무','tasks'],['프로젝트','project']]:['notice','attendance'].includes(page)?[['공지','notice'],['출퇴근·연차','attendance']]:[];
+    contextBar.hidden=!links.length;
+    contextBar.innerHTML=links.map(([label,key])=>`<a href="${href(key)}" ${page===key?'aria-current="page"':''}>${label}</a>`).join('');
   }
   // Adapter for URL selection only: all existing page init/render functions remain unchanged.
   const originalRenderPage=renderPage;
