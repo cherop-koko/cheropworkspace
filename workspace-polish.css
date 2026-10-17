@@ -171,3 +171,11 @@ body :is(.f-btn,.f-btn-cancel,.f-btn-save,.confirm-no,.confirm-yes){font-family:
  #app.workspace-shell .ws-attendance-actions{margin-left:auto}
  #app.workspace-shell .ws-attendance .ws-action{font-size:11px;padding:4px 10px}
 }
+/* Mobile browser owns vertical scrolling so Safari/Chrome can pull to refresh. */
+@media(max-width:650px){
+ html{height:auto;min-height:100%;overflow-x:clip;overflow-y:auto;overscroll-behavior-y:auto}
+ body{height:auto;min-height:100dvh;overflow-x:clip;overflow-y:visible}
+ #app.workspace-shell.on{height:auto;min-height:100dvh;overflow:visible}
+ #app.workspace-shell .sidebar{position:sticky;top:0;z-index:100;background:#fff}
+ #app.workspace-shell .main{flex:none;width:100%;min-width:0;overflow:visible}
+}
