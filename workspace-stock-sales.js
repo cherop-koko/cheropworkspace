@@ -4,12 +4,25 @@ const api=CHEROPSections,esc=v=>escapeHtml(String(v??'')),num=v=>Number(v)||0,fm
 // Paginate every read in the adapted legacy loaders. Explicit pagers keep their own ranges.
 const readClient={from(table){let q=db.from(table),explicit=false,single=false;const proxy=new Proxy({}, {get(_,key){if(key==='then')return(resolve,reject)=>(async()=>{q=q.order('id',{ascending:true});if(explicit||single){const r=await q;if(r.error)throw r.error;return r;}let data=[];for(let offset=0;;offset+=500){const r=await q.range(offset,offset+499);if(r.error)throw r.error;data.push(...(r.data||[]));if((r.data||[]).length<500)return{data,error:null};}})().then(resolve,reject);return(...args)=>{if(['insert','update','upsert','delete'].includes(key))throw Error('조회 화면에서 데이터 변경을 차단했습니다.');if(key==='range'||key==='limit')explicit=true;if(key==='single'||key==='maybeSingle')single=true;q=q[key](...args);return proxy;};}});return proxy;}};
 let stockSnapshot=null,stockSnapshotAt=0,stockRequest=null,inventoryTicket=0,channelTicket=0;
-async function stockData(cached=false){if(cached&&stockSnapshot&&Date.now()-stockSnapshotAt<30000)return stockSnapshot;if(!stockRequest)stockRequest=Promise.all([api.queryAll('products'),api.queryAll('inventory'),api.queryAll('channel_inventory'),api.queryAll('sales_log',q=>q.gte('sale_date',dateStr(new Date(Date.now()-28*86400000)))),getAppState()]).then(([products,inventory,channels,sales,state])=>(stockSnapshotAt=Date.now(),stockSnapshot={products,inventory,channels,sales,state})).finally(()=>{stockRequest=null;});return stockRequest;}
+async function stockData(cached=false){if(cached&&stockSnapshot&&Date.now()-stockSnapshotAt<30000)return stockSnapshot;if(!stockRequest)stockRequest=Promise.all([api.queryAll('products'),api.queryAll('inventory'),api.queryAll('channel_inventory'),api.queryAll('sales_log',q=>q.gte('sale_date',dateStr(new Date(Date.now()-28*86400000)))),getAppState()]).then(([products,inventory,channels,sales,state])=>(imageState=state,stockSnapshotAt=Date.now(),stockSnapshot={products,inventory,channels,sales,state})).finally(()=>{stockRequest=null;});return stockRequest;}
 const matches=(p,q)=>{const text=[p.name,p.option_name,p.sku,p.category].filter(Boolean).join(' ').normalize('NFKC').toLowerCase();return q.normalize('NFKC').toLowerCase().split(/\s+/).filter(Boolean).every(term=>text.includes(term)||text.replace(/\s/g,'').includes(term));};
 const view={salesTab:'overview',channel:'',ticket:0,products:[],sales:[],revenues:[],inventory:[],reservations:[]};
 const table=(heads,rows)=>`<div class="w11-scroll"><table class="inv-tbl"><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
 const button=(t,a,id='')=>`<button type="button" class="w11-button" data-stock="${a}" data-id="${esc(id)}">${t}</button>`;
 const empty=t=>`<p class="w11-empty">${esc(t)}</p>`;
+// Read-only thumbnail matching. Never guess using partial names or change product records.
+let imageState=null,imageSource=null,imageIndex=new Map();
+const imageKey=v=>String(v||'').normalize('NFKC').replace(/\s+/g,'').toLowerCase();
+const imageAliases={'오리지널 몽모':'몽모','오리지널 모리':'모리','오리지널 코코':'코코','오리지널 몽모리':'몽모리','다람쥐 몽모':'몽람이','고슴도치 몽모':'몽슴도치','오리지널 몽모 벨트커버':'오리지널 몽모 안전벨트 커버','오리지널 모리 벨트커버':'오리지널 모리 안전벨트 커버'};
+function productImage(p){
+ const s=imageState||stockSnapshot?.state;
+ if(s!==imageSource){imageSource=s;imageIndex=new Map();for(const year of Object.values(s?.plan||{}))for(const item of year.products||[]){const src=item.imgs?.front||item.imgUrl||item.storeImage;if(!src)continue;for(const name of [item.name,item.storeName]){if(!name)continue;for(const key of new Set([imageKey(name),imageKey(name.replace(/\([^)]*\)/g,''))])){const matches=imageIndex.get(key)||[];matches.push({id:item.id,src});imageIndex.set(key,matches);}}}}
+ const direct=p?.img_url||p?.image_url||p?.imgs?.front;
+ if(direct)return direct;
+ const choices=imageIndex.get(imageKey(imageAliases[p?.name]||p?.name))||[];
+ const unique=[...new Map(choices.map(x=>[x.id,x])).values()];return unique.length===1?unique[0].src:'';
+}
+function productCell(p){const src=productImage(p),safe=/^(https?:\/\/|data:image\/(png|jpe?g|webp|gif);base64,)/i.test(src)?src:'';return `<span class="w13-product"><span class="w13-thumb${safe?'':' is-empty'}" title="${safe?'상품 대표이미지 · 옵션은 상품명 아래 확인':'연결된 이미지 없음'}">${safe?`<img src="${esc(safe)}" alt="" loading="lazy" decoding="async" draggable="false" onerror="this.parentElement.classList.add('is-empty');this.remove()">`:''}<span>이미지<br>없음</span></span><span class="w13-product-text"><span>${esc(p?.name||'상품 정보 없음')}</span>${p?.option_name?`<small>${esc(p.option_name)}</small>`:''}</span></span>`;}
 
 loadInvOverviewBanner=async function() {
  const db=readClient;
@@ -142,7 +155,7 @@ loadInvList=async function(options={}) {
         :`<td></td>`;
       return `${groupHeader}<tr data-pid="${p.id}" data-cat="${escapeHtml(p.category||'')}" ${isDraggable?'draggable="true"':''} style="${p.is_discontinued?'opacity:.45;':isPlanned?'opacity:.7;':''}${isDraggable?'cursor:grab;':''}">
         ${handle}
-        <td><div style="font-weight:500;">${p.name}</div>${opt}</td>
+        <td>${productCell(p)}</td>
         <td style="font-size:11px;min-width:90px;" onclick="event.stopPropagation()">
           <select class="inv-cat-inline-sel" data-pid="${p.id}" onchange="saveInlineCat(this)" onfocus="populateInlineCat(this)" style="background:transparent;border:none;outline:none;font-size:11px;color:${p.category?'var(--text)':'var(--faint)'};cursor:pointer;width:100%;font-family:var(--font);">
             <option value="${p.category||''}">${p.category||'—'}</option>
@@ -180,7 +193,7 @@ loadChannelInv=async function(ch,options={}) {
     $('w12-category-buttons').innerHTML=cats.map(c=>`<button type="button" data-stock="channel-category" data-id="${esc(c)}" aria-pressed="${c===invChCurrentCat}">${esc(c)}</button>`).join('');
     const allocNeeded=allProds.filter(p=>!p.is_discontinued&&p.disc_status!=='planned'&&(invChCurrentCat==='전체'||p.category===invChCurrentCat)).map(p=>{const ci=allChInv.find(r=>r.product_id===p.id&&r.channel===ch)||{},inv=allInvRows.find(r=>r.product_id===p.id)||{},v=calcVelocity(allSales,p.id,ch);return{p,ci,inv,days:v>0?Math.ceil(num(ci.stock)/v):null};}).filter(r=>r.days!==null&&r.days<=3&&num(r.inv.available_stock)>0);
     const fold=$('w12-allocation-alert');fold.querySelector('summary').innerHTML=`<span>채널 배분 필요 <b>${allocNeeded.length}</b></span><small>${esc(ch)} · ${esc(invChCurrentCat)} <i></i></small>`;
-    $('inv-ch-alloc-list').innerHTML=allocNeeded.length?table(['상품·옵션','현재 채널재고','가용','소진 예상',''],allocNeeded.map(({p,ci,inv,days})=>`<tr><td>${esc(label(p))}</td><td>${fmt(ci.stock)}</td><td>${fmt(inv.available_stock)}</td><td>${days}일</td><td>${button('배분·예약','allocate',p.id)}</td></tr>`)):empty('선택한 채널·카테고리에 배분 필요 항목이 없습니다.');
+    $('inv-ch-alloc-list').innerHTML=allocNeeded.length?table(['상품·옵션','현재 채널재고','가용','소진 예상',''],allocNeeded.map(({p,ci,inv,days})=>`<tr><td>${productCell(p)}</td><td>${fmt(ci.stock)}</td><td>${fmt(inv.available_stock)}</td><td>${days}일</td><td>${button('배분·예약','allocate',p.id)}</td></tr>`)):empty('선택한 채널·카테고리에 배분 필요 항목이 없습니다.');
     // 필터
     const st=snap.state;const rsv=st.ch_reservations||[];
     let prods = allProds.filter(p=>$('w11-channel-status').value==='all'||($('w11-channel-status').value==='disc'?p.is_discontinued:!p.is_discontinued));
@@ -205,7 +218,7 @@ loadChannelInv=async function(ch,options={}) {
         :`<span class="sbadge sbadge-ing">정상</span>`;
       const opt=p.option_name?`<div class="inv-faint" style="font-size:11px;">${p.option_name}</div>`:'';
       return `<tr data-channel-product="${esc(p.id)}">
-        <td><div style="font-weight:500;">${p.name}</div>${opt}</td>
+        <td>${productCell(p)}</td>
         <td class="inv-faint" style="font-size:11px;">${p.category||'—'}</td>
         <td class="inv-num ${isAlert?'inv-red':''}">${ci.stock}</td>
         <td class="inv-num">${fmt(rsv.filter(r=>r.product_id===p.id&&r.channel===ch).reduce((n,r)=>n+num(r.qty),0))}</td>
@@ -231,7 +244,7 @@ loadReceiptSchedule=async function() {
     const done=receipts.filter(r=>r.status==='completed').sort((a,b)=>String(b.receipt_date||b.scheduled_date||'').localeCompare(String(a.receipt_date||a.scheduled_date||'')));
 
     // 소모품 입고는 product_id가 없어서 예전에는 전부 '(삭제됨)'으로 표시돼 읽을 수 없었음
-    const stSup = await getAppState();
+    const stSup = await getAppState(); imageState=stSup;
     const supMap = {}; (stSup.prod_supplies||[]).forEach(x => supMap[x.id] = x);
 
     const renderRow=(r,showComplete)=>{
@@ -241,7 +254,7 @@ loadReceiptSchedule=async function() {
         label = (sup ? sup.name : '소모품') + ' <span style="font-size:10px;color:var(--light);">· 소모품</span>';
       } else {
         const p=pMap[r.product_id]||{name:'(삭제됨)'};
-        label=p.option_name?`${p.name} · ${p.option_name}`:p.name;
+        label=productCell(p);
       }
       const stBadge=r.status==='completed'
         ?`<span class="sbadge sbadge-ing">완료</span>`
@@ -319,13 +332,13 @@ loadOrderAlerts=async function() {
     // 발주 필요 섹션
     const alertEl = $('inv-alert-list');
     if(alertEl){
-      const appS = await getAppState();
+      const appS = await getAppState(); imageState=appS;
       const hidden = new Set(appS.inv_alert_hidden || []);
       const visible = orderAlerts.filter(a => !hidden.has(a.productId));
       const hiddenList = orderAlerts.filter(a =>  hidden.has(a.productId));
 
       const renderAlertRow = (a, isHidden=false) => `<tr ${isHidden?'style="opacity:.55;"':''}>
-        <td style="font-weight:500;">${escapeHtml(a.label)}</td>
+        <td style="font-weight:500;">${productCell(prods.find(p=>p.id===a.productId)||{name:a.label})}</td>
         <td class="inv-num ${a.urgency==='danger'?'inv-red':'inv-amber'}">D+${a.days}</td>
         <td>${a.urgency==='danger'
           ?'<span class="sbadge" style="background:var(--red-bg);color:var(--red);">즉시</span>'
@@ -399,6 +412,7 @@ loadShipLog=async function() {
   const pids  = [...new Set(rows.map(r => r.product_id).filter(Boolean))];
   const { data: prods } = await db.from('products').select('id,name,option_name').in('id', pids);
   const prodMap = Object.fromEntries((prods||[]).map(p => [p.id, p]));
+  imageState=await getAppState();
 
   const totalQty = rows.reduce((s,r) => s+(r.quantity||0), 0);
   if ($('ship-log-total')) $('ship-log-total').textContent = `총 ${totalQty.toLocaleString()}개`;
@@ -423,7 +437,7 @@ loadShipLog=async function() {
           const p   = prodMap[r.product_id] || {name:'(알수없음)'};
           const lbl = p.option_name ? `${p.name} · ${p.option_name}` : p.name;
           return `<div data-shipment-id="${esc(r.id)}" style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:0.5px solid var(--surface2);">
-            <div style="flex:1;font-size:12px;color:var(--text);">${lbl}</div>
+            <div class="w13-shipment-product" style="flex:1;min-width:0;">${productCell(p)}</div>
             <div style="font-size:11px;color:var(--light);">${r.channel||''}</div>
             <div style="font-size:12px;font-weight:500;width:40px;text-align:right;">${r.quantity}개</div>
             <button onclick="openShipLogEdit('${r.id}','${date}','${r.channel||''}',${r.quantity},'${lbl}')"
@@ -576,7 +590,7 @@ const sumRows=(rows,key)=>rows.reduce((n,r)=>n+num(r[key]),0);
 function groupRows(rows,key,value){const map=new Map();for(const r of rows)map.set(r[key],(map.get(r[key])||0)+num(r[value]));return map;}
 function change(value,previous,hasPrevious=true){return !hasPrevious?'비교 기록 없음':previous===0?(value===0?'변동 없음':'비교값 0 · 증감률 미산출'):`${value>=previous?'+':''}${((value-previous)/Math.abs(previous)*100).toFixed(1)}%`;}
 function paintTrend(){const cur=groupRows(view.monthly,'date','amount'),prev=groupRows(view.previousMonth,'date','amount'),m=view.month,pm=view.previousMonthPeriod,today=nowDay(),days=Number(m.to.slice(8));const buckets=Array.from({length:days},(_,i)=>{const date=m.from.slice(0,8)+pad(i+1),pd=pm.from.slice(0,8)+pad(i+1);return{date,amount:cur.get(date)||0,entered:cur.has(date),previous:prev.get(pd)||0,previousEntered:pd<=pm.to&&prev.has(pd),previousDate:pd<=pm.to?pd:null,future:date>today};});view.buckets=buckets;
-const values=buckets.flatMap(r=>[r.amount,r.previous]),high=Math.max(...values,1),low=Math.min(...values,0),max=Math.ceil(high/Math.pow(10,Math.floor(Math.log10(high))))*Math.pow(10,Math.floor(Math.log10(high))),min=low<0?Math.floor(low/Math.pow(10,Math.floor(Math.log10(-low))))*Math.pow(10,Math.floor(Math.log10(-low))):0;const W=window.innerWidth<=650?480:900,H=260,L=64,R=14,T=20,B=32,plotW=W-L-R,plotH=H-T-B,y=v=>T+(max-v)/(max-min)*plotH,x=i=>L+(i+.5)*plotW/days,base=y(0);const short=v=>Math.abs(v)>=10000?(v/10000).toLocaleString(undefined,{maximumFractionDigits:1})+'만':fmt(v);
+const values=buckets.flatMap(r=>[r.amount,r.previous]),high=Math.max(...values,1),low=Math.min(...values,0),max=Math.ceil(high/Math.pow(10,Math.floor(Math.log10(high))))*Math.pow(10,Math.floor(Math.log10(high))),min=low<0?Math.floor(low/Math.pow(10,Math.floor(Math.log10(-low))))*Math.pow(10,Math.floor(Math.log10(-low))):0;const W=Math.max(280,$('sales-trend-wrap').clientWidth||(window.innerWidth<=650?480:900)),H=260,L=64,R=14,T=20,B=32,plotW=W-L-R,plotH=H-T-B,y=v=>T+(max-v)/(max-min)*plotH,x=i=>L+(i+.5)*plotW/days,base=y(0);const short=v=>Math.abs(v)>=10000?(v/10000).toLocaleString(undefined,{maximumFractionDigits:1})+'만':fmt(v);
 let line='';buckets.forEach((r,i)=>{if(!r.previousEntered)return;line+=(i&&buckets[i-1].previousEntered?'L':'M')+x(i)+','+y(r.previous)+' ';});
 $('sales-trend-wrap').innerHTML=`<div class="w12-chart-heading"><strong>${esc(m.from.slice(0,7).replace('-','년 '))}월 · 일별 주문 매출</strong><span><i></i>선택 월 <i class="previous"></i>전월 같은 일자</span></div><p class="w11-note">커서를 올리거나 모바일에서 날짜를 터치하세요. 월 전체 날짜를 표시하며 빈 구간은 미입력입니다. ${_salesRange==='month'?'':'아래 그래프는 선택 월만 표시합니다.'}</p><div class="w12-chart-wrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${m.from.slice(0,7)} 일별 주문 매출과 전월 비교">${Array.from({length:5},(_,i)=>{const v=min+(max-min)*i/4;return`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#e9e9e9"/><text x="${L-10}" y="${y(v)+4}" text-anchor="end">${short(v)}</text>`;}).join('')}<line x1="${L}" x2="${W-R}" y1="${base}" y2="${base}" stroke="#bdbdbd"/>${buckets.map((r,i)=>`${r.entered?`<rect x="${x(i)-plotW/days*.27}" y="${Math.min(base,y(r.amount))}" width="${plotW/days*.54}" height="${Math.max(1,Math.abs(base-y(r.amount)))}" fill="${r.future?'#d9bdcb':'#b33c72'}"/>`:''}${i===0||(i+1)%5===0||i===days-1?`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${i+1}일</text>`:''}`).join('')}<path d="${line}" stroke="#9b9b9b" stroke-width="1.8" stroke-dasharray="4 3" fill="none"/>${buckets.map((r,i)=>r.previousEntered?`<circle cx="${x(i)}" cy="${y(r.previous)}" r="2" fill="#999"/>`:'').join('')}</svg><div class="w12-chart-targets" style="left:${L/W*100}%;right:${R/W*100}%;top:${T/H*100}%;bottom:${B/H*100}%;grid-template-columns:repeat(${days},1fr)">${buckets.map(r=>`<button type="button" data-chart-date="${r.date}" aria-label="${r.date} ${r.entered?fmt(r.amount)+'원':r.future?'예정일':'미입력'}"></button>`).join('')}</div><div id="w12-chart-tooltip" role="status" hidden></div></div><p id="w11-chart-value" class="w11-note">선택 월 입력 ${cur.size}일 · 합계 ${fmt(sumRows(view.monthly,'amount'))}원 · 전월 비교선은 실제 입력된 날짜만 표시</p>`;
 const wrap=$('sales-trend-wrap');for(const b of wrap.querySelectorAll('[data-chart-date]')){const show=()=>{const r=buckets.find(r=>r.date===b.dataset.chartDate),tip=$('w12-chart-tooltip');tip.innerHTML=`<strong>${r.date} (${'일월화수목금토'[new Date(r.date+'T12:00:00Z').getUTCDay()]})</strong><span>선택 월 <b>${r.entered?fmt(r.amount)+'원':r.future?'예정일':'미입력'}</b></span><span>전월 같은 일자 <b>${r.previousEntered?fmt(r.previous)+'원':r.previousDate?'미입력':'해당 날짜 없음'}</b></span>`;tip.hidden=false;const container=b.closest('.w12-chart-wrap'),left=b.getBoundingClientRect().left-container.getBoundingClientRect().left;tip.style.left=Math.max(0,Math.min(left-95,container.clientWidth-210))+'px';};b.onpointerenter=show;b.onfocus=show;b.onclick=show;b.onkeydown=e=>{if(e.key==='Escape')$('w12-chart-tooltip').hidden=true;};}wrap.querySelector('.w12-chart-wrap').onpointerleave=()=>{$('w12-chart-tooltip').hidden=true;};}
