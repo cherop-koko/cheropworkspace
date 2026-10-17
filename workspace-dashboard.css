@@ -1,0 +1,94 @@
+/* Scoped shell styles; existing page content styles are deliberately untouched. */
+#app.workspace-shell {--ws-ink:#202020;--ws-dim:#747474;--ws-line:#e7e5e4;--ws-paper:#fff;--ws-pink:#d5648c}
+#app.workspace-shell .tb-nav.ws-breadcrumb{background:none;border-radius:0;font-size:12px;color:var(--muted);padding:0;min-width:0}
+#app.workspace-shell.on{display:grid;grid-template-columns:175px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+#app.workspace-shell .app-body{display:contents}
+#app.workspace-shell .topbar{grid-column:2;grid-row:1}
+#app.workspace-shell .topbar>.tb-logo,#app.workspace-shell .topbar>.tb-div{display:none}
+#app.workspace-shell .main{grid-column:2;grid-row:2;min-height:0}
+#app.workspace-shell .sidebar{grid-column:1;grid-row:1/3;width:175px;align-items:stretch;padding:20px 12px;overflow-y:auto;gap:0;background:var(--ws-paper)}
+#app.workspace-shell .sidebar>nav{display:grid;gap:4px}
+#app.workspace-shell .ws-brand{padding:0 10px}
+#app.workspace-shell .ws-brand .ws-brand-logo{width:117px;height:69px;object-fit:contain;margin-bottom:16px}
+#app.workspace-shell .ws-brand>span{display:block;font-size:9px;letter-spacing:2px;margin:7px 0 20px 2px}
+#app.workspace-shell .ws-nav-caption{font-size:10px;color:var(--ws-dim);letter-spacing:1px;margin:24px 10px 10px}
+#app.workspace-shell .ws-nav-link,#app.workspace-shell .ws-nav-unlinked{display:block;box-sizing:border-box;font-size:12px;text-decoration:none;color:var(--ws-ink);padding:12px 10px;white-space:nowrap;border-left:2px solid transparent;line-height:18px}
+#app.workspace-shell .ws-nav-link:hover{background:#f7f7f7}
+#app.workspace-shell .ws-nav-link[aria-current=page]{background:#fff0f5;color:#ba4070;border-left-color:#ba4070}
+#app.workspace-shell .ws-nav-link[hidden]{display:none}
+#app.workspace-shell .ws-nav-unlinked{color:var(--ws-dim)}
+#app.workspace-shell .ws-context-links{display:flex;gap:20px;border-bottom:1px solid var(--ws-line);margin-bottom:24px}
+#app.workspace-shell .ws-context-links[hidden]{display:none}
+#app.workspace-shell .ws-context-links a{padding:10px 0;font-size:12px;text-decoration:none;color:var(--ws-dim);border-bottom:2px solid transparent}
+#app.workspace-shell .ws-context-links a[aria-current=page]{color:var(--ws-ink);border-bottom-color:var(--ws-pink)}
+#page-dashboard #ws-dashboard{max-width:1140px;margin:auto;color:var(--ws-ink);font-family:'Noto Sans KR',sans-serif}
+#ws-dashboard a{color:inherit;text-decoration:none}
+#ws-dashboard button{font-family:inherit;color:inherit;cursor:pointer}
+#ws-dashboard h1,#ws-dashboard h2,#ws-dashboard p{margin:0}
+#ws-dashboard .ws-dashboard-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:30px}
+#ws-dashboard h1{font-size:24px;font-weight:500;letter-spacing:-.8px}
+#ws-dashboard .ws-dashboard-head>span,#ws-dashboard small,#ws-dashboard .ws-week-head>div>span{font-size:11px;color:var(--ws-dim)}
+#ws-dashboard .ws-week{border-bottom:1px solid var(--ws-line);padding-bottom:20px;margin-bottom:30px}
+#ws-dashboard .ws-week-head,#ws-dashboard .ws-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+#ws-dashboard h2{font-size:15px;font-weight:500;letter-spacing:-.4px}
+#ws-dashboard .ws-week-head h2{margin-bottom:6px}
+#ws-dashboard .ws-week-actions{display:flex;align-items:center;gap:6px}
+#ws-dashboard .ws-week-actions button,#ws-dashboard .ws-action{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:34px;padding:8px 12px;border:1px solid var(--ws-line);border-radius:4px;background:var(--ws-paper);font-size:11px;font-weight:400;line-height:16px;white-space:nowrap}
+#ws-dashboard .ws-week-actions button:nth-child(-n+2){width:34px;padding:0;font-size:20px}
+#ws-dashboard .ws-week-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:4px 0 14px;border-bottom:1px solid var(--ws-line)}
+#ws-dashboard .ws-week-days button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;background:none;border:0;padding:4px 0;min-width:0}
+#ws-dashboard .ws-week-days span{font-size:11px;color:var(--ws-dim)}
+#ws-dashboard .ws-week-days strong{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;font-size:17px;font-weight:400}
+#ws-dashboard .ws-week-days .is-today strong{box-shadow:inset 0 0 0 1px var(--ws-line)}
+#ws-dashboard .ws-week-days button[aria-pressed=true] strong{background:var(--ws-ink);color:var(--ws-paper);box-shadow:none}
+#ws-dashboard .ws-week-days i{width:3px;height:3px;border-radius:50%;background:none}
+#ws-dashboard .ws-week-days i.has-event{background:var(--ws-pink)}
+#ws-dashboard .ws-agenda{display:grid;grid-template-columns:110px minmax(0,1fr) auto;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--ws-line)}
+#ws-dashboard .ws-agenda>span{font-size:11px;color:var(--ws-dim)}
+#ws-dashboard strong{font-weight:400;font-size:12px;overflow-wrap:anywhere}
+#ws-dashboard .ws-empty{font-size:12px;color:var(--ws-dim);padding:18px 0;line-height:1.7}
+#ws-dashboard .ws-error{font-size:12px;padding:12px 0;color:#9d3156}
+#ws-dashboard .ws-work-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:32px}
+#ws-dashboard .ws-section{min-width:0;margin-bottom:30px}
+#ws-dashboard .ws-task{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--ws-line)}
+#ws-dashboard .ws-task small,#ws-dashboard .ws-popup small{display:block;margin-top:5px}
+#ws-dashboard .ws-status{font-size:11px;color:var(--ws-dim);white-space:nowrap;flex-shrink:0}
+#ws-dashboard .ws-notice{display:grid;grid-template-columns:45px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--ws-line)}
+#ws-dashboard .ws-notice>span{font-size:11px;color:var(--ws-dim)}
+#ws-dashboard .ws-popup{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:20px;align-items:center;padding:17px 0;border-bottom:1px solid var(--ws-line)}
+#ws-dashboard .ws-popup>span{font-size:11px;color:var(--ws-dim)}
+#ws-dashboard .ws-day-label{display:flex;align-items:center;justify-content:space-between;font-size:11px;margin-top:14px;color:var(--ws-dim)}
+#ws-dashboard .ws-day-label button{border:0;background:none;padding:8px}
+@media(max-width:650px){
+ #app.workspace-shell.on{display:flex;flex-direction:column}
+ #app.workspace-shell .topbar{order:0;height:auto;min-height:48px;padding:12px 16px;gap:10px;flex-wrap:wrap}
+ #app.workspace-shell .tb-nav.ws-breadcrumb{display:block;font-size:11px}
+ #app.workspace-shell .tb-right{margin-left:auto}
+ #app.workspace-shell .sidebar{display:flex;order:-1;width:100%;height:auto;max-height:none;flex-direction:column;align-items:stretch;overflow:visible;box-sizing:border-box;border-top:0;border-bottom:1px solid var(--ws-line);padding:12px}
+ #app.workspace-shell .ws-brand{padding:0}
+ #app.workspace-shell .ws-brand .ws-brand-logo{width:75px;height:44px;margin:0 0 12px}
+ #app.workspace-shell .ws-brand>span{margin:7px 0 20px 12px}
+ #app.workspace-shell .sidebar>nav{display:flex;flex-wrap:wrap;gap:4px}
+ #app.workspace-shell .ws-nav-link,#app.workspace-shell .ws-nav-unlinked{font-size:11px;padding:10px 9px;border-left:0;border-bottom:2px solid transparent}
+ #app.workspace-shell .ws-nav-link[aria-current=page]{border-bottom-color:#ba4070}
+ #app.workspace-shell .ws-nav-caption{display:none}
+ #app.workspace-shell .main{order:1}
+ #ws-dashboard .ws-work-grid{grid-template-columns:1fr;gap:0}
+ #ws-dashboard .ws-week-head{align-items:flex-start}
+ #ws-dashboard .ws-week-actions{max-width:175px;flex-wrap:wrap;justify-content:flex-end}
+ #ws-dashboard .ws-week-actions .ws-action{margin-left:auto}
+ #ws-dashboard .ws-agenda{grid-template-columns:90px minmax(0,1fr);gap:7px 10px}
+ #ws-dashboard .ws-agenda>small{grid-column:2}
+ #ws-dashboard .ws-notice{grid-template-columns:40px minmax(0,1fr)}
+ #ws-dashboard .ws-notice>span{grid-column:2}
+ #ws-dashboard .ws-popup{grid-template-columns:minmax(0,1fr) auto;gap:12px}
+ #ws-dashboard .ws-popup>span{grid-column:1;grid-row:2}
+ #ws-dashboard .ws-popup>.ws-action{grid-column:2;grid-row:1/3}
+ #ws-dashboard .ws-dashboard-head>span{font-size:11px;white-space:nowrap}
+}
+@media(pointer:coarse){
+ #app.workspace-shell .ws-nav-link,#ws-dashboard .ws-action,#ws-dashboard .ws-week-actions button,#ws-dashboard .ws-day-label button{min-height:44px}
+ #ws-dashboard .ws-week-actions button:nth-child(-n+2){width:44px}
+}
+
+#app.workspace-shell .ws-brand-logo{display:block;width:104px;height:48px;object-fit:contain}
