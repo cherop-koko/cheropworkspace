@@ -37,3 +37,40 @@
 
 #app.workspace-shell #page-sales .page-header{margin-bottom:18px;padding-top:20px;border:0}#app.workspace-shell #page-sales .page-header-top{padding-bottom:6px}#page-sales .w11-tabs{padding:0 36px;margin-top:12px}#page-inventory .w11-button{border:1px solid #ddd;background:#fff;color:#333}#page-sales .w11-note{margin:6px 0}
 @media(max-width:650px){#app.workspace-shell #page-sales .page-header{padding-top:12px}#page-sales .w11-tabs{padding:0 14px;margin-top:10px}#page-inventory .page-header-top button{font-size:11px!important;padding:4px 7px!important}}
+/* Refined inventory navigation and sales strategy views. */
+#page-inventory:not(.w12-show-channels) .w12-optional-channel{display:none}
+#page-inventory:not(.w12-show-channels) #inv-product-table .inv-tbl{min-width:850px}
+#page-inventory.w12-show-channels #inv-product-table .w12-optional-channel{min-width:210px;max-width:260px}
+#page-inventory .w12-optional-channel>span{border-radius:0!important;margin:2px;white-space:nowrap}
+.w12-overview-actions{display:flex;align-items:center;gap:10px;font-size:11px;color:#888}
+.w12-searchbox{display:flex;position:relative;width:100%;align-items:center;min-width:0}
+#page-inventory .w12-searchbox input{padding-right:30px!important;width:100%!important;min-width:0}
+#page-inventory .w12-searchbox>button{position:absolute;right:3px;border:0;background:transparent;color:#888;font-size:17px!important;padding:2px 6px!important;min-height:25px}
+#page-inventory .w11-search{max-width:440px}
+#page-inventory #w11-channel,#page-inventory #inv-ch-cat-pills{display:none!important}
+.w12-filter-label{font-size:11px;color:#888;margin:16px 0 6px}
+.w12-filter-buttons{display:flex;gap:5px;overflow:auto;scrollbar-width:thin;padding-bottom:4px;max-width:100%}
+#page-inventory .w12-filter-buttons button{flex:none;background:#fff;border:1px solid #ddd;color:#777;padding:5px 10px!important}
+#page-inventory .w12-filter-buttons button[aria-pressed=true]{background:#252525;border-color:#252525;color:#fff}
+#page-inventory .w12-channel-controls{margin-top:14px;align-items:center!important}
+#page-inventory .w12-channel-controls>div:has(#inv-ch-search){max-width:400px!important;min-width:170px!important}
+.w12-fold{border-top:1px solid #ccc;border-bottom:1px solid #ddd;margin:16px 0 20px}
+.w12-fold>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;padding:13px 0;cursor:pointer;list-style:none}
+.w12-fold>summary::-webkit-details-marker{display:none}.w12-fold>summary b{font-weight:500;color:#b33c72;margin-left:5px}.w12-fold>summary small{font-size:10px;color:#888}.w12-fold>summary i:after{content:'+';font-size:15px;font-style:normal;margin-left:10px}.w12-fold[open]>summary i:after{content:'−'}
+.w12-chart-heading{display:flex;justify-content:space-between;flex-wrap:wrap;align-items:center;gap:10px;margin:18px 0 8px}.w12-chart-heading strong{font-size:13px;font-weight:500}.w12-chart-heading span{font-size:10px;color:#777;display:flex;align-items:center;gap:6px}.w12-chart-heading i{width:9px;height:9px;background:#b33c72;display:inline-block}.w12-chart-heading .previous{width:15px;height:0;border-top:2px dashed #999;background:none;margin-left:7px}
+.w12-chart-wrap{position:relative;margin:24px 0 12px}.w12-chart-wrap svg{width:100%;display:block;overflow:visible}.w12-chart-wrap svg text{font:11px sans-serif;fill:#888}.w12-chart-targets{position:absolute;display:grid}
+#page-sales .w12-chart-targets button{height:100%;width:100%;min-height:0;padding:0!important;border:0;background:transparent;cursor:crosshair}
+#page-sales .w12-chart-targets button:is(:hover,:focus-visible){background:#b33c7210;outline:1px solid #b33c7230}
+#w12-chart-tooltip{position:absolute;top:0;z-index:5;width:210px;padding:12px;background:#fff;border:1px solid #ddd;box-shadow:0 3px 12px #0000000d;pointer-events:none;font-size:11px}
+#w12-chart-tooltip[hidden]{display:none}#w12-chart-tooltip strong{display:block;font-size:12px;font-weight:500;margin-bottom:9px}#w12-chart-tooltip span{display:flex;justify-content:space-between;gap:8px;margin-top:6px;color:#888}#w12-chart-tooltip b{color:#333;font-weight:500}
+#sales-channel-list .inv-tbl{min-width:700px}#w12-category-analysis .inv-tbl{min-width:480px}#sales-top10 .inv-tbl{min-width:650px}
+.w12-strategy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.w12-strategy-card{border:1px solid #ddd;min-width:0;align-self:start}
+.w12-strategy-card>summary{list-style:none;cursor:pointer;padding:16px;display:grid;grid-template-columns:1fr auto;gap:10px;font-size:13px}
+.w12-strategy-card>summary::-webkit-details-marker{display:none}.w12-strategy-card>summary strong{font-weight:500}.w12-strategy-card>summary b{font-size:15px;font-weight:500}.w12-strategy-card>summary b:after{content:' +';font-size:13px;color:#999}.w12-strategy-card[open]>summary b:after{content:' −'}.w12-strategy-card summary span{font-size:11px;line-height:1.7;color:#888;grid-column:1/-1}.w12-strategy-card .inv-tbl{min-width:420px}.w12-strategy-card .w11-empty{padding:0 16px 16px;margin:0}
+.w12-weekday-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;margin-top:24px;text-align:center}.w12-weekday-grid span{font-size:12px;color:#666}.w12-week-bar{height:90px;display:flex;justify-content:center;align-items:flex-end;margin:14px 0}.w12-week-bar i{width:35%;max-width:32px;background:#b33c72}.w12-weekday-grid strong{display:block;font-size:11px;font-weight:500;white-space:nowrap}.w12-weekday-grid small{display:block;font-size:10px;color:#999;margin-top:5px}
+#page-sales[aria-busy=true] [data-sales-section]{opacity:.5;pointer-events:none}
+@media(max-width:650px){.w12-strategy-grid{grid-template-columns:1fr}.w12-strategy-card>summary{padding:13px}.w12-chart-wrap{margin-top:20px}.w12-chart-wrap svg{height:210px}.w12-chart-wrap svg text{font-size:14px}.w12-chart-targets{top:8%!important;bottom:12%!important}.w12-weekday-grid{gap:4px}.w12-weekday-grid strong{font-size:9px;letter-spacing:-.4px}.w12-weekday-grid small{font-size:9px}.w12-week-bar{height:65px}.w12-fold>summary{gap:6px}.w12-fold>summary small{font-size:9px}#page-inventory .w12-channel-controls>div:has(#inv-ch-search){flex-basis:100%!important;max-width:none!important}.w12-overview-actions{flex-wrap:wrap}.w12-chart-heading strong{font-size:12px}}
+
+@media(max-width:650px){.w12-chart-wrap svg{height:auto}.w12-chart-targets{top:7.6923%!important;bottom:12.3077%!important}}
+#page-inventory button{white-space:nowrap}.w12-fold .inv-tbl{min-width:550px}
