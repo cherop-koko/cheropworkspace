@@ -6,12 +6,12 @@
   const esc = s => escapeHtml(String(s ?? ''));
   let row=null, member='', date='', loading=true, busy=false, error='', request=0;
   function render() {
-    const host=document.getElementById('ws-attendance');if(!host)return;
+    const hosts=document.querySelectorAll('#ws-attendance,[data-ws-attendance]');if(!hosts.length)return;
     const fresh=member===user?.name&&date===day();
     const ready=fresh&&!loading&&!error;
     const entered=ready&&row?.clock_in, left=ready&&row?.clock_out;
     const status=error||(!ready?'출퇴근 기록 확인 중…':left?'퇴근 완료':entered?'근무 중':'출근 전');
-    host.innerHTML=`<span class="ws-attendance-status" ${error?'role="alert"':''}>${esc(status)}</span><div class="ws-attendance-actions"><button type="button" class="ws-action" data-ws-clock="in" ${!ready||busy||entered||left?'disabled':''}>출근${entered?` <time>${esc(row.clock_in.slice(0,5))}</time>`:''}</button><button type="button" class="ws-action" data-ws-clock="out" ${!ready||busy||!entered||left?'disabled':''}>퇴근${left?` <time>${esc(row.clock_out.slice(0,5))}</time>`:''}</button>${error?'<button type="button" class="ws-action" data-ws-clock="retry">다시 확인</button>':''}</div>`;
+    for(const host of hosts)host.innerHTML=`<span class="ws-attendance-status" ${error?'role="alert"':''}>${esc(status)}</span><div class="ws-attendance-actions"><button type="button" class="ws-action" data-ws-clock="in" ${!ready||busy||entered||left?'disabled':''}>출근${entered?` <time>${esc(row.clock_in.slice(0,5))}</time>`:''}</button><button type="button" class="ws-action" data-ws-clock="out" ${!ready||busy||!entered||left?'disabled':''}>퇴근${left?` <time>${esc(row.clock_out.slice(0,5))}</time>`:''}</button>${error?'<button type="button" class="ws-action" data-ws-clock="retry">다시 확인</button>':''}</div>`;
   }
   async function read(name,today) {
     const result=await db.from('attendances').select('*').eq('member',name).eq('date',today).maybeSingle();
@@ -44,6 +44,7 @@
       if(result.error){if(result.error.code==='23505'){toast('다른 화면에서 등록된 기록을 불러옵니다.');return;}throw result.error;}
       if(!result.data?.length){toast('기록이 변경되어 최신 내용을 불러옵니다.');return;}
       toast((type==='in'?'출근':'퇴근')+' '+time+' 저장됐습니다.');
+      document.dispatchEvent(new CustomEvent('workspace-attendance-changed'));
     }catch(e){error='저장 실패: '+(e.message||'다시 시도해주세요.');toast(error);}
     finally{
       const failure=error;busy=false;await load();if(failure){error=failure;render();}

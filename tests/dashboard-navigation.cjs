@@ -32,8 +32,11 @@ assert(!menuHtml.includes('기존 메뉴'));assert(!menuHtml.includes('처리할
  ctx.location.hash='#ops/date%3A2026-12-03';await ctx.initOpsPage();assert(calls.some(c=>c[0]==='day'&&c[1]==='2026-12-03'));
  await ctx.refreshCurrentPage();assert.deepEqual(calls.filter(c=>c[0]==='render').at(-1),['render','ops','date:2026-12-03']);
  assert.equal(writes.length,0);
- const baseline=cp.execFileSync('git',['show','5a825fff5b34accad17c47ed44e65a54374fc287:index.html'],{encoding:'utf8',maxBuffer:4e6});
- let edited=fs.readFileSync('index.html','utf8').replace(/^.*(?:workspace-sections\.(?:js|css)|workspace-popup\.(?:js|css)|workspace-manual-seed\.js|workspace-polish\.css|workspace-attendance\.js).*\n/gm,'');edited=edited.replace('<link rel="stylesheet" href="workspace-dashboard.css?v=20261017-1">\n','').replace('</script>\n<script src="workspace-dashboard.js?v=20261017-4"></script>\n<script>\n','');assert.equal(edited,baseline,'every byte of original pages and persistence code preserved');
+ const baseline=cp.execFileSync('git',['show','28ac0a801a5978b89d613c8164697132a210e769:index.html'],{encoding:'utf8',maxBuffer:4e6});
+ const blocks=[...baseline.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+ const originalCore=blocks.sort((a,b)=>b[1].length-a[1].length)[0][1];
+ assert.equal(fs.readFileSync('workspace-core.js','utf8'),originalCore,'legacy behavior preserved during deferred extraction');
+ const index=fs.readFileSync('index.html','utf8');assert(!index.includes('document.write'));assert(index.includes('<script defer src="workspace-core.js'));
  assert(!/\.(insert|update|upsert|delete)\s*\(/.test(source));
- console.log('PASS: 5 sections, 7 dates, calendar interactions, half-day leave, paginated reads, employee filtering, admin menu/route checks, deep links and refresh; original index preserved byte-for-byte apart from two load hooks; no new database writes.');
+ console.log('PASS: 5 sections, 7 dates, calendar interactions, half-day leave, paginated reads, employee filtering, admin menu/route checks, deep links and refresh; legacy core preserved byte-for-byte during deferred extraction; no new database writes.');
 })().catch(e=>{console.error(e);process.exitCode=1});

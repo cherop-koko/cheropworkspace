@@ -8,7 +8,7 @@ class Q{constructor(table){this.table=table;this.filters=[];this.mode='read';}se
 const dom=new JSDOM(html,{url:'https://cherop-koko.github.io/cheropworkspace/#dashboard',runScripts:'outside-only',pretendToBeVisual:true});
 const w=dom.window;w.structuredClone=structuredClone;w.matchMedia=()=>({matches:false});w.console=console;w.supabase={createClient:()=>({from:t=>new Q(t),storage:{from:()=>({upload:async()=>({error:null}),getPublicUrl:p=>({data:{publicUrl:'https://example.com/'+p}})})}})};w.setInterval=()=>0;w.HTMLElement.prototype.scrollIntoView=function(){};w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')};w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')};
 const ctx=dom.getInternalVMContext();
-for(const node of w.document.scripts){if(node.src){const local=node.src.split('/').at(-1).split('?')[0];if(local.startsWith('workspace-'))vm.runInContext(fs.readFileSync(local,'utf8'),ctx,{filename:local});}else if(!node.textContent.includes('cleanupBrokenRoutineKeys();\nboot();'))vm.runInContext(node.textContent,ctx,{filename:'index-inline'});}
+for(const node of w.document.scripts){if(node.src){const local=node.src.split('/').at(-1).split('?')[0];if(local.startsWith('workspace-')&&local!=='workspace-start.js')vm.runInContext(fs.readFileSync(local,'utf8'),ctx,{filename:local});}else if(!node.textContent.includes('cleanupBrokenRoutineKeys();\nboot();'))vm.runInContext(node.textContent,ctx,{filename:'index-inline'});}
 vm.runInContext("user=MEMBERS[0];",ctx);
 const api=w.CHEROPSections;assert(api);
 const wait=()=>new Promise(r=>setTimeout(r,30));
@@ -18,7 +18,7 @@ async function submit(values){const form=w.document.querySelector('#pf-form');as
 (async()=>{
  assert.equal(writes,0,'no writes during startup');
  assert.equal(w.document.querySelectorAll('.ws-nav-link').length,12);
- await route('tasks');assert(w.document.querySelector('#page-tasks .w2').textContent.includes('업무·프로젝트'));assert.equal(w.document.querySelectorAll('#page-tasks .w2-table tbody tr').length,backup.proj_tasks.filter(x=>x.status!=='done').length);
+ assert.equal(api.states.ps.owner,'me');await route('tasks','all');assert(w.document.querySelector('#page-tasks .w2').textContent.includes('업무·프로젝트'));assert.equal(w.document.querySelectorAll('#page-tasks .w2-table tbody tr').length,backup.proj_tasks.filter(x=>x.status!=='done').length);
  const pid=backup.projects[0].id;await route('project',pid);assert(w.document.querySelector('#page-project .w2:not([hidden])').textContent.includes(backup.projects[0].title));assert(w.document.querySelector('#page-project .w2-legacy').hidden);await route('tasks');assert(w.document.querySelector('#page-tasks .w2'));
  api.states.ls.group='all';await route('lineup');api.states.ls.year='2026';await api.renderLineup();assert.equal(w.document.querySelectorAll('#page-lineup .w2-table tbody tr').length,30);api.states.ls.year='all';await api.renderLineup();assert.equal(w.document.querySelectorAll('#page-lineup .w2-table tbody tr').length,96);
  const p=backup.plan['2026'].products[0];await route('lineup','2026:'+p.id);assert(w.document.querySelector('.w2-product-detail').textContent.includes(p.name));
