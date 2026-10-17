@@ -1164,14 +1164,15 @@ a { text-decoration:none; color:inherit; }
 <script defer src="workspace-production.js?v=20261017-9"></script>
 <script defer src="workspace-production-design.js?v=20261017-9"></script>
 <script defer src="workspace-work-qc.js?v=20261017-9"></script>
-<script defer src="workspace-stock-sales.js?v=20261017-12"></script>
+<script defer src="workspace-stock-sales.js?v=20261017-13"></script>
 <script defer src="workspace-start.js?v=20261017-7"></script>
 <script defer src="vendor/xlsx-0.18.5.min.js"></script>
 <link rel="stylesheet" href="workspace-management.css?v=20261017-7">
 <link rel="stylesheet" href="workspace-parity.css?v=20261017-7">
 <link rel="stylesheet" href="workspace-production-design.css?v=20261017-9">
 <link rel="stylesheet" href="workspace-work-qc.css?v=20261017-9">
-<link rel="stylesheet" href="workspace-stock-sales.css?v=20261017-12">
+<link rel="stylesheet" href="workspace-stock-sales.css?v=20261017-13">
+<link rel="stylesheet" href="workspace-finance-design.css?v=20261017-13">
 </head>
 <body>
 <div id="ws-startup"><div class="ws-startup-brand"><img src="cherop-logo.png" alt="CHEROP"><span>WORKSPACE</span></div><nav aria-label="워크스페이스 메뉴"><a href="#dashboard">대시보드</a><a href="#tasks">업무·프로젝트</a><a href="#inventory">재고·물류</a><a href="#production">상품화 관리</a><a href="#sales">판매분석</a><a href="#lineup">상품·라인업</a><a href="#popup">오프라인·팝업</a><a href="#manual">업무 매뉴얼</a><a href="#notice">팀·공지</a><a href="#ops/calendar">업무 캘린더</a></nav><p id="ws-startup-status" role="status">화면을 불러오는 중…</p></div>
@@ -2643,7 +2644,7 @@ a { text-decoration:none; color:inherit; }
             <div class="card-link" onclick="taxChangeMonth(1)" style="width:26px;height:26px;border:0.5px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;">›</div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;" id="tax-summary-cards"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+          <div class="w13-finance-columns" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
             <div class="card">
               <div class="card-head">
                 <div class="card-title">매출 내역</div>
@@ -2659,7 +2660,7 @@ a { text-decoration:none; color:inherit; }
               <div id="tax-cost-list"></div>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="w13-finance-columns" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div class="card">
               <div class="card-head">
                 <div class="card-title">부가세 예상 계산</div>
@@ -2698,7 +2699,7 @@ a { text-decoration:none; color:inherit; }
               <span style="font-size:10px;color:var(--light);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:6px;border-radius:2px;background:#C4736A;display:inline-block;opacity:.7;"></span>비용</span>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="w13-finance-columns" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div class="card"><div class="card-head"><div class="card-title">연간 비용 구성</div></div><div id="tax-annual-cost-breakdown"></div></div>
             <div class="card"><div class="card-head"><div class="card-title">세금 예상 요약</div></div><div id="tax-annual-tax-summary"></div></div>
           </div>
@@ -2708,7 +2709,7 @@ a { text-decoration:none; color:inherit; }
         <div id="tax-tab-vat" style="display:none;">
           <div style="display:flex;gap:8px;margin-bottom:14px;" id="tax-vat-period-pills"></div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;" id="tax-vat-cards"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="w13-finance-columns" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div class="card"><div class="card-head"><div class="card-title">매입세액 공제 내역</div><div class="card-sub">세금계산서 발행 매입분</div></div><div id="tax-vat-input-list"></div></div>
             <div class="card"><div class="card-head"><div class="card-title">부가세 납부 계산서</div></div><div id="tax-vat-result"></div></div>
           </div>
@@ -2717,7 +2718,7 @@ a { text-decoration:none; color:inherit; }
         <!-- 원천세 탭 -->
         <div id="tax-tab-withhold" style="display:none;">
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;" id="tax-withhold-cards"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="w13-finance-columns" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div class="card">
               <div class="card-head"><div class="card-title">직원별 원천세</div><div class="card-sub">급여 기반 자동 계산</div></div>
               <div id="tax-withhold-list"></div>
@@ -2739,7 +2740,7 @@ a { text-decoration:none; color:inherit; }
 
           <!-- ━━━ 매출장 (입금) ━━━ -->
           <div id="tax-ledger-revenue">
-            <div style="display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start;">
+            <div class="w13-finance-ledger" style="display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start;">
               <!-- 사이드바 -->
               <div style="position:sticky;top:0;">
                 <div style="font-size:10px;font-weight:500;color:var(--light);margin-bottom:8px;letter-spacing:.3px;">매출 구분</div>
@@ -2787,7 +2788,7 @@ a { text-decoration:none; color:inherit; }
 
           <!-- ━━━ 매입장 (지출) ━━━ -->
           <div id="tax-ledger-cost" style="display:none;">
-            <div style="display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start;">
+            <div class="w13-finance-ledger" style="display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start;">
               <!-- 사이드바 -->
               <div style="position:sticky;top:0;">
                 <div style="font-size:10px;font-weight:500;color:var(--light);margin-bottom:8px;letter-spacing:.3px;">카테고리</div>
@@ -2847,7 +2848,7 @@ a { text-decoration:none; color:inherit; }
             </div>
           </div>
 
-          <div style="display:grid;grid-template-columns:200px 1fr;gap:14px;align-items:start;">
+          <div class="w13-finance-ledger" style="display:grid;grid-template-columns:200px 1fr;gap:14px;align-items:start;">
             <!-- 카테고리 사이드바 -->
             <div style="position:sticky;top:0;">
               <div style="font-size:10px;font-weight:500;color:var(--light);margin-bottom:8px;letter-spacing:.3px;">카테고리</div>

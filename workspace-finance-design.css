@@ -1,0 +1,60 @@
+/* Finance presentation only. Existing IDs, permissions and calculations remain in core. */
+#app.workspace-shell #page-tax{--surface:#fff;--surface2:#f5f5f5;--border:#e5e5e5;--border2:#d5d5d5;--r:0;--light:#888;--muted:#666;background:#fff;color:#252525;font-size:12px}
+#app.workspace-shell #page-tax .page-header{margin-bottom:24px}
+#app.workspace-shell #page-tax .page-header-title{font-size:24px;font-weight:500;letter-spacing:-.6px}
+#app.workspace-shell #page-tax .page-tabs{margin-top:20px;border-bottom:1px solid #ddd;gap:24px}
+#app.workspace-shell #page-tax .page-tab{font-size:12px;font-weight:400;padding:10px 0}
+#app.workspace-shell #page-tax .card{padding:20px;border:1px solid #e5e5e5;border-radius:0;box-shadow:none;background:#fff;min-width:0}
+#app.workspace-shell #page-tax .card-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 0 14px;margin:0 0 8px;border-bottom:1px solid #ededed}
+#app.workspace-shell #page-tax .card-title{font-size:13px;font-weight:500;letter-spacing:0}
+#app.workspace-shell #page-tax .card-sub{font-size:10px;font-weight:400;color:#888}
+#app.workspace-shell #page-tax :is(button,.inv-pill,.tax-ledger-tab){font-family:inherit;font-size:11px!important;font-weight:400!important;line-height:20px!important;padding:3px 10px!important;min-height:28px!important;border-radius:0!important;box-sizing:border-box;white-space:nowrap}
+#app.workspace-shell #page-tax .inv-pill{border:1px solid #ddd;background:#fff;color:#777}
+#app.workspace-shell #page-tax .inv-pill.on{background:#252525;color:#fff;border-color:#252525}
+#app.workspace-shell #page-tax .tax-ledger-tab{background:#fff!important;color:#777!important}
+#app.workspace-shell #page-tax .tax-ledger-tab.on{background:#252525!important;color:#fff!important}
+#app.workspace-shell #page-tax :is(select,input:not([type=checkbox]):not([type=file])){font-size:12px!important;font-family:inherit;font-weight:400;line-height:20px!important;min-height:30px!important;padding:4px 9px!important;border:1px solid #ddd;border-radius:0!important;background:#fff;box-sizing:border-box}
+#app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary){gap:0!important;border-top:1px solid #d5d5d5;border-bottom:1px solid #e5e5e5;margin:18px 0 24px!important}
+#app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary)>div{border:0!important;border-right:1px solid #eee!important;border-radius:0!important;padding:18px 14px!important;background:#fff!important;min-width:0;overflow-wrap:anywhere}
+#app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary)>div:last-child{border-right:0!important}
+#app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary)>div>div:first-child{font-size:10px!important;font-weight:400!important;color:#777!important;margin-bottom:8px!important}
+#app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary)>div>div:nth-child(2){font-size:19px!important;font-weight:400!important;line-height:1.45;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+#app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary)>div>div:nth-child(3){font-size:10px!important;font-weight:400!important;line-height:1.6;margin-top:6px!important;color:#888!important}
+#app.workspace-shell #page-tax .w13-finance-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;margin-bottom:18px!important}
+#app.workspace-shell #page-tax .w13-finance-ledger{grid-template-columns:180px minmax(0,1fr)!important;gap:22px!important}
+#app.workspace-shell #page-tax .w13-finance-ledger>div{min-width:0}
+#app.workspace-shell #page-tax :is(#tax-rev-sidebar,#tax-costs-sidebar,#card-usage-cat-sidebar)>div{border-radius:0!important;padding:8px 7px!important;border-bottom:1px solid #f1f1f1}
+#app.workspace-shell #page-tax :is(#tax-rev-table-wrap,#tax-costs-table-wrap,#card-usage-table-wrap){overflow-x:auto;max-width:100%;scrollbar-width:thin}
+#app.workspace-shell #page-tax table{border-collapse:collapse;width:100%;font-size:11px}
+#app.workspace-shell #page-tax :is(th,td){padding:10px 12px!important;border-bottom:1px solid #eee!important;font-size:11px!important;line-height:1.6;vertical-align:middle}
+#app.workspace-shell #page-tax th{color:#888;font-weight:400!important;background:#fafafa!important;white-space:nowrap}
+#app.workspace-shell #page-tax :is(#tax-rev-table-wrap,#tax-costs-table-wrap,#card-usage-table-wrap) table{min-width:680px}
+#app.workspace-shell #page-tax :is(#tax-qtr-chart,#tax-annual-chart){margin:12px 0 4px;padding-top:16px!important}
+#app.workspace-shell #page-tax :is(#tax-qtr-chart,#tax-annual-chart) [style*="font-size"]{font-size:10px!important;font-weight:400!important}
+#app.workspace-shell #page-tax #tax-month-label{font-size:13px!important;font-weight:400!important;min-width:86px;text-align:center}
+#app.workspace-shell #page-tax :is(#tax-tab-monthly,#tax-tab-quarter,#tax-tab-annual,#tax-tab-vat,#tax-tab-withhold,#tax-tab-costs,#tax-tab-card){min-width:0}
+@media(max-width:1000px){
+ #app.workspace-shell #page-tax #tax-summary-cards{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ #app.workspace-shell #page-tax #tax-summary-cards>div:nth-child(n+4){border-top:1px solid #eee!important}
+}
+@media(max-width:650px){
+ #app.workspace-shell #page-tax .page-header-title{font-size:21px}
+ #app.workspace-shell #page-tax .page-header{margin-bottom:18px}
+ #app.workspace-shell #page-tax .page-tabs{gap:20px;margin-top:14px}
+ #app.workspace-shell #page-tax .card{padding:15px}
+ #app.workspace-shell #page-tax .w13-finance-columns{grid-template-columns:minmax(0,1fr)!important;gap:14px!important}
+ #app.workspace-shell #page-tax .w13-finance-ledger{grid-template-columns:minmax(0,1fr)!important;gap:16px!important}
+ #app.workspace-shell #page-tax .w13-finance-ledger>div:first-child{position:static!important}
+ #app.workspace-shell #page-tax :is(#tax-rev-sidebar,#tax-costs-sidebar,#card-usage-cat-sidebar){flex-direction:row!important;overflow-x:auto;max-width:100%;gap:5px!important;padding-bottom:5px}
+ #app.workspace-shell #page-tax :is(#tax-rev-sidebar,#tax-costs-sidebar,#card-usage-cat-sidebar)>div{flex-shrink:0;gap:8px!important;border:1px solid #e5e5e5!important;padding:5px 9px!important}
+ #app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary){grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:14px 0 20px!important}
+ #app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary)>div{padding:14px 10px!important}
+ #app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary)>div:nth-child(2n){border-right:0!important}
+ #app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary)>div:nth-child(n+3){border-top:1px solid #eee!important}
+ #app.workspace-shell #page-tax :is(#tax-summary-cards,#tax-qtr-cards,#tax-annual-cards,#tax-vat-cards,#tax-withhold-cards,#tax-rev-summary,#tax-costs-summary,#card-usage-summary)>div>div:nth-child(2){font-size:17px!important}
+ #app.workspace-shell #page-tax #tax-tab-card>div:first-child{align-items:flex-start!important}
+ #app.workspace-shell #page-tax #tax-tab-card>div:first-child>div:last-child{margin-left:0!important;flex-wrap:wrap;gap:6px!important}
+ #app.workspace-shell #page-tax .w13-finance-ledger .card>div:first-child{padding:12px!important;gap:8px!important}
+ #app.workspace-shell #page-tax .w13-finance-ledger .card>div:first-child>div:last-child{flex-wrap:wrap;gap:6px!important;margin-left:0!important;max-width:100%}
+ #app.workspace-shell #page-tax :is(#tax-rev-bulkbar,#tax-costs-bulkbar,#card-usage-bulkbar){flex-wrap:wrap}
+}
