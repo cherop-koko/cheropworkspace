@@ -1,7 +1,7 @@
 /* Finish deferred initialization after all adapters are available. */
 (async()=>{
 try {
-  if(!window.CHEROPSections||!window.CHEROPAttendance||!window.CHEROPManagement)throw Error('화면 파일을 불러오지 못했습니다.');
+  if(!window.CHEROPSections||!window.CHEROPAttendance||!window.CHEROPTasks || !window.CHEROPManagement)throw Error('화면 파일을 불러오지 못했습니다.');
   cleanupBrokenRoutineKeys();
   await boot();
   document.documentElement.classList.remove('ws-resuming');

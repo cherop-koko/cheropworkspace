@@ -1151,18 +1151,20 @@ a { text-decoration:none; color:inherit; }
 <link rel="stylesheet" href="workspace-dashboard.css?v=20261017-1">
 <link rel="stylesheet" href="workspace-sections.css?v=20261017-2">
 <link rel="stylesheet" href="workspace-popup.css?v=20261017-2">
-<link rel="stylesheet" href="workspace-polish.css?v=20261017-5">
+<link rel="stylesheet" href="workspace-polish.css?v=20261017-6">
 <script defer src="vendor/supabase-2.118.0.min.js"></script>
-<script defer src="workspace-core.js?v=20261017-5"></script>
-<script defer src="workspace-dashboard.js?v=20261017-5"></script>
+<script defer src="workspace-core.js?v=20261017-6"></script>
+<script defer src="workspace-dashboard.js?v=20261017-6"></script>
 <script defer src="workspace-manual-seed.js?v=20261017-2"></script>
-<script defer src="workspace-sections.js?v=20261017-5"></script>
+<script defer src="workspace-sections.js?v=20261017-6"></script>
 <script defer src="workspace-popup.js?v=20261017-3"></script>
-<script defer src="workspace-attendance.js?v=20261017-5"></script>
-<script defer src="workspace-management.js?v=20261017-5"></script>
-<script defer src="workspace-start.js?v=20261017-5"></script>
+<script defer src="workspace-attendance.js?v=20261017-6"></script>
+<script defer src="workspace-management.js?v=20261017-6"></script>
+<script defer src="workspace-tasks.js?v=20261017-6"></script>
+<script defer src="workspace-start.js?v=20261017-6"></script>
 <script defer src="vendor/xlsx-0.18.5.min.js"></script>
-<link rel="stylesheet" href="workspace-management.css?v=20261017-5">
+<link rel="stylesheet" href="workspace-management.css?v=20261017-6">
+<link rel="stylesheet" href="workspace-parity.css?v=20261017-6">
 </head>
 <body>
 <div id="ws-startup"><div class="ws-startup-brand"><img src="cherop-logo.png" alt="CHEROP"><span>WORKSPACE</span></div><nav aria-label="워크스페이스 메뉴"><a href="#dashboard">대시보드</a><a href="#tasks">업무·프로젝트</a><a href="#inventory">재고·물류</a><a href="#production">상품화 관리</a><a href="#sales">판매분석</a><a href="#lineup">상품·라인업</a><a href="#popup">오프라인·팝업</a><a href="#manual">업무 매뉴얼</a><a href="#notice">팀·공지</a><a href="#ops/calendar">업무 캘린더</a></nav><p id="ws-startup-status" role="status">화면을 불러오는 중…</p></div>
@@ -1479,7 +1481,7 @@ a { text-decoration:none; color:inherit; }
       <div class="page" id="page-inventory">
         <div class="page-header">
           <div class="page-header-top">
-            <div><div class="page-header-title">재고 관리</div></div>
+            <div><div class="page-header-title">재고·물류</div></div>
             <div style="display:flex;gap:8px;">
               <button class="f-btn f-btn-cancel" style="font-size:12px;padding:7px 14px;" onclick="exportInvExcel()">📤 재고 내보내기</button>
               <button class="f-btn f-btn-cancel" style="font-size:12px;padding:7px 14px;" onclick="openShipmentModal()">📦 출고 등록</button>
@@ -1621,7 +1623,7 @@ a { text-decoration:none; color:inherit; }
         <div class="page-header">
           <div class="page-header-top">
             <div style="display:flex;align-items:center;gap:10px;">
-              <div class="page-header-title">판매 분석</div><div style="font-size:11px;color:var(--light);">주문 기준 · 회사 공식 매출은 세무관리 매출장(실입금)</div>
+              <div class="page-header-title">판매분석</div><div style="font-size:11px;color:var(--light);">주문 기준 · 회사 공식 매출은 세무관리 매출장(실입금)</div>
               <button class="f-btn f-btn-cancel" style="font-size:12px;padding:6px 12px;" onclick="openSalesRevenueModal()">✏ 주문 매출 입력</button>
 
             </div>
@@ -1727,7 +1729,7 @@ a { text-decoration:none; color:inherit; }
         <div class="page-header">
           <div class="page-header-top">
             <div>
-              <div class="page-header-title">생산 관리</div>
+              <div class="page-header-title">상품화 관리</div>
               <div class="page-header-sub" id="prod-date-sub"></div>
             </div>
           </div>
@@ -2693,7 +2695,7 @@ a { text-decoration:none; color:inherit; }
       <div class="page" id="page-tax">
         <div class="page-header">
           <div class="page-header-top">
-            <div><div class="page-header-title">세무 관리</div></div>
+            <div><div class="page-header-title">경영·정산</div></div>
             <div style="display:flex;gap:4px;" id="tax-year-pills"></div>
           </div>
           <div class="page-tabs" id="tax-tabs">

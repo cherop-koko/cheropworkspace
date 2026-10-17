@@ -1,0 +1,233 @@
+/* Task geometry from the approved 2026-10-17 HTML baseline. */
+#app.workspace-shell{--ws-pink:#db1465;--control-fs:11px}
+#app.workspace-shell .w6-tasks{--hp-bg:#fff;--hp-fg:#111;--hp-sub:#555;--hp-line:#dcdcdc;--hp-soft:#f6f6f6;--hp-pink:#db1465;--hp-pink-soft:#ffe5ef;--hp-alert:#ae293c;--hp-green:#25674a;font:13px/1.5 'Noto Sans KR',Arial,sans-serif;color:var(--hp-fg)}
+#app.workspace-shell .w6-tasks :is(button,input,select,textarea){font-family:inherit;color:inherit}
+#app.workspace-shell .w6-tasks button{background:none;border:0;cursor:pointer}
+#app.workspace-shell .w6-tasks strong,#app.workspace-shell .w6-tasks b{font-weight:500}
+#app.workspace-shell .w6-tasks :is(h1,h2,h3,p){margin:0}
+#app.workspace-shell .w6-tasks h1{font-size:25px;font-weight:500;letter-spacing:-.9px}
+#app.workspace-shell .w6-tasks .hp-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;padding:4px 10px;border:1px solid var(--hp-line);font-size:11px;font-weight:400;line-height:20px;white-space:nowrap;border-radius:0;text-decoration:none}
+#app.workspace-shell .w6-tasks .hp-action.primary{background:var(--hp-fg);color:#fff;border-color:var(--hp-fg)}
+#app.workspace-shell .w6-tasks .hp-text-button{font-size:11px;color:var(--hp-pink);padding:3px 0}
+#app.workspace-shell .w6-tasks .hp-tag{display:inline-flex;background:var(--hp-soft);padding:3px 7px;font-size:10px;white-space:nowrap}
+#app.workspace-shell .w6-tasks .hp-tag.pink{background:var(--hp-pink-soft);color:var(--hp-pink)}
+#app.workspace-shell .w6-tasks .hp-sub{color:var(--hp-sub)}
+#app.workspace-shell .w6-tasks .hp-late{color:var(--hp-alert)}
+#app.workspace-shell .w6-tasks .hp-empty{padding:25px 0;color:var(--hp-sub);font-size:12px}
+#app.workspace-shell .w6-tasks .hp-note{font-size:11px;color:var(--hp-sub);margin-top:14px}
+#app.workspace-shell .w6-tasks .hp-tabs{display:flex;gap:18px;border-bottom:1px solid var(--hp-line)}
+#app.workspace-shell .w6-tasks .hp-tabs button{padding:8px 0;border-bottom:2px solid transparent;font-size:12px;color:var(--hp-sub)}
+#app.workspace-shell .w6-tasks .hp-tabs button.active{color:var(--hp-pink);border-color:var(--hp-pink)}
+#app.workspace-shell .w6-tasks .hp-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+#app.workspace-shell .w6-tasks .hp-detail-item{padding:14px 0;border-bottom:1px solid var(--hp-line);font-size:12px}
+#app.workspace-shell .w6-tasks .hp-detail-item>span{display:block;color:var(--hp-sub);font-size:11px;margin-bottom:7px}
+#app.workspace-shell .w6-tasks .hp-detail-list>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--hp-line);font-size:12px}
+
+#app.workspace-shell .w6-tasks .hp-shell{min-height:850px}
+#app.workspace-shell .w6-tasks .tp-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:22px}
+#app.workspace-shell .w6-tasks .tp-head h1{font-size:25px}
+#app.workspace-shell .w6-tasks .tp-head p{font-size:11px;color:var(--hp-sub);margin-top:6px}
+#app.workspace-shell .w6-tasks .tp-nav{display:flex;gap:26px;border-bottom:1px solid var(--hp-line);margin-bottom:23px}
+#app.workspace-shell .w6-tasks .tp-nav button{font-size:13px;padding:0 0 13px;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--hp-sub)}
+#app.workspace-shell .w6-tasks .tp-nav button.active{border-color:var(--hp-pink);color:var(--hp-pink)}
+#app.workspace-shell .w6-tasks .tp-toolbar{display:grid;grid-template-columns:108px minmax(150px,190px) minmax(150px,1fr);gap:8px;align-items:center;margin-bottom:10px}
+#app.workspace-shell .w6-tasks .tp-toolbar select,#app.workspace-shell .w6-tasks .tp-toolbar input{font-size:12px;line-height:1.5;padding:7px 9px;background:var(--hp-bg);border:1px solid var(--hp-line);border-radius:0;min-width:0;height:34px;width:100%}
+#app.workspace-shell .w6-tasks .tp-toolbar input{margin:0}
+#app.workspace-shell .w6-tasks .tp-toolbar label{min-width:0;max-width:100%;display:block}
+#app.workspace-shell .w6-tasks .tp-toolbar select{max-width:100%;text-overflow:ellipsis;white-space:nowrap}
+#app.workspace-shell .w6-tasks .tasks-tp-search-field{position:relative}
+#app.workspace-shell .w6-tasks .tasks-tp-search-field input{padding-left:32px!important}
+#app.workspace-shell .w6-tasks .tasks-tp-search-field>i,#app.workspace-shell .w6-tasks .tasks-tp-search-field>svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--hp-sub);pointer-events:none}
+#app.workspace-shell .w6-tasks .tp-search-toggle{display:none}
+#app.workspace-shell .w6-tasks .tp-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+#app.workspace-shell .w6-tasks .tp-chip{font-size:11px;line-height:18px;padding:3px 9px;min-height:26px;border:1px solid var(--hp-line);display:flex;gap:6px;align-items:center;justify-content:center;white-space:nowrap;position:relative}
+#app.workspace-shell .w6-tasks .tp-chip-short{display:none}
+#app.workspace-shell .w6-tasks .tp-chip.active{background:var(--hp-fg);color:var(--hp-bg);border-color:var(--hp-fg)}
+#app.workspace-shell .w6-tasks .tp-chip-count{font-variant-numeric:tabular-nums}
+#app.workspace-shell .w6-tasks .tp-list-head,#app.workspace-shell .w6-tasks .tp-row{display:grid;grid-template-columns:20px minmax(0,1fr) 102px 52px 57px 77px 23px;gap:9px;align-items:center}
+#app.workspace-shell .w6-tasks .tp-list-head{font-size:10px;color:var(--hp-sub);padding:11px 0;border-top:1px solid var(--hp-fg);border-bottom:1px solid var(--hp-line)}
+#app.workspace-shell .w6-tasks .tp-row{padding:15px 0;border-bottom:1px solid var(--hp-line);font-size:11px}
+#app.workspace-shell .w6-tasks .tp-row-title{padding:0;text-align:left;min-width:0}
+#app.workspace-shell .w6-tasks .tp-row-title strong{display:block;font-size:12px;letter-spacing:-.2px}
+#app.workspace-shell .w6-tasks .tp-row-title small{display:block;font-size:10px;color:var(--hp-sub);margin-top:4px}
+#app.workspace-shell .w6-tasks .tp-row.done .tp-row-title strong{text-decoration:line-through;color:var(--hp-sub)}
+#app.workspace-shell .w6-tasks .tp-project-link{text-align:left;padding:0;color:var(--hp-sub);font-size:10px}
+#app.workspace-shell .w6-tasks .tp-cell-label{display:none}
+#app.workspace-shell .w6-tasks .tp-status{width:100%;min-width:0;border:1px solid var(--hp-line);background:var(--hp-bg);font-size:10px;padding:5px 3px;border-radius:0}
+#app.workspace-shell .w6-tasks .tp-status.review{background:var(--hp-pink-soft);color:var(--hp-pink);border-color:transparent}
+#app.workspace-shell .w6-tasks .tp-star{padding:0;font-size:20px;color:var(--hp-sub);line-height:1.2}
+#app.workspace-shell .w6-tasks .tp-star.on{color:var(--hp-pink)}
+#app.workspace-shell .w6-tasks .tp-list-foot{display:flex;justify-content:space-between;gap:12px;margin-top:14px;color:var(--hp-sub);font-size:10px}
+#app.workspace-shell .w6-tasks .tp-projects{display:grid;grid-template-columns:1fr 1fr;gap:17px}
+#app.workspace-shell .w6-tasks .tp-project-card{border:1px solid var(--hp-line);padding:20px;background:var(--hp-bg)}
+#app.workspace-shell .w6-tasks .tp-project-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+#app.workspace-shell .w6-tasks .tp-project-card h2{font-size:17px;margin-bottom:6px}
+#app.workspace-shell .w6-tasks .tp-project-card p{font-size:11px;color:var(--hp-sub)}
+#app.workspace-shell .w6-tasks .tp-progress{height:4px;background:var(--hp-soft);margin:21px 0 10px}
+#app.workspace-shell .w6-tasks .tp-progress>div{height:100%;background:var(--hp-pink)}
+#app.workspace-shell .w6-tasks .tp-progress-note{display:flex;justify-content:space-between;gap:10px;font-size:10px}
+#app.workspace-shell .w6-tasks .tp-project-alerts{display:flex;gap:15px;flex-wrap:wrap;padding:14px 0;margin-top:15px;border-top:1px solid var(--hp-line);font-size:11px}
+#app.workspace-shell .w6-tasks .tp-project-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;color:var(--hp-sub);margin-top:8px}
+#app.workspace-shell .w6-tasks .tp-project-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;padding:18px 0;border-block:1px solid var(--hp-line);margin:20px 0}
+#app.workspace-shell .w6-tasks .tp-project-summary>div{font-size:11px}
+#app.workspace-shell .w6-tasks .tp-project-summary span{display:block;color:var(--hp-sub);margin-bottom:6px}
+#app.workspace-shell .w6-tasks .tp-project-summary strong{font-size:19px;font-variant-numeric:tabular-nums}
+#app.workspace-shell .w6-tasks .tp-project-meta{font-size:11px;color:var(--hp-sub);margin:20px 0}
+#app.workspace-shell .w6-tasks .tp-form{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px}
+#app.workspace-shell .w6-tasks .tp-field{display:grid;gap:7px;align-content:start;font-size:11px}
+#app.workspace-shell .w6-tasks .tp-field input,#app.workspace-shell .w6-tasks .tp-field textarea,#app.workspace-shell .w6-tasks .tp-field select{border:1px solid var(--hp-line);background:var(--hp-bg);border-radius:0;width:100%;min-width:0;padding:10px 11px;font-size:12px}
+#app.workspace-shell .w6-tasks .tp-field textarea{min-height:110px;line-height:1.7;resize:vertical}
+#app.workspace-shell .w6-tasks .tp-full{grid-column:1/-1}
+#app.workspace-shell .w6-tasks .tp-important{display:flex;align-items:center;gap:9px;font-size:12px;padding:3px 0}
+#app.workspace-shell .w6-tasks .tp-important input{width:15px}
+#app.workspace-shell .w6-tasks .tp-check-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:4px 0 10px}
+#app.workspace-shell .w6-tasks .tp-check-head>span{font-size:11px;color:var(--hp-sub)}
+#app.workspace-shell .w6-tasks .tp-check-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--hp-line);font-size:12px}
+#app.workspace-shell .w6-tasks .tp-add-check{display:flex;gap:10px;margin-top:12px}
+#app.workspace-shell .w6-tasks .tp-add-check input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--hp-line);background:var(--hp-bg);font-size:12px;border-radius:0}
+#app.workspace-shell .w6-tasks .tp-form-end{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:24px;padding-top:18px;border-top:1px solid var(--hp-line)}
+#app.workspace-shell .w6-tasks .tp-form-end>span{font-size:10px;color:var(--hp-sub)}
+#app.workspace-shell .w6-tasks .tp-form-buttons{display:flex;gap:10px;flex-wrap:wrap}
+#app.workspace-shell .w6-tasks .tp-warning{font-size:11px;color:var(--hp-alert);margin-bottom:15px}
+#app.workspace-shell .w6-tasks .tp-routine-row{display:grid;grid-template-columns:21px minmax(0,1fr) 75px 58px 80px;gap:12px;align-items:center;border-bottom:1px solid var(--hp-line);padding:17px 0;font-size:11px}
+#app.workspace-shell .w6-tasks .tp-routine-row strong{font-size:12px;display:block}
+#app.workspace-shell .w6-tasks .tp-routine-row small{font-size:10px;color:var(--hp-sub);display:block;margin-top:4px}
+#app.workspace-shell .w6-tasks .tp-routine-row.is-done strong{text-decoration:line-through;color:var(--hp-sub)}
+#app.workspace-shell .w6-tasks .tp-routine-summary{font-size:12px;padding:15px 0;border-bottom:1px solid var(--hp-fg)}
+#app.workspace-shell .w6-tasks .tp-notes{display:grid;grid-template-columns:1fr 1fr;gap:17px}
+#app.workspace-shell .w6-tasks .tp-note{padding:20px;border:1px solid var(--hp-line)}
+#app.workspace-shell .w6-tasks .tp-note h2{font-size:14px;margin-bottom:10px}
+#app.workspace-shell .w6-tasks .tp-note p{font-size:12px;white-space:pre-wrap;line-height:1.8}
+#app.workspace-shell .w6-tasks .tp-note-meta{font-size:10px;color:var(--hp-sub);margin:15px 0}
+#app.workspace-shell .w6-tasks .tp-note-actions{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--hp-line);padding-top:12px}
+#app.workspace-shell .w6-tasks .tp-history{margin-top:24px;border-top:1px solid var(--hp-line);padding-top:16px;font-size:11px;color:var(--hp-sub)}
+@media(max-width:900px){#app.workspace-shell .w6-tasks .tp-row,#app.workspace-shell .w6-tasks .tp-list-head{grid-template-columns:20px minmax(0,1fr) 83px 45px 50px 72px 20px;gap:7px}#app.workspace-shell .w6-tasks .tp-row-title strong{font-size:11px}#app.workspace-shell .w6-tasks .tp-projects,#app.workspace-shell .w6-tasks .tp-notes{grid-template-columns:1fr}#app.workspace-shell .w6-tasks .tp-toolbar input{width:165px}#app.workspace-shell .w6-tasks .tp-nav{gap:23px}}
+@media(max-width:760px){#app.workspace-shell .w6-tasks .tp-list-head{display:none}#app.workspace-shell .w6-tasks .tp-row{grid-template-columns:21px minmax(0,1fr) 80px 23px;gap:9px 10px;padding:16px 0}#app.workspace-shell .w6-tasks .tp-row>.tp-complete{grid-column:1;grid-row:1}#app.workspace-shell .w6-tasks .tp-row-title{grid-column:2;grid-row:1}#app.workspace-shell .w6-tasks .tp-row-title strong{font-size:12px}#app.workspace-shell .w6-tasks .tp-row>.tp-state-cell{grid-column:3;grid-row:1}#app.workspace-shell .w6-tasks .tp-row>.tp-star{grid-column:4;grid-row:1}#app.workspace-shell .w6-tasks .tp-row>.tp-project-cell{grid-column:2;grid-row:2}#app.workspace-shell .w6-tasks .tp-row>.tp-owner-cell{grid-column:3;grid-row:2}#app.workspace-shell .w6-tasks .tp-row>.tp-date-cell{grid-column:2/4;grid-row:3}#app.workspace-shell .w6-tasks .tp-cell-label{display:inline;color:var(--hp-sub);font-size:10px;margin-right:6px}#app.workspace-shell .w6-tasks .tp-project-link{font-size:11px}#app.workspace-shell .w6-tasks .tp-status{font-size:11px;padding:6px 4px}#app.workspace-shell .w6-tasks .tp-project-summary{grid-template-columns:1fr 1fr}#app.workspace-shell .w6-tasks .tp-form{grid-template-columns:1fr}#app.workspace-shell .w6-tasks .tp-toolbar input{margin-left:0;flex:1;min-width:130px}#app.workspace-shell .w6-tasks .tp-routine-row{grid-template-columns:21px minmax(0,1fr) 70px;gap:8px 10px}#app.workspace-shell .w6-tasks .tp-routine-row>span:nth-last-child(2){grid-column:2;grid-row:2}#app.workspace-shell .w6-tasks .tp-routine-row>span:last-child{grid-column:3;grid-row:2;font-size:10px}#app.workspace-shell .w6-tasks .tp-form-end{align-items:start;flex-direction:column}}
+@media(max-width:420px){#app.workspace-shell .w6-tasks .tp-head{flex-wrap:wrap}#app.workspace-shell .w6-tasks .tp-nav{gap:20px}#app.workspace-shell .w6-tasks .tp-nav button{font-size:12px}#app.workspace-shell .w6-tasks .tp-toolbar select{flex:1;max-width:100%}#app.workspace-shell .w6-tasks .tp-toolbar input{flex-basis:100%;width:100%}#app.workspace-shell .w6-tasks .tp-project-card,#app.workspace-shell .w6-tasks .tp-note{padding:17px}}
+@media(pointer:coarse){#app.workspace-shell .w6-tasks .tp-chip,#app.workspace-shell .w6-tasks .tp-nav button,#app.workspace-shell .w6-tasks .tp-star{min-height:44px}#app.workspace-shell .w6-tasks .tp-row-title{min-height:44px}#app.workspace-shell .w6-tasks .tp-field input,#app.workspace-shell .w6-tasks .tp-field select,#app.workspace-shell .w6-tasks .tp-field textarea,#app.workspace-shell .w6-tasks .tp-toolbar select,#app.workspace-shell .w6-tasks .tp-toolbar input{font-size:16px}#app.workspace-shell .w6-tasks .tp-star{min-width:23px}#app.workspace-shell .w6-tasks .tp-status{min-height:40px}}
+#app.workspace-shell .w6-tasks .tp-toolbar select,#app.workspace-shell .w6-tasks .tp-toolbar input{font-size:12px;width:100%;min-width:0;margin:0}
+@media(max-width:760px){
+ #app.workspace-shell .w6-tasks .tp-toolbar{grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) 44px;gap:7px}
+ #app.workspace-shell .w6-tasks .tp-toolbar select{padding-inline:8px;height:40px}
+ #app.workspace-shell .w6-tasks .tp-search-toggle{display:flex;align-items:center;justify-content:center;position:relative;height:40px;width:44px;border:1px solid var(--hp-line);color:var(--hp-sub)}
+ #app.workspace-shell .w6-tasks .tp-search-toggle[aria-expanded="true"]{background:var(--hp-soft);color:var(--hp-fg)}
+ #app.workspace-shell .w6-tasks .tp-search-toggle.has-query:after{content:"";position:absolute;right:8px;top:7px;width:5px;height:5px;border-radius:50%;background:var(--hp-pink)}
+ #app.workspace-shell .w6-tasks .tasks-tp-search-field{display:none!important;grid-column:1/-1}
+ #app.workspace-shell .w6-tasks .tp-toolbar.search-open .tasks-tp-search-field{display:block!important}
+ #app.workspace-shell .w6-tasks .tp-toolbar .tasks-tp-search-field input{height:40px;font-size:16px}
+ #app.workspace-shell .w6-tasks .tp-toolbar .tasks-tp-search-field input::placeholder{font-size:12px;opacity:1;color:var(--hp-sub)}
+ #app.workspace-shell .w6-tasks .tp-chips[aria-label]{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+ #app.workspace-shell .w6-tasks .tp-chips[aria-label] .tp-chip{padding:3px 2px;gap:4px;font-size:11px;min-width:0}
+ #app.workspace-shell .w6-tasks .tp-chip-full{display:none}
+ #app.workspace-shell .w6-tasks .tp-chip-short{display:inline}
+}
+@media(pointer:coarse){
+ #app.workspace-shell .w6-tasks .tp-toolbar select,#app.workspace-shell .w6-tasks .tp-search-toggle,#app.workspace-shell .w6-tasks .tp-toolbar .tasks-tp-search-field input{height:44px}
+ #app.workspace-shell .w6-tasks .tp-chip{min-height:26px;margin-block:9px}
+ #app.workspace-shell .w6-tasks .tp-chip:after{content:"";position:absolute;inset:-9px 0}
+ #app.workspace-shell .w6-tasks .tp-chips{margin-bottom:6px}
+}
+/* Final shared tokens: restrained type, square controls and compact vertical spacing. */
+#app.workspace-shell :is(.w2-button,.hp-action,.pf-btn,.w2-toolbar select,.w2-toolbar input,.w2-tabs button,.w5-filters select){border-radius:0!important;font-family:'Noto Sans KR',Arial,sans-serif}
+#app.workspace-shell .w2-tabs button{font-size:12px;font-weight:400}
+#app.workspace-shell .w6-tab-count{font-size:10px;margin-left:7px;color:#777;font-weight:400}
+#app.workspace-shell #ws-dashboard .ws-action{font-size:11px;font-weight:400;line-height:20px;padding:4px 10px;min-height:30px;border-radius:0}
+#app.workspace-shell #ws-dashboard .ws-week-actions :is(button,a){font-size:11px;font-weight:400;line-height:20px;padding:4px 10px;min-height:30px;border-radius:0}
+#app.workspace-shell #ws-dashboard .ws-week-actions button:nth-child(-n+2){font-size:18px;width:30px;padding:0}
+#app.workspace-shell #ws-dashboard :is(.ws-task strong,.ws-project strong,.ws-notice strong,.ws-agenda strong){font-size:12px;font-weight:400}
+#app.workspace-shell #ws-dashboard .ws-popup{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;gap:16px;padding:17px 0}
+.w6-popup-name{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+#app.workspace-shell #ws-dashboard .w6-popup-name strong{font-size:12px;font-weight:500}
+#app.workspace-shell #ws-dashboard .w6-popup-tag{display:inline-flex;line-height:18px;font-size:10px;font-weight:400;padding:2px 7px;background:#f4f4f4;color:#666;white-space:nowrap}
+#app.workspace-shell #ws-dashboard .w6-popup-tag.preparing{background:#ffe5ef;color:#db1465}
+#app.workspace-shell #ws-dashboard .w6-popup-tag.operating{background:#edf5ef;color:#25674a}
+#app.workspace-shell #ws-dashboard .w6-popup-tag.settling{background:#f8f0e2;color:#8b6325}
+.w6-popup-summary{font-size:11px;color:#555}
+.w6-popup-summary small{display:block;margin-top:5px}
+#app.workspace-shell .w6-tasks .tp-head h1{font-size:25px}
+#app.workspace-shell .w6-tasks .tp-head .hp-action{font-size:11px}
+#app.workspace-shell .w6-tasks .tp-toolbar select,#app.workspace-shell .w6-tasks .tp-toolbar input{height:34px;min-height:34px;font-size:12px;border-radius:0;padding:7px 9px}
+#app.workspace-shell .w6-tasks .tasks-tp-search-field{display:flex;position:relative}
+#app.workspace-shell .w6-tasks .tasks-tp-search-field input{padding-left:9px!important;padding-right:32px!important}
+#app.workspace-shell .w6-tasks .tasks-tp-search-field button{position:absolute;right:4px;top:0;width:30px;height:34px;font-size:20px}
+#app.workspace-shell .w6-tasks input[type=checkbox]{width:15px;height:15px;min-height:15px;padding:0;margin:0;accent-color:var(--hp-pink);flex:none}
+#app.workspace-shell .w6-tasks .tp-status{font-size:10px;min-height:28px;padding:4px;border-radius:0;line-height:18px}
+#app.workspace-shell .w6-tasks .tp-row-title small{overflow-wrap:anywhere;max-height:36px;overflow:hidden}
+#app.workspace-shell .w6-tasks .tp-star{font-size:20px}
+#app.workspace-shell .w6-tasks .tp-project-card h2{font-size:17px;font-weight:500}
+#app.workspace-shell .w6-tasks .w6-card-title{font:inherit;line-height:1.6;text-align:left;padding:0}
+#app.workspace-shell .w6-tasks .tp-project-card{border-top:2px solid var(--project-color)}
+#app.workspace-shell .w6-tasks .tp-progress>div{height:100%;background:var(--project-color,var(--hp-pink))}
+#app.workspace-shell .w6-tasks .tp-project-link{display:inline;line-height:1.6;overflow-wrap:anywhere}
+.w6-project-dot{display:inline-block;width:5px;height:5px;margin-right:5px;border-radius:50%;vertical-align:middle}
+.w6-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.w6-detail-head{margin-top:24px}.w6-detail-body{margin-top:20px}.w6-preserve{white-space:pre-wrap}
+#app.workspace-shell .w6-tasks .tp-routine-row .tp-row-title{font-size:12px;font-weight:500}
+#app.workspace-shell .w6-tasks .tp-note p{color:#222;white-space:pre-wrap;line-height:1.8}
+#app.workspace-shell .w6-tasks .tp-note h2{font-size:14px}
+.w6-time-basis{display:block;color:#888;font-size:10px;line-height:1.5;margin-top:3px}
+.w6-editor .w5-form>label:first-child{grid-column:1/-1}
+.w6-editor .w6-important{display:flex;flex-direction:row;align-items:center;gap:7px;color:#333}
+.w6-editor input[type=checkbox]{width:15px;height:15px;min-height:15px;accent-color:#db1465;margin:0;flex:none}
+.w6-editor :is(input,select,textarea,button){border-radius:0!important}
+.w6-editor .tp-check-head{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#777;margin-bottom:8px}
+.w6-editor .tp-check-head h3{font-size:12px;font-weight:500;color:#222;margin:0}
+.w6-editor .w6-check-item{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:8px 0;gap:8px}
+.w6-editor .w6-check-item label{display:flex;flex-direction:row;align-items:center;gap:8px;color:#333;overflow-wrap:anywhere}
+.w6-editor .w6-check-item button{border:0;background:#fff;font-size:16px;padding:2px 8px}
+.w6-editor .tp-add-check{display:flex;gap:7px;margin-top:10px}
+.w6-editor .tp-add-check input{flex:1;min-width:0}.w6-editor .tp-add-check button{flex:none}
+.w6-editor input[type=color]{width:52px;padding:3px}
+#app.workspace-shell #page-lineup .w2-head .w2-button{background:#111;color:#fff;border-color:#111}
+#app.workspace-shell #page-lineup .w2-table :is(th,td){font-size:11px}
+#app.workspace-shell #page-lineup .w2-product-row strong{font-size:12px;font-weight:500}
+#app.workspace-shell #page-lineup .w2-tabs button{padding:8px 0;margin-right:10px}
+@media(max-width:760px){
+ #app.workspace-shell .w6-tasks .tp-toolbar{grid-template-columns:100px minmax(0,1fr) 34px;gap:6px}
+ #app.workspace-shell .w6-tasks .tp-toolbar .tasks-tp-search-field{display:none!important;grid-column:1/-1}
+ #app.workspace-shell .w6-tasks .tp-toolbar.search-open .tasks-tp-search-field{display:flex!important}
+ #app.workspace-shell .w6-tasks .tp-search-toggle{display:flex;align-items:center;justify-content:center;width:34px;height:34px;min-height:34px;border:1px solid var(--hp-line);font-size:20px}
+ #app.workspace-shell .w6-tasks .tp-chips{display:flex;flex-wrap:wrap;gap:5px}
+ #app.workspace-shell .w6-tasks .tp-chip{min-height:26px;line-height:18px;padding:3px 7px;font-size:10px}
+ #app.workspace-shell .w6-tasks .tp-nav{gap:18px;white-space:nowrap}
+ #app.workspace-shell .w6-tasks .tp-nav button{font-size:12px}
+ #app.workspace-shell .w6-tasks .hp-detail-grid{grid-template-columns:1fr}
+ #app.workspace-shell .w6-tasks .tp-head h1{font-size:23px}
+ #app.workspace-shell .w6-tasks .tp-status{font-size:11px}
+ #app.workspace-shell .w6-tasks .tp-row{grid-template-columns:18px minmax(0,1fr) 74px 20px}
+ #app.workspace-shell #ws-dashboard .ws-popup{grid-template-columns:minmax(0,1fr) auto;gap:8px 12px}
+ #app.workspace-shell #ws-dashboard .ws-popup>.w6-popup-summary{grid-column:1;grid-row:2}
+ #app.workspace-shell #ws-dashboard .ws-popup>.ws-action{grid-column:2;grid-row:1/3}
+}
+#app.workspace-shell .w6-tasks .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+#app.workspace-shell #page-lineup .w2-table td:nth-child(3){white-space:nowrap}
+#app.workspace-shell .ws-nav-link[aria-current=page]{color:#db1465;border-left-color:#db1465}
+@media(max-width:650px){#app.workspace-shell .ws-nav-link[aria-current=page]{border-bottom-color:#db1465}}
+/* Retained stock, production, sales and accounting screens share the approved visual system. */
+#app.workspace-shell{--surface:#fff;--surface2:#f6f6f6;--surface3:#fff;--bg:#fff;--text:#111;--border:#dcdcdc;--border2:#ccc;--light:#777;--muted:#555}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) :is(.f-btn,.btn,.btn-sm,.btn-xs){font-family:'Noto Sans KR',Arial,sans-serif!important;font-size:11px!important;font-weight:400!important;line-height:20px!important;min-height:30px;padding:4px 10px!important;border-radius:0!important;white-space:nowrap}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) :is(input:not([type=checkbox]):not([type=radio]),select){font-family:'Noto Sans KR',Arial,sans-serif!important;font-size:12px!important;line-height:20px!important;min-height:32px;border-radius:0!important;padding:5px 9px!important;max-width:100%}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) .page-header-top{gap:14px;flex-wrap:wrap}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) .page-header-top>div:last-child{flex-wrap:wrap;gap:6px!important}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) .page-tabs{gap:22px;overflow-x:auto;white-space:nowrap}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) .page-tab{font-size:12px;font-weight:400;padding:10px 0;flex:none}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) .page-tab.on{color:#db1465;border-bottom-color:#db1465}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) :is(.card,.stat-card){border-radius:0;background:#fff}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) table{font-size:11px}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) th{font-weight:400}
+#app.workspace-shell :is(.page-header-title,.w2-head h1,#ws-dashboard h1),#app.workspace-shell #cherop-popup-latest h1{font-size:25px;font-weight:500;line-height:1.4;letter-spacing:-.9px}
+@media(max-width:650px){
+ #app.workspace-shell :is(.page-header-title,.w2-head h1,#ws-dashboard h1),#app.workspace-shell #cherop-popup-latest h1{font-size:23px}
+ #app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) .page-header-top>div:last-child{gap:5px!important}
+}
+#app.workspace-shell .w2{font-family:'Noto Sans KR',Arial,sans-serif}
+#app.workspace-shell .w6-tasks .tp-status{padding:5px 3px}
+#app.workspace-shell :is(#page-inventory,#page-production,#page-sales,#page-tax) :is(.inv-pill,.mpill,.cat-pill,.st-pill,.card-link){font-size:11px!important;font-weight:400!important;border-radius:0!important;line-height:18px;min-height:28px;padding:4px 9px!important;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center}
+#app.workspace-shell :is(#sales-summary,#tax-summary-cards)>div{border-radius:0!important}
+@media(max-width:760px){
+ #app.workspace-shell .w6-tasks .tp-head h1{font-size:25px}
+ #app.workspace-shell .w6-tasks .tp-status{font-size:11px!important;padding:6px 4px;min-height:30px}
+ #app.workspace-shell .w6-tasks .tp-toolbar select{padding:7px 8px}
+}
+/* Dashboard keeps its approved subtle corner treatment; lineup controls remain square. */
+#app.workspace-shell #ws-dashboard .ws-action,#app.workspace-shell #ws-dashboard .ws-week-actions :is(button,a){border-radius:4px}
