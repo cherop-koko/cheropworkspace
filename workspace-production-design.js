@@ -24,7 +24,7 @@ loadWorkLogList=async function(){
   $('work-log-recent-row').style.display=recent.length?'flex':'none';$('work-log-recent-chips').innerHTML=recent.map(id=>btn(name(map.get(id)),'work-pick',id)).join('');
   $('w8-work-range').textContent=`${cutoff} – ${end} · ${logs.length}건 · ${fmt(logs.reduce((n,r)=>n+num(r.qty),0))}개`;
   [7,14,30].forEach(days=>{const el=$('work-log-period-'+days);el.classList.toggle('on',days===_workLogPeriodDays);el.setAttribute('aria-pressed',String(days===_workLogPeriodDays));});
-  $('work-log-timeline').innerHTML=logs.length?table(['날짜','상품·옵션','수량','관리'],logs.map(r=>`<tr data-work-log-id="${esc(r.id)}"><td data-label="날짜">${esc(r.date)}</td><td data-label="상품"><strong>${esc(r.label||name(map.get(r.product_id)))}</strong></td><td data-label="수량">${fmt(r.qty)}개</td><td class="w8-row-actions">${btn('수정·삭제','work-edit',r.id)}</td></tr>`).join(''),'w8-log-table'):empty('선택한 기간에 등록된 작업 기록이 없습니다.');
+  $('work-log-timeline').innerHTML=logs.length?CHEROPWorkQC.renderDays(logs,map):empty('선택한 기간에 등록된 작업 기록이 없습니다.');
  }catch(error){if(ticket===tickets.work)errorView('work-log-timeline',error,'work-retry');}
 };
 workLogSetPeriod=function(days){if(![7,14,30].includes(Number(days)))return;_workLogPeriodDays=Number(days);return loadWorkLogList();};

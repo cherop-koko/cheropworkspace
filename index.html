@@ -1161,13 +1161,15 @@ a { text-decoration:none; color:inherit; }
 <script defer src="workspace-attendance.js?v=20261017-7"></script>
 <script defer src="workspace-management.js?v=20261017-7"></script>
 <script defer src="workspace-tasks.js?v=20261017-7"></script>
-<script defer src="workspace-production.js?v=20261017-8"></script>
-<script defer src="workspace-production-design.js?v=20261017-8"></script>
+<script defer src="workspace-production.js?v=20261017-9"></script>
+<script defer src="workspace-production-design.js?v=20261017-9"></script>
+<script defer src="workspace-work-qc.js?v=20261017-9"></script>
 <script defer src="workspace-start.js?v=20261017-7"></script>
 <script defer src="vendor/xlsx-0.18.5.min.js"></script>
 <link rel="stylesheet" href="workspace-management.css?v=20261017-7">
 <link rel="stylesheet" href="workspace-parity.css?v=20261017-7">
-<link rel="stylesheet" href="workspace-production-design.css?v=20261017-8">
+<link rel="stylesheet" href="workspace-production-design.css?v=20261017-9">
+<link rel="stylesheet" href="workspace-work-qc.css?v=20261017-9">
 </head>
 <body>
 <div id="ws-startup"><div class="ws-startup-brand"><img src="cherop-logo.png" alt="CHEROP"><span>WORKSPACE</span></div><nav aria-label="워크스페이스 메뉴"><a href="#dashboard">대시보드</a><a href="#tasks">업무·프로젝트</a><a href="#inventory">재고·물류</a><a href="#production">상품화 관리</a><a href="#sales">판매분석</a><a href="#lineup">상품·라인업</a><a href="#popup">오프라인·팝업</a><a href="#manual">업무 매뉴얼</a><a href="#notice">팀·공지</a><a href="#ops/calendar">업무 캘린더</a></nav><p id="ws-startup-status" role="status">화면을 불러오는 중…</p></div>
@@ -1748,8 +1750,8 @@ a { text-decoration:none; color:inherit; }
 
         <div id="prod-tab-today" class="w8-production">
           <section class="w8-section">
-            <div class="w8-toolbar"><h2>작업 기록</h2><div class="w8-actions"><button class="w8-button" data-w8="defect-new">불량 등록</button><button class="w8-button w8-primary" data-w8="work-new">+ 작업 입력</button></div></div>
-            <div class="w8-toolbar w8-period"><p id="w8-work-range" class="w8-note"></p><div class="w8-actions" aria-label="작업 조회 기간"><button class="w8-button on" id="work-log-period-7" data-w8-period="7">7일</button><button class="w8-button" id="work-log-period-14" data-w8-period="14">14일</button><button class="w8-button" id="work-log-period-30" data-w8-period="30">30일</button></div></div>
+            <div class="w8-toolbar"><h2>작업 기록</h2><div class="w8-actions"><button class="w8-button w8-primary" data-w8="work-new">+ 작업 입력</button></div></div>
+            <div class="w8-toolbar w8-period"><p id="w8-work-range" class="w8-note"></p><div class="w8-actions" aria-label="작업 조회 기간"><button class="w8-button on" id="work-log-period-7" data-w8-period="7">7일</button><button class="w8-button" id="work-log-period-14" data-w8-period="14">14일</button><button class="w8-button" id="work-log-period-30" data-w8-period="30">30일</button><button class="w8-button" data-qc="collapse">모두 접기</button></div></div>
             <div id="work-log-recent-row" class="w8-recent" style="display:none;"><span>최근 작업</span><span id="work-log-recent-chips" class="w8-actions"></span></div>
             <div id="work-log-timeline" aria-live="polite"></div>
           </section>
@@ -1819,7 +1821,7 @@ a { text-decoration:none; color:inherit; }
         <!-- 불량 관리 탭 -->
         <div id="prod-tab-defect" class="w8-production" style="display:none;">
           <div class="w8-toolbar"><h2>불량 관리</h2><div class="w8-actions"><button class="w8-button" data-w8="return-new">반품 불량 접수</button><button class="w8-button w8-primary" data-w8="defect-new">+ 불량 등록</button></div></div>
-          <div id="prod-defect-filter" class="w8-actions w8-defect-filters"></div><p class="w8-note">동일 접수는 한 줄로 모아 표시합니다. 처리·상세에서 개별 수량의 상태, 메모와 사진을 확인할 수 있습니다.</p>
+          <div id="prod-defect-filter" class="w8-actions w8-defect-filters"></div>
           <div id="w8-defect-results" aria-live="polite"></div>
         </div>
       </div>
