@@ -4,7 +4,7 @@
 const api=window.CHEROPSections,esc=v=>escapeHtml(String(v??'')),num=v=>Number(v)||0;
 const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const dateLabel=value=>{const d=new Date(value);return value&&!Number.isNaN(d.getTime())?new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'미등록';};
-const tabNames={today:'오늘 작업',reservations:'예약 작업',supply:'소모품',calendar:'생산 캘린더',recommend:'생산 추천',defect:'불량 관리'};
+const tabNames={today:'오늘 작업',reservations:'예약 작업',supply:'소모품',calendar:'생산 캘린더',recommend:'상품화 추천',defect:'불량 관리'};
 const state={channel:'',query:'',ticket:0,rows:[],scheduled:[],products:new Map()};
 let editSnapshot=null,saving=false;
 function matching(rows){const query=state.query.trim().toLowerCase();return rows.filter(r=>(!state.channel||r.channel===state.channel)&&(!query||(state.products.get(r.product_id)||r.product_id||'').toLowerCase().includes(query)));}
