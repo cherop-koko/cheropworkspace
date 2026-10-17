@@ -1151,20 +1151,21 @@ a { text-decoration:none; color:inherit; }
 <link rel="stylesheet" href="workspace-dashboard.css?v=20261017-1">
 <link rel="stylesheet" href="workspace-sections.css?v=20261017-2">
 <link rel="stylesheet" href="workspace-popup.css?v=20261017-2">
-<link rel="stylesheet" href="workspace-polish.css?v=20261017-6">
+<link rel="stylesheet" href="workspace-polish.css?v=20261017-7">
 <script defer src="vendor/supabase-2.118.0.min.js"></script>
-<script defer src="workspace-core.js?v=20261017-6"></script>
-<script defer src="workspace-dashboard.js?v=20261017-6"></script>
+<script defer src="workspace-core.js?v=20261017-7"></script>
+<script defer src="workspace-dashboard.js?v=20261017-7"></script>
 <script defer src="workspace-manual-seed.js?v=20261017-2"></script>
-<script defer src="workspace-sections.js?v=20261017-6"></script>
+<script defer src="workspace-sections.js?v=20261017-7"></script>
 <script defer src="workspace-popup.js?v=20261017-3"></script>
-<script defer src="workspace-attendance.js?v=20261017-6"></script>
-<script defer src="workspace-management.js?v=20261017-6"></script>
-<script defer src="workspace-tasks.js?v=20261017-6"></script>
-<script defer src="workspace-start.js?v=20261017-6"></script>
+<script defer src="workspace-attendance.js?v=20261017-7"></script>
+<script defer src="workspace-management.js?v=20261017-7"></script>
+<script defer src="workspace-tasks.js?v=20261017-7"></script>
+<script defer src="workspace-production.js?v=20261017-7"></script>
+<script defer src="workspace-start.js?v=20261017-7"></script>
 <script defer src="vendor/xlsx-0.18.5.min.js"></script>
-<link rel="stylesheet" href="workspace-management.css?v=20261017-6">
-<link rel="stylesheet" href="workspace-parity.css?v=20261017-6">
+<link rel="stylesheet" href="workspace-management.css?v=20261017-7">
+<link rel="stylesheet" href="workspace-parity.css?v=20261017-7">
 </head>
 <body>
 <div id="ws-startup"><div class="ws-startup-brand"><img src="cherop-logo.png" alt="CHEROP"><span>WORKSPACE</span></div><nav aria-label="워크스페이스 메뉴"><a href="#dashboard">대시보드</a><a href="#tasks">업무·프로젝트</a><a href="#inventory">재고·물류</a><a href="#production">상품화 관리</a><a href="#sales">판매분석</a><a href="#lineup">상품·라인업</a><a href="#popup">오프라인·팝업</a><a href="#manual">업무 매뉴얼</a><a href="#notice">팀·공지</a><a href="#ops/calendar">업무 캘린더</a></nav><p id="ws-startup-status" role="status">화면을 불러오는 중…</p></div>
@@ -1734,23 +1735,17 @@ a { text-decoration:none; color:inherit; }
             </div>
           </div>
           <div class="page-tabs" id="prod-tabs">
-            <div class="page-tab on" onclick="prodSetTab('today',this)">오늘 작업</div>
-            <div class="page-tab"   onclick="prodSetTab('supply',this)">소모품</div>
-            <div class="page-tab"   onclick="prodSetTab('calendar',this)" style="display:none;">생산 캘린더</div>
-            <div class="page-tab"   onclick="prodSetTab('recommend',this)">생산 추천</div>
-            <div class="page-tab"   onclick="prodSetTab('defect',this)">불량 관리</div>
+            <div class="page-tab on" data-prod-tab="today" onclick="prodSetTab('today',this)">오늘 작업</div>
+            <div class="page-tab" data-prod-tab="reservations" onclick="prodSetTab('reservations',this)">예약 작업 <span id="prod-reservation-count"></span></div>
+            <div class="page-tab" data-prod-tab="supply" onclick="prodSetTab('supply',this)">소모품</div>
+            <div class="page-tab" data-prod-tab="calendar" onclick="prodSetTab('calendar',this)" style="display:none;">생산 캘린더</div>
+            <div class="page-tab" data-prod-tab="recommend" onclick="prodSetTab('recommend',this)">생산 추천</div>
+            <div class="page-tab" data-prod-tab="defect" onclick="prodSetTab('defect',this)">불량 관리</div>
           </div>
         </div>
 
         <!-- 오늘 일정 탭 -->
         <div id="prod-tab-today">
-          <!-- 채널배분 예약 대기 (예약 있을 때만 표시) -->
-          <div class="card" id="prod-rsv-card" style="margin-bottom:14px;display:none;border-color:#FAC775;">
-            <div class="card-head" style="margin-bottom:8px;">
-              <div><div class="card-title">📌 채널배분 예약 대기</div><div class="card-sub">생산 완료(작업 기록) 시 자동으로 채널에 반영됩니다</div></div>
-            </div>
-            <div id="prod-rsv-list" style="display:flex;flex-direction:column;gap:4px;"></div>
-          </div>
           <!-- 상단 풀폭: 작업 기록 (퀵바 + 타임라인) -->
           <div class="card" style="margin-bottom:14px;">
             <div class="card-head" style="margin-bottom:10px;">
@@ -1798,6 +1793,15 @@ a { text-decoration:none; color:inherit; }
             </div>
             <div id="prod-ship-list"></div>
           </div>
+        </div>
+
+        <div id="prod-tab-reservations" class="w7-reservations" style="display:none;">
+          <section class="card" id="prod-rsv-card">
+            <div class="card-head"><div><div class="card-title">채널 배분 대기</div><div class="card-sub">작업 기록에 상품화 완료 수량을 입력하면 기존 예약 순서대로 채널에 자동 반영됩니다.</div></div></div>
+            <form id="prod-reservation-filter" class="w7-reservation-filter"><label>채널<select id="prod-reservation-channel"><option value="">전체 채널</option></select></label><label class="w7-search">상품 검색<input id="prod-reservation-search" type="search" placeholder="상품명·옵션 검색"></label><button class="w2-button" type="submit">검색</button></form>
+            <div id="prod-reservation-summary" class="w7-summary" aria-live="polite"></div><div id="prod-rsv-list"></div>
+          </section>
+          <section class="card"><div class="card-head"><div><div class="card-title">날짜별 작업 예약</div><div class="card-sub">기존 예약 전체 · 예정일이 지난 기록도 표시됩니다.</div></div><button type="button" class="w2-button" onclick="openProdReserveModal()">+ 작업 예약</button></div><div id="prod-reserve-list"></div></section>
         </div>
 
         <!-- 소모품 탭 -->

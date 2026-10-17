@@ -1,1 +1,1 @@
-{"private":true,"scripts":{"test":"node tests/dashboard-navigation.cjs && node tests/sections-runtime.cjs && node tests/attendance-runtime.cjs && node tests/management-runtime.cjs && node tests/task-parity-runtime.cjs"},"devDependencies":{"jsdom":"26.1.0"}}
+{"private":true,"scripts":{"test":"node tests/dashboard-navigation.cjs && node tests/sections-runtime.cjs && node tests/attendance-runtime.cjs && node tests/management-runtime.cjs && node tests/task-parity-runtime.cjs && node tests/production-roadmap-runtime.cjs"},"devDependencies":{"jsdom":"26.1.0"}}
