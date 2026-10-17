@@ -1,0 +1,144 @@
+/* Shared compact controls and a stable, low-height mobile navigation. */
+#app.workspace-shell{--control-h:30px;--control-fs:12px;color-scheme:light}
+#app.workspace-shell :is(.btn,.btn-sm,.btn-xs,.w2-button,.ws-action,.hp-action,.pf-btn),
+#app.workspace-shell #ws-dashboard .ws-week-actions button,
+#app.workspace-shell #cherop-popup-latest :is(.hp-action,.pf-btn){box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:var(--control-h);height:auto;padding:4px 10px;font-size:var(--control-fs);font-weight:400;line-height:20px;letter-spacing:-.15px;border-radius:4px;white-space:nowrap}
+#app.workspace-shell :is(.w2-head h1,#ws-dashboard h1),#app.workspace-shell #cherop-popup-latest h1{font-size:22px;font-weight:500;line-height:1.4;letter-spacing:-.7px;text-decoration:none}
+#app.workspace-shell :is(.w2-tabs,.page-tabs) button,#app.workspace-shell #cherop-popup-latest :is(.pc-tabs,.pc-switch,.pf-nav) button{font-size:12px;font-weight:400;line-height:18px;padding:6px 10px;min-height:30px;border-radius:3px}
+#app.workspace-shell .w2-chips .w2-button{min-height:28px;padding:3px 9px;font-size:11px;line-height:20px}
+#app.workspace-shell :is(.w2-toolbar,.w2-calendar-toolbar) :is(input,select),#app.workspace-shell #cherop-popup-latest .pc-selected select{font-size:12px;line-height:20px;min-height:32px;padding:5px 9px;border-radius:4px}
+#app.workspace-shell .w2-head{margin-bottom:22px;gap:12px}
+#app.workspace-shell #ws-dashboard .ws-week-actions button:nth-child(-n+2){width:30px;min-height:30px;padding:0;font-size:18px}
+#app.workspace-shell #cherop-popup-latest{font-size:12px;line-height:1.6;--hp-bg:#fff;--hp-fg:#222;--hp-sub:#737373;--hp-line:#e5e5e5;--hp-soft:#f8f8f8;--hp-pink:#ba4070}
+#app.workspace-shell #cherop-popup-latest :is(.pc-head,.hp-page-heading){display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:0 0 22px;padding:0}
+#app.workspace-shell #cherop-popup-latest :is(.pc-head,.hp-page-heading) p{font-size:11px;line-height:1.6;margin-top:5px;color:#737373}
+#app.workspace-shell #cherop-popup-latest :is(.pc-head,.hp-page-heading) h1{margin:0}
+#app.workspace-shell #cherop-popup-latest .pc-tabs{margin-bottom:20px;gap:14px}
+#app.workspace-shell #cherop-popup-latest :is(.pc-bar,.pf-section-head){gap:10px;margin:18px 0 12px;align-items:center}
+#app.workspace-shell #cherop-popup-latest :is(h2,.pc-bar h2){font-size:14px;font-weight:500;line-height:1.5}
+#app.workspace-shell #cherop-popup-latest :is(.pc-field,.pf-modal label){font-size:11px;line-height:1.5;gap:5px}
+#app.workspace-shell #cherop-popup-latest :is(.pc-field,.pf-modal label) :is(input,select){min-height:32px;padding:5px 9px;font-size:12px;line-height:20px;border-radius:4px}
+#app.workspace-shell #cherop-popup-latest textarea{font-size:12px;line-height:1.7;padding:8px 10px;border-radius:4px}
+#app.workspace-shell #cherop-popup-latest :is(.pc-form-bottom,.pf-modal-foot){margin-top:18px;padding-top:14px;gap:10px}
+#app.workspace-shell #cherop-popup-latest .pc-metrics{gap:16px;padding:16px 0;margin:16px 0}
+#app.workspace-shell #cherop-popup-latest .pc-metrics strong{font-size:21px;font-weight:500;line-height:1.4;letter-spacing:-.5px;margin-top:5px}
+#app.workspace-shell #cherop-popup-latest .pc-metrics small{font-size:10px;margin-left:4px}
+#app.workspace-shell #cherop-popup-latest .pc-table :is(th,td){font-size:11px;line-height:1.6;padding:10px 12px}
+#app.workspace-shell #cherop-popup-latest .pc-table th{font-weight:500}
+#app.workspace-shell #cherop-popup-latest .pc-table small{font-size:10px;line-height:1.6;margin-top:4px}
+#app.workspace-shell #cherop-popup-latest .pc-card-actions{gap:6px;flex-wrap:wrap}
+#app.workspace-shell #cherop-popup-latest .pc-card-actions .hp-action{min-height:28px;padding:3px 9px;font-size:11px}
+#app.workspace-shell #cherop-popup-latest .pf-row{padding:11px 0;gap:12px}
+#app.workspace-shell #cherop-popup-latest .pf-row strong{font-size:12px;line-height:1.6}
+#app.workspace-shell #cherop-popup-latest .pf-row small{font-size:10px;line-height:1.6;margin-top:3px}
+#app.workspace-shell #cherop-popup-latest .pc-sheet{padding:28px;line-height:1.75}
+#app.workspace-shell #cherop-popup-latest .pc-sheet h2{font-size:22px;line-height:1.5;margin:12px 0}
+#app.workspace-shell #cherop-popup-latest .pc-report-section{padding-top:22px}
+#app.workspace-shell #cherop-popup-latest .pc-report-section h3{font-size:14px;margin-bottom:10px}
+#app.workspace-shell #cherop-popup-latest .pc-note{font-size:11px;line-height:1.75;margin:10px 0}
+#app.workspace-shell #cherop-popup-latest .pc-source-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;margin:0}
+#app.workspace-shell #cherop-popup-latest .pc-source-facts>div{padding:10px 0;border-bottom:1px solid var(--hp-line)}
+#app.workspace-shell #cherop-popup-latest .pc-source-facts dt{color:var(--hp-sub);font-size:11px;margin-bottom:4px}
+#app.workspace-shell #cherop-popup-latest .pc-source-facts dd{margin:0;font-size:12px;white-space:pre-line;overflow-wrap:anywhere}
+#app.workspace-shell .ws-brand{display:flex;flex-direction:column}
+@media(max-width:650px){
+ #app.workspace-shell.on{height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+ #app.workspace-shell .sidebar{flex:none;position:relative;display:flex;flex-direction:column;padding:7px 12px 0;gap:4px;height:auto;max-height:88px;overflow:visible;border-bottom:1px solid #e7e5e4}
+ #app.workspace-shell .ws-brand{height:30px;display:flex;flex-direction:row;align-items:center;gap:9px;padding:0;flex:none}
+ #app.workspace-shell .ws-brand .ws-brand-logo{width:52px;height:29px;margin:0;object-fit:contain}
+ #app.workspace-shell .ws-brand>span{font-size:8px;letter-spacing:1.7px;margin:0;line-height:1;color:#666}
+ #app.workspace-shell .sidebar>nav{display:flex;flex-wrap:nowrap;gap:4px;width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;scroll-padding-inline:10px;overscroll-behavior-x:contain}
+ #app.workspace-shell .sidebar>nav::-webkit-scrollbar{display:none}
+ #app.workspace-shell :is(.ws-nav-link,.ws-nav-unlinked){flex:none;min-height:32px;padding:6px 9px;font-size:11px;line-height:18px;white-space:nowrap;border-left:0;border-bottom:2px solid transparent;background:none}
+ #app.workspace-shell .ws-nav-link[aria-current=page]{background:transparent;color:#ba4070;border-bottom-color:#ba4070}
+ #app.workspace-shell .ws-nav-caption{display:none}
+ #app.workspace-shell .topbar{flex:none;height:30px;min-height:30px;padding:3px 12px;gap:8px;flex-wrap:nowrap;border-bottom:1px solid #eee}
+ #app.workspace-shell .tb-nav.ws-breadcrumb{font-size:10px;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ #app.workspace-shell .tb-right{gap:8px;min-width:0}
+ #app.workspace-shell .tb-date{display:none}
+ #app.workspace-shell :is(.avatar,.tb-avatar){width:24px;height:24px;font-size:9px}
+ #app.workspace-shell .main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:17px 12px 28px}
+ #app.workspace-shell :is(.w2-head h1,#ws-dashboard h1),#app.workspace-shell #cherop-popup-latest h1{font-size:20px;line-height:1.4}
+ #app.workspace-shell :is(.w2-head,.ws-dashboard-head){margin-bottom:18px;gap:8px}
+ #app.workspace-shell :is(.w2-button,.ws-action),#app.workspace-shell #cherop-popup-latest .hp-action{min-height:30px;padding:4px 9px;font-size:11px;line-height:20px}
+ #app.workspace-shell #cherop-popup-latest :is(.pc-head,.hp-page-heading){margin-bottom:16px;gap:8px}
+ #app.workspace-shell #cherop-popup-latest .pc-metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+ #app.workspace-shell #cherop-popup-latest .pc-metrics strong{font-size:17px;white-space:normal}
+ #app.workspace-shell #cherop-popup-latest .pc-metrics small{display:block;margin:2px 0 0;font-size:9px}
+ #app.workspace-shell #cherop-popup-latest .pc-sheet{padding:16px 12px}
+ #app.workspace-shell #cherop-popup-latest .pc-sheet h2{font-size:20px}
+ #app.workspace-shell #cherop-popup-latest .pc-source-facts{grid-template-columns:1fr}
+ #app.workspace-shell #cherop-popup-latest .pc-selected{gap:7px;flex-wrap:wrap}
+ #app.workspace-shell #cherop-popup-latest .pc-selected select{max-width:100%;flex:1;min-width:150px}
+}
+/* Legacy pages and their retained modals use the same compact control scale. */
+body :is(.f-btn,.f-btn-cancel,.f-btn-save,.confirm-no,.confirm-yes){font-family:'Noto Sans KR',Arial,sans-serif!important;font-size:12px!important;font-weight:400!important;line-height:20px!important;min-height:30px!important;padding:4px 10px!important;border-radius:4px!important}
+#app.workspace-shell :is(.filter-btn,.tab-btn,.page-tab,.sub-tab,.att-pill){font-size:12px!important;font-weight:400;line-height:18px!important;min-height:30px;padding:5px 10px!important}
+#app.workspace-shell #cherop-popup-latest .hp-back{font-size:11px;line-height:18px;padding:4px 0;margin-bottom:13px}
+#app.workspace-shell #cherop-popup-latest .pf-photo{aspect-ratio:4/3}
+@media print{#app.workspace-shell #cherop-popup-latest .pc-sheet{padding:0}#app.workspace-shell #cherop-popup-latest .pc-source-facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Popup records, reports and forms share the same layout primitives. */
+#app.workspace-shell #cherop-popup-latest .pc-tabs{display:flex;border-bottom:1px solid var(--hp-line)}
+#app.workspace-shell #cherop-popup-latest .pc-tabs button{border-bottom:2px solid transparent;border-radius:0}
+#app.workspace-shell #cherop-popup-latest .pc-tabs button.active{border-bottom-color:var(--hp-pink);color:var(--hp-pink)}
+#app.workspace-shell #cherop-popup-latest .pc-bar{display:flex;justify-content:space-between;flex-wrap:wrap}
+#app.workspace-shell #cherop-popup-latest .pc-switch{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--hp-line);border-radius:4px}
+#app.workspace-shell #cherop-popup-latest .pc-switch button.active{background:var(--hp-fg);color:#fff}
+#app.workspace-shell #cherop-popup-latest .pc-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 20px}
+#app.workspace-shell #cherop-popup-latest .pc-card{min-width:0;border-bottom:1px solid var(--hp-line);padding-bottom:18px}
+#app.workspace-shell #cherop-popup-latest .pc-card-actions{display:flex;align-items:center}
+#app.workspace-shell #cherop-popup-latest .pf-card-info>p{font-size:11px;color:var(--hp-sub);margin:5px 0}
+#app.workspace-shell #cherop-popup-latest .pf-card-info>strong{font-size:18px;display:block;margin:9px 0 2px}
+#app.workspace-shell #cherop-popup-latest .pc-unit{font-size:10px;color:var(--hp-sub);margin:8px 0}
+#app.workspace-shell #cherop-popup-latest .pc-compare-scroll{overflow:auto;max-width:100%;isolation:isolate}
+#app.workspace-shell #cherop-popup-latest .pc-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+#app.workspace-shell #cherop-popup-latest .pc-table :is(th,td){text-align:right;border-bottom:1px solid var(--hp-line);vertical-align:middle}
+#app.workspace-shell #cherop-popup-latest .pc-table :is(th,td):first-child{text-align:left}
+#app.workspace-shell #cherop-popup-latest .pc-table small{display:block;color:var(--hp-sub);font-weight:400}
+#app.workspace-shell #cherop-popup-latest .pc-all th:first-child{position:sticky;left:0;z-index:1;background:white;width:170px}
+#app.workspace-shell #cherop-popup-latest .pc-all thead th{background:var(--hp-soft);text-align:left}
+#app.workspace-shell #cherop-popup-latest .pc-table .pc-section>*{background:var(--hp-soft);padding-block:7px}
+#app.workspace-shell #cherop-popup-latest .pc-table :is(.pc-total,.pc-profit)>*{font-weight:500;background:#fcfcfc}
+#app.workspace-shell #cherop-popup-latest .pc-selected{display:flex;align-items:center;gap:10px;padding:12px 0;border-block:1px solid var(--hp-line);margin-bottom:18px}
+#app.workspace-shell #cherop-popup-latest .pc-field{display:flex;flex-direction:column;min-width:0}
+#app.workspace-shell #cherop-popup-latest .pc-field :is(input,select,textarea){width:100%;max-width:100%;border:1px solid var(--hp-line);background:#fff}
+#app.workspace-shell #cherop-popup-latest .pc-field textarea{min-height:100px;resize:vertical}
+#app.workspace-shell #cherop-popup-latest .pc-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#app.workspace-shell #cherop-popup-latest .pc-full{grid-column:1/-1}
+#app.workspace-shell #cherop-popup-latest .pc-check{display:flex;align-items:center;gap:7px;font-size:11px}
+#app.workspace-shell #cherop-popup-latest .pc-check input{accent-color:var(--hp-fg);width:14px;height:14px;margin:0}
+#app.workspace-shell #cherop-popup-latest .pc-form-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;border-top:1px solid var(--hp-line);font-size:11px;color:var(--hp-sub)}
+#app.workspace-shell #cherop-popup-latest .pc-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-block:1px solid var(--hp-line)}
+#app.workspace-shell #cherop-popup-latest .pc-metrics>div{min-width:0}
+#app.workspace-shell #cherop-popup-latest .pc-metrics>div>span{display:block;color:var(--hp-sub);font-size:11px}
+#app.workspace-shell #cherop-popup-latest .pc-metrics strong{display:block;font-variant-numeric:tabular-nums}
+#app.workspace-shell #cherop-popup-latest .pc-cost-row{display:grid;grid-template-columns:minmax(150px,1.4fr) repeat(3,minmax(0,1fr));gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--hp-line)}
+#app.workspace-shell #cherop-popup-latest .pc-cost-title small{display:block;font-size:10px;color:var(--hp-sub);margin-top:3px}
+#app.workspace-shell #cherop-popup-latest .pc-reuse{grid-column:2/-1;display:grid;grid-template-columns:1fr 2fr;gap:12px;align-items:center;font-size:11px;color:var(--hp-sub)}
+#app.workspace-shell #cherop-popup-latest .pc-sales-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--hp-line)}
+#app.workspace-shell #cherop-popup-latest .pc-sheet{margin-top:20px;border:1px solid var(--hp-line);background:white}
+#app.workspace-shell #cherop-popup-latest .pc-sheet-logo{width:90px;height:53px;object-fit:contain;display:block;margin-bottom:20px}
+#app.workspace-shell #cherop-popup-latest .pc-report-label{font-size:9px;letter-spacing:1.5px;color:var(--hp-sub)}
+#app.workspace-shell #cherop-popup-latest .pc-report-meta{font-size:11px;color:var(--hp-sub);margin-bottom:20px}
+#app.workspace-shell #cherop-popup-latest .pc-cover{display:block;width:100%;height:280px;object-fit:cover;margin:20px 0}
+#app.workspace-shell #cherop-popup-latest .pc-rank{display:grid;grid-template-columns:34px minmax(0,1fr) 90px 90px;gap:10px;align-items:center;border-bottom:1px solid var(--hp-line);padding:10px 0;font-size:12px}
+#app.workspace-shell #cherop-popup-latest .pc-rankhead{font-size:10px;color:var(--hp-sub)}
+#app.workspace-shell #cherop-popup-latest .pc-rank-value{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#app.workspace-shell #cherop-popup-latest .pc-place{color:var(--hp-sub)}
+#app.workspace-shell #cherop-popup-latest .pc-report-section>p{white-space:pre-line}
+@media(max-width:1100px){#app.workspace-shell #cherop-popup-latest .pc-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){
+ #app.workspace-shell #cherop-popup-latest .pc-cards{grid-template-columns:1fr;gap:26px}
+ #app.workspace-shell #cherop-popup-latest .pf-photo{aspect-ratio:1.65}
+ #app.workspace-shell #cherop-popup-latest .pc-cost-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #app.workspace-shell #cherop-popup-latest .pc-cost-title{grid-column:1/-1}
+ #app.workspace-shell #cherop-popup-latest .pc-reuse{grid-column:1/-1;grid-template-columns:1fr}
+ #app.workspace-shell #cherop-popup-latest .pc-sales-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #app.workspace-shell #cherop-popup-latest .pc-sales-row>.pc-field:first-child{grid-column:1/-1}
+ #app.workspace-shell #cherop-popup-latest .pc-rank{grid-template-columns:20px minmax(0,1fr) 48px 66px;gap:6px;font-size:11px}
+ #app.workspace-shell #cherop-popup-latest .pc-rankhead{font-size:9px}
+ #app.workspace-shell #cherop-popup-latest .pc-rankhead .pc-rank-value{white-space:normal}
+ #app.workspace-shell #cherop-popup-latest .pc-cover{height:190px}
+ #app.workspace-shell #cherop-popup-latest .pf-dialog .pc-form-grid{grid-template-columns:1fr}
+ #app.workspace-shell #cherop-popup-latest .pc-selected>.hp-tag{display:none}
+}
