@@ -7,7 +7,7 @@ declare
  reservations jsonb; rv jsonb; pending_total integer; good_left integer := p_good; bad_left integer := p_dispose;
  q integer; good_n integer; bad_n integer; remain_n integer; pid text; receipt text; typ text;
  inv public.inventory%rowtype; avail integer; move_n integer; allocated integer := 0; changed integer;
- resolved text := to_char(now() at time zone 'Asia/Seoul','YYYY-MM-DD'); original_used boolean;
+ resolved text := to_char(now() at time zone 'Asia/Seoul','YYYY-MM-DD'); original_used boolean; previous_guard text;
 begin
  if p_operation is null or length(p_operation)<16 or length(p_operation)>100 or p_good is null or p_dispose is null or p_good<0 or p_dispose<0 or p_good::bigint+p_dispose::bigint<1 then raise exception '처리 수량이 올바르지 않습니다.'; end if;
  if jsonb_typeof(p_expected) is distinct from 'array' or jsonb_array_length(p_expected)=0 then raise exception '접수 내역이 없습니다.'; end if;
@@ -56,7 +56,10 @@ begin
   s:=jsonb_set(s,'{ch_reservations}',reservations);
  end if;
  s:=jsonb_set(s,'{prod_defects}',out_rows);
+ previous_guard:=coalesce(current_setting('workspace.stock_write',true),'');
+ perform set_config('workspace.stock_write','atomic',true);
  update public.app_state set data=s,updated_at=clock_timestamp() where id='cherop_main';
+ perform set_config('workspace.stock_write',previous_guard,true);
  return jsonb_build_object('good',p_good,'disposed',p_dispose,'pending',pending_total-p_good-p_dispose,'allocated',allocated);
 end $$;
 revoke all on function public.resolve_production_defects_v1(jsonb,integer,integer,text) from public;
