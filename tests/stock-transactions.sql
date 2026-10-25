@@ -1,0 +1,58 @@
+-- Run after the function definitions inside BEGIN / ROLLBACK. Synthetic data only.
+set local role anon;
+do $$
+declare orig jsonb; snapshot jsonb; request jsonb; r jsonb; first_result jsonb; before_i jsonb; after_i jsonb; row_data jsonb; failed boolean;
+ pid constant text:='__test_stock_atomic_20261025';
+begin
+ select data into strict orig from public.app_state where id='cherop_main';
+ insert into public.products(id,name)values(pid,'검증 전용 상품');
+ insert into public.inventory(id,product_id,total_stock,produced_stock,pending_production,available_stock)values(pid,pid,20,10,10,6);
+ insert into public.channel_inventory(id,product_id,channel,stock)values(pid||'_a',pid,'검증A',4);
+ perform set_config('workspace.stock_write','atomic',true);
+ update public.app_state set data=jsonb_set(data,'{ch_reservations}',coalesce(data->'ch_reservations','[]')||jsonb_build_array(jsonb_build_object('id',pid||'_r','product_id',pid,'channel','검증A','qty',3,'createdAt','2026-01-01T00:00:00Z','memo','보존')))where id='cherop_main';
+ perform set_config('workspace.stock_write','',true);
+ select to_jsonb(i)-'updated_at' into before_i from public.inventory i where product_id=pid;
+ request:=jsonb_build_object('mode','insert','rows',jsonb_build_array(jsonb_build_object('id',pid||'_sale','product_id',pid,'channel','검증A','quantity',9,'amount',0,'sale_date','2026-10-25')));
+ first_result:=public.workspace_stock_v2('__test_operation_ship_01','shipments',request);
+ r:=public.workspace_stock_v2('__test_operation_ship_01','shipments',request);
+ if r<>first_result then raise exception 'Retry idempotency failed';end if;
+ select to_jsonb(i) into r from public.inventory i where product_id=pid;
+ if (r->>'total_stock')::integer<>11 or (r->>'produced_stock')::integer<>4 or (r->>'pending_production')::integer<>7 or (r->>'available_stock')::integer<>4 then raise exception 'Mixed source deduction failed: %',r;end if;
+ perform public.workspace_stock_v2('__test_operation_upload_02','shipments',request-'mode');
+ if (select total_stock from public.inventory where product_id=pid)<>11 then raise exception 'Duplicate upload deducted stock';end if;
+ select to_jsonb(t) into row_data from public.sales_log t where id=pid||'_sale';
+ perform public.workspace_stock_v2('__test_operation_delete_03','delete_shipment',jsonb_build_object('id',pid||'_sale','expected',row_data));
+ select to_jsonb(i)-'updated_at' into after_i from public.inventory i where product_id=pid;
+ if after_i<>before_i then raise exception 'Cancel did not restore exact stock origins';end if;
+ if not exists(select 1 from public.app_state a,lateral jsonb_array_elements(a.data->'ch_reservations')x where a.id='cherop_main' and x->>'id'=pid||'_r' and x->>'memo'='보존' and x->>'qty'='3' and x->>'createdAt'='2026-01-01T00:00:00Z') then raise exception 'Reservation restore metadata lost';end if;
+ request:=jsonb_build_object('rows',jsonb_build_array(jsonb_build_object('id',pid||'_batch_a','product_id',pid,'channel','검증A','quantity',1,'sale_date','2026-10-25'),jsonb_build_object('id',pid||'_batch_z','product_id',pid,'channel','검증A','quantity',999,'sale_date','2026-10-25')));
+ failed:=false;begin perform public.workspace_stock_v2('__test_operation_fail_batch','shipments',request);exception when others then failed:=true;end;
+ if not failed or exists(select 1 from public.sales_log where id like pid||'_batch%') or (select to_jsonb(i)-'updated_at' from public.inventory i where product_id=pid)<>before_i then raise exception 'Batch rollback failed';end if;
+ select jsonb_build_object('inventory',to_jsonb(i),'channels',(select jsonb_agg(to_jsonb(c) order by c.id)from public.channel_inventory c where c.product_id=pid),'reservations',(select jsonb_agg(x order by x->>'id')from public.app_state a,lateral jsonb_array_elements(a.data->'ch_reservations')x where a.id='cherop_main' and x->>'product_id'=pid)) into snapshot from public.inventory i where product_id=pid;
+ request:=jsonb_build_object('product_id',pid,'desired',jsonb_build_object('검증A',21),'channels',jsonb_build_array('검증A'),'expected',snapshot);
+ failed:=false;begin perform public.workspace_stock_v2('__test_operation_overcap','allocate',request);exception when others then failed:=true;end;
+ if not failed or (select stock from public.channel_inventory where id=pid||'_a')<>4 then raise exception 'Reservation cap failed';end if;
+ request:=jsonb_set(request,'{desired}',jsonb_build_object('검증A',15));
+ perform public.workspace_stock_v2('__test_operation_alloc_04','allocate',request);
+ if not exists(select 1 from public.app_state a,lateral jsonb_array_elements(a.data->'ch_reservations')x where a.id='cherop_main' and x->>'id'=pid||'_r' and x->>'qty'='3' and x->>'createdAt'='2026-01-01T00:00:00Z') then raise exception 'FIFO changed';end if;
+ failed:=false;begin perform public.workspace_stock_v2('__test_operation_stale_05','allocate',request);exception when others then failed:=true;end;
+ if not failed then raise exception 'Stale allocation accepted';end if;
+ row_data:=jsonb_build_object('id',pid||'_work','product_id',pid,'qty',2,'date','2026-10-25','label','검증 전용','memo','보존');
+ perform public.workspace_stock_v2('__test_operation_work_06','worklog',jsonb_build_object('row',row_data,'expected',null));
+ if (select produced_stock from public.inventory where product_id=pid)<>12 or (select pending_production from public.inventory where product_id=pid)<>8 or (select stock from public.channel_inventory where id=pid||'_a')<>12 then raise exception 'Work log/FIFO atomic update failed';end if;
+ if not exists(select 1 from public.app_state a,lateral jsonb_array_elements(a.data->'ch_reservations')x where a.id='cherop_main' and x->>'id'=pid||'_r' and x->>'qty'='1') then raise exception 'FIFO did not consume oldest reservation';end if;
+ failed:=false;begin perform public.workspace_stock_v2('__test_operation_work_over','worklog',jsonb_build_object('row',jsonb_set(row_data,'{qty}','1000'),'expected',row_data));exception when others then failed:=true;end;
+ if not failed then raise exception 'Work over pending accepted';end if;
+ failed:=false;begin update public.app_state set data=jsonb_set(data,'{ch_reservations}',coalesce(orig->'ch_reservations','[]')) where id='cherop_main';exception when others then failed:=true;end;
+ if not failed then raise exception 'Stale whole-state overwrite accepted';end if;
+ if (select data-'ch_reservations'-'work_logs' from public.app_state where id='cherop_main') is distinct from orig-'ch_reservations'-'work_logs' then raise exception 'Unrelated state modified';end if;
+ -- Existing QC must still save reservations through the new stale-write guard.
+ row_data:=jsonb_build_array(jsonb_build_object('id',pid||'_defect','product_id',pid,'type','production','status','pending','qty',3,'memo','keep','photo_urls',jsonb_build_array('https://example.com/test.png')));
+ update public.app_state set data=jsonb_set(data,'{prod_defects}',coalesce(data->'prod_defects','[]')||row_data) where id='cherop_main';
+ r:=public.resolve_production_defects_v1(row_data,2,1,'__test_qc_atomic_07');
+ if r->>'pending'<>'0' or r->>'allocated'<>'2' or (select total_stock from public.inventory where product_id=pid)<>22 then raise exception 'QC compatibility failed';end if;
+ r:=public.resolve_production_defects_v1(row_data,2,1,'__test_qc_atomic_07');
+ if r->>'already_applied'<>'true' or (select total_stock from public.inventory where product_id=pid)<>22 then raise exception 'QC idempotency failed';end if;
+ if (select data-'ch_reservations'-'work_logs'-'prod_defects' from public.app_state where id='cherop_main') is distinct from orig-'ch_reservations'-'work_logs'-'prod_defects' then raise exception 'QC changed unrelated state';end if;
+end $$;
+select 'PASS: anon role; mixed-source cancel; retry/reupload; batch rollback; reservation cap/FIFO; stale allocation/state; work log; unrelated data preserved' as result;

@@ -611,5 +611,5 @@ $('inv-cat-pills').parentElement.classList.add('w11-legacy-filter');
 for(const id of ['inv-product-modal','inv-receipt-modal','inv-alloc-modal','inv-cat-modal','shipment-modal','ship-log-edit-modal','inv-upload-modal','inv-import-modal','ch-alloc-modal','sales-log-edit-modal','sales-revenue-modal','sales-log-modal','receipt-edit-modal'])$(id)?.classList.add('w8-modal');
 const originalSaveChAlloc=saveChAlloc;saveChAlloc=async function(){await originalSaveChAlloc();if(!$('ch-alloc-modal').classList.contains('on')&&invCurrentTab==='channel')await loadChannelInv(invCurrentChannel,{cached:true});};
 window.addEventListener('resize',()=>{if(view.monthly)paintTrend();});
-window.CHEROPStockSales={view,period,readClient,showSalesTab,stockData};
+window.CHEROPStockSales={view,period,readClient,showSalesTab,stockData,invalidate(){stockSnapshot=null;stockSnapshotAt=0;}};
 })();

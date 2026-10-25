@@ -8,7 +8,9 @@ begin
  select product_id into strict pid from public.inventory order by id limit 1;
  select data into baseline from public.app_state where id='cherop_main' for update;
  expected:=jsonb_build_array(jsonb_build_object('id','qa-legacy','product_id',pid,'qty',5,'status','pending','type','production','date','2026-10-17','memo','preserve memo','photo_urls',jsonb_build_array('https://example.com/qc-test.png'),'extra','retain'));
+ perform set_config('workspace.stock_write','atomic',true);
  update public.app_state set data=jsonb_set(jsonb_set(data,'{prod_defects}',expected),'{ch_reservations}',jsonb_build_array(jsonb_build_object('id','qa-reservation','product_id',pid,'qty',3,'channel','__qc_transaction_test__','createdAt','2026-01-01'))),updated_at=clock_timestamp() where id='cherop_main';
+ perform set_config('workspace.stock_write','',true);
  update public.inventory set total_stock=15,produced_stock=5,pending_production=10,available_stock=5 where product_id=pid;
  result:=public.resolve_production_defects_v1(expected,2,1,'qa-operation-partial-0001');
  if result->>'pending'<>'2' or result->>'allocated'<>'3' then raise exception 'partial result failed'; end if;

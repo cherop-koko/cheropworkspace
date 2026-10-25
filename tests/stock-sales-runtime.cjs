@@ -57,5 +57,21 @@ const main=()=>tables.app_state[0].data;
  const snap=await w.CHEROPStockSales.stockData(true);assert.equal(snap.channels.length,1201);vm.runInContext("invCurrentCat='전체';invCurrentFilter='all'",ctx);w.document.getElementById('inv-search').value='검증 소형';await w.loadInvList({cached:true});assert.equal(w.document.querySelectorAll('#inv-product-table tr[data-pid]').length,1);assert.equal(w.document.querySelector('#inv-product-table tr[data-pid]').dataset.pid,'stock-a');click('[data-stock=clear-search][data-id=inv-search]');await wait();
  vm.runInContext("_salesYear=2026;_salesMonth=10;_salesRange='year'",ctx);assert.equal(w.CHEROPStockSales.period().prevFrom,'2025-01-01');vm.runInContext("_salesYear=2024;_salesMonth=2;_salesRange='month'",ctx);assert.equal(w.CHEROPStockSales.period().to,'2024-02-29');assert.equal(w.CHEROPStockSales.period().prevTo,'2024-01-31');
  assert.equal(writes,0,'page views and controls never write records');assert.deepEqual(tables,before,'all record IDs, values, notes, dates and states retained');
+ // Lost responses must reuse an operation ID and never fall back to client writes.
+ const request={rows:[{id:'test-new',product_id:'stock-a',channel:'채널 A',quantity:2,sale_date:'2026-10-25'}]};
+ rpcHandler=async()=>({error:{message:'network failure'}});
+ await assert.rejects(w.CHEROPStockIntegrity.perform('shipments',request,'retry-test'));
+ const firstOp=rpcCalls.at(-1).args.p_operation;
+ rpcHandler=async()=>({data:{rows:1,stock_changed:1},error:null});
+ await w.CHEROPStockIntegrity.perform('shipments',request,'retry-test');
+ assert.equal(rpcCalls.at(-1).args.p_operation,firstOp);assert.equal(writes,0);assert.deepEqual(tables,before);
+ await w.openShipLogEdit('shipment-0000','2026-10-01','채널 A',2,'검증 상품');
+ assert.equal(w.document.getElementById('slog-edit-amount').value,'2');assert.equal(w.document.getElementById('slog-edit-date').value,'2026-10-01');w.closeModal('sales-log-edit-modal');
+ // Multiple source rows mapped to one product must aggregate, including negative revenue.
+ vm.runInContext("invUploadChannel='카카오선물하기'",ctx);
+ w._invUploadAgg={a:{pname:'상품 A',rows:[{saleDate:'2026-10-25',qty:2,orderAmt:100},{saleDate:'2026-10-25',qty:3,orderAmt:200}]},b:{pname:'상품 B',rows:[{saleDate:'2026-10-25',qty:1,orderAmt:-50}]}};
+ w._invUploadMappings={a:'stock-a',b:'stock-a'};w._invUploadSkipped=new Set();
+ await w.processUpload();const upload=rpcCalls.at(-1).args;
+ assert.equal(upload.p_action,'shipments');assert.equal(upload.p_payload.rows.length,1);assert.equal(upload.p_payload.rows[0].quantity,6);assert.equal(upload.p_payload.rows[0].amount,250);assert(upload.p_payload.rows[0].id.includes('카카오선물하기'));assert.equal(upload.p_payload.revenues[0].amount,250);assert.equal(writes,0);assert.deepEqual(tables,before);
  console.log('PASS: API pagination 1,207 shipments / 1,201 allocations; all 58 receipts; channel-consistent totals, graph and records; missing item revenue explicit; read-only navigation preserves all fields.');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
