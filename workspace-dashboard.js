@@ -19,7 +19,7 @@
   sidebar.id='ws-navigation';
   const entry = (label,page,sub='',admin=false) => `<a class="ws-nav-link${admin?' ws-admin':''}" href="${href(page,sub)}" data-ws-page="${page}" data-ws-sub="${esc(sub)}">${label}</a>`;
   const logo=document.querySelector('.tb-logo').innerHTML;
-  sidebar.innerHTML = `<div class="ws-brand">${logo}<span>WORKSPACE</span></div><nav aria-label="워크스페이스 메뉴">
+  sidebar.innerHTML = `<div class="ws-brand"><a class="ws-brand-home" href="#dashboard" aria-label="체로프 대시보드로 이동">${logo}</a><span>WORKSPACE</span></div><nav aria-label="워크스페이스 메뉴">
     ${entry('대시보드','dashboard')}${entry('업무·프로젝트','tasks')}
     ${entry('재고·물류','inventory')}${entry('상품화 관리','production')}${entry('판매분석','sales')}${entry('상품·라인업','lineup')}
     <span class="ws-nav-unlinked" aria-disabled="true">오프라인·팝업</span>
