@@ -9,6 +9,8 @@
 #app.workspace-shell .sidebar{grid-column:1;grid-row:1/3;width:175px;align-items:stretch;padding:20px 12px;overflow-y:auto;gap:0;background:var(--ws-paper)}
 #app.workspace-shell .sidebar>nav{display:grid;gap:4px}
 #app.workspace-shell .ws-brand{padding:0 10px}
+#app.workspace-shell .ws-brand-home{display:block;width:max-content;flex:none;line-height:0;text-decoration:none}
+#app.workspace-shell .ws-brand-home:focus-visible{outline:2px solid var(--ws-pink);outline-offset:3px}
 #app.workspace-shell .ws-brand .ws-brand-logo{width:117px;height:69px;object-fit:contain;margin-bottom:16px}
 #app.workspace-shell .ws-brand>span{display:block;font-size:9px;letter-spacing:2px;margin:7px 0 20px 2px}
 #app.workspace-shell .ws-nav-caption{font-size:10px;color:var(--ws-dim);letter-spacing:1px;margin:24px 10px 10px}
