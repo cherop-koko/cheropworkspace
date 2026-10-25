@@ -17,12 +17,14 @@ const imageAliases={'오리지널 몽모':'몽모','오리지널 모리':'모리
 function productImage(p){
  const s=imageState||stockSnapshot?.state;
  if(s!==imageSource){imageSource=s;imageIndex=new Map();for(const year of Object.values(s?.plan||{}))for(const item of year.products||[]){const src=item.imgs?.front||item.imgUrl||item.storeImage;if(!src)continue;for(const name of [item.name,item.storeName]){if(!name)continue;for(const key of new Set([imageKey(name),imageKey(name.replace(/\([^)]*\)/g,''))])){const matches=imageIndex.get(key)||[];matches.push({id:item.id,src});imageIndex.set(key,matches);}}}}
+ const linked=s?.inventory_images?.[p?.id];
+ if(linked){if(linked.variantImage)return linked.variantImage;const item=linked.lineupId?Object.values(s?.plan||{}).flatMap(y=>y.products||[]).find(x=>x.id===linked.lineupId):null;return item?.imgs?.front||item?.imgUrl||linked.image||'';}
  const direct=p?.img_url||p?.image_url||p?.imgs?.front;
  if(direct)return direct;
  const choices=imageIndex.get(imageKey(imageAliases[p?.name]||p?.name))||[];
  const unique=[...new Map(choices.map(x=>[x.id,x])).values()];return unique.length===1?unique[0].src:'';
 }
-function productCell(p){const src=productImage(p),safe=/^(https?:\/\/|data:image\/(png|jpe?g|webp|gif);base64,)/i.test(src)?src:'';return `<span class="w13-product"><span class="w13-thumb${safe?'':' is-empty'}" title="${safe?'상품 대표이미지 · 옵션은 상품명 아래 확인':'연결된 이미지 없음'}">${safe?`<img src="${esc(safe)}" alt="" loading="lazy" decoding="async" draggable="false" onerror="this.parentElement.classList.add('is-empty');this.remove()">`:''}<span>이미지<br>없음</span></span><span class="w13-product-text"><span>${esc(p?.name||'상품 정보 없음')}</span>${p?.option_name?`<small>${esc(p.option_name)}</small>`:''}</span></span>`;}
+function productCell(p){const src=productImage(p),setPhoto=(imageState||stockSnapshot?.state)?.inventory_images?.[p?.id]?.imageKind==='set',safe=/^(https?:\/\/|data:image\/(png|jpe?g|webp|gif);base64,)/i.test(src)?src:'';return `<span class="w13-product"><span class="w13-thumb${safe?'':' is-empty'}" title="${safe?(setPhoto?'세트 대표이미지 · 개별 구성품은 상품명과 옵션 확인':'상품 대표이미지 · 옵션은 상품명 아래 확인'):'연결된 이미지 없음'}">${safe?`<img src="${esc(safe)}" alt="" loading="lazy" decoding="async" draggable="false" onerror="this.parentElement.classList.add('is-empty');this.remove()">`:''}<span>이미지<br>없음</span></span><span class="w13-product-text"><span>${esc(p?.name||'상품 정보 없음')}</span>${p?.option_name||setPhoto?`<small>${esc([p?.option_name,setPhoto?'세트 대표사진':''].filter(Boolean).join(' · '))}</small>`:''}</span></span>`;}
 
 loadInvOverviewBanner=async function() {
  const db=readClient;
@@ -93,7 +95,7 @@ loadInvList=async function(options={}) {
   try {
     const searchQ = ($('inv-search')?.value||'').trim().toLowerCase();
     const snap=await stockData(options.cached);if(ticket!==inventoryTicket)return;
-    const allProds=snap.products.filter(p=>invCurrentFilter==='everything'||(invCurrentFilter==='disc'?p.is_discontinued:invCurrentFilter==='planned'?!p.is_discontinued&&p.disc_status==='planned':!p.is_discontinued&&p.disc_status!=='planned')).sort((a,b)=>(a.sort_order??999999)-(b.sort_order??999999)||String(a.name).localeCompare(String(b.name)));
+    const allProds=snap.products.filter(p=>p.disc_status!=='deleted').filter(p=>invCurrentFilter==='everything'||(invCurrentFilter==='disc'?p.is_discontinued:invCurrentFilter==='planned'?!p.is_discontinued&&p.disc_status==='planned':!p.is_discontinued&&p.disc_status!=='planned')).sort((a,b)=>(a.sort_order??999999)-(b.sort_order??999999)||String(a.name).localeCompare(String(b.name)));
     let prods=allProds.filter(p=>(invCurrentCat==='전체'||p.category===invCurrentCat)&&matches(p,searchQ));
     const invRows=snap.inventory,chInvRows=snap.channels,salesRows=snap.sales,sState=snap.state;
     const reservations = sState.ch_reservations || [];
@@ -185,7 +187,7 @@ loadChannelInv=async function(ch,options={}) {
   try {
     const searchQ = ($('inv-ch-search')?.value||'').trim().toLowerCase();
     const snap=await stockData(options.cached);if(ticket!==channelTicket)return;
-    const allProds=snap.products,allChInv=snap.channels,allInvRows=snap.inventory,allSales=snap.sales;
+    const allProds=snap.products.filter(p=>p.disc_status!=='deleted'),allChInv=snap.channels,allInvRows=snap.inventory,allSales=snap.sales;
     const cats=['전체',...new Set([...(snap.state.inv_categories||[]),...allProds.map(p=>p.category).filter(Boolean)])];
     $('w11-channel-category').innerHTML=cats.map(c=>`<option ${c===invChCurrentCat?'selected':''}>${esc(c)}</option>`).join('');
     const channels=[...new Set([...CHANNELS,...allChInv.map(r=>r.channel)])];
@@ -611,5 +613,5 @@ $('inv-cat-pills').parentElement.classList.add('w11-legacy-filter');
 for(const id of ['inv-product-modal','inv-receipt-modal','inv-alloc-modal','inv-cat-modal','shipment-modal','ship-log-edit-modal','inv-upload-modal','inv-import-modal','ch-alloc-modal','sales-log-edit-modal','sales-revenue-modal','sales-log-modal','receipt-edit-modal'])$(id)?.classList.add('w8-modal');
 const originalSaveChAlloc=saveChAlloc;saveChAlloc=async function(){await originalSaveChAlloc();if(!$('ch-alloc-modal').classList.contains('on')&&invCurrentTab==='channel')await loadChannelInv(invCurrentChannel,{cached:true});};
 window.addEventListener('resize',()=>{if(view.monthly)paintTrend();});
-window.CHEROPStockSales={view,period,readClient,showSalesTab,stockData};
+window.CHEROPStockSales={view,period,readClient,showSalesTab,stockData,productImage,invalidate(){stockSnapshot=null;stockSnapshotAt=0;imageSource=null;imageState=null;}};
 })();
