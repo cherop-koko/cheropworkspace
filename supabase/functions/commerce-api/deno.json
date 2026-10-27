@@ -1,0 +1,2 @@
+{"compilerOptions":{"allowJs":true,"checkJs":false,"strict":false,"lib":["deno.window","dom","esnext"]}}
+
