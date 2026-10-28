@@ -1165,6 +1165,7 @@ a { text-decoration:none; color:inherit; }
 <script defer src="workspace-production-design.js?v=20261017-9"></script>
 <script defer src="workspace-work-qc.js?v=20261017-9"></script>
 <script defer src="workspace-stock-sales.js?v=20261025-catalog"></script>
+<script defer src="workspace-purchase-orders.js?v=20261028-1"></script>
 <script defer src="workspace-catalog.js?v=20261025-catalog"></script>
 <script defer src="workspace-start.js?v=20261017-7"></script>
 <script defer src="vendor/xlsx-0.18.5.min.js"></script>
@@ -1173,6 +1174,7 @@ a { text-decoration:none; color:inherit; }
 <link rel="stylesheet" href="workspace-production-design.css?v=20261017-9">
 <link rel="stylesheet" href="workspace-work-qc.css?v=20261017-9">
 <link rel="stylesheet" href="workspace-stock-sales.css?v=20261017-13">
+<link rel="stylesheet" href="workspace-purchase-orders.css?v=20261028-1">
 <link rel="stylesheet" href="workspace-finance-design.css?v=20261017-13">
 <link rel="stylesheet" href="workspace-login.css?v=20261017-14">
 <link rel="stylesheet" href="workspace-responsive.css?v=20261025-fold">
@@ -1507,6 +1509,7 @@ a { text-decoration:none; color:inherit; }
             <div class="page-tab"   onclick="invSetTab('shiplog',this)">출고 내역</div>
             <div class="page-tab"   onclick="invSetTab('channel',this)">채널별 재고</div>
             <div class="page-tab"   onclick="invSetTab('receipt',this)">입고 일정</div>
+            <button type="button" class="page-tab" id="inv-purchase-tab" onclick="invSetTab('purchase',this)">발주현황</button>
             <div class="page-tab"   onclick="invSetTab('alert',this)">재고 알림<span id="inv-alert-badge" style="display:none;margin-left:5px;vertical-align:1px;background:var(--red);color:#fff;font-size:10px;font-weight:500;min-width:16px;height:16px;border-radius:8px;align-items:center;justify-content:center;padding:0 4px;"></span></div>
           </div>
         </div>
@@ -1610,6 +1613,9 @@ a { text-decoration:none; color:inherit; }
             <div id="inv-receipt-done"></div>
           </div>
         </div>
+
+        <!-- 탭: 발주현황 — 기존 발주·실입고 기록 조회 -->
+        <div id="inv-tab-purchase" class="inv-tab" style="display:none;" aria-labelledby="inv-purchase-tab"></div>
 
         <!-- 탭: 재고 알림 -->
         <div id="inv-tab-alert" class="inv-tab" style="display:none;">
@@ -5364,3 +5370,4 @@ a { text-decoration:none; color:inherit; }
 
 </body>
 </html>
+
