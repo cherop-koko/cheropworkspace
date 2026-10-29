@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script>try{if(sessionStorage.getItem('cherop_uid'))document.documentElement.classList.add('ws-resuming')}catch(e){}</script>
 <style>.ws-resuming #loading{display:none!important}#ws-startup{display:none}.ws-resuming #ws-startup{display:block;position:fixed;inset:0;z-index:1999;background:#fff;color:#222;font-family:Arial,sans-serif}.ws-startup-brand{display:flex;align-items:center;gap:9px;height:37px;padding:7px 12px 0;box-sizing:border-box}.ws-startup-brand img{width:52px;height:29px;object-fit:contain}.ws-startup-brand span{font-size:8px;letter-spacing:1.7px;color:#666}#ws-startup nav{display:flex;gap:4px;padding:4px 12px 0;overflow-x:auto;white-space:nowrap;border-bottom:1px solid #e7e5e4;scrollbar-width:none}#ws-startup a{display:block;flex:none;font-size:11px;line-height:18px;padding:6px 9px;text-decoration:none;color:#222;min-height:32px;box-sizing:border-box}#ws-startup-status{font-size:12px;color:#777;margin:30px 12px;line-height:1.8}#ws-startup-status button{font-size:12px;padding:4px 10px;background:white;border:1px solid #ddd;border-radius:4px}</style>
 <title>체로프 워크스페이스</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -1153,7 +1152,8 @@ a { text-decoration:none; color:inherit; }
 <link rel="stylesheet" href="workspace-popup.css?v=20261017-2">
 <link rel="stylesheet" href="workspace-polish.css?v=20261017-10">
 <script defer src="vendor/supabase-2.118.0.min.js"></script>
-<script defer src="workspace-core.js?v=20261017-7"></script>
+<script defer src="workspace-auth-client.js?v=20261029-1"></script>
+<script defer src="workspace-core.js?v=20261029-auth1"></script>
 <script defer src="workspace-dashboard.js?v=20261025-logo"></script>
 <script defer src="workspace-manual-seed.js?v=20261017-2"></script>
 <script defer src="workspace-sections.js?v=20261025-fold"></script>
@@ -1198,7 +1198,7 @@ a { text-decoration:none; color:inherit; }
     <h2>로그인</h2>
     <div class="login-grid" id="login-grid" aria-label="팀원 선택"></div>
     <label class="login-field-label" for="pin-input">비밀번호</label>
-    <input type="password" class="pin-input" id="pin-input" placeholder="비밀번호 6자리" maxlength="6" inputmode="numeric" autocomplete="current-password" aria-describedby="login-err">
+    <input type="password" class="pin-input" id="pin-input" placeholder="비밀번호" maxlength="128" style="letter-spacing:normal;font-size:16px" autocomplete="current-password" aria-describedby="login-err">
     <button class="login-btn" onclick="doLogin()">로그인</button>
     <div class="login-err" id="login-err" role="status" aria-live="polite"></div>
   </div>
@@ -1643,6 +1643,7 @@ a { text-decoration:none; color:inherit; }
             <div style="display:flex;align-items:center;gap:10px;">
               <div class="page-header-title">판매분석</div><div style="font-size:11px;color:var(--light);">주문 기준 · 회사 공식 매출은 세무관리 매출장(실입금)</div>
               <button class="f-btn f-btn-cancel" style="font-size:12px;padding:6px 12px;" onclick="openSalesRevenueModal()">✏ 주문 매출 입력</button>
+              <a id="commerce-entry" hidden class="f-btn f-btn-cancel" style="font-size:12px;padding:6px 12px;" href="./sales-verification.html">매출 연동 검증 ↗</a>
 
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">

@@ -37,8 +37,14 @@ assert(!menuHtml.includes('기존 메뉴'));assert(!menuHtml.includes('처리할
  const baseline=cp.execFileSync('git',['show','28ac0a801a5978b89d613c8164697132a210e769:index.html'],{encoding:'utf8',maxBuffer:4e6});
  const blocks=[...baseline.matchAll(/<script>([\s\S]*?)<\/script>/g)];
  const originalCore=blocks.sort((a,b)=>b[1].length-a[1].length)[0][1];
- assert.equal(fs.readFileSync('workspace-core.js','utf8'),originalCore,'legacy behavior preserved during deferred extraction');
+ // Auth was replaced intentionally; compare every remaining byte of legacy behavior.
+ const nonAuth = code => code.replace(/,\s*pin:\s*'[^']*'/g,'')
+   .replace(/^const db = .*;$/m,'<shared client>')
+   .replace(/(?:function doLogin\(\) \{|let workspaceLoginBusy = false;)[\s\S]*?(?=\/\* ═)/,'<login>\n')
+   .replace(/async function boot\(\) \{[\s\S]*?(?=\/\* ═)/,'<session restore>\n');
+ const hash = code => require('crypto').createHash('sha256').update(nonAuth(code)).digest('hex');
+ assert.equal(hash(fs.readFileSync('workspace-core.js','utf8')),hash(originalCore),'non-auth legacy core behavior preserved');
  const index=fs.readFileSync('index.html','utf8');assert(!index.includes('document.write'));assert(index.includes('<script defer src="workspace-core.js'));
  assert(!/\.(insert|update|upsert|delete)\s*\(/.test(source));
- console.log('PASS: 5 sections, 7 dates, calendar interactions, half-day leave, paginated reads, employee filtering, admin menu/route checks, deep links and refresh; legacy core preserved byte-for-byte during deferred extraction; no new database writes.');
+ console.log('PASS: 5 sections, 7 dates, calendar interactions, half-day leave, paginated reads, employee filtering, admin menu/route checks, deep links and refresh; legacy core preserved outside explicit auth integration; no new database writes.');
 })().catch(e=>{console.error(e);process.exitCode=1});

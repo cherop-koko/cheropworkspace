@@ -1,0 +1,2 @@
+// Public client configuration only. Provider credentials belong in server secrets.
+window.CHEROPCommerceConfig = Object.freeze({"url": "https://pmgntojnfglppjtypwzq.supabase.co", "publishableKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtZ250b2puZmdscHBqdHlwd3pxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjkzOTUsImV4cCI6MjA5MTYwNTM5NX0.GyJdXYGbkzPHESJHp3HeZihnBV_2fSCvlIV44D78So8", "api": "https://pmgntojnfglppjtypwzq.supabase.co/functions/v1/commerce-api"});
