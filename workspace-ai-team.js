@@ -1,0 +1,33 @@
+/* New AI team register. No legacy tasks, employee records or business ledgers are read/written. */
+(() => {
+  'use strict';
+  const roles = [
+    ['lead','AI 총괄팀장','목표 · 배정 · 검수 · 대표님 보고','업무를 접수하고 한 명의 실행 책임자를 지정합니다. 결과를 검수해 대표님께 보고합니다.'],
+    ['finance','재무·경영관리','매출 · 정산 · 순익 · 현금흐름','금액 기준, 예산과 지급 계획을 관리합니다.'],
+    ['logistics','구매·재고·물류','발주 · 생산 · 재고 · 입출고','판매 가능 재고와 생산·도착 증빙을 연결합니다.'],
+    ['md','상품기획·채널 MD','상품 구성 · 옵션 · 상세 기획','상품 기준정보와 채널별 판매 구성을 책임집니다.'],
+    ['marketing','마케팅·성장관리','광고 · 인스타 운영 · 시장 조사','콘텐츠 방향과 캠페인 성과를 관리합니다.'],
+    ['creative','디자인·콘텐츠 제작','이미지 · 영상 · 카피 · 번역','확정된 기획과 승인된 원본으로 결과물을 제작합니다.'],
+    ['projects','프로젝트·인력운영','분기 계획 · 팝업 · 일정 · 업무량','담당자와 기한, 선행 업무와 현장 확인을 관리합니다.'],
+    ['quality','품질·고객경험','검수 · CS · 불량 · 브랜드 원본','제작 결과와 제품 사실을 대조하고 개선을 요청합니다.'],
+    ['systems','시스템·자동화','연결 · 실행 기록 · 백업 · 복구','반복 업무를 구현하고 성공·실패 기록을 확인합니다.']
+  ];
+  const statuses={queued:'시작 전',working:'진행 중',review:'검수 중',blocked:'확인 필요',done:'완료'};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const host=document.createElement('div'); host.id='page-ai-team';host.className='page';document.querySelector('.main').appendChild(host);
+  const menu=document.querySelector('#ws-navigation nav');
+  const entry=document.createElement('a');entry.className='ws-nav-link';entry.href='#ai-team';entry.dataset.wsPage='ai-team';entry.dataset.wsSub='';entry.textContent='AI 조직도';menu.insertBefore(entry,menu.children[1]||null);
+  const originalParse=parseHash;
+  parseHash=function(){if(location.hash==='#ai-team'||location.hash.startsWith('#ai-team/')){let sub='';try{sub=decodeURIComponent(location.hash.split('/')[1]||'');}catch{}return {page:'ai-team',sub};}return originalParse();};
+  const originalRender=renderPage;
+  renderPage=function(page,sub=''){originalRender(page,sub);if(page==='ai-team'){document.querySelector('.tb-nav').textContent='AI 운영본부';load(sub);}};
+  let data=null, error='', selected='lead', filter='active', generation=0;
+  const time=s=>s?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(new Date(s)):'기록 없음';
+  function render(){
+    const role=roles.find(r=>r[0]===selected)||roles[0],tasks=data?.tasks||[],mine=tasks.filter(t=>selected==='lead'||t.owner===selected),shown=mine.filter(t=>filter==='all'||(filter==='done'?t.status==='done':t.status!=='done'));
+    const card=r=>{const items=tasks.filter(t=>r[0]==='lead'||t.owner===r[0]);return `<a class="ai-person ${selected===r[0]?'selected':''}" href="#ai-team/${r[0]}" ${selected===r[0]?'aria-current="true"':''}><span class="ai-person-top"><span class="ai-avatar">${r[0]==='lead'?'총괄':String(roles.indexOf(r)).padStart(2,'0')}</span><span class="ai-chip">실행 연결 전</span></span><strong>${r[1]}</strong><small>${r[2]}</small><span class="ai-person-count">미완료 ${items.filter(t=>t.status!=='done').length} · 완료 ${items.filter(t=>t.status==='done').length}</span></a>`;};
+    host.innerHTML=`<div class="ai-team"><header class="ai-heading"><div><span class="ai-eyebrow">CHEROP · MONGMO</span><h1>AI 운영본부</h1><p>대표님의 지시부터 담당 배정, 검수와 결과 보고까지 한곳에서 확인합니다.</p></div><button data-ai="refresh">기록 새로고침</button></header><div class="ai-notice">새 조직의 업무만 표시합니다. 기존 워크스페이스 업무는 자동으로 가져오지 않습니다.</div>${error?`<p class="ai-error" role="alert">${esc(error)}</p>`:''}<div class="ai-summary"><div><small>업무 지시 · 결과 보고</small><strong>AI 총괄팀장</strong><span>현재 ChatGPT 대화에서 요청</span></div><div><small>새 조직 업무</small><strong>${data?tasks.filter(t=>t.status!=='done').length:'—'}건 미완료</strong><span>등록된 업무 기준 · 실시간 가동 수 아님</span></div><div><small>자동화 실행 연동</small><strong>미연결</strong><span>기존 자동화의 가동 여부와 별개입니다.</span></div></div><div class="ai-layout"><section aria-label="AI 조직도"><div class="ai-section-title"><h2>조직도</h2><span>담당을 선택해 주세요</span></div><div class="ai-chief">${card(roles[0])}</div><div class="ai-org-grid">${roles.slice(1).map(card).join('')}</div></section><aside class="ai-detail" aria-label="선택한 담당의 업무"><span class="ai-eyebrow">담당 상세</span><h2>${role[1]}</h2><p>${role[3]}</p><div class="ai-detail-note">${selected==='lead'?'모든 담당의 업무를 모아 보여드립니다.':'완료 결과는 총괄팀장이 검수해 보고드립니다.'}</div><div class="ai-filters" aria-label="업무 상태 필터">${[['active','미완료'],['done','완료'],['all','전체']].map(([id,label])=>`<button data-filter="${id}" aria-pressed="${filter===id}">${label}</button>`).join('')}</div><div aria-live="polite">${!data?'<p class="ai-empty">업무 기록을 아직 불러오지 못했습니다.</p>':shown.length?shown.map(t=>`<article class="ai-task"><span class="ai-chip">${esc(statuses[t.status]||'상태 미확인')}</span><h3>${esc(t.title)}</h3><dl><dt>실행 담당</dt><dd>${esc(roles.find(r=>r[0]===t.owner)?.[1]||'미배정')}</dd><dt>다음 행동</dt><dd>${esc(t.next)}</dd><dt>완료 기준</dt><dd>${esc(t.acceptance)}</dd><dt>기한</dt><dd>${esc(t.due||'미정')}</dd><dt>결과·검수</dt><dd>${esc(t.result||'아직 없습니다.')}</dd></dl></article>`).join(''):'<p class="ai-empty">해당 상태의 새 업무가 없습니다.<br>업무 지시는 총괄팀장과의 대화에 남겨 주세요.</p>'}</div><section class="ai-monitor"><h3>자동화 확인</h3><dl><dt>실행기 연결</dt><dd>미연결</dd><dt>최근 실행</dt><dd>연결 후 표시</dd><dt>최근 성공·실패</dt><dd>연결 후 표시</dd><dt>다음 예정 실행</dt><dd>연결 후 표시</dd></dl><p>이 화면을 여는 것만으로 AI 작업이 시작되지는 않습니다. 자동화 실행 기록 연결 전에는 가동 상태를 추정하지 않습니다.</p></section></aside></div><footer class="ai-footer">업무 기록 갱신: ${data?time(data.updatedAt):'미확인'} (한국시간) · 현재는 검수 후 갱신하는 기록이며 실시간 동기화가 아닙니다.</footer></div>`;
+  }
+  async function load(sub){selected=roles.some(r=>r[0]===sub)?sub:'lead';render();const id=++generation;try{const response=await fetch('workspace-ai-register.json',{cache:'no-store'});if(!response.ok)throw Error();const next=await response.json();if(next.schemaVersion!==1||!Array.isArray(next.tasks)||!next.updatedAt||!Number.isFinite(Date.parse(next.updatedAt)))throw Error();if(id!==generation)return;data=next;error='';render();}catch{if(id!==generation)return;error='최신 업무 기록을 불러오지 못했습니다. '+(data?'마지막 조회 기록을 표시합니다. ':'')+'새로고침하거나 총괄팀장에게 조회를 요청해 주세요.';render();}}
+  host.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;if(button.dataset.ai==='refresh')load(selected);if(button.dataset.filter){filter=button.dataset.filter;render();}});
+})();
