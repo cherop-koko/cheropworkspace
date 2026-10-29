@@ -8,6 +8,8 @@ Use the issued Imweb REST API V2 Key and Secret. An owner/admin enters them into
 
 Provision the representative and authorized co-manager as real Supabase Auth accounts and map verified user IDs to `commerce_access` before use. Do not authorize users from display names, the old PIN login, editable metadata, or self-registration. Existing legacy RLS issues are separate and remain unresolved by this page.
 
+After signing in, use **연결 확인** to exchange the server-held credentials for an Imweb token. The endpoint requires an enabled administrator and returns only success and a check timestamp. It does not return keys/tokens, fetch orders, or write database rows. A successful token exchange does not verify order/refund mapping.
+
 ## Server preparation
 
 The source in `supabase/functions/commerce-api` starts from recovered deployed v1. New endpoints add authenticated manual page advancement and admin-only read access to legacy 자사몰 totals. No new SQL migration is included here. `tick` and requests to enable scheduled collection are denied. Keep the existing cron job inactive.

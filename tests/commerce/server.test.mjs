@@ -12,6 +12,7 @@ globalThis.fetch = async (url, options = {}) => {
   if (address.pathname === '/rest/v1/rpc/commerce_claim') return json(null);
   if (address.pathname === '/rest/v1/commerce_channels') return json([{id:'imweb',versions:['v1','v2'],history_start:'2026-10-01',schedule_enabled:false,last_success_at:null}]);
   if (address.pathname === '/rest/v1/commerce_jobs' || address.pathname === '/rest/v1/commerce_checks') return json([]);
+  if (address.hostname === 'api.imweb.me' && address.pathname === '/v2/auth') return json({code:200,access_token:'synthetic-private-provider-token'});
   throw new Error('Unexpected test request: ' + address.pathname);
 };
 await import('../../supabase/functions/commerce-api/index.ts');
@@ -38,4 +39,18 @@ test('manual advance uses the existing queue and never writes legacy tables',asy
 test('scheduler stays off and cannot be enabled from the verification screen',async()=>{
   calls=[];assert.equal((await req('tick','POST',{},null)).status,409);assert.equal(calls.length,0);
   assert.equal((await req('settings','POST',{history_start:'2026-10-01',versions:['v2'],schedule_enabled:true})).status,409);assert(calls.every(x=>x.method==='GET'));
+});
+test('connection check authenticates without collecting orders, writing DB rows or returning secrets',async()=>{
+  calls=[];
+  const response=await req('connection','POST',{}), result=await response.json();
+  assert.equal(response.status,200);assert.equal(result.authenticated,true);assert.equal(result.orders_collected,false);
+  assert.equal(calls.filter(x=>x.path==='/v2/auth').length,1);
+  assert(calls.filter(x=>x.method!=='GET').every(x=>x.path==='/v2/auth'));
+  assert.equal(calls.some(x=>x.query.includes('synthetic-imweb')||x.query.includes('synthetic-private-provider-token')),false);
+  assert(!JSON.stringify(result).includes('synthetic'));
+});
+test('anonymous and non-admin callers cannot check the Imweb credentials',async()=>{
+  calls=[];assert.equal((await req('connection','POST',{},null)).status,401);
+  role='reader';assert.equal((await req('connection','POST',{})).status,403);role='admin';
+  assert.equal(calls.some(x=>x.path==='/v2/auth'),false);
 });

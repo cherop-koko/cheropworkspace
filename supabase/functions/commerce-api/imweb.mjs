@@ -90,6 +90,10 @@ export function createImweb({ key, secret, fetcher = fetch, sleep = ms => new Pr
   }
   async function authenticate() { const r = await request('auth', {}, true); if (typeof r.access_token !== 'string' || !r.access_token) throw new CommerceError('PROVIDER_TOKEN_MISSING', 502); token = r.access_token; }
   return {
+    async checkConnection() {
+      await authenticate();
+      return { authenticated: true };
+    },
     async page({ from, to, version, page }) {
       await authenticate(); const [a, b] = kstBounds(from, to);
       const rows = listOf(await request('shop/orders', { order_date_from: a, order_date_to: b, order_version: version, offset: page, limit: 10 }));

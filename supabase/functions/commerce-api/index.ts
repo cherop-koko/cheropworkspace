@@ -113,12 +113,17 @@ Deno.serve(async req => {
     const actor = await authorize(req);
     if (req.method === 'GET' && action === 'status') {
       return new Response(JSON.stringify({ actor: { member_id: actor.member_id, role: actor.role }, credentials_present: configured(),
-        capabilities: { manual_advance: true, comparison: true, cutover: false }, channel: await account(), jobs: await db('commerce_jobs?select=id,kind,from_date,to_date,status,error_code,page,version_index,orders_count,created_at,completed_at&order=created_at.desc&limit=12'),
+        capabilities: { connection_check: true, manual_advance: true, comparison: true, cutover: false }, channel: await account(), jobs: await db('commerce_jobs?select=id,kind,from_date,to_date,status,error_code,page,version_index,orders_count,created_at,completed_at&order=created_at.desc&limit=12'),
         checks: await db('commerce_checks?select=from_date,to_date,payment_matches,refund_verified,checked_at&order=checked_at.desc&limit=5'),
         refund_support: 'unverified', fixed_egress_ip: false, chatgpt_connected: false }), { headers });
     }
     if (req.method === 'GET' && action === 'report') return new Response(JSON.stringify(await report(url)), { headers });
     admin(actor);
+    if (req.method === 'POST' && action === 'connection') {
+      const client = createImweb({ key: env('IMWEB_API_KEY'), secret: env('IMWEB_SECRET_KEY'), deadline: Date.now() + 30000 });
+      await client.checkConnection();
+      return new Response(JSON.stringify({ authenticated: true, orders_collected: false, checked_at: new Date().toISOString() }), { headers });
+    }
     if (req.method === 'GET' && action === 'comparison') return new Response(JSON.stringify(await comparison(url)), { headers });
     if (req.method === 'POST' && action === 'advance') return new Response(JSON.stringify(await worker()), { headers });
     if (req.method !== 'POST' || !['sync', 'settings', 'check'].includes(action || '')) throw new CommerceError('NOT_FOUND', 404);

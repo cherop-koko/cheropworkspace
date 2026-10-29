@@ -3,7 +3,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const config = window.CHEROPCommerceConfig;
-  let client, status, busy = false, stop = false, generation = 0, reportRequest = 0;
+  let client, status, busy = false, checking = false, stop = false, generation = 0, reportRequest = 0;
   const money = n => Number.isFinite(n) ? n.toLocaleString('ko-KR') + '원' : '—';
   const codes = { SIGN_IN_REQUIRED: '로그인이 필요합니다.', ACCESS_DENIED: '이 계정에는 조회 권한이 없습니다.', ADMIN_REQUIRED: '관리자 권한이 필요합니다.', CREDENTIALS_MISSING: '아임웹 서버 키 등록을 기다리고 있습니다.', HISTORY_START_REQUIRED: '수집 시작일을 설정해 주세요.', PROVIDER_AUTH_REJECTED: '아임웹 인증 정보를 확인해야 합니다.', PROVIDER_RATE_LIMIT: '아임웹 조회 제한으로 수집을 잠시 멈췄습니다.', INVALID_RANGE: '조회 기간을 확인해 주세요.', SCHEDULER_DISABLED: '예약 수집은 비활성 상태입니다.', NETWORK_ERROR: '연결하지 못했습니다. 마지막 조회 결과를 유지합니다.', SYNC_IN_PROGRESS: '수집 중에는 시작일을 바꿀 수 없습니다.', NOT_FOUND: '서버 업데이트가 아직 적용되지 않았습니다.' };
   function notice(message, error = false) { $('notice').textContent = message; $('notice').classList.toggle('error', error); }
@@ -30,8 +30,9 @@
     return body;
   }
   function controls() {
-    $('sync').disabled = busy || !status?.credentials_present || status.actor?.role !== 'admin' || !status.capabilities?.manual_advance;
-    $('range-form').querySelector('[type=submit]').disabled = busy;
+    $('check-connection').disabled = busy || checking || !status?.credentials_present || status.actor?.role !== 'admin' || !status.capabilities?.connection_check;
+    $('sync').disabled = busy || checking || !status?.credentials_present || status.actor?.role !== 'admin' || !status.capabilities?.manual_advance;
+    $('range-form').querySelector('[type=submit]').disabled = busy || checking;
     $('pause').hidden = !busy;
   }
   async function refreshStatus() {
@@ -117,6 +118,19 @@
     });
     $('range-form').addEventListener('submit', async event => { event.preventDefault(); try { await loadReport(); } catch(e) { notice(errorText(e), true); } });
     $('sync').addEventListener('click', () => synchronize().catch(e => notice(errorText(e), true)));
+    $('check-connection').addEventListener('click', async () => {
+      if (busy || checking) return;
+      const ticket = generation;
+      checking = true; controls();
+      try {
+        const result = await api('connection', { body: {} });
+        if (ticket !== generation) return;
+        if (result.authenticated !== true) throw new Error();
+        $('connection-status').textContent = '아임웹 인증 성공 · 실주문 수집 전';
+        notice('아임웹 키 인증에 성공했습니다. 이 확인으로 주문을 수집하거나 기존 수기 내역을 변경하지 않습니다.');
+      } catch(e) { if (ticket === generation) notice(errorText(e), true); }
+      finally { checking = false; controls(); }
+    });
     $('pause').addEventListener('click', () => { stop = true; $('sync-state').textContent = '진행 중인 묶음 이후 추가 수집을 멈춥니다.'; });
     $('logout').addEventListener('click', async () => { clearPrivate(); await client.auth.signOut({ scope:'local' }); notice('로그아웃했습니다.'); });
     window.addEventListener('pagehide', () => { stop = true; generation++; });
