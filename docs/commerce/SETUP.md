@@ -8,7 +8,7 @@ Use the issued Imweb REST API V2 Key and Secret. An owner/admin enters them into
 
 Use the **existing workspace name selector** for both pages. `workspace-auth` validates passwords through Supabase Auth. The browser shares one persistent session; there is no second email/password form or separate sales account. Existing member IDs and business records remain unchanged.
 
-The previously public six-digit PINs are compromised credentials and must not be migrated into server authority. The project owner enters a **new, unique password for each existing member**, once, in [Edge Function Secrets](https://supabase.com/dashboard/project/pmgntojnfglppjtypwzq/settings/functions). Do not send these passwords through chat. Each must have 12–128 characters including letters and non-letters; use a password manager to generate them.
+The previously public six-digit PINs are compromised credentials and must not be migrated into server authority. The project owner enters a **new, unique password for each existing member**, once, in [Edge Function Secrets](https://supabase.com/dashboard/project/pmgntojnfglppjtypwzq). Do not send these passwords through chat. Each must have 12–128 characters including letters and non-letters; use a password manager to generate them.
 
 | Existing member | Secret name |
 | --- | --- |
