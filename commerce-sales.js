@@ -1,4 +1,4 @@
-/* Standalone verification page. No imports from the legacy app and no legacy DB writes. */
+/* Separate verification data/UI; only authentication is shared with the workspace. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -12,7 +12,9 @@
     generation++; stop = true; status = null;
     $('connected-panel').hidden = true; $('login-panel').hidden = false;
     ['manual-amount','api-amount','difference'].forEach(id => $(id).textContent = '—');
-    $('daily').replaceChildren(); $('password').value = '';
+    $('daily').replaceChildren();
+    ['manual-count','api-count','last-sync','sync-state','connection-status','orders-check','coverage'].forEach(id => $(id).textContent = '조회 전');
+    controls();
   }
   async function api(action, options = {}) {
     const { data, error } = await client.auth.getSession();
@@ -107,15 +109,10 @@
     finally { busy = false; controls(); }
   }
   async function start() {
-    if (!config || !window.supabase) { notice('화면을 불러오지 못했습니다. 새로고침해 주세요.', true); return; }
-    client = window.supabase.createClient(config.url, config.publishableKey, { auth: { storage: sessionStorage, storageKey: 'cherop-commerce-verification-auth', persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+    if (!config || !window.CHEROPWorkspaceAuth) { notice('화면을 불러오지 못했습니다. 새로고침해 주세요.', true); return; }
+    client = window.CHEROPWorkspaceAuth.getClient();
     const today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0,10);
     $('to').value = today; $('from').value = new Date(Date.parse(today) - 6 * 86400000).toISOString().slice(0,10);
-    $('login-form').addEventListener('submit', async event => {
-      event.preventDefault(); const button = event.currentTarget.querySelector('button'); button.disabled = true;
-      try { const result = await client.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value }); $('password').value = ''; if (result.error) throw Object.assign(new Error(), { code:'SIGN_IN_REQUIRED' }); await refreshStatus(); await loadReport(); }
-      catch(e) { notice(errorText(e), true); } finally { button.disabled = false; }
-    });
     $('range-form').addEventListener('submit', async event => { event.preventDefault(); try { await loadReport(); } catch(e) { notice(errorText(e), true); } });
     $('sync').addEventListener('click', () => synchronize().catch(e => notice(errorText(e), true)));
     $('check-connection').addEventListener('click', async () => {
@@ -132,10 +129,23 @@
       finally { checking = false; controls(); }
     });
     $('pause').addEventListener('click', () => { stop = true; $('sync-state').textContent = '진행 중인 묶음 이후 추가 수집을 멈춥니다.'; });
-    $('logout').addEventListener('click', async () => { clearPrivate(); await client.auth.signOut({ scope:'local' }); notice('로그아웃했습니다.'); });
+    $('logout').addEventListener('click', async () => { try { await window.CHEROPWorkspaceAuth.logout(); clearPrivate(); notice('워크스페이스에서 로그아웃했습니다.'); } catch(e) { notice(window.CHEROPWorkspaceAuth.errorText(e), true); } });
     window.addEventListener('pagehide', () => { stop = true; generation++; });
-    client.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') clearPrivate(); });
-    try { const { data } = await client.auth.getSession(); if (data.session) { await refreshStatus(); await loadReport(); } } catch(e) { notice(errorText(e), true); }
+    async function resume() {
+      try {
+        const profile = await window.CHEROPWorkspaceAuth.profile();
+        if (!profile) { clearPrivate(); return; }
+        if (!profile.admin) { clearPrivate(); notice('이 화면은 대표님·김효민님이 이용할 수 있습니다.', true); return; }
+        await refreshStatus(); await loadReport();
+      } catch(e) { clearPrivate(); notice(errorText(e), true); }
+    }
+    client.auth.onAuthStateChange(event => {
+      if (event === 'SIGNED_OUT') { clearPrivate(); notice('워크스페이스 로그인이 필요합니다.'); }
+      else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') setTimeout(resume, 0);
+    });
+    window.addEventListener('pageshow', event => { if(event.persisted) resume(); });
+    window.addEventListener('focus', resume);
+    await resume();
   }
   window.CHEROPCommerceVerification = { renderReport, money };
   start();

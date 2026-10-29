@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-let handler, role = 'admin', calls = [], legacyPages = [];
+let handler, role = 'admin', calls = [], legacyPages = [], metadata = null;
 globalThis.Deno = { env: { get: k => ({ SUPABASE_URL:'https://db.example.test', SUPABASE_SERVICE_ROLE_KEY:'synthetic-server-key', IMWEB_API_KEY:'synthetic-imweb-key', IMWEB_SECRET_KEY:'synthetic-imweb-secret' })[k] }, serve: fn => { handler = fn; } };
 globalThis.EdgeRuntime = { waitUntil() {} };
 globalThis.fetch = async (url, options = {}) => {
   const address = new URL(url); calls.push({ path:address.pathname, query:address.search, method:options.method || 'GET', body:options.body });
   const json = value => new Response(JSON.stringify(value), { headers:{'Content-Type':'application/json'} });
-  if (address.pathname === '/auth/v1/user') return options.headers.Authorization === 'Bearer synthetic-user-token' ? json({id:'synthetic-user',email_confirmed_at:'2026-01-01',is_anonymous:false}) : new Response('{}',{status:401});
+  if (address.pathname === '/auth/v1/user') return options.headers.Authorization === 'Bearer synthetic-user-token' ? json({id:'synthetic-user',email_confirmed_at:'2026-01-01',is_anonymous:false,...(metadata?{app_metadata:metadata}:{})}) : new Response('{}',{status:401});
   if (address.pathname === '/rest/v1/commerce_access') return json([{member_id:'synthetic-member',role}]);
   if (address.pathname === '/rest/v1/channel_sales_log') return json(legacyPages.shift() || []);
   if (address.pathname === '/rest/v1/rpc/commerce_claim') return json(null);
@@ -53,4 +53,23 @@ test('anonymous and non-admin callers cannot check the Imweb credentials',async(
   calls=[];assert.equal((await req('connection','POST',{},null)).status,401);
   role='reader';assert.equal((await req('connection','POST',{})).status,403);role='admin';
   assert.equal(calls.some(x=>x.path==='/v2/auth'),false);
+});
+
+test('shared workspace administrators can access revenue without a second commerce account',async()=>{
+  for(const member of ['ceo','hyomin']){
+    metadata={workspace_member_id:member,workspace_enabled:true};calls=[];
+    const response=await req('status');assert.equal(response.status,200);
+    assert.equal((await response.json()).actor.member_id,member);
+    assert(!calls.some(x=>x.path.endsWith('/commerce_access')));
+  }
+  metadata=null;
+});
+test('employees, disabled identities and reader roles cannot read any revenue endpoint',async()=>{
+  for(const claims of [{workspace_member_id:'hyunjin',workspace_enabled:true,admin:true},{workspace_member_id:'sungae',workspace_enabled:true},{workspace_member_id:'ceo',workspace_enabled:false}]){
+    metadata=claims;calls=[];
+    for(const endpoint of ['status','report','comparison'])assert.equal((await req(endpoint)).status,403);
+    assert(!calls.some(x=>x.path.includes('/rest/')));
+  }
+  metadata=null;role='reader';calls=[];
+  assert.equal((await req('report')).status,403);assert.equal((await req('status')).status,403);role='admin';
 });

@@ -1,0 +1,45 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const {JSDOM}=require('jsdom');
+const index=fs.readFileSync('index.html','utf8'),code=fs.readFileSync('workspace-purchase-orders.js','utf8');
+const dom=new JSDOM(index,{url:'https://example.test/',runScripts:'outside-only'});
+const {window}=dom,d=window.document;
+const order={id:'test-order',item:'허그키링 <test>',qty:500,orderDate:'2026-10-28',status:'ordered',logistics:{factory_dispatch_planned_on:'2026-10-31'}};
+const done={id:'hood',item:'후드 50cm',qty:200,status:'received',logistics:{domestic_received_on:'2026-10-28',received_quantity_confirmed:200}};
+const state={ops_orders:[order,done],inventory_images:{},plan:{}};
+const originalState=JSON.stringify(state);
+const ctx={document:d,window,Intl,Date,Number,String,Object,Map,Promise,console,
+ escapeHtml:s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
+ getAppState:async()=>state,invCurrentTab:'overview',location:{hash:'#inventory'},history:{replaceState(a,b,hash){ctx.location.hash=hash;}}};
+window.CHEROPSections={queryAll:async()=>[]};
+ctx.invSetTab=function(tab,el){ctx.invCurrentTab=tab;d.querySelectorAll('#inv-tabs .page-tab').forEach(x=>x.classList.remove('on'));if(el)el.classList.add('on');['overview','shiplog','channel','receipt','alert'].forEach(t=>d.getElementById('inv-tab-'+t).style.display=t===tab?'':'none');ctx.location.hash='#inventory/'+tab;};
+ctx.initInventory=function(){ctx.invCurrentTab='overview';['overview','shiplog','channel','receipt','alert'].forEach(t=>d.getElementById('inv-tab-'+t).style.display=t==='overview'?'':'none');};
+ctx.renderPage=async function(page,sub){if(page==='inventory'){ctx.initInventory();if(['overview','shiplog','channel','receipt','alert'].includes(sub))ctx.invSetTab(sub);}};
+vm.createContext(ctx);vm.runInContext(code,ctx);
+const api=window.CHEROPPurchaseOrders;
+(async()=>{
+ assert.equal(api.plusSeven('2026-11-30'),'2026-12-07');
+ assert.equal(api.plusSeven('2026-02-30'),'');
+ assert.equal(api.normalize(order,{},'2026-10-28').eta,'2026-11-07');
+ const actual={...order,logistics:{...order.logistics,factory_dispatch_actual_on:'2026-11-02',domestic_eta:'2026-11-07'}};
+ assert.equal(api.normalize(actual,{},'2026-10-28').eta,'2026-11-09');
+ assert.equal(api.normalize({...actual,logistics:{...actual.logistics,logistics_status:'yiwu_kc_wait',departure_target_on:'2026-11-08'}},{},'2026-10-28').eta,'');
+ assert.equal(api.normalize({...order,arrivalDate:'2026-10-12',status:'received',logistics:{}},{},'2026-10-28').received,'');
+ assert.equal(api.normalize({...order,status:'received',logistics:{}},{status:'completed',receipt_date:'2026-10-08'},'2026-10-28').received,'2026-10-08');
+ assert(api.normalize({...order,logistics:{factory_dispatch_planned_on:'2026-10-14'}},{},'2026-10-28').needsCheck);
+ ctx.invSetTab('purchase');await api.load();
+ assert.equal(d.getElementById('inv-tab-purchase').style.display,'');
+ assert(d.getElementById('inv-purchase-tab').classList.contains('on'));
+ assert.equal(d.querySelectorAll('#inv-tab-purchase tbody tr').length,2);
+ const button=d.querySelector('[data-po-detail="test-order"]');button.dispatchEvent(new window.Event('click',{bubbles:true}));
+ assert(d.querySelector('.po-detail-body').textContent.includes('2026-11-07'));
+ assert(!d.querySelector('#inv-tab-purchase test'));
+ d.querySelector('[data-po-close]').dispatchEvent(new window.Event('click',{bubbles:true}));assert(!d.querySelector('.po-detail-row'));
+ ctx.invSetTab('alert');assert.equal(d.getElementById('inv-tab-purchase').style.display,'none');
+ assert(d.querySelector('#inv-tabs .page-tab.on').textContent.includes('재고 알림'));
+ await ctx.renderPage('inventory','purchase');await api.load();assert.equal(d.getElementById('inv-tab-purchase').style.display,'');
+ await ctx.renderPage('inventory','');assert.equal(d.getElementById('inv-tab-purchase').style.display,'none');
+ assert.equal(JSON.stringify(state),originalState);
+ assert(!/setAppState|\.upsert\(|\.insert\(|\.update\(|\.delete\(/.test(code));
+ const tab=d.getElementById('inv-purchase-tab');assert(tab.previousElementSibling.textContent.includes('입고 일정'));
+ console.log(JSON.stringify({passed:['dispatch + 7 days','actual dispatch precedence','KC hold','no invented actual arrival','receipt evidence','overdue reconfirmation','safe product text','detail controls','adjacent tab','alert tab mapping','direct URL','hide on return','no data mutations']}));
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>window.close());

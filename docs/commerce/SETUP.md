@@ -6,7 +6,20 @@
 
 Use the issued Imweb REST API V2 Key and Secret. An owner/admin enters them into the Supabase project's Edge Functions → Secrets as `IMWEB_API_KEY` and `IMWEB_SECRET_KEY`. Never place values in chat, GitHub, browser configuration, URLs, logs, or this document. The server exchanges these credentials for an access token and requests orders with that token.
 
-Provision the representative and authorized co-manager as real Supabase Auth accounts and map verified user IDs to `commerce_access` before use. Do not authorize users from display names, the old PIN login, editable metadata, or self-registration. Existing legacy RLS issues are separate and remain unresolved by this page.
+Use the **existing workspace name selector** for both pages. `workspace-auth` validates passwords through Supabase Auth. The browser shares one persistent session; there is no second email/password form or separate sales account. Existing member IDs and business records remain unchanged.
+
+The previously public six-digit PINs are compromised credentials and must not be migrated into server authority. The project owner enters a **new, unique password for each existing member**, once, in [Edge Function Secrets](https://supabase.com/dashboard/project/pmgntojnfglppjtypwzq/settings/functions). Do not send these passwords through chat. Each must have 12–128 characters including letters and non-letters; use a password manager to generate them.
+
+| Existing member | Secret name |
+| --- | --- |
+| 고예흰 | `WORKSPACE_PASSWORD_CEO` |
+| 김효민 | `WORKSPACE_PASSWORD_HYOMIN` |
+| 정현진 | `WORKSPACE_PASSWORD_HYUNJIN` |
+| 김성애 | `WORKSPACE_PASSWORD_SUNGAE` |
+
+On a member's first successful login with this owner-set password, the server creates the corresponding Auth identity and fixed trusted metadata. No separate email account, invitation, or user signup is required. Internal `@workspace.cherop.invalid` identifiers are non-deliverable Auth aliases, not employee email addresses. The server never resets an existing account or attaches permissions to a colliding account. Do not delete/re-create Auth users to reset passwords: an owner should update that user's password through Supabase Auth administration. Remove each bootstrap secret after that member's Auth identity is provisioned. The secrets do not reset existing passwords if changed later.
+
+Permissions derive only from server-managed `app_metadata.workspace_member_id` and `workspace_enabled`. Only `ceo` and `hyomin` may use the commerce API, including reads. Set `workspace_enabled=false` through Auth administration to disable this binding; the API fetches current Auth user metadata each time. Existing enabled `commerce_access` administrators remain compatible for non-workspace identities; workspace identities cannot bypass disabled metadata through that fallback. Editable user metadata and `cherop_uid` never authorize. Existing legacy table RLS issues are separate and remain unresolved by this login change.
 
 After signing in, use **연결 확인** to exchange the server-held credentials for an Imweb token. The endpoint requires an enabled administrator and returns only success and a check timestamp. It does not return keys/tokens, fetch orders, or write database rows. A successful token exchange does not verify order/refund mapping.
 
@@ -14,7 +27,11 @@ After signing in, use **연결 확인** to exchange the server-held credentials 
 
 The source in `supabase/functions/commerce-api` starts from recovered deployed v1. New endpoints add authenticated manual page advancement and admin-only read access to legacy 자사몰 totals. No new SQL migration is included here. `tick` and requests to enable scheduled collection are denied. Keep the existing cron job inactive.
 
-The public frontend config includes only the existing public anon key. The page uses a separate sessionStorage key and does not import any legacy application script. The server revalidates every user's Auth token and `commerce_access` record.
+The public frontend config includes only the existing public anon key. Both pages use `workspace-auth-client.js`, the same Supabase client configuration and `cherop-workspace-auth-v1` localStorage session. Verification does not import legacy business modules. Logout broadcasts across tabs in the same browser. Commerce endpoints revalidate Auth and server-managed access, rather than trusting client state.
+
+Deploy `workspace-auth` and the updated `commerce-api` with their `_shared/workspace-identity.mjs` dependency. Their gateway `verify_jwt` is false because the login endpoint authenticates a password and authenticated endpoints independently call Auth `/user`. No business table migration or legacy data write is part of this change.
+
+Before publishing the new main login, configure all four new passwords, privately distribute each to the relevant member, and verify real login/session restore using the configured accounts. Do not deploy a login that locks staff out. The old main page remains in service until the coordinated rollout. Keep the current main commit as a rollback reference, but understand that reverting restores the old insecure PIN UI and is not a security fix.
 
 ## Verification before cutover
 
@@ -27,10 +44,10 @@ The public frontend config includes only the existing public anon key. The page 
 
 ## Current limits
 
-No live API credentials were used to develop this change. No live order import, refund reconciliation, account provisioning, database migration, server deployment or screen cutover is implied by unit tests. The V2 adapter's amount/status mappings must be verified against real responses. Refund amount/date and net sales remain unverified. Missing collection stays unknown rather than zero. A matching displayed difference is not proof of matching accounting definitions.
+Automated tests use synthetic credentials. Actual password setup, successful live employee login and Imweb token/order verification are separate rollout checks. No live order import, refund reconciliation, account provisioning, database migration, server deployment or screen cutover is implied by unit tests. The V2 adapter's amount/status mappings must be verified against real responses. Refund amount/date and net sales remain unverified. Missing collection stays unknown rather than zero. A matching displayed difference is not proof of matching accounting definitions.
 
 Net sales is intended as verified payments minus verified refunds, with payment-date and refund-date period attribution made explicit. Fees/settlement, Meta attribution, Toss item records, Kakao and The Hyundai Hi are excluded from the API total.
 
 ## Checks
 
-Run `node --test tests/commerce/server.test.mjs tests/commerce/ui.test.cjs` with Node 24 or later. These use synthetic data and mocked HTTP, not the production database.
+Run `node --test tests/commerce/*.test.*` with Node 24 or later. These use synthetic data and mocked HTTP, not the production database.

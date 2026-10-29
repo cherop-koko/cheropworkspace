@@ -20,7 +20,7 @@ if (typeof supabase === 'undefined' || !supabase.createClient) {
   throw new Error('supabase-js 로드 실패');
 }
 
-const db = supabase.createClient(SB_URL, SB_KEY);
+const db = window.CHEROPWorkspaceAuth.getClient(SB_URL, SB_KEY);
 
 /* Supabase REST 는 한 번에 1000행까지만 돌려준다.
    판매 행이 그보다 많으면 조용히 잘려서 판매속도·발주 계산이 실제보다 낮게 나온다.
@@ -45,10 +45,10 @@ window.addEventListener('unhandledrejection', function(ev){
 });
 
 const MEMBERS = [
-  { id:'ceo',     name:'고예흰', label:'대표님',   av:'고예', role:'대표',   pin:'960923', admin:true  },
-  { id:'hyomin',  name:'김효민', label:'김효민님', av:'김효', role:'운영',   pin:'970121', admin:true  },
-  { id:'hyunjin', name:'정현진', label:'정현진님', av:'정현', role:'물류',   pin:'960524', admin:false },
-  { id:'sungae',  name:'김성애', label:'김성애님', av:'김성', role:'QC',     pin:'711209', admin:false },
+  { id:'ceo',     name:'고예흰', label:'대표님',   av:'고예', role:'대표', admin:true  },
+  { id:'hyomin',  name:'김효민', label:'김효민님', av:'김효', role:'운영', admin:true  },
+  { id:'hyunjin', name:'정현진', label:'정현진님', av:'정현', role:'물류', admin:false },
+  { id:'sungae',  name:'김성애', label:'김성애님', av:'김성', role:'QC', admin:false },
 ];
 
 /* 팝업 일정 — 날짜순으로 등록해두면 대시보드 '중요 일정' 카드가
@@ -1103,26 +1103,45 @@ function selMember(id) {
   $('login-err').textContent='';
 }
 
-function doLogin() {
-  if(!selMemberId) { $('login-err').textContent='팀원을 선택해주세요.'; return; }
-  const m = MEMBERS.find(x=>x.id===selMemberId);
-  if($('pin-input').value !== m.pin) { $('login-err').textContent='비밀번호가 올바르지 않아요.'; $('pin-input').value=''; return; }
-  user = m;
-  sessionStorage.setItem('cherop_uid', m.id);
+let workspaceLoginBusy = false;
+function applyWorkspaceProfile(profile) {
+  const member = MEMBERS.find(x => x.id === profile?.id);
+  if (!member) throw Object.assign(new Error(), { code: 'ACCESS_DENIED' });
+  if (user?.id === member.id) return;
+  if (user) { location.reload(); return; } // discard previous member's cached data
+  user = { ...member, admin: profile.admin === true };
+  const entry = $('commerce-entry'); if (entry) entry.hidden = !user.admin;
+  if (new URLSearchParams(location.search).get('next') === 'sales-verification' && user.admin) {
+    location.replace('./sales-verification.html'); return;
+  }
   startApp();
+}
+async function doLogin() {
+  if (workspaceLoginBusy) return;
+  if (!selMemberId) { $('login-err').textContent='팀원을 선택해주세요.'; return; }
+  const memberId = selMemberId, password = $('pin-input').value;
+  const button = document.querySelector('.login-btn');
+  workspaceLoginBusy = true; button.disabled = true; $('login-err').textContent='로그인 확인 중…';
+  try {
+    applyWorkspaceProfile(await window.CHEROPWorkspaceAuth.login(memberId, password));
+    $('login-err').textContent='';
+  } catch (error) { $('login-err').textContent = window.CHEROPWorkspaceAuth.errorText(error); }
+  finally { $('pin-input').value=''; workspaceLoginBusy=false; button.disabled=false; }
 }
 
 $('pin-input').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
-async function logout() {
-  const ok = await customConfirm('로그아웃 하시겠어요?', ''); if(!ok) return;
+function hideWorkspaceSession() {
   sessionStorage.removeItem('cherop_uid');
   user=null; attState={}; attRowId=null;
-  $('app').classList.remove('on');
-  $('login').style.display='flex';
+  $('app').classList.remove('on'); $('login').style.display='flex';
   $('pin-input').value='';
-  selMemberId=null;
-  document.querySelectorAll('.login-member').forEach(el=>el.classList.remove('sel'));
+  const entry=$('commerce-entry'); if(entry) entry.hidden=true;
+}
+async function logout() {
+  const ok = await customConfirm('로그아웃 하시겠어요?', ''); if(!ok) return;
+  try { await window.CHEROPWorkspaceAuth.logout(); hideWorkspaceSession(); location.reload(); }
+  catch (error) { toast(window.CHEROPWorkspaceAuth.errorText(error)); }
 }
 
 /* ═══════════════════════════════════════
@@ -1147,13 +1166,24 @@ function startApp() {
 
 async function boot() {
   renderLoginMembers();
-  const uid = sessionStorage.getItem('cherop_uid');
-  if(uid) {
-    const m = MEMBERS.find(x=>x.id===uid);
-    if(m) { user=m; $('loading').style.display='none'; startApp(); return; }
+  sessionStorage.removeItem('cherop_uid'); // obsolete client-side marker never authorizes
+  const auth = window.CHEROPWorkspaceAuth;
+  async function resume() {
+    try {
+      const profile = await auth.profile();
+      if (profile) applyWorkspaceProfile(profile);
+      else if (user) { hideWorkspaceSession(); location.reload(); }
+    } catch (error) { const wasSignedIn=!!user; hideWorkspaceSession(); $('login-err').textContent=auth.errorText(error); if(wasSignedIn) location.reload(); }
+    finally { $('loading').style.display='none'; if (!user) $('login').style.display='flex'; }
   }
-  $('loading').style.display='none';
-  $('login').style.display='flex';
+  db.auth.onAuthStateChange(event => {
+    // Leave the Auth callback before invoking any asynchronous Auth methods.
+    if (event === 'SIGNED_OUT') { hideWorkspaceSession(); location.reload(); }
+    else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') setTimeout(resume, 0);
+  });
+  window.addEventListener('pageshow', event => { if(event.persisted) resume(); });
+  window.addEventListener('focus', resume);
+  await resume();
 }
 
 /* ═══════════════════════════════════════

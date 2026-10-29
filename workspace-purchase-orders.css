@@ -1,0 +1,64 @@
+/* Match the approved incoming-stock list; all rules are scoped to purchase records. */
+#inv-purchase-tab.page-tab{border:0!important;border-bottom:2px solid transparent!important;background:transparent!important;font:inherit!important;padding:12px 0!important;min-height:0;color:var(--light);border-radius:0}
+#inv-purchase-tab.page-tab.on{border-bottom-color:#b23a72!important;color:#b23a72}
+#inv-tab-purchase{font-family:inherit;color:#242424}
+#inv-tab-purchase .po-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0}
+#inv-tab-purchase .po-heading h2{font-size:14px;font-weight:500;margin:0}
+#inv-tab-purchase .po-heading h2 span{font-size:11px;font-weight:400;color:#888;margin-left:9px}
+#inv-tab-purchase .po-heading>span{font-size:11px;color:#888}
+#inv-tab-purchase .po-table{border-collapse:collapse;width:100%;table-layout:fixed;background:#fff}
+#inv-tab-purchase .po-table th{padding:10px 7px;border-top:1px solid #dedede;border-bottom:1px solid #e9e9e9;font-size:11px;font-weight:400;color:#888;text-align:left;white-space:nowrap}
+#inv-tab-purchase .po-table td{padding:10px 7px;border-bottom:1px solid #e9e9e9;vertical-align:middle;font-size:12px;line-height:1.5;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+#inv-tab-purchase .po-table td:first-child,#inv-tab-purchase .po-table th:first-child{padding-left:0}
+#inv-tab-purchase .po-table td:last-child,#inv-tab-purchase .po-table th:last-child{padding-right:0}
+#inv-tab-purchase .po-table td:nth-child(2){text-align:right;padding-right:16px}
+#inv-tab-purchase .po-table small{font-size:10px;color:#888;display:block;margin-top:3px}
+#inv-tab-purchase .po-table strong{font-size:13px;font-weight:500}
+#inv-tab-purchase button.po-product{display:flex;align-items:center;gap:9px;min-width:0;width:100%;text-align:left;padding:0!important;border:0;background:none;white-space:normal;font-weight:400}
+#inv-tab-purchase .po-product>span:last-child{min-width:0;overflow-wrap:anywhere}
+#inv-tab-purchase .po-product small{color:#888;font-size:10px;display:block;margin-top:3px}
+#inv-tab-purchase .po-thumb{display:grid;place-items:center;flex:0 0 34px;width:34px;height:36px;border:1px solid #ededed;background:#fafafa;overflow:hidden}
+#inv-tab-purchase .po-thumb img{display:block;width:100%;height:100%;object-fit:contain}
+#inv-tab-purchase .po-thumb>span{font-size:8px;color:#999;text-align:center;line-height:1.3}
+#inv-tab-purchase .po-muted{color:#999}
+#inv-tab-purchase .po-check{color:#b23a72}
+#inv-tab-purchase .po-badge{font-size:10px;display:inline-block;padding:3px 5px;color:#777;background:#f6f6f6}
+#inv-tab-purchase .po-badge.hold{background:#fbf4e6;color:#8a631b}
+#inv-tab-purchase .po-badge.check{background:#fbf0f5;color:#b23a72}
+#inv-tab-purchase .po-badge.done{background:#edf6ef;color:#38734e}
+#inv-tab-purchase .po-note{font-size:10px;color:#888;margin:13px 0 23px;line-height:1.7}
+#inv-tab-purchase .po-completed{border-top:1px solid #dedede;margin-top:22px}
+#inv-tab-purchase .po-completed>summary{font-size:12px;padding:14px 0;cursor:pointer;font-weight:500}
+#inv-tab-purchase .po-completed>summary span{font-size:11px;color:#888;font-weight:400;margin-left:8px}
+#inv-tab-purchase .po-empty{padding:20px 0;color:#888;font-size:12px}
+#inv-tab-purchase .po-detail-row>td{padding:0!important}
+#inv-tab-purchase .po-detail-body{padding:16px;background:#fafafa}
+#inv-tab-purchase .po-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+#inv-tab-purchase .po-detail-head strong{font-size:12px;font-weight:500}
+#inv-tab-purchase .po-detail-head button{border:0;background:none;color:#888;white-space:nowrap}
+#inv-tab-purchase .po-detail-body dl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0 10px}
+#inv-tab-purchase .po-detail-body dt{font-size:10px;color:#888;margin-bottom:4px}
+#inv-tab-purchase .po-detail-body dd{font-size:12px;margin:0;overflow-wrap:anywhere}
+#inv-tab-purchase .po-detail-body p{font-size:11px;line-height:1.8;color:#777;margin:12px 0 8px}
+@media(max-width:900px){#inv-tab-purchase .po-table td{font-size:11px;padding:9px 5px}#inv-tab-purchase .po-table th{font-size:10px;padding:9px 5px}#inv-tab-purchase .po-product{gap:6px}#inv-tab-purchase .po-thumb{width:29px;height:32px;flex-basis:29px}}
+@media(max-width:650px){
+ #inv-purchase-tab.page-tab{font-size:12px!important;padding:10px 0!important}
+ #inv-tab-purchase .po-heading>span{font-size:10px}
+ #inv-tab-purchase .po-table,#inv-tab-purchase .po-table tbody{display:block}
+ #inv-tab-purchase .po-table thead,#inv-tab-purchase .po-table colgroup{display:none}
+ #inv-tab-purchase .po-table tr:not(.po-detail-row){display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 7px;border-bottom:1px solid #e9e9e9;padding:14px 0}
+ #inv-tab-purchase .po-table td,#inv-tab-purchase .po-table td:first-child,#inv-tab-purchase .po-table td:last-child,#inv-tab-purchase .po-table td:nth-child(2){display:block;border:0;padding:0;font-size:12px;text-align:left}
+ #inv-tab-purchase td[data-label="상품"]{grid-column:1/4;grid-row:1;min-height:44px}
+ #inv-tab-purchase .po-table td:is([data-label="수량"],[data-label="발주 수량"]){grid-column:4;grid-row:1;text-align:right;padding-top:1px;font-size:11px}
+ #inv-tab-purchase td:is([data-label="수량"],[data-label="발주 수량"]):after{content:'개'}
+ #inv-tab-purchase .po-table td[data-label="상태"]{grid-column:4;grid-row:1;text-align:right;align-self:end;padding-top:23px}
+ #inv-tab-purchase td[data-label]:not([data-label="상품"]):not([data-label="수량"]):not([data-label="발주 수량"]):not([data-label="상태"]):before{content:attr(data-label);display:block;font-size:10px;color:#888;margin-bottom:5px}
+ #inv-tab-purchase .po-completed td[data-label="발주일"]{grid-column:1/3}
+ #inv-tab-purchase .po-completed td[data-label="실제 입고일"]{grid-column:3/5}
+ #inv-tab-purchase .po-thumb{width:34px;height:36px;flex-basis:34px}
+ #inv-tab-purchase .po-product{font-size:12px!important}
+ #inv-tab-purchase .po-detail-row,#inv-tab-purchase .po-detail-row>td{display:block}
+ #inv-tab-purchase .po-detail-body dl{grid-template-columns:1fr 1fr}
+ #inv-tab-purchase .po-detail-body{padding:13px}
+}
+@media(pointer:coarse){#inv-tab-purchase button,#inv-tab-purchase summary{min-height:44px}}

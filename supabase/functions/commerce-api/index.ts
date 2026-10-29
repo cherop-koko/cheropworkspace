@@ -1,4 +1,5 @@
 /// <reference path="./runtime.d.ts" />
+import { workspaceProfile } from '../_shared/workspace-identity.mjs';
 import { CommerceError, createImweb, day, dayKST, addDays } from './imweb.mjs';
 
 const env = (key: string) => Deno.env.get(key) || '';
@@ -32,6 +33,11 @@ async function authorize(req: Request) {
   if (!response.ok) throw new CommerceError('SIGN_IN_REQUIRED', 401);
   const identity = await response.json();
   if (!identity.id || !identity.email_confirmed_at || identity.is_anonymous) throw new CommerceError('ACCESS_DENIED', 403);
+  if (identity.app_metadata && Object.hasOwn(identity.app_metadata, 'workspace_member_id')) {
+    const profile = workspaceProfile(identity);
+    if (!profile?.admin) throw new CommerceError('ACCESS_DENIED', 403);
+    return { member_id: profile.id, role: 'admin', id: identity.id };
+  }
   const access = (await db('commerce_access?user_id=eq.' + encodeURIComponent(identity.id) + '&enabled=eq.true&select=member_id,role'))[0];
   if (!access) throw new CommerceError('ACCESS_DENIED', 403);
   return { ...access, id: identity.id };
@@ -111,6 +117,7 @@ Deno.serve(async req => {
     const url = new URL(req.url), action = url.pathname.split('/').filter(Boolean).at(-1);
     if (action === 'tick') throw new CommerceError('SCHEDULER_DISABLED', 409);
     const actor = await authorize(req);
+    admin(actor);
     if (req.method === 'GET' && action === 'status') {
       return new Response(JSON.stringify({ actor: { member_id: actor.member_id, role: actor.role }, credentials_present: configured(),
         capabilities: { connection_check: true, manual_advance: true, comparison: true, cutover: false }, channel: await account(), jobs: await db('commerce_jobs?select=id,kind,from_date,to_date,status,error_code,page,version_index,orders_count,created_at,completed_at&order=created_at.desc&limit=12'),
@@ -118,7 +125,6 @@ Deno.serve(async req => {
         refund_support: 'unverified', fixed_egress_ip: false, chatgpt_connected: false }), { headers });
     }
     if (req.method === 'GET' && action === 'report') return new Response(JSON.stringify(await report(url)), { headers });
-    admin(actor);
     if (req.method === 'POST' && action === 'connection') {
       const client = createImweb({ key: env('IMWEB_API_KEY'), secret: env('IMWEB_SECRET_KEY'), deadline: Date.now() + 30000 });
       await client.checkConnection();
@@ -164,4 +170,3 @@ Deno.serve(async req => {
     return new Response(JSON.stringify({ error: cleanCode(e) }), { status: e instanceof CommerceError ? e.status : 500, headers });
   }
 });
-
