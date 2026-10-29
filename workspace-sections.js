@@ -65,7 +65,7 @@ if(ps.tab==='routines'){const r=s.routines?.[user.name]||[];body=`<div class="w2
 if(ps.tab==='notes'){const notes=(s.memos||[]).filter(n=>n.author===user.name);body=`<div class="w2-subhead"><h2>메모</h2>${action('메모 등록','memo-new')}</div>${notes.map(n=>`<div class="w2-list-row"><strong>${esc(n.title||n.text||n.content||'메모')}</strong>${action('열기','memo-edit',n.id)}</div>`).join('')||empty('등록된 메모가 없습니다.')}`;}
 view.innerHTML=head('업무·프로젝트','',ps.tab==='projects'?action('+ 프로젝트 등록','project-new'):action('+ 업무 등록','task-new'))+tabs([['list','업무 목록'],['projects','프로젝트'],['routines','반복 업무'],['notes','메모']],ps.tab,'task-tab')+body;
 }catch(e){fail(view,e);}}
-initTasks=function(sub=''){tasksWho=MEMBERS.some(m=>m.name===sub)?sub:user.name;ps.owner=['all','me',...MEMBERS.map(m=>m.name)].includes(sub)?sub:['projects','routines','notes','list'].includes(sub)?ps.owner:'me';ps.tab=['list','projects','routines','notes'].includes(sub)?sub:'list';ps.selected='';renderTasks();};
+initTasks=function(sub=''){tasksWho=MEMBERS.some(m=>m.name===sub)?sub:user.name;ps.owner=['all','me',...MEMBERS.map(m=>m.name)].includes(sub)?sub:['projects','routines','notes','list','operations'].includes(sub)?ps.owner:'me';ps.tab=['list','projects','routines','notes','operations'].includes(sub)?sub:'list';ps.selected='';renderTasks();};
 loadAllTasks=renderTasks;loadProjects=function(){ps.tab='projects';ps.selected=selectedProjId||'';renderTasks();};
 // Route #project uses the same consolidated category and original project IDs.
 const originalTaskView=renderTasks;
@@ -123,7 +123,7 @@ const previousRenderPage=renderPage;
 renderPage=function(page,sub=''){
  previousRenderPage(page,sub);
  syncBrandIdentity();
- if(page==='tasks')document.querySelector('.tb-nav').textContent='업무·프로젝트 / '+({projects:'프로젝트',routines:'반복 업무',notes:'메모'}[sub]||'업무 목록');
+ if(page==='tasks')document.querySelector('.tb-nav').textContent='업무·프로젝트 / '+({projects:'프로젝트',routines:'반복 업무',notes:'메모',operations:'AI 총괄'}[sub]||'업무 목록');
  requestAnimationFrame(()=>{const navEl=document.querySelector('#ws-navigation > nav');const selected=navEl?.querySelector('[aria-current=page]');if(matchMedia('(max-width:650px)').matches&&selected&&navEl){navEl.scrollTo({left:Math.max(0,selected.offsetLeft-navEl.clientWidth/2+selected.clientWidth/2),behavior:'smooth'});}});
  if(['tasks','project','manual','popup','lineup','ops'].includes(page))document.querySelectorAll('.ws-context-links').forEach(e=>e.hidden=true);
  document.querySelectorAll('[data-ws-page]').forEach(e=>{const selected=(page==='assets'?'manual':page==='project'?'tasks':page==='attendance'?'notice':page)===e.dataset.wsPage;if(selected)e.setAttribute('aria-current','page');else e.removeAttribute('aria-current');});
