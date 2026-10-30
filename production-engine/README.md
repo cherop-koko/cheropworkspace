@@ -64,3 +64,5 @@ v1은 외부 생성 AI API를 호출하지 않습니다. 기존 Supabase 함수/
 
 ## 화면 변경 필수 기준
 화면 작업 전 WORKSPACE_DESIGN_RULES.md를 읽으세요. 제작실은 AI 조직도 안의 탭이며, 기존 공통 디자인을 재사용합니다. 새 시각 테마를 추가하지 마세요. 미리보기는 자체 포함 HTML을 별도 보관하고 app_state.cherop_production_previews의 jobs[작업UUID]에 previewURL/downloadURL을 기록합니다. ZIP만으로 미리보기가 가능하다고 안내하지 않습니다.
+
+미리보기 전달 규칙(2026-10-30): 모바일 파일 뷰어가 HTML을 코드로 표시하므로 HTML 파일 링크를 웹 미리보기로 안내하지 않는다. 비공개 Sites 웹 미리보기를 사용한다. 현재 K01: https://cherop-production-preview.yehuingo.chatgpt.site (project_id appgprj_6ae4906775b081919e45c0d6c5c3994a). 원본·생산 Storage는 비공개 유지. 파일 받기는 별도 링크.

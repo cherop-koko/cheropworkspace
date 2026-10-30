@@ -7,7 +7,7 @@ let timer=null,ticket=0,filter='active',data={},previews={},updated='';
 const active=()=>location.hash==='#ai-team/production';
 const names={queued:'실행 대기',working:'제작 중',review:'검수 대기',blocked:'자료 확인 필요',failed:'실행 실패',cancelled:'취소',approved:'승인'};
 const time=value=>value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value)):'—';
-function safeLink(value){try{const u=new URL(value);return u.protocol==='https:'&&u.hostname==='chatgpt.com'&&u.pathname==='/library'?esc(u.href):'';}catch{return '';}}
+function safeLink(value){try{const u=new URL(value);return u.protocol==='https:'&&((u.hostname==='chatgpt.com'&&u.pathname==='/library')||u.hostname==='cherop-production-preview.yehuingo.chatgpt.site')?esc(u.href):'';}catch{return '';}}
 function paint(error=''){
  if(!active())return;
  const jobs=data.jobs||[],shown=jobs.filter(j=>filter==='all'||!['cancelled','approved'].includes(j.status));
