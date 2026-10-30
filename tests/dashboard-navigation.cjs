@@ -16,7 +16,7 @@ assert(!menuHtml.includes('기존 메뉴'));assert(!menuHtml.includes('처리할
 
 (async()=>{
  await ctx.loadDashboard();const view=nodes.get('ws-dashboard');let html=view.innerHTML;
- const labels=['주간 캘린더','처리할 업무','진행 프로젝트','공지','오프라인·팝업 현황'];let last=-1;for(const label of labels){const at=html.indexOf('<h2>'+label+'</h2>');assert(at>last,label);last=at;}
+ const labels=['공지','주간 캘린더','처리할 업무','진행 프로젝트','오프라인·팝업 현황'];let last=-1;for(const label of labels){const at=html.indexOf('<h2>'+label+'</h2>');assert(at>last,label);last=at;}
  assert.equal((html.match(/data-week="day"/g)||[]).length,7);
  assert(html.includes('실제 프로젝트'));assert(html.includes('实际')===false);assert(!html.includes('일반 일정 숨김'));
  assert(calls.some(c=>c[0]==='read'&&c[1]==='tasks'&&c[2]===500),'pagination');
