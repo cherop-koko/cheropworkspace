@@ -1,0 +1,32 @@
+name: CHEROP AI production
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: cherop-ai-production
+  cancel-in-progress: false
+jobs:
+  produce:
+    if: vars.CHEROP_AI_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production-ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install renderer
+        run: |
+          pip install -r production-engine/ai-worker/requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Produce one queued product
+        env:
+          OPENAI_API_KEY: ${{ secrets.CHEROP_OPENAI_API_KEY }}
+          CHEROP_TEXT_MODEL: ${{ vars.CHEROP_TEXT_MODEL }}
+          CHEROP_SUPABASE_URL: https://pmgntojnfglppjtypwzq.supabase.co
+          CHEROP_SUPABASE_SERVICE_KEY: ${{ secrets.CHEROP_SUPABASE_SERVICE_KEY }}
+        run: python production-engine/ai-worker/cloud.py
