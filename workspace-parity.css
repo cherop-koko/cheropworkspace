@@ -50,6 +50,11 @@
 #app.workspace-shell .w6-tasks .tp-row-title{padding:0;text-align:left;min-width:0}
 #app.workspace-shell .w6-tasks .tp-row-title strong{display:block;font-size:12px;letter-spacing:-.2px}
 #app.workspace-shell .w6-tasks .tp-row-title small{display:block;font-size:10px;color:var(--hp-sub);margin-top:4px}
+#app.workspace-shell .w6-tasks .tp-check-preview{display:grid;gap:3px;margin-top:5px;font-size:11px;line-height:1.55;color:var(--hp-sub);white-space:normal}
+#app.workspace-shell .w6-tasks .tp-check-preview-item{display:grid;grid-template-columns:12px minmax(0,1fr);gap:5px;align-items:start}
+#app.workspace-shell .w6-tasks .tp-check-preview-mark{text-align:center;line-height:1.55}
+#app.workspace-shell .w6-tasks .tp-check-preview-text{min-width:0;overflow-wrap:anywhere}
+#app.workspace-shell .w6-tasks .tp-check-preview-item.is-done .tp-check-preview-text{color:#777;text-decoration:line-through}
 #app.workspace-shell .w6-tasks .tp-row.done .tp-row-title strong{text-decoration:line-through;color:var(--hp-sub)}
 #app.workspace-shell .w6-tasks .tp-project-link{text-align:left;padding:0;color:var(--hp-sub);font-size:10px}
 #app.workspace-shell .w6-tasks .tp-cell-label{display:none}
