@@ -6,6 +6,19 @@ import asyncio, base64, hashlib, html, json, os, re, sys, time
 from pathlib import Path
 from urllib.request import Request, urlopen, build_opener, HTTPRedirectHandler
 from urllib.parse import urlparse
+from urllib.parse import urljoin
+from html.parser import HTMLParser
+
+class SourceImages(HTMLParser):
+    def __init__(self,base): super().__init__(); self.base=base; self.items=[]
+    def handle_starttag(self,tag,attrs):
+        if tag!='img': return
+        a=dict(attrs);value=a.get('data-original') or a.get('data-src') or a.get('src')
+        if not value:return
+        url=urljoin(self.base,value)
+        p=urlparse(url)
+        if p.scheme=='https' and p.hostname in ('cherop.com','www.cherop.com','cdn.imweb.me'):
+            self.items.append({'url':url,'description':a.get('alt',''),'source':self.base})
 
 class Blocked(Exception): pass
 class NoRedirect(HTTPRedirectHandler):
@@ -27,7 +40,7 @@ def validate_brief(b):
     if hashlib.sha256(t.encode()).hexdigest()!=b['template']['sha256']: raise Blocked('기본틀 해시 불일치')
     if re.search(r'<script\b|\son\w+\s*=|<iframe\b|javascript:',t,re.I): raise Blocked('실행 코드 금지')
     if not b.get('facts') or not b.get('sources'): raise Blocked('확정 상품정보·출처 필요')
-    if not b.get('assetCatalog'): raise Blocked('상품별 원본 사진 목록 필요')
+    if b.get('assetCatalog') and len(b['assetCatalog'])>40: raise Blocked('한 작업 원본 40개 한도')
     if any(x not in b.get('texts',{}) for x in b.get('lockedTextKeys',[])): raise Blocked('고정 문구 슬롯 오류')
     if re.search(r'신생아|0세|KC 안전기준',t+' '.join(b.get('texts',{}).values())) and not b.get('kcEvidence'):
         raise Blocked('상품별 KC·사용연령 증빙 필요')
@@ -101,12 +114,20 @@ async def run(b,out):
         events.append({'time':time.time(),'stage':stage,**detail})
         (out/'progress.json').write_text(json.dumps(events,ensure_ascii=False,indent=2))
     status('공식 자료 수집')
-    sources=[]
+    sources=[];discovered=[]
     for url in b['sources']:
         raw,mime=read_url(url,{'cherop.com','www.cherop.com'})
         if mime not in ('text/html','text/plain'): raise Blocked('상품 출처 형식 오류')
+        parser=SourceImages(url);parser.feed(raw.decode('utf-8','replace'));discovered.extend(parser.items)
         text=re.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>','',raw.decode('utf-8','replace'),flags=re.I)
         sources.append({'url':url,'text':re.sub('<[^>]+>',' ',text)[:24000]})
+    if not b.get('assetCatalog'):
+        # Candidate discovery is not SKU certification. Model sees source + image,
+        # and must flag insufficient size evidence instead of guessing.
+        unique={x['url']:x for x in discovered}
+        if not unique: raise Blocked('공식몰 원본 이미지 탐색 결과 없음')
+        if len(unique)>40: raise Blocked('공식몰 후보 40개 초과: 상품 상세 영역을 지정해야 합니다')
+        b['assetCatalog']={f'found{i:03}':dict(x,productKey=b['productKey'],verification='candidate_not_verified') for i,x in enumerate(unique.values())}
     assets={};catalog=[]
     for key,item in b['assetCatalog'].items():
         if item.get('productKey')!=b['productKey']: raise Blocked('다른 상품 사진: '+key)

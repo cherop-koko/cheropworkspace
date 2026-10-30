@@ -7,6 +7,10 @@ def brief():
  return {'schemaVersion':2,'productKey':'K02','productName':'몽모 50cm','template':{'html':t,'sha256':hashlib.sha256(t.encode()).hexdigest()},'facts':{'size':'50cm'},'sources':['https://cherop.com/all/?idx=101'],'texts':{'title':'몽모','size':'50cm'},'lockedTextKeys':['size'],'assetCatalog':{'photo':{'productKey':'K02','url':'https://cdn.imweb.me/test.png'}}}
 def plan(): return {'texts':{'title':'곁에 두는 몽모','size':'50cm'},'assets':{'hero':'photo'},'issues':[]}
 class Tests(unittest.TestCase):
+ def test_source_images_only_approved_hosts(self):
+  p=w.SourceImages('https://cherop.com/all/?idx=101')
+  p.feed('<img src="https://evil.test/x"><img data-src="//cdn.imweb.me/a.png" alt="몽모"><img src="/b.jpg">')
+  self.assertEqual(len(p.items),2);self.assertEqual(p.items[0]['url'],'https://cdn.imweb.me/a.png')
  def test_template_tampering(self):
   b=brief();b['template']['html']+='changed'
   with self.assertRaises(w.Blocked):w.validate_brief(b)
