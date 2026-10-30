@@ -8,7 +8,7 @@
 
 ## 위치와 연결
 
-- 워크스페이스: https://cherop-koko.github.io/cheropworkspace/#production-engine
+- 워크스페이스: https://cherop-koko.github.io/cheropworkspace/#ai-team/production
 - Supabase project: pmgntojnfglppjtypwzq
 - Edge Function: production-engine
 - 비공개 Storage bucket: cherop-production
@@ -61,3 +61,6 @@ v1은 외부 생성 AI API를 호출하지 않습니다. 기존 Supabase 함수/
 
 `node --test tests/production-engine/renderer.test.mjs`.
 승인 K01 본문·이미지·폰트 보존 재현, 실서버 cron→job→private ZIP→notice 종단 시험. 기존 승인본/K17 등 병행 제작 자료는 수정하지 않습니다.
+
+## 화면 변경 필수 기준
+화면 작업 전 WORKSPACE_DESIGN_RULES.md를 읽으세요. 제작실은 AI 조직도 안의 탭이며, 기존 공통 디자인을 재사용합니다. 새 시각 테마를 추가하지 마세요. 미리보기는 자체 포함 HTML을 별도 보관하고 app_state.cherop_production_previews의 jobs[작업UUID]에 previewURL/downloadURL을 기록합니다. ZIP만으로 미리보기가 가능하다고 안내하지 않습니다.

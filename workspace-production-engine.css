@@ -1,1 +1,23 @@
-.pe-wrap{max-width:1100px;margin:auto;padding:28px}.pe-wrap header{display:flex;justify-content:space-between;align-items:start;gap:16px}.pe-wrap h1{font-size:26px;margin:8px 0}.pe-wrap h2{font-size:17px;margin:14px 0 8px}.pe-wrap p{line-height:1.8;word-break:keep-all}.pe-wrap button{border:1px solid #ddd;background:white;border-radius:7px;padding:10px 14px;cursor:pointer}.pe-info{background:#f7f6f3;border:1px solid #e9e6e1;border-radius:12px;padding:20px;margin:20px 0}.pe-info p{font-size:13px;margin:7px 0}.pe-stats{display:flex;gap:26px;margin:22px 0}.pe-stats b{margin-left:8px}.pe-muted{font-size:12px;color:#7a7a7a;overflow-wrap:anywhere}.pe-jobs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.pe-jobs article{border:1px solid #e5e5e5;border-radius:12px;padding:20px;background:#fff}.pe-status{display:inline-block;font-size:12px;background:#ece9f5;color:#49405e;padding:5px 9px;border-radius:5px;margin-right:10px}.pe-error{color:#a83e38;font-size:13px}@media(max-width:640px){.pe-wrap{padding:18px}.pe-jobs{grid-template-columns:1fr}.pe-stats{gap:15px;font-size:13px}}
+/* Inherit AI-team tokens and compact workspace typography. No separate visual theme. */
+#page-ai-team .ai-work-tabs{display:flex;gap:24px;border-bottom:1px solid var(--ai-line,#e7e5e4);margin:0 0 20px}
+#page-ai-team .ai-work-tabs a{display:block;padding:10px 0;border-bottom:2px solid transparent;color:var(--ai-muted,#747474);font-size:12px;text-decoration:none;line-height:20px}
+#page-ai-team .ai-work-tabs a[aria-current=page]{color:var(--ai-pink,#ba4070);border-bottom-color:var(--ai-pink,#ba4070)}
+#page-ai-team .ai-work-tabs a:focus-visible,#page-ai-team .pe-actions a:focus-visible{outline:2px solid var(--ai-pink);outline-offset:3px}
+#page-ai-team .pe-table{width:100%;border-collapse:collapse;font-size:11px;text-align:left}
+#page-ai-team .pe-table th{font-weight:400;color:var(--ai-muted);padding:10px 12px;border-bottom:1px solid var(--ai-line);background:#fafafa;white-space:nowrap}
+#page-ai-team .pe-table td{padding:16px 12px;border-bottom:1px solid var(--ai-line);vertical-align:top;line-height:1.8}
+#page-ai-team .pe-table th:first-child,#page-ai-team .pe-table td:first-child{padding-left:0;width:42%}
+#page-ai-team .pe-table td:first-child strong{font-size:12px;font-weight:500;display:block;margin-top:3px}
+#page-ai-team .pe-product,#page-ai-team .pe-muted{font-size:10px;color:var(--ai-muted)}
+#page-ai-team .pe-job-info{margin-top:7px;color:var(--ai-muted);font-size:10px}
+#page-ai-team .pe-job-info summary,#page-ai-team .pe-guide summary{cursor:pointer}
+#page-ai-team .pe-job-info span{overflow-wrap:anywhere;display:block;margin-top:7px}
+#page-ai-team .pe-job-info p{margin:3px 0}
+#page-ai-team .pe-actions{display:flex;gap:8px;flex-wrap:wrap}
+#page-ai-team .pe-actions a{font-size:11px;line-height:20px;min-height:30px;padding:4px 10px;border:1px solid var(--ai-line);color:inherit;background:white;text-decoration:none;white-space:nowrap}
+#page-ai-team .pe-actions .pe-preview{color:var(--ai-pink);border-color:#e7b6c8;background:var(--ai-soft)}
+#page-ai-team .pe-state-review{color:var(--ai-pink);background:var(--ai-soft)}
+#page-ai-team .pe-guide{margin-top:24px;border-top:1px solid var(--ai-line);padding-top:16px;font-size:11px;color:var(--ai-muted)}
+#page-ai-team .pe-guide p{line-height:1.8;margin:10px 0}
+@media(max-width:650px){#page-ai-team .pe-table thead{display:none}#page-ai-team .pe-table,#page-ai-team .pe-table tbody,#page-ai-team .pe-table tr{display:block}#page-ai-team .pe-table tr{padding:12px 0;border-bottom:1px solid var(--ai-line)}#page-ai-team .pe-table td{display:flex;gap:12px;padding:5px 0;border:0;width:auto!important}#page-ai-team .pe-table td:before{content:attr(data-label);color:var(--ai-muted);width:42px;flex-shrink:0}#page-ai-team .pe-table td:first-child{display:block;padding:0 0 10px}#page-ai-team .pe-table td:first-child:before{display:none}#page-ai-team .pe-team .ai-summary{grid-template-columns:repeat(3,minmax(0,1fr))}#page-ai-team .pe-team .ai-summary>div{padding:14px 8px;border-bottom:0;border-right:1px solid var(--ai-line)}#page-ai-team .pe-team .ai-summary>div:first-child{padding-left:0}#page-ai-team .pe-team .ai-summary>div:last-child{border-right:0}#page-ai-team .pe-team .ai-summary span{display:none}}
+@media(pointer:coarse){#page-ai-team .pe-actions a,#page-ai-team .ai-work-tabs a{min-height:44px;display:inline-flex;align-items:center}}
