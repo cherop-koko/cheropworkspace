@@ -271,3 +271,24 @@
 @media(max-width:650px){.w7-rsv-head{display:none}.w7-rsv-row{grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;padding:12px 0}.w7-rsv-row strong{grid-column:1;grid-row:1}.w7-rsv-channel{grid-column:1;grid-row:2}.w7-rsv-qty{grid-column:2;grid-row:1}.w7-rsv-row time{grid-column:2;grid-row:2}.w7-reservation-filter{gap:6px}.w7-reservation-filter label:first-child{flex:0 1 105px}.w7-reservations .card{padding:14px}.w7-reservations .card-head{flex-wrap:wrap}}
 .w7-reservations .w2-button{border:1px solid #e5e5e5;background:#fff;color:#222;font-family:inherit;cursor:pointer}
 .w7-reservations .w2-button:hover{border-color:#c54179;color:#c54179}
+
+/* Compact project summaries; full source text remains in project details. */
+#app.workspace-shell .w6-tasks .tp-projects{align-items:start;grid-template-columns:repeat(2,minmax(0,1fr))}
+#app.workspace-shell .w6-tasks .tp-project-card{min-width:0}
+#app.workspace-shell .w6-tasks .tp-project-card .tp-project-excerpt{font-size:12px;line-height:1.75;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;min-height:3.5em;margin:10px 0 18px}
+#app.workspace-shell .w6-tasks .tp-project-description{grid-column:1/-1;min-width:0}
+#app.workspace-shell .w6-tasks .tp-project-description .w6-preserve{font-size:13px;line-height:1.9;overflow-wrap:anywhere;max-width:78ch}
+#app.workspace-shell .w6-tasks .tp-routine-details{margin-top:10px;font-size:12px;line-height:1.8;font-weight:400}
+#app.workspace-shell .w6-tasks .tp-routine-details summary{cursor:pointer;color:var(--hp-sub);padding:5px 0}
+#app.workspace-shell .w6-tasks .tp-routine-details ul{padding-left:18px;margin:8px 0 0}
+#app.workspace-shell .w6-tasks .tp-routine-details li{margin:0 0 8px;overflow-wrap:anywhere}
+#app.workspace-shell .w6-tasks .tp-routine-row{align-items:start}
+@media(max-width:1100px){
+ #app.workspace-shell .w6-tasks .tp-projects{grid-template-columns:minmax(0,1fr)}
+ #app.workspace-shell .w6-tasks .tp-project-card h2{font-size:17px;line-height:1.5}
+ #app.workspace-shell .w6-tasks .tp-project-card .tp-project-excerpt{font-size:14px;min-height:0}
+ #app.workspace-shell .w6-tasks .tp-project-description .w6-preserve{font-size:14px}
+ #app.workspace-shell .w6-tasks .tp-routine-row .tp-row-title{font-size:14px;line-height:1.6;text-align:left}
+ #app.workspace-shell .w6-tasks .tp-routine-details{font-size:14px}
+ #app.workspace-shell .w6-tasks .tp-project-bottom{gap:12px;flex-wrap:wrap}
+}
