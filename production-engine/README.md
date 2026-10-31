@@ -1,37 +1,23 @@
-# 체로프 제작프로그램 · 제작실행기 v1
+# 체로프 제작실 · 수동 업무 및 상세페이지 보관
 
-## 현재 실제로 하는 일
+2026-10-31 대표님 확정: 유료 API 자동제작은 사용하지 않습니다. 기존 업무·프로젝트에서 등록·확인하고 제작실은 결과물 보관용으로 사용합니다. 자동제작 재활성화, API 키 등록 요청, 대기열 제출은 하지 않습니다.
 
-승인 HTML을 불변 템플릿으로 등록하고 이미지·움짤·폰트와 문구 슬롯을 별도 원본 파일과 작은 입력 JSON에 저장합니다. 서버는 1분마다 대기 요청을 확인하고 상품 증빙, 필수 슬롯, 등록 템플릿의 SHA-256을 검사한 뒤 HTML과 원본 이미지·폰트를 포함한 ZIP 초안을 제작합니다. 결과는 비공개 Storage, 진행 기록은 production_jobs/events, 대시보드 상태는 cherop_production_summary, 알림은 cherop_main.notices에 저장합니다. 브라우저/채팅 실행 상태와 무관합니다.
+## 업무 진행
+1. 최신 app_state `cherop_kakao_detail_handoff_20261030`의 상품명·옵션·규칙을 읽습니다. 분류와 통합 기록을 보존합니다.
+2. 기존 업무·프로젝트에 담당과 진행 상황을 기록하고 요청받은 제작을 채팅에서 수행합니다.
+3. 승인 기본틀을 복제하고 자체 검수·수정 후 결과를 보관합니다. 검토본을 승인본으로 표시하지 않습니다.
+4. 원본 HTML은 Library에 저장하고 기존 비공개 Sites에 상품별 미리보기·코드 복사 화면을 등록합니다. 이미지/원본 HTML을 공개 GitHub에 올리지 않습니다.
+5. app_state `cherop_detail_studio.assets`에 `채널:상품ID` 키로 previewURL/codeURL을 등록합니다. 카카오 상품명/옵션은 인계서 rows에서 읽습니다. 다른 채널은 `cherop_detail_studio.pages`에 channel,id,displayTitle,page,options,productionStatus,resultURL을 기록합니다. 기존 배열·다른 채팅 변경을 덮어쓰지 않습니다.
 
-자동화 대상은 **등록 완료된 입력 자료로 템플릿 조립**입니다. 자연어 지시만으로 공식몰 탐색·제품 판단·AI 이미지 생성·시각검수·카카오 업로드까지 수행하는 자율 에이전트는 아닙니다. 그 작업은 디자인/MD 담당이 입력 자료로 준비해야 합니다. 다른 제품의 레이아웃/옵션 수가 다르면 해당 구조의 승인 템플릿을 별도 등록해야 하며 K01의 다섯 옵션을 복사하면 안 됩니다.
-
-## 위치와 연결
-
-- 워크스페이스: https://cherop-koko.github.io/cheropworkspace/#ai-team/production
-- Supabase project: pmgntojnfglppjtypwzq
-- Edge Function: production-engine
-- 비공개 Storage bucket: cherop-production
-- cron: cherop-production-worker (매분, 대기/만료 작업이 있을 때만 호출)
-- 승인 K01 원본: libfile_c247487631708191af4293455120bf1e (보존)
-- 업무 인계: app_state.cherop_kakao_detail_handoff_20261030
-- 담당 목록: app_state.cherop_ai_role_assignments
-- 코드: production-engine/{renderer.mjs,index.ts,schema.sql,runtime.sql}
-
-## 새 채팅 인계 명령
-
-> cherop-koko/cheropworkspace의 production-engine/README.md와 Supabase의 cherop_kakao_detail_handoff_20261030, production_jobs를 먼저 읽으세요. 해당 K번호와 request_key의 기존 실행/결과를 확인하고, 승인된 상품 구성·원본·템플릿을 대조하세요. 자료가 준비된 작업만 입력 JSON을 등록하여 제작실에 제출하세요. 중복 실행, 다른 채팅 업무 덮어쓰기, 자동 판매게시를 하지 마세요. 자료가 없는 항목은 필요한 자료와 상태를 남기고 독립적으로 가능한 작업을 진행하세요. 결과 파일·시각검수·작업 상태를 저장해 주세요.
-
-## 등록과 실행 (연결 도구를 사용하는 담당자)
-
-1. `production_jobs`에서 같은 상품과 요청 확인. 재시도/새 버전에는 명시적인 새 request_key를 사용합니다.
-2. 공식몰과 인계서에서 SKU·옵션·실측·재고·포장·모델인증을 대조. 파일 속 `evidence`의 true는 실제 검수 뒤에만 작성. 입력 값의 선언은 외부기관 인증을 자동 검증한 결과가 아닙니다.
-3. 승인 HTML을 `python production-engine/prepare_template.py APPROVED.html OUTPUT.json K01`로 슬롯화하고 옆에 원본 assets 폴더를 만듭니다. JSON과 원본 모두 inputs/에 업로드해야 합니다. evidence는 기본 false이므로 실제 확인 후 기록해야 합니다. 이 명령은 **승인본 재현용**입니다. 다른 상품에서는 이미지/문구/증빙을 전부 검토하여 교체해야 합니다. 새 틀은 SHA-256을 production_templates에 등록합니다. 원본 파일을 덮어쓰지 않습니다.
-4. `select production_invoke('{"action":"prepare-upload","path":"inputs/고유영문파일명.json"}');` 반환 request id를 `net._http_response`에서 조회. 반환된 signedUrl에 JSON을 PUT합니다. 업로드 URL은 2시간 단기 자격증명입니다. 공개 로그/공지에 남기지 않습니다.
-5. `insert into production_jobs(request_key,title,product_key,input_path) values (...) returning id;` 로 제출. 권한 있는 Supabase 연결 도구 또는 API만 등록 가능. 일반 브라우저 anon 쓰기는 불가합니다.
-6. 서버가 매분 실행. 작업 상태 조회. `review`는 자동 검사 통과/초안 생성 완료이며 최종 승인 아님.
-7. 결과: `production_invoke`에 `{"action":"download","id":"UUID"}`를 전달하고 응답 signedUrl로 다운로드. 링크는 10분 만료, **다운로드한 ZIP은 압축을 풀고 index.html을 열면 됩니다. 원본 이미지/폰트 파일이 함께 들어 있어 만료되지 않습니다**. 사용자에게 전달하는 파일은 영구 보관함에 저장합니다.
-8. 실제 모바일 시각검수와 상품 대조 후 report에 검수 결과를 기록하고 approved로 전환합니다. 카카오 판매페이지에 게시하지 않습니다.
+## 화면
+- AI 조직도 > 제작실, #ai-team/production
+- 채널 / 상품명·K번호 / 옵션·메모 / 승인·검토·미제작 / 미리보기 / 코드 복사 / 원본 파일
+- 통합 상품은 현재 목록에서 제외, 통합 보관 포함 필터로 조회합니다.
+- HTML이 없는 상품은 미등록 표시. 끝없는 미리보기 준비 중 표시는 금지합니다.
+- 코드 복사는 비공개 화면에서 사용자 클릭으로 수행하며 원본 전체를 보존합니다. 채널의 HTML 에디터 지원 여부는 별도 검토입니다.
+- 비공개 사이트 project: appgprj_6ae4906775b081919e45c0d6c5c3994a
+- URL: https://cherop-production-preview.yehuingo.chatgpt.site
+- 기존 production_jobs/events/templates/Storage는 이력 보존용입니다. cron은 해제했습니다. DB 함수는 보존하며 사용하지 않습니다.
 
 ## 기본틀 필수 기준
 
@@ -44,25 +30,3 @@
 - KC 번호/0세/신생아 문구는 모델별 증빙. K01 인증번호를 다른 상품에 복사하지 않음. 자석 키링에 신생아 문구 금지.
 - 브랜드 로고, 서울 팝업·대구 외벽 두 사진, 두 줄 소개, HTML 텍스트 문의 버튼 유지.
 - K01 코코·모리 판매 품절 유지. 이 시스템은 재고·판매가격을 변경하지 않음.
-
-## 상태·복구·알림
-
-queued → working → review / blocked / failed. 수동 취소는 cancelled. 최종 사람/담당자 검수는 approved.
-원자적 claim과 임대 토큰으로 동시 중복 실행을 방지합니다. 비정상 종료 시 5분 임대 만료 후 최대 3회 재시도. 입력 오류/실행 오류는 사유를 기록하여 무한 재실행하지 않습니다. 취소된 작업의 늦은 결과는 반영하지 않습니다.
-전체 SQL 기능은 service_role/관리 연결에서만 실행 가능합니다. 서버 토큰은 Vault에 있고 브라우저에 노출하지 않습니다. 기존 workspace-auth에 연결된 실계정이 생기면 API에서 검증하며, 현재 UI에는 보안 계정 준비 전 등록/다운로드 버튼을 노출하지 않습니다.
-공지와 제작실은 요청 완료/확인 필요 상태를 보여줍니다. 휴대폰 푸시/이메일/카카오 메시지 발송은 미연결입니다.
-예상시간은 충분한 비교 가능한 실행 이력이 쌓이기 전 표시하지 않습니다. 자료 준비·시각검수 시간까지 임의 추정하지 않습니다.
-
-## 비용과 범위
-
-v1은 외부 생성 AI API를 호출하지 않습니다. 기존 Supabase 함수/DB/저장공간 사용량은 증가합니다. 새 유료 플랜, 자동충전, 유료 AI 모델은 설정하지 않았습니다. K01 원본 약 36MB + 결과 약 36MB이므로 저장 용량은 별도 관리가 필요합니다. 이미지 생성/영상 편집 실행기는 다음 단계의 별도 연결이며 현재 완료로 표시하면 안 됩니다.
-
-## 검증
-
-`node --test tests/production-engine/renderer.test.mjs`.
-승인 K01 본문·이미지·폰트 보존 재현, 실서버 cron→job→private ZIP→notice 종단 시험. 기존 승인본/K17 등 병행 제작 자료는 수정하지 않습니다.
-
-## 화면 변경 필수 기준
-화면 작업 전 WORKSPACE_DESIGN_RULES.md를 읽으세요. 제작실은 AI 조직도 안의 탭이며, 기존 공통 디자인을 재사용합니다. 새 시각 테마를 추가하지 마세요. 미리보기는 자체 포함 HTML을 별도 보관하고 app_state.cherop_production_previews의 jobs[작업UUID]에 previewURL/downloadURL을 기록합니다. ZIP만으로 미리보기가 가능하다고 안내하지 않습니다.
-
-미리보기 전달 규칙(2026-10-30): 모바일 파일 뷰어가 HTML을 코드로 표시하므로 HTML 파일 링크를 웹 미리보기로 안내하지 않는다. 비공개 Sites 웹 미리보기를 사용한다. 현재 K01: https://cherop-production-preview.yehuingo.chatgpt.site (project_id appgprj_6ae4906775b081919e45c0d6c5c3994a). 원본·생산 Storage는 비공개 유지. 파일 받기는 별도 링크.
