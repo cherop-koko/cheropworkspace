@@ -1153,7 +1153,7 @@ a { text-decoration:none; color:inherit; }
 <link rel="stylesheet" href="workspace-popup.css?v=20261017-2">
 <link rel="stylesheet" href="workspace-polish.css?v=20261017-10">
 <script defer src="vendor/supabase-2.118.0.min.js"></script>
-<script defer src="workspace-core.js?v=20261017-7"></script>
+<script defer src="workspace-core.js?v=20261102-stock-atomic"></script>
 <script defer src="workspace-dashboard.js?v=20261025-logo"></script>
 <script defer src="workspace-manual-seed.js?v=20261017-2"></script>
 <script defer src="workspace-sections.js?v=20261025-fold"></script>
@@ -1162,9 +1162,10 @@ a { text-decoration:none; color:inherit; }
 <script defer src="workspace-management.js?v=20261017-7"></script>
 <script defer src="workspace-tasks.js?v=20261031-routine-readability"></script>
 <script defer src="workspace-production.js?v=20261017-9"></script>
-<script defer src="workspace-production-design.js?v=20261017-9"></script>
+<script defer src="workspace-production-design.js?v=20261102-stock"></script>
 <script defer src="workspace-work-qc.js?v=20261017-9"></script>
-<script defer src="workspace-stock-sales.js?v=20261025-catalog"></script>
+<script defer src="workspace-inventory-transactions.js?v=20261102-1"></script>
+<script defer src="workspace-stock-sales.js?v=20261102-stock-atomic"></script>
 <script defer src="workspace-purchase-orders.js?v=20261028-1"></script>
 <script defer src="workspace-catalog.js?v=20261025-catalog"></script>
 <link rel="stylesheet" href="workspace-ai-team.css?v=20261029-2">
@@ -1566,7 +1567,6 @@ a { text-decoration:none; color:inherit; }
                 <input type="text" id="inv-search" class="inv-search-inp" placeholder="상품명 검색..." style="width:160px;padding:5px 10px;font-size:12px;" oninput="loadInvList()">
                 <div style="display:flex;gap:5px;" id="inv-filter-pills">
                   <div class="inv-pill on" onclick="invSetFilter('all',this)">활성</div>
-                  <div class="inv-pill"    onclick="invSetFilter('planned',this)">단종 예정</div>
                   <div class="inv-pill"    onclick="invSetFilter('disc',this)">단종</div>
                 </div>
               </div>
@@ -1830,7 +1830,7 @@ a { text-decoration:none; color:inherit; }
 
         <!-- 생산 추천 탭 -->
         <div id="prod-tab-recommend" class="w8-production" style="display:none;">
-          <div class="w8-filters"><label>상품 검색<input id="w8-rec-search" type="search" placeholder="상품명·옵션 검색"></label><label>카테고리<select id="w8-rec-category"><option value="전체">전체 카테고리</option></select></label><label>상품 상태<select id="w8-rec-status"><option value="active">활성</option><option value="planned">단종 예정</option><option value="disc">단종</option><option value="all">전체 상품</option></select></label><button class="w8-button" data-w8="category-manage">카테고리 관리</button></div>
+          <div class="w8-filters"><label>상품 검색<input id="w8-rec-search" type="search" placeholder="상품명·옵션 검색"></label><label>카테고리<select id="w8-rec-category"><option value="전체">전체 카테고리</option></select></label><label>상품 상태<select id="w8-rec-status"><option value="active">활성</option><option value="disc">단종</option><option value="all">전체 상품</option></select></label><button class="w8-button" data-w8="category-manage">카테고리 관리</button></div>
           <div class="w8-toolbar"><h2>상품화 추천 <small id="w8-rec-count"></small></h2><div class="w8-actions"><select id="w8-rec-sort" aria-label="추천 정렬"><option value="expiry">소진일 임박순</option><option value="progress">상품화 미완료순</option></select><button class="w8-button" id="prod-rec-hidden-toggle" data-w8="rec-hidden">숨긴 상품</button></div></div>
           <div id="w8-rec-results" aria-live="polite"></div><p class="w8-note">소진 예상은 기존 출고 기록과 판매 가능한 재고를 기준으로 계산합니다. 작업 담기는 예약을 등록하며 재고 수량을 바꾸지 않습니다.</p>
         </div>
@@ -3190,15 +3190,11 @@ a { text-decoration:none; color:inherit; }
           <div class="prop-icon">⚑</div><div class="prop-label">판매 상태</div>
           <div class="prop-val">
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              <div class="inv-pill on" id="disc-st-active"  onclick="setDiscStatus('active')" >정상</div>
-              <div class="inv-pill"   id="disc-st-planned" onclick="setDiscStatus('planned')">단종 예정</div>
+              <div class="inv-pill on" id="disc-st-active"  onclick="setDiscStatus('active')" >판매중</div>
               <div class="inv-pill"   id="disc-st-disc"    onclick="setDiscStatus('disc')"   >단종</div>
             </div>
             <input type="hidden" id="inv-p-disc-status" value="active">
-            <div id="inv-p-disc-date-wrap" style="margin-top:8px;display:none;">
-              <div style="font-size:11px;color:var(--light);margin-bottom:4px;">단종 예정일</div>
-              <input type="date" id="inv-p-disc-date" class="prop-inp" style="width:160px;">
-            </div>
+            <input type="hidden" id="inv-p-disc-date" value="">
           </div>
         </div>
       </div>

@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const ctx=vm.createContext({console,openShipmentModal:async()=>{},setDiscStatus:()=>{},reconcileInventory:async()=>{}});vm.runInContext(fs.readFileSync('workspace-inventory-transactions.js','utf8'),ctx);
+const build=ctx.buildInventorySalesRows;
+const input={a:{rows:[{saleDate:'2026-11-02',qty:2,orderAmt:200},{saleDate:'2026-11-02',qty:3,orderAmt:300}]},b:{rows:[{saleDate:'2026-11-02',qty:4,orderAmt:400}]}};
+let rows=build(input,{a:'p',b:'p'},new Set(),'자사몰',{old:'p'});assert.equal(rows.length,1);assert.equal(rows[0].quantity,9);assert.equal(rows[0].amount,900);assert(rows[0].legacy_ids.includes('sale-2026-11-02--old'));
+assert.notEqual(rows[0].id,build(input,{a:'p',b:'p'},new Set(),'카카오')[0].id);
+assert.equal(build(input,{a:'p',b:'p'},new Set(['b']),'자사몰')[0].quantity,5);
+const item={saleDate:'2026-11-02',qty:2,orderAmt:100,itemNo:'order-1'};
+rows=build({a:{rows:[item,item]}},{a:'p'},new Set(),'자사몰');assert.equal(rows.length,1);assert.equal(rows[0].quantity,2);
+assert.throws(()=>build({a:{rows:[item,{...item,qty:3}]}},{a:'p'},new Set(),'자사몰'),/품목번호/);
+assert.throws(()=>build({a:{rows:[{...item,qty:-1}]}},{a:'p'},new Set(),'자사몰'),/수량/);
+assert.throws(()=>build({a:{rows:[{...item,saleDate:''}]}},{a:'p'},new Set(),'자사몰'),/날짜/);
+console.log('PASS: daily aggregation, channel-safe IDs, legacy aliases, duplicate order lines, skipped mappings and invalid input');

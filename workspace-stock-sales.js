@@ -33,7 +33,7 @@ loadInvOverviewBanner=async function() {
     const prods    = (await db.from('products').select('*').eq('is_discontinued',false)).data||[];
     const invRows  = (await db.from('inventory').select('*')).data||[];
     const salesRows= await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
-    // 단종예정 + 이미 발주 등록된 상품 제외 (발주 알림 탭과 동일 기준)
+    // 이미 발주 등록된 상품 제외 (발주 알림 탭과 동일 기준)
     const sBan = await getAppState();
     const orderedPidsBan = new Set((sBan.ops_orders||[])
       .filter(o => o.status !== 'received' && o.status !== 'cancelled' && o.product_id)
@@ -41,7 +41,7 @@ loadInvOverviewBanner=async function() {
     const hiddenAlertSet = new Set(sBan.inv_alert_hidden || []);
     let alertCount = 0;
     for(const p of prods){
-      if (p.disc_status === 'planned' || orderedPidsBan.has(p.id) || hiddenAlertSet.has(p.id)) continue;
+      if (orderedPidsBan.has(p.id) || hiddenAlertSet.has(p.id)) continue;
       const inv = invRows.find(x=>x.product_id===p.id)||{};
       const velAll = calcVelocity(salesRows, p.id);
       const d = daysUntilReorder(inv, velAll);
@@ -95,7 +95,7 @@ loadInvList=async function(options={}) {
   try {
     const searchQ = ($('inv-search')?.value||'').trim().toLowerCase();
     const snap=await stockData(options.cached);if(ticket!==inventoryTicket)return;
-    const allProds=snap.products.filter(p=>p.disc_status!=='deleted').filter(p=>invCurrentFilter==='everything'||(invCurrentFilter==='disc'?p.is_discontinued:invCurrentFilter==='planned'?!p.is_discontinued&&p.disc_status==='planned':!p.is_discontinued&&p.disc_status!=='planned')).sort((a,b)=>(a.sort_order??999999)-(b.sort_order??999999)||String(a.name).localeCompare(String(b.name)));
+    const allProds=snap.products.filter(p=>p.disc_status!=='deleted').filter(p=>invCurrentFilter==='everything'||(invCurrentFilter==='disc'?p.is_discontinued:!p.is_discontinued)).sort((a,b)=>(a.sort_order??999999)-(b.sort_order??999999)||String(a.name).localeCompare(String(b.name)));
     let prods=allProds.filter(p=>(invCurrentCat==='전체'||p.category===invCurrentCat)&&matches(p,searchQ));
     const invRows=snap.inventory,chInvRows=snap.channels,salesRows=snap.sales,sState=snap.state;
     const reservations = sState.ch_reservations || [];
@@ -145,9 +145,9 @@ loadInvList=async function(options={}) {
       const velAll=calcVelocity(salesRows, p.id);
       const daysAll = daysUntilSoldOut(inv, velAll);    // 표의 D+ = 지금 재고로 며칠
       const daysOrd = daysUntilReorder(inv, velAll);    // 배지 = 발주해야 하나 (대기분 포함)
-      const isPlanned = p.disc_status === 'planned';
-      const badge=p.is_discontinued?`<span class="sbadge" style="background:var(--surface2);color:var(--faint);">단종</span>`
-        :isPlanned?`<span class="sbadge" style="background:#FFF3CD;color:#856404;">단종 예정${p.disc_date?' (~'+p.disc_date.slice(5).replace('-','/')+')':''}</span>`
+      const review = sState.inventory_review?.[p.id];
+      const overAllocated = chInvRows.filter(c=>c.product_id===p.id).reduce((n,c)=>n+num(c.stock),0)>num(inv.produced_stock);
+      const badge=review?.sample_only?`<span class="sbadge" title="${esc(review.reason)}">샘플 보관 · 판매 제외</span>`:review||overAllocated?`<span class="sbadge" style="color:var(--red);" title="${esc(review?.reason||'채널 배정 합계가 상품화 완료 수량보다 많습니다')}">확인 필요</span>`:p.is_discontinued?`<span class="sbadge" style="background:var(--surface2);color:var(--faint);">단종</span>`
         :daysOrd!==null&&daysOrd<=REORDER_TH.urgent?`<span class="sbadge" style="background:var(--red-bg);color:var(--red);">발주필요</span>`
         :daysOrd!==null&&daysOrd<=REORDER_TH.warn?`<span class="sbadge" style="background:var(--amber-bg);color:var(--amber);">주의</span>`
         :`<span class="sbadge sbadge-ing">정상</span>`;
@@ -155,7 +155,7 @@ loadInvList=async function(options={}) {
       const handle=isDraggable
         ?`<td style="cursor:grab;color:var(--faint);font-size:13px;text-align:center;user-select:none;" class="inv-drag-handle">⠿</td>`
         :`<td></td>`;
-      return `${groupHeader}<tr data-pid="${p.id}" data-cat="${escapeHtml(p.category||'')}" ${isDraggable?'draggable="true"':''} style="${p.is_discontinued?'opacity:.45;':isPlanned?'opacity:.7;':''}${isDraggable?'cursor:grab;':''}">
+      return `${groupHeader}<tr data-pid="${p.id}" data-cat="${escapeHtml(p.category||'')}" ${isDraggable?'draggable="true"':''} style="${p.is_discontinued?'opacity:.45;':''}${isDraggable?'cursor:grab;':''}">
         ${handle}
         <td>${productCell(p)}</td>
         <td style="font-size:11px;min-width:90px;" onclick="event.stopPropagation()">
@@ -193,7 +193,7 @@ loadChannelInv=async function(ch,options={}) {
     const channels=[...new Set([...CHANNELS,...allChInv.map(r=>r.channel)])];
     $('w12-channel-buttons').innerHTML=channels.map(c=>`<button type="button" data-stock="channel-filter" data-id="${esc(c)}" aria-pressed="${c===ch}">${esc(c)}</button>`).join('');
     $('w12-category-buttons').innerHTML=cats.map(c=>`<button type="button" data-stock="channel-category" data-id="${esc(c)}" aria-pressed="${c===invChCurrentCat}">${esc(c)}</button>`).join('');
-    const allocNeeded=allProds.filter(p=>!p.is_discontinued&&p.disc_status!=='planned'&&(invChCurrentCat==='전체'||p.category===invChCurrentCat)).map(p=>{const ci=allChInv.find(r=>r.product_id===p.id&&r.channel===ch)||{},inv=allInvRows.find(r=>r.product_id===p.id)||{},v=calcVelocity(allSales,p.id,ch);return{p,ci,inv,days:v>0?Math.ceil(num(ci.stock)/v):null};}).filter(r=>r.days!==null&&r.days<=3&&num(r.inv.available_stock)>0);
+    const allocNeeded=allProds.filter(p=>!p.is_discontinued&&(invChCurrentCat==='전체'||p.category===invChCurrentCat)).map(p=>{const ci=allChInv.find(r=>r.product_id===p.id&&r.channel===ch)||{},inv=allInvRows.find(r=>r.product_id===p.id)||{},v=calcVelocity(allSales,p.id,ch);return{p,ci,inv,days:v>0?Math.ceil(num(ci.stock)/v):null};}).filter(r=>r.days!==null&&r.days<=3&&num(r.inv.available_stock)>0);
     const fold=$('w12-allocation-alert');fold.querySelector('summary').innerHTML=`<span>채널 배분 필요 <b>${allocNeeded.length}</b></span><small>${esc(ch)} · ${esc(invChCurrentCat)} <i></i></small>`;
     $('inv-ch-alloc-list').innerHTML=allocNeeded.length?table(['상품·옵션','현재 채널재고','가용','소진 예상',''],allocNeeded.map(({p,ci,inv,days})=>`<tr><td>${productCell(p)}</td><td>${fmt(ci.stock)}</td><td>${fmt(inv.available_stock)}</td><td>${days}일</td><td>${button('배분·예약','allocate',p.id)}</td></tr>`)):empty('선택한 채널·카테고리에 배분 필요 항목이 없습니다.');
     // 필터
@@ -293,9 +293,9 @@ loadOrderAlerts=async function() {
  const db=readClient;
 
   try {
-    // 단종 제외 + 단종예정 제외
+    // 판매중 상품만 조회
     const prodsAll = (await db.from('products').select('*').eq('is_discontinued',false)).data||[];
-    const prods    = prodsAll.filter(p => p.disc_status !== 'planned');
+    const prods    = prodsAll.filter(p => p.disc_status !== 'deleted');
     const invRows  = (await db.from('inventory').select('*')).data||[];
     const chInvRows= (await db.from('channel_inventory').select('*')).data||[];
     const salesRows= await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
@@ -511,7 +511,7 @@ runInventoryAudit=async function() {
       const curAvail  = inv.available_stock || 0;
       const curPend   = inv.pending_production || 0;
       const curTotal  = inv.total_stock || 0;
-      if (available === curAvail && pending === curPend && total === curTotal) continue;
+      if (chSum <= produced && available === curAvail && pending === curPend && total === curTotal) continue;
       const p = pMap[inv.product_id];
       issues.push({
         productId: inv.product_id,
@@ -527,6 +527,7 @@ runInventoryAudit=async function() {
 
     const lines = issues.slice(0, 8).map(x => {
       const parts = [];
+      if (x.chSum > x.produced) parts.push(`채널 배정 ${x.chSum} > 상품화 완료 ${x.produced} (실수량 확인 필요)`);
       if (x.curAvail !== x.available) parts.push(`가용 ${x.curAvail}→${x.available}`);
       if (x.curPend  !== x.pending)   parts.push(`대기 ${x.curPend}→${x.pending}`);
       if (x.curTotal !== x.total)     parts.push(`총재고 ${x.curTotal}→${x.total}`);
@@ -543,10 +544,11 @@ runInventoryAudit=async function() {
 
     let fixed = 0;
     for (const x of issues) {
+      if (x.chSum > x.produced || x.totalRaised) continue;
       const r = await reconcileInventory(x.productId);
       if (r?.changed) fixed++;
     }
-    toast(`${fixed}개 상품의 재고를 바로잡았어요 ✓`);
+    toast(`${fixed}개 계산값 수정 · 실수량 확인 필요 ${issues.filter(x=>x.chSum>x.produced||x.totalRaised).length}개`);
     loadInvOverview();
   } catch(e) {
     console.error('runInventoryAudit', e);
@@ -556,9 +558,9 @@ runInventoryAudit=async function() {
 
 const inventoryPage=$('page-inventory'),salesPage=$('page-sales');
 function metrics(items){return `<div class="w11-metrics">${items.map(([title,value,note])=>`<div><span>${title}</span><strong>${value}</strong><small>${note||''}</small></div>`).join('')}</div>`;}
-function inventorySummary(rows,reservations,s,products){const ids=new Set(products.filter(p=>invCurrentCat==='전체'||p.category===invCurrentCat).map(p=>p.id));const filtered=rows.filter(r=>ids.has(r.product_id));$('w11-stock-metrics').innerHTML=metrics([['현재 총재고',fmt(filtered.reduce((n,r)=>n+num(r.total_stock),0)),'입고 누계 아님 · 기존 재고 원장'],['상품화 완료',fmt(filtered.reduce((n,r)=>n+num(r.produced_stock),0)),'가용·채널 배분 포함'],['상품화 대기',fmt(filtered.reduce((n,r)=>n+num(r.pending_production),0)),'미상품화 재고 · 예약은 별도 표시'],['예약',fmt(reservations.filter(r=>ids.has(r.product_id)).reduce((n,r)=>n+num(r.qty),0)),'상품화 완료 후 자동 배분']]);const sel=$('w11-category');sel.innerHTML=[...new Set(['전체',...(s.inv_categories||[]),...(stockSnapshot?.products||products).map(p=>p.category).filter(Boolean)])].map(c=>`<option ${c===invCurrentCat?'selected':''}>${esc(c)}</option>`).join('');}
+function inventorySummary(rows,reservations,s,products){const uncertain=products.filter(p=>p.disc_status==='review');const ids=new Set(products.filter(p=>p.disc_status!=='review'&&(invCurrentCat==='전체'||p.category===invCurrentCat)).map(p=>p.id));const filtered=rows.filter(r=>ids.has(r.product_id));$('w11-stock-metrics').innerHTML=metrics([['현재 총재고',fmt(filtered.reduce((n,r)=>n+num(r.total_stock),0)),uncertain.length?`관계 확인 중 ${uncertain.length}개 기록 합계 제외`:'입고 누계 아님 · 기존 재고 원장'],['상품화 완료',fmt(filtered.reduce((n,r)=>n+num(r.produced_stock),0)),'가용·채널 배분 포함'],['상품화 대기',fmt(filtered.reduce((n,r)=>n+num(r.pending_production),0)),'미상품화 재고 · 예약은 별도 표시'],['예약',fmt(reservations.filter(r=>ids.has(r.product_id)).reduce((n,r)=>n+num(r.qty),0)),'상품화 완료 후 자동 배분']]);const sel=$('w11-category');sel.innerHTML=[...new Set(['전체',...(s.inv_categories||[]),...(stockSnapshot?.products||products).map(p=>p.category).filter(Boolean)])].map(c=>`<option ${c===invCurrentCat?'selected':''}>${esc(c)}</option>`).join('');}
 $('inv-tab-overview').insertAdjacentHTML('afterbegin','<div id="w11-stock-metrics"></div>');
-const invFilter=document.createElement('div');invFilter.className='w11-filters';invFilter.innerHTML='<label class="w11-search">상품 검색</label><label>카테고리<select id="w11-category"><option>전체</option></select></label><label>상품 상태<select id="w11-status"><option value="all">활성</option><option value="everything">전체 상태</option><option value="planned">단종 예정</option><option value="disc">단종</option></select></label>'+button('카테고리 관리','categories');invFilter.querySelector('.w11-search').append($('inv-search'));$('inv-tab-overview').insertBefore(invFilter,$('inv-overview-banner'));
+const invFilter=document.createElement('div');invFilter.className='w11-filters';invFilter.innerHTML='<label class="w11-search">상품 검색</label><label>카테고리<select id="w11-category"><option>전체</option></select></label><label>상품 상태<select id="w11-status"><option value="all">활성</option><option value="everything">전체 상태</option><option value="disc">단종</option></select></label>'+button('카테고리 관리','categories');invFilter.querySelector('.w11-search').append($('inv-search'));$('inv-tab-overview').insertBefore(invFilter,$('inv-overview-banner'));
 $('w11-category').onchange=e=>{invCurrentCat=e.target.value;loadInvList({cached:true});};$('w11-status').onchange=e=>{invCurrentFilter=e.target.value;loadInvList({cached:true});};
 $('inv-channel-tabs').insertAdjacentHTML('afterend','<select id="w11-channel" aria-label="재고 채널"></select><select id="w11-channel-status" aria-label="채널 상품 상태"><option value="active">활성 상품</option><option value="all">전체 상품</option><option value="disc">단종 상품</option></select>');$('w11-channel').onchange=e=>{invCurrentChannel=e.target.value;loadChannelInv(invCurrentChannel);};$('w11-channel-status').onchange=()=>loadChannelInv(invCurrentChannel);$('inv-ch-cat-pills').innerHTML='<select id="w11-channel-category" aria-label="채널 상품 카테고리"><option>전체</option></select>';$('w11-channel-category').onchange=e=>{invChCurrentCat=e.target.value;loadChannelInv(invCurrentChannel);};
 const channelControls=$('inv-channel-tabs').parentElement;channelControls.classList.add('w12-channel-controls');

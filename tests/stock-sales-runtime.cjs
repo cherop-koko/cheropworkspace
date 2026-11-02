@@ -39,6 +39,8 @@ const main=()=>tables.app_state[0].data;
 (async()=>{
  const before=structuredClone(tables);
  await route('inventory','overview');await w.loadInvList();
+ assert(w.document.getElementById('inv-product-table').textContent.includes('단종 예정 보존'),'legacy planned rows remain visible as selling inventory');
+ assert.equal(w.document.querySelector('#w11-status option[value=planned]'),null);
  assert.equal((await w.CHEROPStockSales.readClient.from('channel_inventory').select('*')).data.length,1201);
  assert(w.document.getElementById('inv-product-table').textContent.includes('보관채널 1200'));
  await route('inventory','receipt');await w.loadReceiptSchedule();assert.equal(w.document.querySelectorAll('[data-receipt-id]').length,58);
@@ -57,5 +59,13 @@ const main=()=>tables.app_state[0].data;
  const snap=await w.CHEROPStockSales.stockData(true);assert.equal(snap.channels.length,1201);vm.runInContext("invCurrentCat='전체';invCurrentFilter='all'",ctx);w.document.getElementById('inv-search').value='검증 소형';await w.loadInvList({cached:true});assert.equal(w.document.querySelectorAll('#inv-product-table tr[data-pid]').length,1);assert.equal(w.document.querySelector('#inv-product-table tr[data-pid]').dataset.pid,'stock-a');click('[data-stock=clear-search][data-id=inv-search]');await wait();
  vm.runInContext("_salesYear=2026;_salesMonth=10;_salesRange='year'",ctx);assert.equal(w.CHEROPStockSales.period().prevFrom,'2025-01-01');vm.runInContext("_salesYear=2024;_salesMonth=2;_salesRange='month'",ctx);assert.equal(w.CHEROPStockSales.period().to,'2024-02-29');assert.equal(w.CHEROPStockSales.period().prevTo,'2024-01-31');
  assert.equal(writes,0,'page views and controls never write records');assert.deepEqual(tables,before,'all record IDs, values, notes, dates and states retained');
+ // Exercise the upload handler, not just its pure row builder.
+ w._invUploadAgg={one:{rows:[{saleDate:'2026-11-02',qty:2,orderAmt:100,itemNo:'test-order'}]}};
+ w._invUploadMappings={one:'stock-a'};w._invUploadSkipped=new Set();
+ vm.runInContext("invUploadChannel='자사몰';syncSalesToTaxLedger=async()=>{};",ctx);
+ const beforeRpc=rpcCalls.length;await w.processUpload();
+ assert.equal(rpcCalls.length,beforeRpc+1);assert.equal(rpcCalls.at(-1).name,'apply_inventory_sales_v1');
+ assert.equal(rpcCalls.at(-1).args.p_rows[0].quantity,2);
+ assert.equal(tables.sales_log.length,1207,'client does not separately insert sales rows');
  console.log('PASS: API pagination 1,207 shipments / 1,201 allocations; all 58 receipts; channel-consistent totals, graph and records; missing item revenue explicit; read-only navigation preserves all fields.');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});

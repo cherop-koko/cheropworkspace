@@ -37,8 +37,14 @@ assert(!menuHtml.includes('기존 메뉴'));assert(!menuHtml.includes('처리할
  const baseline=cp.execFileSync('git',['show','28ac0a801a5978b89d613c8164697132a210e769:index.html'],{encoding:'utf8',maxBuffer:4e6});
  const blocks=[...baseline.matchAll(/<script>([\s\S]*?)<\/script>/g)];
  const originalCore=blocks.sort((a,b)=>b[1].length-a[1].length)[0][1];
- assert.equal(fs.readFileSync('workspace-core.js','utf8'),originalCore,'legacy behavior preserved during deferred extraction');
+ const currentCore=fs.readFileSync('workspace-core.js','utf8');
+ const excluded=new Set(['loadDashInventory','loadInvOverviewBanner','loadInvList','saveShipLogEdit','deleteShipLog','reconcileInventory','applyShipmentStock','openShipmentModal','saveShipment','loadOrderAlerts','setDiscStatus','processUpload','loadOpsOrderAlert']);
+ const segments=text=>{const starts=[...text.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\(/gm)];return new Map(starts.filter(x=>!excluded.has(x[1])).map((x)=>{const i=starts.indexOf(x);return[x[1],text.slice(x.index,starts[i+1]?.index??text.length)]}));};
+ const beforeSegments=segments(originalCore),afterSegments=segments(currentCore);
+ // Adjacent comments travel with removed functions; compare function source up to its final top-level brace.
+ for(const [name,source] of beforeSegments){const trim=x=>x.slice(0,x.lastIndexOf('\n}')+2);assert.equal(trim(afterSegments.get(name)||''),trim(source),'unrelated core function preserved: '+name);}
+
  const index=fs.readFileSync('index.html','utf8');assert(!index.includes('document.write'));assert(index.includes('<script defer src="workspace-core.js'));
  assert(!/\.(insert|update|upsert|delete)\s*\(/.test(source));
- console.log('PASS: 5 sections, 7 dates, calendar interactions, half-day leave, paginated reads, employee filtering, admin menu/route checks, deep links and refresh; legacy core preserved byte-for-byte during deferred extraction; no new database writes.');
+ console.log('PASS: 5 sections, 7 dates, calendar interactions, half-day leave, paginated reads, employee filtering, admin menu/route checks, deep links and refresh; unrelated legacy functions preserved; no new database writes.');
 })().catch(e=>{console.error(e);process.exitCode=1});

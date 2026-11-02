@@ -1,0 +1,134 @@
+/* Sales writes use one database transaction; retrying an identical import is a no-op. */
+function buildInventorySalesRows(agg, mappings, skipped, channel, aliases = {}) {
+  const rows = new Map();
+  for (const [key, group] of Object.entries(agg)) {
+    const pid = mappings[key];
+    if (!pid || skipped.has(key)) continue;
+    for (const source of group.rows) {
+      const date = source.saleDate;
+      const qty = Number(source.qty), amount = Number(source.orderAmt || 0);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !Number.isSafeInteger(qty) || qty < 0 || !Number.isSafeInteger(amount)) throw Error('판매 날짜·수량·금액을 확인해주세요: ' + key);
+      const item = source.itemNo == null ? '' : String(source.itemNo).trim();
+      const id = item ? `sale-item-${encodeURIComponent(channel)}-${encodeURIComponent(item)}` : `sale-${date}-${encodeURIComponent(channel)}-${pid}`;
+      const oldPids = [pid, ...Object.keys(aliases).filter(k => aliases[k] === pid)];
+      const legacy_ids = item ? [`sale-item-${item}`] : oldPids.map(p => `sale-${date}-${channel.replace(/[^a-z0-9]/gi, '')}-${p}`);
+      const row = {id, product_id:pid, channel, quantity:qty, amount, sale_date:date, legacy_ids};
+      const prev = rows.get(id);
+      if (prev && item) {
+        if (prev.product_id !== pid || prev.quantity !== qty || prev.amount !== amount || prev.sale_date !== date) throw Error('같은 주문 품목번호에 서로 다른 내용이 있습니다: ' + item);
+        continue; // Repeated identical order line in the same file.
+      }
+      if (prev) { prev.quantity += qty; prev.amount += amount; }
+      else rows.set(id, row);
+    }
+  }
+  return [...rows.values()];
+}
+function inventorySaleExpected(row) {
+  return Object.fromEntries(['quantity','channel','product_id','sale_date','amount'].map(k=>[k,row[k]]));
+}
+async function commitInventorySales(rows, deletes = []) {
+  const {data,error} = await db.rpc('apply_inventory_sales_v1', {p_rows:rows,p_delete_ids:deletes});
+  if (error) throw Error(error.message);
+  return data;
+}
+async function refreshInventorySales(result) {
+  const dates = new Map((result?.affected || []).map(r=>[r.date+'|'+r.channel,r]));
+  for (const r of dates.values()) {
+    try { await syncSalesToTaxLedger(r.date,r.channel); }
+    catch (e) { console.error('세무 매출장 재계산 실패',e); toast('판매·재고 저장 완료. 세무 매출장 재계산은 다시 확인해주세요.'); }
+  }
+  await loadInvOverview();
+}
+let inventorySalesBusy = false;
+async function processUpload() {
+  if (inventorySalesBusy) return;
+  const btn=$('inv-up-submit'), agg=window._invUploadAgg||{}, mappings=window._invUploadMappings||{}, skipped=window._invUploadSkipped||new Set();
+  inventorySalesBusy=true;
+  try {
+    const unresolved=Object.keys(agg).filter(k=>!mappings[k]&&!skipped.has(k));
+    if (unresolved.length) {
+      if (!await customConfirm(`매칭 안된 항목 ${unresolved.length}개`,'매칭된 항목만 업로드하고 나머지는 건너뛸까요?')) return;
+      unresolved.forEach(k=>skipped.add(k));
+    }
+    if (btn) {btn.disabled=true;btn.textContent='판매·재고 저장 중…';}
+    const state=await getAppState();
+    const rows=buildInventorySalesRows(agg,mappings,skipped,invUploadChannel,state.inventory_product_aliases||{});
+    if (!rows.length) throw Error('저장할 판매내역이 없습니다.');
+    const result=await commitInventorySales(rows);
+    // Mapping persistence may be retried safely; inventory was already committed atomically.
+    for (const [key,pid] of Object.entries(mappings)) {
+      if (skipped.has(key)||!agg[key]) continue;
+      const {data:existing,error:readError}=await db.from('channel_product_mapping').select('id').eq('channel',invUploadChannel).eq('channel_name',key);
+      if (readError) {toast('판매·재고 저장 완료. 상품 매칭 저장은 재확인해주세요.');break;}
+      const payload={product_id:pid,channel:invUploadChannel,channel_name:key};
+      const write=existing?.length ? await db.from('channel_product_mapping').update(payload).eq('channel',invUploadChannel).eq('channel_name',key) : await db.from('channel_product_mapping').insert({...payload,id:'map-'+crypto.randomUUID()});
+      if(write.error){toast('판매·재고 저장 완료. 상품 매칭 저장은 재확인해주세요.');break;}
+    }
+    toast('판매·재고 저장 완료 · 재업로드는 변경 수량만 반영됩니다');
+    closeModal('inv-upload-modal');
+    await refreshInventorySales(result);
+  } catch(e){toast('판매 입력 실패: '+e.message);console.error(e);}
+  finally {inventorySalesBusy=false;if(btn){btn.disabled=false;btn.textContent='업로드 처리';btn.style.opacity='';}}
+}
+async function saveShipment() {
+  if(inventorySalesBusy)return;
+  const date=$('shipment-date').value, channel=$('shipment-channel').value;
+  const items=[...$('shipment-rows').querySelectorAll('div[id^="sr-"]')].map(row=>({rowId:row.id,pid:row.querySelector('.ship-prod-id')?.value,qty:Number(row.querySelector('.ship-qty')?.value)})).filter(x=>x.pid);
+  if(!date||!items.length||items.some(x=>!Number.isSafeInteger(x.qty)||x.qty<=0)){toast('날짜·상품·양의 정수 수량을 입력해주세요');return;}
+  inventorySalesBusy=true;
+  window._shipmentOperationId ||= crypto.randomUUID();
+  try {
+    const result=await commitInventorySales(items.map(x=>({id:`ship-${window._shipmentOperationId}-${x.rowId}`,product_id:x.pid,channel,quantity:x.qty,amount:0,sale_date:date})));
+    toast('출고·재고 저장 완료');closeModal('shipment-modal');await refreshInventorySales(result);
+    if(invCurrentTab==='shiplog')await loadShipLog();
+  } catch(e){toast('출고 입력 실패: '+e.message);}
+  finally {inventorySalesBusy=false;}
+}
+async function saveShipLogEdit(id) {
+  if(inventorySalesBusy)return;
+  const quantity=Number($('slog-edit-amount').value),sale_date=$('slog-edit-date').value,channel=$('slog-edit-channel').value;
+  if(!sale_date||!Number.isSafeInteger(quantity)||quantity<=0){toast('날짜와 양의 정수 수량을 입력해주세요');return;}
+  inventorySalesBusy=true;
+  try {
+    const {data:prev,error}=await db.from('sales_log').select('*').eq('id',id).single();if(error)throw error;
+    const result=await commitInventorySales([{...prev,quantity,sale_date,channel,expected:inventorySaleExpected(prev)}]);
+    toast('출고 수정·재고 조정 완료');closeModal('sales-log-edit-modal');await refreshInventorySales(result);await loadShipLog();
+  } catch(e){toast('수정 실패: '+e.message);}
+  finally{inventorySalesBusy=false;}
+}
+async function deleteShipLog(id) {
+  if(inventorySalesBusy)return;
+  inventorySalesBusy=true;
+  try {
+    const {data:prev,error}=await db.from('sales_log').select('*').eq('id',id).single();if(error)throw error;
+    if(!await customConfirm('출고 내역 삭제',`재고 ${prev.quantity}개를 복구하고 출고 내역을 삭제할까요?`))return;
+    const result=await commitInventorySales([],[{id,expected:inventorySaleExpected(prev)}]);
+    toast('출고 삭제·재고 복구 완료');closeModal('sales-log-edit-modal');await refreshInventorySales(result);await loadShipLog();
+  } catch(e){toast('삭제 실패: '+e.message);}
+  finally{inventorySalesBusy=false;}
+}
+
+// Keep the legacy login/core file untouched; install inventory-only overrides here.
+const legacyOpenShipmentModal = openShipmentModal;
+openShipmentModal = async function(...args) {
+  window._shipmentOperationId = crypto.randomUUID();
+  return legacyOpenShipmentModal(...args);
+};
+const legacySetDiscStatus = setDiscStatus;
+setDiscStatus = function(status) {
+  return legacySetDiscStatus(status === 'disc' ? 'disc' : 'active');
+};
+const legacyReconcileInventory = reconcileInventory;
+reconcileInventory = async function(productId) {
+  const [ir, cr] = await Promise.all([
+    db.from('inventory').select('*').eq('product_id', productId).maybeSingle(),
+    db.from('channel_inventory').select('stock').eq('product_id', productId)
+  ]);
+  if (ir.error || cr.error) throw Error(ir.error?.message || cr.error?.message);
+  if (!ir.data) return null;
+  const allocated = (cr.data || []).reduce((n, r) => n + (r.stock || 0), 0);
+  if (allocated > ir.data.produced_stock || ir.data.produced_stock > ir.data.total_stock)
+    throw Error('실수량·채널 배정을 먼저 확인해주세요.');
+  return legacyReconcileInventory(productId);
+};
