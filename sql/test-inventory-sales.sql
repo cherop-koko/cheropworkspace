@@ -34,12 +34,15 @@ begin
  perform public.apply_inventory_sales_v1(r);
  if (select total_stock from inventory where id='__inventory_test__')<>110 or exists(select 1 from sales_log where id='sale-__inventory_test_new__') then raise exception 'Legacy alias double deducted'; end if;
  if (select amount from channel_sales_log where id='csl-2026-11-02-QA-__inventory_test__')<>1000 then raise exception 'Revenue retry duplicated'; end if;
- -- Oversubscribed channel allocations are an error, not a zero-clamp success.
+ -- Old allocation differences are reported, while current physical stock stays authoritative.
  update channel_inventory set stock=999 where id='__inventory_test__';
+ perform public.apply_inventory_sales_v1(jsonb_set(r,'{0,quantity}','11'));
+ if (select produced_stock from inventory where id='__inventory_test__')<>89
+    or (select stock from channel_inventory where id='__inventory_test__')<>998 then raise exception 'Stock-backed shipment did not preserve allocation difference'; end if;
  begin
-   perform public.apply_inventory_sales_v1(jsonb_set(r,'{0,quantity}','11'));
-   raise exception 'Expected inventory mismatch';
- exception when others then if sqlerrm not like '재고 확인 필요:%' then raise; end if; end;
+   perform public.apply_inventory_sales_v1(jsonb_set(r,'{0,quantity}','101'));
+   raise exception 'Expected insufficient physical stock';
+ exception when others then if sqlerrm not like '판매 가능 재고 부족:%' then raise; end if; end;
 end $$;
 rollback;
 select 'PASS: retry, quantity edit, channel edit, cancellation, legacy alias, revenue and batch rollback; test rows rolled back' as result;

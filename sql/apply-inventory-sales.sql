@@ -6,7 +6,8 @@ declare
  r jsonb; old public.sales_log%rowtype; inv public.inventory%rowtype;
  s jsonb; request_rows jsonb; affected jsonb := '[]'; rv jsonb; reservations jsonb;
  pid text; ch text; sid text; legacy text; label text; q integer; delta integer; allocated integer; take_n integer;
- total_alloc integer; n integer := 0; remain_n integer; stock_changed boolean:=false;
+ total_alloc integer; free_stock integer; stock_limit integer; inventory_warnings jsonb := '{}';
+ n integer := 0; remain_n integer; stock_changed boolean:=false;
  deleted boolean; pass integer; cid text;
 begin
  if jsonb_typeof(p_rows) is distinct from 'array' or jsonb_typeof(p_delete_ids) is distinct from 'array' then raise exception '판매 입력 형식 오류'; end if;
@@ -65,11 +66,24 @@ begin
      select coalesce(sum(stock),0) into total_alloc from public.channel_inventory where product_id=pid;
      select coalesce(sum(stock),0),min(id) into allocated,cid from public.channel_inventory where product_id=pid and channel=ch;
      if (select count(*) from public.channel_inventory where product_id=pid and channel=ch)>1 then raise exception '채널 배정 기록이 중복되었습니다: % / %',pid,ch; end if;
-     if inv.total_stock<>inv.produced_stock+inv.pending_production or inv.produced_stock<total_alloc or inv.available_stock<>inv.produced_stock-total_alloc then
+     if inv.total_stock is null or inv.produced_stock is null or inv.pending_production is null or inv.available_stock is null
+        or least(inv.total_stock,inv.produced_stock,inv.pending_production,inv.available_stock)<0
+        or inv.total_stock<>inv.produced_stock+inv.pending_production
+        or exists(select 1 from public.channel_inventory where product_id=pid and (stock is null or stock<0)) then
        raise exception '재고 확인 필요: % (상품화 완료 %, 채널 배정 %, 가용 %). 판매는 저장되지 않았습니다.',pid,inv.produced_stock,total_alloc,inv.available_stock;
      end if;
+     -- Historical allocation differences must not block a stock-backed shipment.
+     -- Preserve the difference; never invent stock or use another channel's units.
+     free_stock:=least(inv.available_stock,greatest(inv.produced_stock-total_alloc,0));
+     stock_limit:=least(allocated+free_stock,greatest(inv.produced_stock-(total_alloc-allocated),0));
+     if inv.produced_stock<total_alloc or inv.available_stock<>greatest(inv.produced_stock-total_alloc,0) then
+       inventory_warnings:=inventory_warnings||jsonb_build_object(pid,jsonb_build_object(
+         'product_id',pid,'produced_stock',inv.produced_stock,'allocated_stock',total_alloc,'available_stock',inv.available_stock));
+     end if;
      if delta>0 then
-       if delta>allocated+inv.available_stock or delta>inv.produced_stock then raise exception '판매 가능 재고 부족: % / % (배정+가용 %, 판매 %)',pid,ch,allocated+inv.available_stock,delta; end if;
+       if delta>stock_limit then
+         raise exception '판매 가능 재고 부족: % / % (출고 가능 %, 요청 %). 예약은 상품화 완료 후 출고할 수 있습니다.',pid,ch,stock_limit,delta;
+       end if;
        take_n:=least(allocated,delta);
        if take_n>0 then update public.channel_inventory set stock=stock-take_n,updated_at=now() where id=cid; end if;
        update public.inventory set total_stock=total_stock-delta,produced_stock=produced_stock-delta,available_stock=available_stock-(delta-take_n),updated_at=now() where id=inv.id;
@@ -114,7 +128,8 @@ begin
    end if;
  end loop;
  if stock_changed then update public.app_state set data=jsonb_set(data,'{ch_reservations}',coalesce(s->'ch_reservations','[]')),updated_at=now() where id='cherop_main'; end if;
- return jsonb_build_object('processed',n,'affected',affected);
+ return jsonb_build_object('processed',n,'affected',affected,'inventory_warnings',
+   coalesce((select jsonb_agg(value) from jsonb_each(inventory_warnings)),'[]'));
 end;
 $$;
 revoke all on function public.apply_inventory_sales_v1(jsonb,jsonb) from public;

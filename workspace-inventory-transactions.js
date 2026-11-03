@@ -32,6 +32,10 @@ async function commitInventorySales(rows, deletes = []) {
   if (error) throw Error(error.message);
   return data;
 }
+function inventorySalesSaved(result, message) {
+  const count = result?.inventory_warnings?.length || 0;
+  toast(message + (count ? ` · 기존 재고 배정 확인 필요 ${count}종` : ''), count ? 6000 : 3000);
+}
 async function refreshInventorySales(result) {
   const dates = new Map((result?.affected || []).map(r=>[r.date+'|'+r.channel,r]));
   for (const r of dates.values()) {
@@ -65,7 +69,7 @@ async function processUpload() {
       const write=existing?.length ? await db.from('channel_product_mapping').update(payload).eq('channel',invUploadChannel).eq('channel_name',key) : await db.from('channel_product_mapping').insert({...payload,id:'map-'+crypto.randomUUID()});
       if(write.error){toast('판매·재고 저장 완료. 상품 매칭 저장은 재확인해주세요.');break;}
     }
-    toast('판매·재고 저장 완료 · 재업로드는 변경 수량만 반영됩니다');
+    inventorySalesSaved(result,'판매·재고 저장 완료 · 재업로드는 변경 수량만 반영됩니다');
     closeModal('inv-upload-modal');
     await refreshInventorySales(result);
   } catch(e){toast('판매 입력 실패: '+e.message);console.error(e);}
@@ -80,7 +84,7 @@ async function saveShipment() {
   window._shipmentOperationId ||= crypto.randomUUID();
   try {
     const result=await commitInventorySales(items.map(x=>({id:`ship-${window._shipmentOperationId}-${x.rowId}`,product_id:x.pid,channel,quantity:x.qty,amount:0,sale_date:date})));
-    toast('출고·재고 저장 완료');closeModal('shipment-modal');await refreshInventorySales(result);
+    inventorySalesSaved(result,'출고·재고 저장 완료');closeModal('shipment-modal');await refreshInventorySales(result);
     if(invCurrentTab==='shiplog')await loadShipLog();
   } catch(e){toast('출고 입력 실패: '+e.message);}
   finally {inventorySalesBusy=false;}
@@ -93,7 +97,7 @@ async function saveShipLogEdit(id) {
   try {
     const {data:prev,error}=await db.from('sales_log').select('*').eq('id',id).single();if(error)throw error;
     const result=await commitInventorySales([{...prev,quantity,sale_date,channel,expected:inventorySaleExpected(prev)}]);
-    toast('출고 수정·재고 조정 완료');closeModal('sales-log-edit-modal');await refreshInventorySales(result);await loadShipLog();
+    inventorySalesSaved(result,'출고 수정·재고 조정 완료');closeModal('sales-log-edit-modal');await refreshInventorySales(result);await loadShipLog();
   } catch(e){toast('수정 실패: '+e.message);}
   finally{inventorySalesBusy=false;}
 }
@@ -104,7 +108,7 @@ async function deleteShipLog(id) {
     const {data:prev,error}=await db.from('sales_log').select('*').eq('id',id).single();if(error)throw error;
     if(!await customConfirm('출고 내역 삭제',`재고 ${prev.quantity}개를 복구하고 출고 내역을 삭제할까요?`))return;
     const result=await commitInventorySales([],[{id,expected:inventorySaleExpected(prev)}]);
-    toast('출고 삭제·재고 복구 완료');closeModal('sales-log-edit-modal');await refreshInventorySales(result);await loadShipLog();
+    inventorySalesSaved(result,'출고 삭제·재고 복구 완료');closeModal('sales-log-edit-modal');await refreshInventorySales(result);await loadShipLog();
   } catch(e){toast('삭제 실패: '+e.message);}
   finally{inventorySalesBusy=false;}
 }

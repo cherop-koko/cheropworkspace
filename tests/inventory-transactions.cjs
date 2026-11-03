@@ -10,4 +10,9 @@ rows=build({a:{rows:[item,item]}},{a:'p'},new Set(),'자사몰');assert.equal(ro
 assert.throws(()=>build({a:{rows:[item,{...item,qty:3}]}},{a:'p'},new Set(),'자사몰'),/품목번호/);
 assert.throws(()=>build({a:{rows:[{...item,qty:-1}]}},{a:'p'},new Set(),'자사몰'),/수량/);
 assert.throws(()=>build({a:{rows:[{...item,saleDate:''}]}},{a:'p'},new Set(),'자사몰'),/날짜/);
+let savedMessage;ctx.toast=m=>{savedMessage=m;};
+ctx.inventorySalesSaved({inventory_warnings:[{product_id:'p'}]},'출고·재고 저장 완료');
+assert.equal(savedMessage,'출고·재고 저장 완료 · 기존 재고 배정 확인 필요 1종');
+ctx.inventorySalesSaved({inventory_warnings:[]},'출고·재고 저장 완료');
+assert.equal(savedMessage,'출고·재고 저장 완료');
 console.log('PASS: daily aggregation, channel-safe IDs, legacy aliases, duplicate order lines, skipped mappings and invalid input');
