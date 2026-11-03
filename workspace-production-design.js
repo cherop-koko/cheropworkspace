@@ -16,7 +16,7 @@ function productMap(rows){return new Map(rows.map(p=>[p.id,p]));}
 loadWorkLogList=async function(){
  const ticket=next('work');try{
   const [s,products]=await Promise.all([getAppState(),productData()]);if(ticket!==tickets.work)return;
-  state.products=products;const map=productMap(products);_workLogProdList=products.filter(p=>!p.is_discontinued&&!(s.prod_hidden||[]).includes(p.id)).sort((a,b)=>name(a).localeCompare(name(b),'ko'));
+  state.products=products;const map=productMap(products);_workLogProdList=products.filter(p=>!p.stock_unlimited&&!p.is_discontinued&&!(s.prod_hidden||[]).includes(p.id)).sort((a,b)=>name(a).localeCompare(name(b),'ko'));
   const end=today(),start=new Date(end+'T12:00:00Z');start.setUTCDate(start.getUTCDate()-(_workLogPeriodDays-1));const cutoff=start.toISOString().slice(0,10);
   const all=(s.work_logs||[]).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   const logs=all.filter(r=>r.date>=cutoff&&r.date<=end),seen=new Set(),recent=[];
@@ -66,7 +66,7 @@ loadProdRecFull=async function(){
  const ticket=next('rec');try{
   const [s,products,inventory,sales]=await Promise.all([getAppState(),productData(),api.queryAll('inventory'),api.queryAll('sales_log',q=>q.gte('sale_date',dateStr(new Date(Date.now()-28*86400000))))]);if(ticket!==tickets.rec)return;
   const invMap=new Map(inventory.map(r=>[r.product_id,r]));state.hidden=s.prod_hidden||[];
-  state.recommend=products.map(p=>{const inv=invMap.get(p.id)||{},total=num(inv.total_stock),produced=num(inv.produced_stock);return{p,total,produced,pending:num(inv.pending_production),pct:total?Math.round(produced/total*100):0,days:daysUntilSoldOut(inv,calcVelocity(sales,p.id))};});
+  state.recommend=products.filter(p=>!p.stock_unlimited).map(p=>{const inv=invMap.get(p.id)||{},total=num(inv.total_stock),produced=num(inv.produced_stock);return{p,total,produced,pending:num(inv.pending_production),pct:total?Math.round(produced/total*100):0,days:daysUntilSoldOut(inv,calcVelocity(sales,p.id))};});
   const cats=[...new Set([...(s.inv_categories||[]),...products.map(p=>p.category).filter(Boolean)])];if(prodRecCat!=='전체'&&!cats.includes(prodRecCat))prodRecCat='전체';
   $('w8-rec-category').innerHTML=['전체',...cats].map(c=>`<option value="${esc(c)}" ${prodRecCat===c?'selected':''}>${esc(c==='전체'?'전체 카테고리':c)}</option>`).join('');$('w8-rec-sort').value=prodRecSort;paintRecommendations();
  }catch(error){if(ticket===tickets.rec)errorView('w8-rec-results',error,'rec-retry');}

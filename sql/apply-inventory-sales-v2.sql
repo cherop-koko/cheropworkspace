@@ -13,7 +13,7 @@ declare
  source_kind text; store_id text; review_id text; actor jsonb; plan jsonb := '[]'; confirmation_token text; detail_text text;
  complete_n integer; pending_n integer; free_n integer; own_reserved integer; other_reserved integer; pending_limit integer;
  restore_n integer; lot_index integer; source_remaining integer; changed_reviews boolean:=false; snapshot jsonb;
- previous_guard text;
+ previous_guard text; unlimited boolean;
 begin
  begin -- All preview writes are rolled back by the confirmation exception below.
  if jsonb_typeof(p_rows) is distinct from 'array' or jsonb_typeof(p_delete_ids) is distinct from 'array' then raise exception '판매 입력 형식 오류'; end if;
@@ -28,17 +28,19 @@ begin
  if (select count(*)<>count(distinct x->>'id') from jsonb_array_elements(request_rows) x) then raise exception '입력에 중복 판매 ID가 있습니다.'; end if;
  for r in select value from jsonb_array_elements(request_rows) loop
    sid:=r->>'id'; deleted:=coalesce((r->>'delete')::boolean,false);
+   select name||coalesce(' · '||nullif(option_name,''),'') into label from public.products where id=r->>'product_id';
+   label:=coalesce(label,'선택한 상품');
    if sid is null or length(sid)>500 then raise exception '판매 ID 오류'; end if;
    select * into old from public.sales_log where id=sid for update;
    if old.id is null and not deleted then
      if (select count(*) from public.sales_log where id in (select jsonb_array_elements_text(coalesce(r->'legacy_ids','[]'))))>1 then
-       raise exception '같은 날짜·상품의 기존 판매 기록이 여러 개입니다. 중복 여부를 확인해주세요: %',sid;
+       raise exception '같은 날짜·상품의 기존 판매 기록이 여러 개입니다. 중복 여부를 확인해주세요: %',label;
      end if;
      for legacy in select jsonb_array_elements_text(coalesce(r->'legacy_ids','[]')) loop
        select * into old from public.sales_log where id=legacy for update;
        if old.id is not null then
          if old.channel is distinct from r->>'channel' or old.product_id is distinct from r->>'product_id' then
-           raise exception '과거 판매 ID의 채널/상품이 다릅니다. 중복 차감 방지를 위해 확인이 필요합니다: %',legacy;
+           raise exception '과거 판매 ID의 채널/상품이 다릅니다. 중복 차감 방지를 위해 확인이 필요합니다: %',label;
          end if;
          exit;
        end if;
@@ -52,16 +54,17 @@ begin
    if not deleted then
      pid:=r->>'product_id'; ch:=r->>'channel'; q:=(r->>'quantity')::integer;
      if pid is null or nullif(ch,'') is null or q is null or q<0 or r->>'sale_date' is null then raise exception '상품·채널·날짜·수량을 확인해주세요.'; end if;
-     select name||coalesce(' · '||nullif(option_name,''),'') into label from public.products where id=pid and disc_status is distinct from 'deleted';
-     if not found then raise exception '삭제·통합된 상품입니다. 판매 매칭을 다시 선택해주세요: %',pid; end if;
+     select name||coalesce(' · '||nullif(option_name,''),'') into label from public.products where id=pid;
+     if not found then raise exception '상품 정보를 찾지 못했습니다. 판매 매칭을 다시 선택해주세요.'; end if;
+     if exists(select 1 from public.products where id=pid and disc_status='deleted') then raise exception '삭제·통합된 상품입니다. 판매 매칭을 다시 선택해주세요: %',label; end if;
      if coalesce((s->'inventory_review'->pid->>'block_sales')::boolean,false) then raise exception '%: %',label,s->'inventory_review'->pid->>'reason'; end if;
    end if;
    store_id:=coalesce(old.id,sid);
    entry:=sources->store_id;
    if old.id is not null and entry is null then
-     -- Older shipments have no breakdown; preserve the previous cancellation behavior.
+     -- Older unlimited-service shipments never represent physical stock. Other legacy shipments retain their cancellation behavior.
      entry:=jsonb_build_object('product_id',old.product_id,'channel',old.channel,'quantity',old.quantity,'legacy',true,
-       'lots',jsonb_build_array(jsonb_build_object('kind','legacy_completed','qty',old.quantity)));
+       'lots',jsonb_build_array(jsonb_build_object('kind',case when exists(select 1 from public.products where id=old.product_id and stock_unlimited) then 'unlimited' else 'legacy_completed' end,'qty',old.quantity)));
    end if;
    if old.id is not null and (entry->>'product_id' is distinct from old.product_id or entry->>'channel' is distinct from old.channel
       or (entry->>'quantity')::integer is distinct from old.quantity
@@ -82,16 +85,35 @@ begin
        pid:=r->>'product_id'; ch:=r->>'channel'; delta:=q;
      end if;
      if delta=0 then continue; end if;
-     select * into strict inv from public.inventory where product_id=pid for update;
+     select name||coalesce(' · '||nullif(option_name,''),''),stock_unlimited into label,unlimited from public.products where id=pid for share;
+     label:=coalesce(label,'상품 정보 없음');
+     -- Unlimited services record quantity/revenue but never manufacture physical stock.
+     if delta>0 and unlimited then
+       lots:=lots||jsonb_build_array(jsonb_build_object('kind','unlimited','qty',delta));
+       stock_changed:=true; continue;
+     elsif delta<0 and not exists(select 1 from jsonb_array_elements(lots) x where x->>'kind'<>'unlimited') then
+       remain_n:=-delta;
+       for lot,lot_index in select value,(ordinality-1)::integer from jsonb_array_elements(lots) with ordinality order by ordinality desc loop
+         exit when remain_n=0;
+         restore_n:=least((lot->>'qty')::integer,remain_n);
+         lots:=jsonb_set(lots,array[lot_index::text,'qty'],to_jsonb((lot->>'qty')::integer-restore_n));
+         remain_n:=remain_n-restore_n;
+       end loop;
+       if remain_n<>0 then raise exception '%: 취소할 출고 기록 수량을 확인해주세요.',label; end if;
+       select coalesce(jsonb_agg(value),'[]') into lots from jsonb_array_elements(lots) where (value->>'qty')::integer>0;
+       stock_changed:=true; continue;
+     end if;
+     select * into inv from public.inventory where product_id=pid for update;
+     if not found then raise exception '재고 기록을 찾지 못했습니다: % / %',label,ch; end if;
      perform 1 from public.channel_inventory where product_id=pid order by id for update;
      select coalesce(sum(stock),0) into total_alloc from public.channel_inventory where product_id=pid;
      select coalesce(sum(stock),0),min(id) into allocated,cid from public.channel_inventory where product_id=pid and channel=ch;
-     if (select count(*) from public.channel_inventory where product_id=pid and channel=ch)>1 then raise exception '채널 배정 기록이 중복되었습니다: % / %',pid,ch; end if;
+     if (select count(*) from public.channel_inventory where product_id=pid and channel=ch)>1 then raise exception '채널 배정 기록이 중복되었습니다: % / %',label,ch; end if;
      if inv.total_stock is null or inv.produced_stock is null or inv.pending_production is null or inv.available_stock is null
         or least(inv.total_stock,inv.produced_stock,inv.pending_production,inv.available_stock)<0
         or inv.total_stock<>inv.produced_stock+inv.pending_production
         or exists(select 1 from public.channel_inventory where product_id=pid and (stock is null or stock<0)) then
-       raise exception '재고 확인 필요: % (상품화 완료 %, 채널 배정 %, 가용 %). 판매는 저장되지 않았습니다.',pid,inv.produced_stock,total_alloc,inv.available_stock;
+       raise exception '재고 확인 필요: % (상품화 완료 %, 채널 배정 %, 가용 %). 판매는 저장되지 않았습니다.',label,inv.produced_stock,total_alloc,inv.available_stock;
      end if;
      -- Historical allocation differences must not block a stock-backed shipment.
      -- Preserve the difference; never invent stock or use another channel's units.
@@ -108,7 +130,7 @@ begin
        into own_reserved,other_reserved from jsonb_array_elements(coalesce(s->'ch_reservations','[]')) x where x->>'product_id'=pid;
        pending_limit:=greatest(inv.pending_production-other_reserved,0);
        if pending_n>pending_limit then
-         raise exception '판매 가능 재고 부족: % / % (완료 %, 사용 가능한 대기 %, 요청 %)',pid,ch,stock_limit,pending_limit,delta;
+         raise exception '판매 가능 재고 부족: % / % (해당 채널 출고 가능 완료 %개, 사용 가능한 대기 %개, 요청 %개)',label,ch,stock_limit,pending_limit,delta;
        end if;
        if pending_n>0 then
          select name||coalesce(' · '||nullif(option_name,''),'') into label from public.products where id=pid;
@@ -154,6 +176,9 @@ begin
          exit when remain_n=0;
          restore_n:=least((lot->>'qty')::integer,remain_n); if restore_n<=0 then continue; end if;
          source_kind:=lot->>'kind';
+         if source_kind='unlimited' then
+           lots:=jsonb_set(lots,array[lot_index::text,'qty'],to_jsonb((lot->>'qty')::integer-restore_n)); remain_n:=remain_n-restore_n; continue;
+         end if;
          if source_kind in ('completed_allocated','legacy_completed') then
            if cid is null then
              cid:='ci-sale-'||gen_random_uuid()::text;
