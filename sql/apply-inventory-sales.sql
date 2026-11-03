@@ -6,7 +6,7 @@ declare
  r jsonb; old public.sales_log%rowtype; inv public.inventory%rowtype;
  s jsonb; request_rows jsonb; affected jsonb := '[]'; rv jsonb; reservations jsonb;
  pid text; ch text; sid text; legacy text; label text; q integer; delta integer; allocated integer; take_n integer;
- total_alloc integer; free_stock integer; inventory_warnings jsonb := '{}';
+ total_alloc integer; free_stock integer; stock_limit integer; inventory_warnings jsonb := '{}';
  n integer := 0; remain_n integer; stock_changed boolean:=false;
  deleted boolean; pass integer; cid text;
 begin
@@ -75,13 +75,14 @@ begin
      -- Historical allocation differences must not block a stock-backed shipment.
      -- Preserve the difference; never invent stock or use another channel's units.
      free_stock:=least(inv.available_stock,greatest(inv.produced_stock-total_alloc,0));
+     stock_limit:=least(allocated+free_stock,greatest(inv.produced_stock-(total_alloc-allocated),0));
      if inv.produced_stock<total_alloc or inv.available_stock<>greatest(inv.produced_stock-total_alloc,0) then
        inventory_warnings:=inventory_warnings||jsonb_build_object(pid,jsonb_build_object(
          'product_id',pid,'produced_stock',inv.produced_stock,'allocated_stock',total_alloc,'available_stock',inv.available_stock));
      end if;
      if delta>0 then
-       if delta>least(inv.produced_stock,allocated+free_stock) then
-         raise exception '판매 가능 재고 부족: % / % (출고 가능 %, 요청 %). 예약은 상품화 완료 후 출고할 수 있습니다.',pid,ch,least(inv.produced_stock,allocated+free_stock),delta;
+       if delta>stock_limit then
+         raise exception '판매 가능 재고 부족: % / % (출고 가능 %, 요청 %). 예약은 상품화 완료 후 출고할 수 있습니다.',pid,ch,stock_limit,delta;
        end if;
        take_n:=least(allocated,delta);
        if take_n>0 then update public.channel_inventory set stock=stock-take_n,updated_at=now() where id=cid; end if;

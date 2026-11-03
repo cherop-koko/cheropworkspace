@@ -48,6 +48,18 @@ begin
    raise exception 'Expected channel shortage';
  exception when others then if sqlerrm not like '판매 가능 재고 부족:%' then raise; end if; end;
  update public.inventory set available_stock=0 where id='__shipment_availability_test__';
+ -- Preserve other channels even when this channel has an overstated allocation.
+ insert into public.channel_inventory(id,product_id,channel,stock)
+ values('__shipment_other_channel_test__','__shipment_availability_test__','QB',20);
+ begin
+   perform public.apply_inventory_sales_v1(jsonb_set(r,'{0,quantity}','152'));
+   raise exception 'Expected protection of other channel units';
+ exception when others then if sqlerrm not like '판매 가능 재고 부족:%' then raise; end if; end;
+ perform public.apply_inventory_sales_v1(jsonb_set(r,'{0,quantity}','151'));
+ if (select produced_stock from public.inventory where id='__shipment_availability_test__')<>20
+    or (select stock from public.channel_inventory where id='__shipment_other_channel_test__')<>20 then raise exception 'Other channel stock not protected'; end if;
+ perform public.apply_inventory_sales_v1('[]','[{"id":"ship-__availability_test__"}]');
+ delete from public.channel_inventory where id='__shipment_other_channel_test__';
  -- A valid first row and excessive second row must roll back together.
  begin
    perform public.apply_inventory_sales_v1(jsonb_set(r,'{0,quantity}','160') ||
