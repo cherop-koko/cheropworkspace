@@ -41,7 +41,7 @@ loadInvOverviewBanner=async function() {
     const hiddenAlertSet = new Set(sBan.inv_alert_hidden || []);
     let alertCount = 0;
     for(const p of prods){
-      if (orderedPidsBan.has(p.id) || hiddenAlertSet.has(p.id)) continue;
+      if (p.stock_unlimited || orderedPidsBan.has(p.id) || hiddenAlertSet.has(p.id)) continue;
       const inv = invRows.find(x=>x.product_id===p.id)||{};
       const velAll = calcVelocity(salesRows, p.id);
       const d = daysUntilReorder(inv, velAll);
@@ -127,7 +127,7 @@ loadInvList=async function(options={}) {
         const rsv=reservations.filter(r=>r.product_id===p.id&&r.channel===ch).reduce((s,r)=>s+(r.qty||0),0);
         if(!ci.stock && !rsv) return '';
         const vel=calcVelocity(salesRows,p.id,ch);
-        const days=vel>0?Math.ceil(ci.stock/vel):null;
+        const days=!p.stock_unlimited&&vel>0?Math.ceil(ci.stock/vel):null;
         const isAlert=days!==null&&days<=3;
         const lbl={'자사몰':'자사몰','카카오선물하기':'카카오','스마트스토어':'스마트'}[ch]||ch;
         const rsvTag=rsv?` <span style="opacity:.75;">(예약 ${rsv})</span>`:'';
@@ -143,11 +143,11 @@ loadInvList=async function(options={}) {
         }
       }
       const velAll=calcVelocity(salesRows, p.id);
-      const daysAll = daysUntilSoldOut(inv, velAll);    // 표의 D+ = 지금 재고로 며칠
-      const daysOrd = daysUntilReorder(inv, velAll);    // 배지 = 발주해야 하나 (대기분 포함)
+      const daysAll = p.stock_unlimited ? null : daysUntilSoldOut(inv, velAll);    // 표의 D+ = 지금 재고로 며칠
+      const daysOrd = p.stock_unlimited ? null : daysUntilReorder(inv, velAll);    // 배지 = 발주해야 하나 (대기분 포함)
       const review = sState.inventory_review?.[p.id];
       const overAllocated = chInvRows.filter(c=>c.product_id===p.id).reduce((n,c)=>n+num(c.stock),0)>num(inv.produced_stock);
-      const badge=review?.sample_only?`<span class="sbadge" title="${esc(review.reason)}">샘플 보관 · 판매 제외</span>`:review||overAllocated?`<span class="sbadge" style="color:var(--red);" title="${esc(review?.reason||'채널 배정 합계가 상품화 완료 수량보다 많습니다')}">확인 필요</span>`:p.is_discontinued?`<span class="sbadge" style="background:var(--surface2);color:var(--faint);">단종</span>`
+      const badge=p.stock_unlimited?'<span class="sbadge sbadge-ing">수량 제한 없음</span>':review?.sample_only?`<span class="sbadge" title="${esc(review.reason)}">샘플 보관 · 판매 제외</span>`:review||overAllocated?`<span class="sbadge" style="color:var(--red);" title="${esc(review?.reason||'채널 배정 합계가 상품화 완료 수량보다 많습니다')}">확인 필요</span>`:p.is_discontinued?`<span class="sbadge" style="background:var(--surface2);color:var(--faint);">단종</span>`
         :daysOrd!==null&&daysOrd<=REORDER_TH.urgent?`<span class="sbadge" style="background:var(--red-bg);color:var(--red);">발주필요</span>`
         :daysOrd!==null&&daysOrd<=REORDER_TH.warn?`<span class="sbadge" style="background:var(--amber-bg);color:var(--amber);">주의</span>`
         :`<span class="sbadge sbadge-ing">정상</span>`;
@@ -163,12 +163,12 @@ loadInvList=async function(options={}) {
             <option value="${p.category||''}">${p.category||'—'}</option>
           </select>
         </td>
-        <td class="inv-num" style="padding:0;"><input class="inv-inline-num" type="number" value="${inv.total_stock||0}" data-pid="${p.id}" data-field="total_stock" data-prev="${inv.total_stock||0}" onfocus="this.select()" onblur="saveInlineStock(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}"></td>
-        <td class="inv-num inv-green" style="padding:0;"><input class="inv-inline-num inv-green" type="number" value="${inv.produced_stock||0}" data-pid="${p.id}" data-field="produced_stock" data-prev="${inv.produced_stock||0}" onfocus="this.select()" onblur="saveInlineStock(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}"></td>
-        <td class="inv-num inv-amber">${inv.pending_production||0}</td>
-        <td class="inv-num">${inv.available_stock||0}</td>
-        <td class="w12-optional-channel" onclick="openChAllocModal('${p.id}')" style="cursor:pointer;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-          ${chChips||'<span class="inv-faint" style="font-size:11px;">미배분 →</span>'}
+        <td class="inv-num" style="padding:0;">${p.stock_unlimited?'무제한':`<input class="inv-inline-num" type="number" value="${inv.total_stock||0}" data-pid="${p.id}" data-field="total_stock" data-prev="${inv.total_stock||0}" onfocus="this.select()" onblur="saveInlineStock(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}">`}</td>
+        <td class="inv-num inv-green" style="padding:0;">${p.stock_unlimited?'—':`<input class="inv-inline-num inv-green" type="number" value="${inv.produced_stock||0}" data-pid="${p.id}" data-field="produced_stock" data-prev="${inv.produced_stock||0}" onfocus="this.select()" onblur="saveInlineStock(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.prev;this.blur();}">`}</td>
+        <td class="inv-num inv-amber">${p.stock_unlimited?'—':inv.pending_production||0}</td>
+        <td class="inv-num">${p.stock_unlimited?'무제한':inv.available_stock||0}</td>
+        <td class="w12-optional-channel" onclick="${p.stock_unlimited?'':`openChAllocModal('${p.id}')`}" style="cursor:pointer;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+          ${p.stock_unlimited?'배분 불필요':chChips||'<span class="inv-faint" style="font-size:11px;">미배분 →</span>'}
         </td>
         <td class="inv-num">${fmt(reservations.filter(r=>r.product_id===p.id).reduce((n,r)=>n+num(r.qty),0))}</td><td class="inv-num">${fmt((sState.prod_defects||[]).filter(r=>r.product_id===p.id&&r.status==='pending').reduce((n,r)=>n+(num(r.qty)||1),0))}</td>
         <td class="${daysAll&&daysAll<=PRODUCE_TH.urgent?'inv-red':daysAll&&daysAll<=PRODUCE_TH.warn?'inv-amber':''} inv-num" title="지금 팔 수 있는 재고 기준 소진 예상일">${daysAll?`D+${daysAll}`:'—'}</td>
@@ -193,7 +193,7 @@ loadChannelInv=async function(ch,options={}) {
     const channels=[...new Set([...CHANNELS,...allChInv.map(r=>r.channel)])];
     $('w12-channel-buttons').innerHTML=channels.map(c=>`<button type="button" data-stock="channel-filter" data-id="${esc(c)}" aria-pressed="${c===ch}">${esc(c)}</button>`).join('');
     $('w12-category-buttons').innerHTML=cats.map(c=>`<button type="button" data-stock="channel-category" data-id="${esc(c)}" aria-pressed="${c===invChCurrentCat}">${esc(c)}</button>`).join('');
-    const allocNeeded=allProds.filter(p=>!p.is_discontinued&&(invChCurrentCat==='전체'||p.category===invChCurrentCat)).map(p=>{const ci=allChInv.find(r=>r.product_id===p.id&&r.channel===ch)||{},inv=allInvRows.find(r=>r.product_id===p.id)||{},v=calcVelocity(allSales,p.id,ch);return{p,ci,inv,days:v>0?Math.ceil(num(ci.stock)/v):null};}).filter(r=>r.days!==null&&r.days<=3&&num(r.inv.available_stock)>0);
+    const allocNeeded=allProds.filter(p=>!p.stock_unlimited&&!p.is_discontinued&&(invChCurrentCat==='전체'||p.category===invChCurrentCat)).map(p=>{const ci=allChInv.find(r=>r.product_id===p.id&&r.channel===ch)||{},inv=allInvRows.find(r=>r.product_id===p.id)||{},v=calcVelocity(allSales,p.id,ch);return{p,ci,inv,days:v>0?Math.ceil(num(ci.stock)/v):null};}).filter(r=>r.days!==null&&r.days<=3&&num(r.inv.available_stock)>0);
     const fold=$('w12-allocation-alert');fold.querySelector('summary').innerHTML=`<span>채널 배분 필요 <b>${allocNeeded.length}</b></span><small>${esc(ch)} · ${esc(invChCurrentCat)} <i></i></small>`;
     $('inv-ch-alloc-list').innerHTML=allocNeeded.length?table(['상품·옵션','현재 채널재고','가용','소진 예상',''],allocNeeded.map(({p,ci,inv,days})=>`<tr><td>${productCell(p)}</td><td>${fmt(ci.stock)}</td><td>${fmt(inv.available_stock)}</td><td>${days}일</td><td>${button('배분·예약','allocate',p.id)}</td></tr>`)):empty('선택한 채널·카테고리에 배분 필요 항목이 없습니다.');
     // 필터
@@ -203,7 +203,7 @@ loadChannelInv=async function(ch,options={}) {
     if(searchQ) prods=prods.filter(p=>matches(p,searchQ));
     const chInvRows = allChInv.filter(r=>r.channel===ch);
     const salesRows = allSales.filter(r=>r.channel===ch);
-    const pids=new Set(prods.map(p=>p.id));const total = chInvRows.filter(r=>pids.has(r.product_id)).reduce((s,r)=>s+(r.stock||0),0);
+    const pids=new Set(prods.filter(p=>!p.stock_unlimited).map(p=>p.id));const total = chInvRows.filter(r=>pids.has(r.product_id)).reduce((s,r)=>s+(r.stock||0),0);
     $('inv-ch-title').textContent=`${ch} 재고`; $('inv-ch-sub').textContent=`${prods.length}종 · 실배분 ${fmt(total)}개`;
     if(!prods.length){ $('inv-channel-table').innerHTML='<div style="padding:14px 16px;font-size:13px;color:var(--faint);">상품이 없어요</div>'; return; }
     $('inv-channel-table').innerHTML=`<table class="inv-tbl"><thead><tr>
@@ -212,9 +212,9 @@ loadChannelInv=async function(ch,options={}) {
       const ci=chInvRows.find(x=>x.product_id===p.id)||{stock:0};
       const vel=calcVelocity(salesRows,p.id,ch);
       const weekSales=Math.round(vel*7);
-      const days=vel>0?Math.ceil(ci.stock/vel):null;
+      const days=!p.stock_unlimited&&vel>0?Math.ceil(ci.stock/vel):null;
       const isAlert=days!==null&&days<=3;
-      const badge=ci.stock===0?`<span class="sbadge" style="background:var(--surface2);color:var(--faint);">미배분</span>`
+      const badge=p.stock_unlimited?'<span class="sbadge sbadge-ing">수량 제한 없음</span>':ci.stock===0?`<span class="sbadge" style="background:var(--surface2);color:var(--faint);">미배분</span>`
         :isAlert?`<span class="sbadge" style="background:var(--red-bg);color:var(--red);">배분필요</span>`
         :days&&days<=14?`<span class="sbadge" style="background:var(--amber-bg);color:var(--amber);">주의</span>`
         :`<span class="sbadge sbadge-ing">정상</span>`;
@@ -222,12 +222,12 @@ loadChannelInv=async function(ch,options={}) {
       return `<tr data-channel-product="${esc(p.id)}">
         <td>${productCell(p)}</td>
         <td class="inv-faint" style="font-size:11px;">${p.category||'—'}</td>
-        <td class="inv-num ${isAlert?'inv-red':''}">${ci.stock}</td>
+        <td class="inv-num ${isAlert?'inv-red':''}">${p.stock_unlimited?'무제한':ci.stock}</td>
         <td class="inv-num">${fmt(rsv.filter(r=>r.product_id===p.id&&r.channel===ch).reduce((n,r)=>n+num(r.qty),0))}</td>
-        <td class="inv-num">${fmt((allInvRows.find(r=>r.product_id===p.id)||{}).available_stock)}</td><td class="inv-num">${fmt((allInvRows.find(r=>r.product_id===p.id)||{}).pending_production)}</td>
+        <td class="inv-num">${p.stock_unlimited?'무제한':fmt((allInvRows.find(r=>r.product_id===p.id)||{}).available_stock)}</td><td class="inv-num">${p.stock_unlimited?'—':fmt((allInvRows.find(r=>r.product_id===p.id)||{}).pending_production)}</td>
         <td class="inv-num inv-faint">${weekSales>0?weekSales+'개':'—'}</td>
         <td class="inv-num ${isAlert?'inv-red':days&&days<=14?'inv-amber':''}">${days?`D+${days}`:'—'}</td>
-        <td>${badge}</td><td>${button('배분·예약','allocate',p.id)}</td>
+        <td>${badge}</td><td>${p.stock_unlimited?'—':button('배분·예약','allocate',p.id)}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
   } catch(e){ console.error(e); }
@@ -295,7 +295,7 @@ loadOrderAlerts=async function() {
   try {
     // 판매중 상품만 조회
     const prodsAll = (await db.from('products').select('*').eq('is_discontinued',false)).data||[];
-    const prods    = prodsAll.filter(p => p.disc_status !== 'deleted');
+    const prods    = prodsAll.filter(p => p.disc_status !== 'deleted' && !p.stock_unlimited);
     const invRows  = (await db.from('inventory').select('*')).data||[];
     const chInvRows= (await db.from('channel_inventory').select('*')).data||[];
     const salesRows= await dbFetchAll(() => db.from('sales_log').select('*').gte('sale_date', dateStr(new Date(Date.now()-28*86400000))));
@@ -466,13 +466,13 @@ exportInvExcel=async function() {
         '상품명':          p.name || '',
         '사이즈':          p.option_name || '',
         '카테고리':        p.category || '',
-        '원재고':          inv.total_stock || 0,
-        '자사몰재고':       own.stock || 0,
-        '카카오재고':       kakao.stock || 0,
-        '스마트스토어재고': smart.stock || 0,
-        '상품화완료재고':   inv.produced_stock || 0,
-        '가용재고':         inv.available_stock || 0,
-        '상품화대기재고':   inv.pending_production || 0,
+        '원재고':          p.stock_unlimited ? '무제한' : inv.total_stock || 0,
+        '자사몰재고':       p.stock_unlimited ? '무제한' : own.stock || 0,
+        '카카오재고':       p.stock_unlimited ? '무제한' : kakao.stock || 0,
+        '스마트스토어재고': p.stock_unlimited ? '무제한' : smart.stock || 0,
+        '상품화완료재고':   p.stock_unlimited ? '—' : inv.produced_stock || 0,
+        '가용재고':         p.stock_unlimited ? '무제한' : inv.available_stock || 0,
+        '상품화대기재고':   p.stock_unlimited ? '—' : inv.pending_production || 0,
         '판매가':           p.price || 0,
         '상태':             p.is_discontinued ? '판매 종료' : '판매 중',
       };
@@ -558,7 +558,7 @@ runInventoryAudit=async function() {
 
 const inventoryPage=$('page-inventory'),salesPage=$('page-sales');
 function metrics(items){return `<div class="w11-metrics">${items.map(([title,value,note])=>`<div><span>${title}</span><strong>${value}</strong><small>${note||''}</small></div>`).join('')}</div>`;}
-function inventorySummary(rows,reservations,s,products){const uncertain=products.filter(p=>p.disc_status==='review');const ids=new Set(products.filter(p=>p.disc_status!=='review'&&(invCurrentCat==='전체'||p.category===invCurrentCat)).map(p=>p.id));const filtered=rows.filter(r=>ids.has(r.product_id));$('w11-stock-metrics').innerHTML=metrics([['현재 총재고',fmt(filtered.reduce((n,r)=>n+num(r.total_stock),0)),uncertain.length?`관계 확인 중 ${uncertain.length}개 기록 합계 제외`:'입고 누계 아님 · 기존 재고 원장'],['상품화 완료',fmt(filtered.reduce((n,r)=>n+num(r.produced_stock),0)),'가용·채널 배분 포함'],['상품화 대기',fmt(filtered.reduce((n,r)=>n+num(r.pending_production),0)),'미상품화 재고 · 예약은 별도 표시'],['예약',fmt(reservations.filter(r=>ids.has(r.product_id)).reduce((n,r)=>n+num(r.qty),0)),'상품화 완료 후 자동 배분']]);const sel=$('w11-category');sel.innerHTML=[...new Set(['전체',...(s.inv_categories||[]),...(stockSnapshot?.products||products).map(p=>p.category).filter(Boolean)])].map(c=>`<option ${c===invCurrentCat?'selected':''}>${esc(c)}</option>`).join('');}
+function inventorySummary(rows,reservations,s,products){const uncertain=products.filter(p=>p.disc_status==='review');const ids=new Set(products.filter(p=>!p.stock_unlimited&&p.disc_status!=='review'&&(invCurrentCat==='전체'||p.category===invCurrentCat)).map(p=>p.id));const filtered=rows.filter(r=>ids.has(r.product_id));$('w11-stock-metrics').innerHTML=metrics([['현재 총재고',fmt(filtered.reduce((n,r)=>n+num(r.total_stock),0)),uncertain.length?`관계 확인 중 ${uncertain.length}개 기록 합계 제외`:'입고 누계 아님 · 기존 재고 원장'],['상품화 완료',fmt(filtered.reduce((n,r)=>n+num(r.produced_stock),0)),'가용·채널 배분 포함'],['상품화 대기',fmt(filtered.reduce((n,r)=>n+num(r.pending_production),0)),'미상품화 재고 · 예약은 별도 표시'],['예약',fmt(reservations.filter(r=>ids.has(r.product_id)).reduce((n,r)=>n+num(r.qty),0)),'상품화 완료 후 자동 배분']]);const sel=$('w11-category');sel.innerHTML=[...new Set(['전체',...(s.inv_categories||[]),...(stockSnapshot?.products||products).map(p=>p.category).filter(Boolean)])].map(c=>`<option ${c===invCurrentCat?'selected':''}>${esc(c)}</option>`).join('');}
 $('inv-tab-overview').insertAdjacentHTML('afterbegin','<div id="w11-stock-metrics"></div>');
 const invFilter=document.createElement('div');invFilter.className='w11-filters';invFilter.innerHTML='<label class="w11-search">상품 검색</label><label>카테고리<select id="w11-category"><option>전체</option></select></label><label>상품 상태<select id="w11-status"><option value="all">활성</option><option value="everything">전체 상태</option><option value="disc">단종</option></select></label>'+button('카테고리 관리','categories');invFilter.querySelector('.w11-search').append($('inv-search'));$('inv-tab-overview').insertBefore(invFilter,$('inv-overview-banner'));
 $('w11-category').onchange=e=>{invCurrentCat=e.target.value;loadInvList({cached:true});};$('w11-status').onchange=e=>{invCurrentFilter=e.target.value;loadInvList({cached:true});};
