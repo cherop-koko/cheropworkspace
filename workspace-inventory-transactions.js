@@ -110,6 +110,38 @@ async function deleteShipLog(id) {
 }
 
 // Keep the legacy login/core file untouched; install inventory-only overrides here.
+// Pasted rows can be created in the same millisecond. Give each row a stable,
+// unique ID so both DOM controls and transaction retries address the right row.
+function addShipmentRow(prodName='', qty='', prodId='', status='') {
+  const row = document.createElement('div');
+  const rowId = 'sr-' + crypto.randomUUID();
+  row.id = rowId;
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 70px 32px;align-items:center;padding:6px 10px;border-bottom:0.5px solid var(--border);position:relative;';
+  row.innerHTML = `
+    <div style="position:relative;">
+      <input class="prop-inp ship-prod-search" placeholder="상품명 검색..." autocomplete="off"
+        style="width:100%;font-size:12px;border:none;background:transparent;padding:0;">
+      <div class="ship-prod-dropdown" style="display:none;position:fixed;z-index:9999;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--r);max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12);"></div>
+      <span class="ship-selected-prod" style="font-size:10px;margin-left:4px;"></span>
+    </div>
+    <input type="number" class="prop-inp ship-qty" placeholder="0" min="1"
+      style="font-size:12px;text-align:center;border:none;background:var(--surface2);border-radius:4px;padding:3px 6px;">
+    <div class="ship-remove" style="cursor:pointer;color:var(--light);font-size:14px;text-align:center;">✕</div>
+    <input type="hidden" class="ship-prod-id">`;
+  const input = row.querySelector('.ship-prod-search');
+  input.value = prodName;
+  input.dataset.rowid = rowId;
+  input.oninput = input.onfocus = () => shipSearchProd(input, rowId);
+  row.querySelector('.ship-prod-dropdown').id = 'ship-drop-' + rowId;
+  row.querySelector('.ship-prod-id').value = prodId;
+  row.querySelector('.ship-qty').value = qty;
+  const selected = row.querySelector('.ship-selected-prod');
+  selected.textContent = status ? (status === 'ok' ? '✓ 매칭' : '✕ 미매칭') : '';
+  selected.style.display = status ? '' : 'none';
+  selected.style.color = status === 'ok' ? '#6B9E7A' : status === 'err' ? '#C4736A' : 'var(--light)';
+  row.querySelector('.ship-remove').onclick = () => row.remove();
+  $('shipment-rows').appendChild(row);
+}
 const legacyOpenShipmentModal = openShipmentModal;
 openShipmentModal = async function(...args) {
   window._shipmentOperationId = crypto.randomUUID();
