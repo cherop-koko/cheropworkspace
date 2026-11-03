@@ -28,9 +28,20 @@ function inventorySaleExpected(row) {
   return Object.fromEntries(['quantity','channel','product_id','sale_date','amount'].map(k=>[k,row[k]]));
 }
 async function commitInventorySales(rows, deletes = []) {
-  const {data,error} = await db.rpc('apply_inventory_sales_v1', {p_rows:rows,p_delete_ids:deletes});
-  if (error) throw Error(error.message);
-  return data;
+  let confirmation = null;
+  const actor = typeof user === 'object' && user ? {id:user.id,name:user.name} : {};
+  for (let attempt=0;attempt<3;attempt++) {
+    const {data,error} = await db.rpc('apply_inventory_sales_v2', {p_rows:rows,p_delete_ids:deletes,p_confirmation:confirmation,p_actor:actor});
+    if (error) throw Error(error.message);
+    if (!data?.needs_confirmation) {
+      _appStateCache=null;_appStateCacheAt=0;
+      return data;
+    }
+    if (!window.CHEROPPendingShipments) throw Error('대기재고 확인 화면을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
+    if (!await window.CHEROPPendingShipments.confirm(data.pending_rows,attempt>0)) return null;
+    confirmation=data.confirmation;
+  }
+  throw Error('입력 중 재고가 계속 변경됐습니다. 다시 확인 후 등록해주세요.');
 }
 function inventorySalesSaved(result, message) {
   const count = result?.inventory_warnings?.length || 0;
@@ -60,6 +71,7 @@ async function processUpload() {
     const rows=buildInventorySalesRows(agg,mappings,skipped,invUploadChannel,state.inventory_product_aliases||{});
     if (!rows.length) throw Error('저장할 판매내역이 없습니다.');
     const result=await commitInventorySales(rows);
+    if (result===null) return;
     // Mapping persistence may be retried safely; inventory was already committed atomically.
     for (const [key,pid] of Object.entries(mappings)) {
       if (skipped.has(key)||!agg[key]) continue;
@@ -84,6 +96,7 @@ async function saveShipment() {
   window._shipmentOperationId ||= crypto.randomUUID();
   try {
     const result=await commitInventorySales(items.map(x=>({id:`ship-${window._shipmentOperationId}-${x.rowId}`,product_id:x.pid,channel,quantity:x.qty,amount:0,sale_date:date})));
+    if (result===null) return;
     inventorySalesSaved(result,'출고·재고 저장 완료');closeModal('shipment-modal');await refreshInventorySales(result);
     if(invCurrentTab==='shiplog')await loadShipLog();
   } catch(e){toast('출고 입력 실패: '+e.message);}
@@ -97,6 +110,7 @@ async function saveShipLogEdit(id) {
   try {
     const {data:prev,error}=await db.from('sales_log').select('*').eq('id',id).single();if(error)throw error;
     const result=await commitInventorySales([{...prev,quantity,sale_date,channel,expected:inventorySaleExpected(prev)}]);
+    if (result===null) return;
     inventorySalesSaved(result,'출고 수정·재고 조정 완료');closeModal('sales-log-edit-modal');await refreshInventorySales(result);await loadShipLog();
   } catch(e){toast('수정 실패: '+e.message);}
   finally{inventorySalesBusy=false;}
@@ -108,6 +122,7 @@ async function deleteShipLog(id) {
     const {data:prev,error}=await db.from('sales_log').select('*').eq('id',id).single();if(error)throw error;
     if(!await customConfirm('출고 내역 삭제',`재고 ${prev.quantity}개를 복구하고 출고 내역을 삭제할까요?`))return;
     const result=await commitInventorySales([],[{id,expected:inventorySaleExpected(prev)}]);
+    if (result===null) return;
     inventorySalesSaved(result,'출고 삭제·재고 복구 완료');closeModal('sales-log-edit-modal');await refreshInventorySales(result);await loadShipLog();
   } catch(e){toast('삭제 실패: '+e.message);}
   finally{inventorySalesBusy=false;}

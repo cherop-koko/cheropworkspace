@@ -64,7 +64,7 @@ const main=()=>tables.app_state[0].data;
  w._invUploadMappings={one:'stock-a'};w._invUploadSkipped=new Set();
  vm.runInContext("invUploadChannel='자사몰';syncSalesToTaxLedger=async()=>{};",ctx);
  const beforeRpc=rpcCalls.length;await w.processUpload();
- assert.equal(rpcCalls.length,beforeRpc+1);assert.equal(rpcCalls.at(-1).name,'apply_inventory_sales_v1');
+ assert.equal(rpcCalls.length,beforeRpc+1);assert.equal(rpcCalls.at(-1).name,'apply_inventory_sales_v2');
  assert.equal(rpcCalls.at(-1).args.p_rows[0].quantity,2);
  assert.equal(tables.sales_log.length,1207,'client does not separately insert sales rows');
  // Reproduce rapid pasted rows with the clock held to one millisecond.
