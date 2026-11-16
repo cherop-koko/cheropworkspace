@@ -92,8 +92,16 @@ function dailyRows(date) {
     else overflow.push(p);
   }
   const legacy=existing.filter(p=>kind(p)!=='스토리'&&p.story).flatMap(p=>p.story.split(/\n+(?=[①②③④⑤⑥⑦⑧⑨⑩])/)).map(t=>t.trim()).filter(Boolean);
+  const publications = ['피드','릴스'].flatMap(format => {
+    const saved = existing.filter(post => kind(post)===format);
+    if(saved.length) return saved;
+    const base = (format==='피드'?'feed-':'reel-')+date;
+    let id = base;
+    while(record.posts.some(post=>post.id===id)) id+='-new';
+    return [emptyPost(id,date,format)];
+  });
   return slots.map((p,i)=>p||overflow.shift()||{...emptyPost('story-'+date+'-'+(i+1),date,'스토리'),storySlot:i+1,brief:legacy[i]||''})
-    .concat(overflow,existing.filter(p=>kind(p)!=='스토리'));
+    .concat(overflow,publications);
 }
 function weekBoard() {
   const dates=weekDates(diaryDate), all=record.posts.filter(p=>dates.includes(p.date)&&p.status==='posted');
@@ -105,12 +113,18 @@ function weekBoard() {
   }
   const calendar=dates.map((d,i)=>{
     const items=dailyRows(d), post=items.find(p=>kind(p)!=='스토리'&&p.title)||items.find(p=>p.title);
-    return '<button type="button" class="ig-date" data-ig-date="'+d+'" aria-pressed="'+(d===diaryDate)+'"><b>'+d.slice(-2)+'</b><span>'+esc(post?.title||'게시 계획 작성')+'</span><small>'+['월','화','수','목','금','토','일'][i]+'요일 · 스토리 '+count(items,'스토리')+'/5'+(items.some(p=>kind(p)==='피드')?' · 피드':'')+(items.some(p=>kind(p)==='릴스')?' · 릴스':'')+'</small></button>'+(d===diaryDate?'<div class="ig-checks">'+items.map(checkbox).join('')+'</div>':'');
+    const saved = record.posts.filter(p=>p.date===d);
+    const summary = ['피드','릴스'].map(format=>{
+      const planned = saved.filter(p=>kind(p)===format);
+      return format+' '+(planned.length ? count(planned,format)+'/'+planned.length : '미정');
+    }).join(' · ');
+    return '<button type="button" class="ig-date" data-ig-date="'+d+'" aria-pressed="'+(d===diaryDate)+'"><b>'+d.slice(-2)+'</b><span>'+esc(post?.title||'게시 계획 작성')+'</span><small>'+['월','화','수','목','금','토','일'][i]+'요일 · 스토리 '+count(items,'스토리')+'/5'+' · '+summary+'</small></button>'+(d===diaryDate?'<div class="ig-checks">'+items.map(checkbox).join('')+'</div>':'');
   }).join('');
   const sequence=rows.map((p,i)=>{
     const draft={...p,...drafts.get(p.id)},open=p.id===openId;
+    const emptyLabel=kind(p)==='스토리'?'주제 입력':kind(p)==='릴스'?'공개 릴스 기획하기':'피드 기획하기';
     const fields=[['title','주제'],['brief','소재 아이디어'],['caption','캡션'],['mediaUrl','사진·영상 링크']].map(([key,title])=>'<label>'+title+(key==='brief'||key==='caption'?'<textarea name="'+key+'">'+esc(draft[key])+'</textarea>':'<input name="'+key+'" type="'+(key==='mediaUrl'?'url':'text')+'" value="'+esc(draft[key])+'">')+'</label>').join('');
-    return '<button class="ig-slot" data-ig-open="'+esc(p.id)+'" aria-expanded="'+open+'"><small>'+esc(label(p,i))+'</small><span>'+esc(draft.title||'주제 입력')+'</span><span>'+ (open?'−':'+')+'</span></button>'+(open?'<form class="ig-form" data-ig-form="'+esc(p.id)+'">'+fields+'<button>원고 저장</button></form>':'');
+    return '<button class="ig-slot" data-ig-open="'+esc(p.id)+'" aria-expanded="'+open+'"><small>'+esc(label(p,i))+'</small><span>'+esc(draft.title||emptyLabel)+'</span><span>'+ (open?'−':'+')+'</span></button>'+(open?'<form class="ig-form" data-ig-form="'+esc(p.id)+'">'+fields+'<button>원고 저장</button></form>':'');
   }).join('');
   const pilots=(record.reelPilots||[]).map(p=>{
     const release=record.posts.find(x=>x.id==='release-'+p.id);
