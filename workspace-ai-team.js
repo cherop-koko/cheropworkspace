@@ -117,6 +117,14 @@ listStyle.textContent = `
   .post-row{border-bottom:1px solid var(--border)}
   .post-toggle{flex:1;text-align:left;min-height:44px;padding:3px 0}
   .post-kind{display:grid;place-items:center;width:52px;height:25px;flex:none;border:1px solid var(--border2);font-size:12px}
+  .ig-feed{--kind-ink:#8b3d57;--kind-fill:#f8e7ed}
+  .ig-reel{--kind-ink:#315c88;--kind-fill:#e7f0fa}
+  .ig-story{--kind-ink:#31684e;--kind-fill:#e5f2eb}
+  .post-kind{background:var(--kind-fill);color:var(--kind-ink);border-color:transparent}
+  .grid .tile .post-count,.week-total .post-count{color:var(--kind-ink)}
+  .week .tile .post-count{display:block;white-space:nowrap;font-size:11px;letter-spacing:-.03em}
+  .month .count-line{display:flex;flex-wrap:wrap;gap:0 5px}
+  .week-total{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px}
   .post-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
   .post-check{width:17px;height:17px;flex:none;accent-color:var(--text);margin:0 8px}
   .post-memo{padding:10px 12px;background:var(--surface2)}
@@ -128,6 +136,8 @@ listStyle.textContent = `
 shadow.append(listStyle);
 const paintDiary=(()=>{
 const names=['주간계획','월간일정','성과'],types=['스토리','피드','릴스'],statuses=['예정','준비 중','완료'];
+const categoryStyle = {'피드':'ig-feed','릴스':'ig-reel','스토리':'ig-story'};
+const categories = Object.keys(categoryStyle);
 const weekdays=['월','화','수','목','금','토','일'];
 const key=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 const date=k=>new Date(k+'T12:00:00'),shift=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n,12);
@@ -152,6 +162,17 @@ function calendarItems(k) {
  const posts = items(k);
  return tab === 1 ? posts.filter(p => !p.original.monthlyArchived && p.status===2) : posts;
 }
+function appendCounts(parent, posts, includeZero=false) {
+  const labels=[];
+  for(const category of categories) {
+    const count=posts.filter(post=>types[post.type]===category).length;
+    if(!count && !includeZero) continue;
+    const label=category+' '+count;
+    parent.append(node('span','post-count '+categoryStyle[category],label));
+    labels.push(label);
+  }
+  return labels.join(' · ');
+}
 function calendar(parent,d){
  const month=tab===1, first=month?new Date(d.getFullYear(),d.getMonth(),1,12):monday(d),last=month?new Date(d.getFullYear(),d.getMonth()+1,0,12):shift(first,6);
  const bar=node('div','bar'),h=node('h1');h.append(node('small','',String(d.getFullYear())),document.createTextNode(month?(d.getMonth()+1)+'월':(first.getMonth()+1)+'.'+first.getDate()+' — '+(last.getMonth()+1)+'.'+last.getDate()));
@@ -159,7 +180,25 @@ function calendar(parent,d){
  const prev=button('‹',()=>move(-1),'arrow prev'),next=button('›',()=>move(1),'arrow next');prev.ariaLabel='이전 기간';next.ariaLabel='다음 기간';bar.append(prev,h,next);parent.append(bar);
  const g=node('div','grid '+(month?'month':'week'));weekdays.forEach(w=>g.append(node('div','weekday',w)));
  if(month)for(let i=0;i<(first.getDay()+6)%7;i++)g.append(node('div'));
- for(let v=first;v<=last;v=shift(v,1)){const k=key(v),ps=calendarItems(k),memo=data.notes[k],b=button('',()=>setDay(k),'tile'+(ps.length||memo?' busy':'')+(k===selected?' active':''));b.ariaLabel=k+' '+(memo||'');b.setAttribute('aria-pressed',String(k===selected));b.append(node('b','',String(v.getDate())));if(memo)b.append(node('span','',memo));if(ps.length){const summary=['피드','스토리','릴스'].map(t=>{const n=ps.filter(p=>types[p.type]===t).length;return n?t+' '+n:''}).filter(Boolean).join(' · ');const count=node('span','post-count',summary);b.append(count);b.ariaLabel+=' '+summary;}g.append(b)}parent.append(g)
+ for(let v=first;v<=last;v=shift(v,1)){
+   const k=key(v), ps=calendarItems(k), memo=data.notes[k];
+   const tile=button('',()=>setDay(k),'tile'+(ps.length||memo?' busy':'')+(k===selected?' active':''));
+   tile.setAttribute('aria-pressed',String(k===selected));
+   tile.append(node('b','',String(v.getDate())));
+   if(memo) tile.append(node('span','',memo));
+   const counts=node('div','count-line');
+   const labels=appendCounts(counts,ps);
+   if(labels) tile.append(counts);
+   tile.ariaLabel=[k,memo,labels].filter(Boolean).join(' ');
+   g.append(tile);
+ }
+ parent.append(g);
+ if(!month) {
+   const summary=node('div','week-total');
+   summary.append(node('strong','','이번 주 합계'));
+   appendCounts(summary,weekDates(selected).flatMap(day=>items(day)),true);
+   parent.append(summary);
+ }
 }
 function field(parent,label,value,change,tag='input'){const l=node('label','',label),e=node(tag);e.value=value;e.oninput=()=>{change(e.value)};l.append(e);parent.append(l);return e}
 function weeklyPost(item) {
@@ -175,7 +214,7 @@ function weeklyPost(item) {
   }, 'post-toggle');
   toggle.id = 'post-' + item.id;
   toggle.setAttribute('aria-expanded', String(expanded));
-  toggle.append(node('span', 'post-kind', types[item.type]), node('span', 'post-title', title));
+  toggle.append(node('span', 'post-kind '+categoryStyle[types[item.type]], types[item.type]), node('span', 'post-title', title));
   const check = node('input', 'post-check');
   check.type = 'checkbox';
   check.checked = item.status === 2;
@@ -204,11 +243,21 @@ function weeklyPost(item) {
   editor.append(details,button('저장', async () => {
     if (await persist(item,changes)) { pending.delete(item.id); opened=null; render(); }
   },'add'));
+  editor.append(button('게시물 삭제', async () => {
+    if(busy || !window.confirm(types[item.type]+' 게시물을 삭제할까요?')) return;
+    const next=structuredClone(record);
+    next.posts=next.posts.filter(post=>post.id!==item.id);
+    // Older plans can supply a story from a numbered slot on the parent post.
+    if(item.id==='story-'+item.original.date+'-'+item.original.storySlot){
+      next.hiddenDiarySlots={...next.hiddenDiarySlots,[item.id]:true};
+    }
+    if(await save(next)){pending.delete(item.id);opened=null;render()}
+  },'add'));
   card.append(editor);
   return card;
 }
 function weekList(parent) {
-  const rows = dailyRows(selected).filter(post => record.posts.some(saved => saved.id === post.id) || post.brief);
+  const rows = dailyRows(selected).filter(post => record.posts.some(saved => saved.id === post.id) || (post.brief && !record.hiddenDiarySlots?.[post.id]));
   rows.sort((a,b)=>['피드','릴스','스토리'].indexOf(kind(a))-['피드','릴스','스토리'].indexOf(kind(b)));
   for (const post of rows) parent.append(weeklyPost(toItem(post)));
   if (!rows.length) parent.append(node('p','empty','등록된 콘텐츠가 없습니다.'));
@@ -243,6 +292,13 @@ function render(){const nav=diaryNav,s=shadow.querySelector('#screen'),d=date(se
        const day=selected,next=structuredClone(record);
        next.diaryNotes={...next.diaryNotes,[day]:noteDrafts.get(day)??data.notes[day]??''};
        if(await save(next)) noteDrafts.delete(day);
+     },'add'));
+     if(data.notes[selected]) form.append(button('일정 삭제',async()=>{
+       const day=selected;
+       if(busy || !window.confirm(day+' 월간 일정을 삭제할까요?')) return;
+       const next=structuredClone(record);
+       delete next.diaryNotes[day];
+       if(await save(next)){noteDrafts.delete(day);render()}
      },'add'));
      s.append(form);
    }
