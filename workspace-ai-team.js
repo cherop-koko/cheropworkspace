@@ -123,6 +123,11 @@ listStyle.textContent = `
   .post-kind{background:var(--kind-fill);color:var(--kind-ink);border-color:transparent}
   .grid .tile .post-count,.week-total .post-count{color:var(--kind-ink)}
   .week .tile .post-count{display:block;white-space:nowrap;font-size:11px;letter-spacing:-.03em}
+  .week .count-line{width:100%;min-width:0}
+  .week .tile .calendar-post{white-space:normal;overflow:visible;overflow-wrap:anywhere;text-overflow:clip;line-height:1.45;margin-top:3px}
+  .reel-options{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0}
+  .post-memo .reel-option{display:flex;align-items:center;gap:5px}
+  .post-memo .reel-option input{width:15px;height:15px;min-height:0;margin:0;padding:0;accent-color:var(--text)}
   .month .count-line{display:flex;flex-wrap:wrap;gap:0 5px}
   .week-total{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px}
   .post-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
@@ -173,6 +178,21 @@ function appendCounts(parent, posts, includeZero=false) {
   }
   return labels.join(' · ');
 }
+function appendCalendarPosts(parent, posts) {
+  const labels=[];
+  for(const category of categories) {
+    for(const post of posts.filter(p=>types[p.type]===category)) {
+      const product=String(post.original.productName||'').trim();
+      const modes=category==='릴스'?[post.original.reelTest?'테스트':'',post.original.reelPublic?'공개':''].filter(Boolean):[];
+      const label=[category,product,modes.join('·')].filter(Boolean).join(' · ');
+      const entry=node('span','post-count calendar-post '+categoryStyle[category],label);
+      entry.title=label;
+      parent.append(entry);
+      labels.push(label);
+    }
+  }
+  return labels.join(' / ');
+}
 function calendar(parent,d){
  const month=tab===1, first=month?new Date(d.getFullYear(),d.getMonth(),1,12):monday(d),last=month?new Date(d.getFullYear(),d.getMonth()+1,0,12):shift(first,6);
  const bar=node('div','bar'),h=node('h1');h.append(node('small','',String(d.getFullYear())),document.createTextNode(month?(d.getMonth()+1)+'월':(first.getMonth()+1)+'.'+first.getDate()+' — '+(last.getMonth()+1)+'.'+last.getDate()));
@@ -187,7 +207,7 @@ function calendar(parent,d){
    tile.append(node('b','',String(v.getDate())));
    if(memo) tile.append(node('span','',memo));
    const counts=node('div','count-line');
-   const labels=appendCounts(counts,ps);
+   const labels=month?appendCounts(counts,ps):appendCalendarPosts(counts,ps);
    if(labels) tile.append(counts);
    tile.ariaLabel=[k,memo,labels].filter(Boolean).join(' ');
    g.append(tile);
@@ -236,9 +256,23 @@ function weeklyPost(item) {
   const purposeLabel = node('label','','콘텐츠 목적');
   purposeLabel.append(purpose);
   details.append(purposeLabel);
-  for (const [label,k] of [['캡션','caption'],['게시 시간','time'],['사진·영상 링크','mediaUrl'],['게시물 링크','postUrl']]) {
+  field(details, '상품명', changes.productName ?? item.original.productName ?? '', value => changes.productName = value);
+  if(types[item.type]==='릴스') {
+    const options=node('div','reel-options');
+    for(const [label,k] of [['테스트 릴스','reelTest'],['이날 공개 게시','reelPublic']]) {
+      const wrapper=node('label','reel-option');
+      const input=node('input');
+      input.type='checkbox';
+      input.checked=changes[k] ?? item.original[k] ?? false;
+      input.onchange=()=>changes[k]=input.checked;
+      wrapper.append(input,document.createTextNode(label));
+      options.append(wrapper);
+    }
+    details.append(options);
+  }
+  for (const [label,k] of [['캡션','caption'],['게시물 링크','postUrl']]) {
     const input = field(details,label,changes[k] ?? item.original[k] ?? '',v=>changes[k]=v,k==='caption'?'textarea':'input');
-    if (k==='time') input.type='time';
+
   }
   editor.append(details,button('저장', async () => {
     if (await persist(item,changes)) { pending.delete(item.id); opened=null; render(); }
