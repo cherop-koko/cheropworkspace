@@ -182,7 +182,7 @@ function appendCalendarPosts(parent, posts) {
   const labels=[];
   for(const category of categories) {
     for(const post of posts.filter(p=>types[p.type]===category)) {
-      const product=String(post.original.productName||'').trim();
+      const product=String(post.original.title||post.original.productName||'').trim();
       const modes=category==='릴스'?[post.original.reelTest?'테스트':'',post.original.reelPublic?'공개':''].filter(Boolean):[];
       const label=[category,product,modes.join('·')].filter(Boolean).join(' · ');
       const entry=node('span','post-count calendar-post '+categoryStyle[category],label);
@@ -225,7 +225,7 @@ function weeklyPost(item) {
   const card = node('article', 'post-row');
   const row = node('div', 'post-head');
   const changes = draft(item);
-  const title = changes.title || item.title || item.idea.split('\n')[0] || '제목 입력';
+  const title = (changes.title ?? (item.title || item.original.productName)) || '상품명 입력';
   const expanded = opened === item.id;
   const toggle = button('', () => {
     opened = expanded ? null : item.id;
@@ -246,9 +246,9 @@ function weeklyPost(item) {
   const editor = node('div', 'post-memo');
   field(editor, '메모', changes.brief ?? item.idea, value => changes.brief = value, 'textarea');
   const details = node('details');
-  details.append(node('summary', '', '제목 · 상세 설정'));
-  details.open = !item.title;
-  field(details, '제목', changes.title ?? item.title, value => changes.title = value);
+  details.append(node('summary', '', '상품명 · 상세 설정'));
+  details.open = !(item.title || item.original.productName);
+  field(details, '상품명', changes.title ?? (item.title || item.original.productName || ''), value => { changes.title = value; changes.productName = value; });
   const purpose = node('select');
   for (const name of ['미지정','팬','매출']) purpose.add(new Option(name,name));
   purpose.value = changes.purpose ?? item.original.purpose ?? '미지정';
@@ -256,7 +256,6 @@ function weeklyPost(item) {
   const purposeLabel = node('label','','콘텐츠 목적');
   purposeLabel.append(purpose);
   details.append(purposeLabel);
-  field(details, '상품명', changes.productName ?? item.original.productName ?? '', value => changes.productName = value);
   if(types[item.type]==='릴스') {
     const options=node('div','reel-options');
     for(const [label,k] of [['테스트 릴스','reelTest'],['이날 공개 게시','reelPublic']]) {
