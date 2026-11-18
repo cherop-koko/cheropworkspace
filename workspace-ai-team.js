@@ -155,7 +155,27 @@ const toItem=p=>({id:p.id,type:types.indexOf(kind(p)),title:p.title||'',idea:p.b
 const items=(k=selected)=>record.posts.filter(p=>p.date===k).map(toItem);
 const data={get notes(){return record.diaryNotes||{}}};
 const pending=new Map(), noteDrafts=new Map();
-function persist(p,patch){if(busy)return;for(const k of ['mediaUrl','postUrl']){if(patch[k]&&!/^https?:\/\//i.test(patch[k])){message='링크는 http 또는 https 주소를 입력해 주세요.';render();return false}}const next=structuredClone(record);replacePost(next,{...p.original,...patch});return save(next)}
+function persist(p,patch) {
+  if(busy) return false;
+  if(Object.hasOwn(patch,'date') && (!/^\d{4}-\d{2}-\d{2}$/.test(patch.date) || key(date(patch.date))!==patch.date)) {
+    message='유효한 날짜를 선택해 주세요.';
+    render();
+    return false;
+  }
+  for(const k of ['mediaUrl','postUrl']) {
+    if(patch[k]&&!/^https?:\/\//i.test(patch[k])) {
+      message='링크는 http 또는 https 주소를 입력해 주세요.';
+      render();
+      return false;
+    }
+  }
+  const next=structuredClone(record);
+  if(patch.date && patch.date!==p.original.date && p.id==='story-'+p.original.date+'-'+p.original.storySlot) {
+    next.hiddenDiarySlots={...next.hiddenDiarySlots,[p.id]:true};
+  }
+  replacePost(next,{...p.original,...patch});
+  return save(next);
+}
 function draft(p){if(!pending.has(p.id))pending.set(p.id,{});return pending.get(p.id)}
 function node(tag,cls='',txt=''){const e=document.createElement(tag);e.className=cls;e.textContent=txt;return e}
 function button(txt,fn,cls=''){const b=node('button',cls,txt);b.onclick=fn;return b}
@@ -249,6 +269,9 @@ function weeklyPost(item) {
   details.append(node('summary', '', '상품명 · 상세 설정'));
   details.open = !(item.title || item.original.productName);
   field(details, '상품명', changes.title ?? (item.title || item.original.productName || ''), value => { changes.title = value; changes.productName = value; });
+  const dateInput = field(details, '게시 날짜', changes.date ?? item.original.date, value => changes.date = value);
+  dateInput.type = 'date';
+  dateInput.required = true;
   const purpose = node('select');
   for (const name of ['미지정','팬','매출']) purpose.add(new Option(name,name));
   purpose.value = changes.purpose ?? item.original.purpose ?? '미지정';
@@ -274,7 +297,7 @@ function weeklyPost(item) {
 
   }
   editor.append(details,button('저장', async () => {
-    if (await persist(item,changes)) { pending.delete(item.id); opened=null; render(); }
+    if (await persist(item,changes)) { pending.delete(item.id); setDay(changes.date || item.original.date); }
   },'add'));
   editor.append(button('게시물 삭제', async () => {
     if(busy || !window.confirm(types[item.type]+' 게시물을 삭제할까요?')) return;
@@ -290,7 +313,7 @@ function weeklyPost(item) {
   return card;
 }
 function weekList(parent) {
-  const rows = dailyRows(selected).filter(post => record.posts.some(saved => saved.id === post.id) || (post.brief && !record.hiddenDiarySlots?.[post.id]));
+  const rows = dailyRows(selected).filter(post => record.posts.some(saved => saved.id === post.id && saved.date === post.date) || (post.brief && !record.hiddenDiarySlots?.[post.id]));
   rows.sort((a,b)=>['피드','릴스','스토리'].indexOf(kind(a))-['피드','릴스','스토리'].indexOf(kind(b)));
   for (const post of rows) parent.append(weeklyPost(toItem(post)));
   if (!rows.length) parent.append(node('p','empty','등록된 콘텐츠가 없습니다.'));
