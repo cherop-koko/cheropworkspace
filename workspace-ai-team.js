@@ -187,14 +187,22 @@ function calendarItems(k) {
  const posts = items(k);
  return tab === 1 ? posts.filter(p => !p.original.monthlyArchived && p.status===2) : posts;
 }
-function appendCounts(parent, posts, includeZero=false) {
+function appendCounts(parent, posts, includeZero=false, splitReels=false) {
   const labels=[];
+  const append=(category,label,count)=>{
+    if(!count && !includeZero) return;
+    const text=label+' '+count;
+    parent.append(node('span','post-count '+categoryStyle[category],text));
+    labels.push(text);
+  };
   for(const category of categories) {
-    const count=posts.filter(post=>types[post.type]===category).length;
-    if(!count && !includeZero) continue;
-    const label=category+' '+count;
-    parent.append(node('span','post-count '+categoryStyle[category],label));
-    labels.push(label);
+    const matching=posts.filter(post=>types[post.type]===category);
+    if(splitReels && category==='릴스') {
+      append(category,'테스트 릴스',matching.filter(post=>post.original.reelTest).length);
+      append(category,'공개 릴스',matching.filter(post=>post.original.reelPublic).length);
+      const unspecified=matching.filter(post=>!post.original.reelTest && !post.original.reelPublic).length;
+      if(unspecified) append(category,'미지정 릴스',unspecified);
+    } else append(category,category,matching.length);
   }
   return labels.join(' · ');
 }
@@ -236,7 +244,7 @@ function calendar(parent,d){
  if(!month) {
    const summary=node('div','week-total');
    summary.append(node('strong','','이번 주 합계'));
-   appendCounts(summary,weekDates(selected).flatMap(day=>items(day)),true);
+   appendCounts(summary,weekDates(selected).flatMap(day=>items(day)),true,true);
    parent.append(summary);
  }
 }
